@@ -51,11 +51,7 @@ export class BuildingManager {
     return events;
   }
 
-  canBuild(
-    defId: string,
-    resources: ResourceManager,
-    technology: TechnologyTree,
-  ): boolean {
+  canBuild(defId: string, resources: ResourceManager, technology: TechnologyTree): boolean {
     const def = this.definitions.get(defId);
     if (!def) return false;
 
@@ -106,21 +102,15 @@ export class BuildingManager {
   }
 
   getActiveBuildings(): Building[] {
-    return Array.from(this.buildings.values()).filter(
-      (b) => b.status === "active",
-    );
+    return Array.from(this.buildings.values()).filter((b) => b.status === "active");
   }
 
   getPendingBuildings(): Building[] {
-    return Array.from(this.buildings.values()).filter(
-      (b) => b.status === "pending",
-    );
+    return Array.from(this.buildings.values()).filter((b) => b.status === "pending");
   }
 
   getBuildingsByDefinition(defId: string): Building[] {
-    return Array.from(this.buildings.values()).filter(
-      (b) => b.definitionId === defId,
-    );
+    return Array.from(this.buildings.values()).filter((b) => b.definitionId === defId);
   }
 
   getBuildingCount(): number {
