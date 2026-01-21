@@ -7,6 +7,11 @@ import {
   EXTRACTION_RATE_MULTIPLIERS,
   ESTIMATE_UNCERTAINTY,
   DEPLETION_THRESHOLDS,
+  RECYCLING_RECOVERY_RATES,
+  RECYCLING_TIME_MULTIPLIER,
+  RUSH_RECYCLING_PENALTY,
+  REPURPOSE_COST_MULTIPLIER,
+  REPURPOSE_TIME_MULTIPLIER,
 } from "../src/core/balance/OperationsBalance";
 
 describe("Deposit Model", () => {
@@ -172,5 +177,24 @@ describe("Deposit Extraction", () => {
 
     // Range should be tighter (±10% of 50 remaining = 10, so range ~10)
     expect(range).toBeLessThan(30);
+  });
+});
+
+describe("Recycling Balance Constants", () => {
+  test("RECYCLING_RECOVERY_RATES defines rates for different building states", () => {
+    expect(RECYCLING_RECOVERY_RATES.standard).toBe(0.4);
+    expect(RECYCLING_RECOVERY_RATES.depleted).toBe(0.25);
+    expect(RECYCLING_RECOVERY_RATES.active).toBe(0.5);
+    expect(RECYCLING_RECOVERY_RATES.damaged).toBe(0.15);
+  });
+
+  test("recycling time and rush penalty defined", () => {
+    expect(RECYCLING_TIME_MULTIPLIER).toBe(0.25);
+    expect(RUSH_RECYCLING_PENALTY).toBe(0.3);
+  });
+
+  test("repurpose multipliers defined", () => {
+    expect(REPURPOSE_COST_MULTIPLIER).toBe(0.3);
+    expect(REPURPOSE_TIME_MULTIPLIER).toBe(0.5);
   });
 });

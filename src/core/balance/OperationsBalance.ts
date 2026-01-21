@@ -93,3 +93,23 @@ export const DEPLETION_THRESHOLDS = {
   warning: 0.25,     // 25% remaining
   critical: 0.10,    // 10% remaining
 } as const;
+
+// Recycling Recovery Rates (fraction of original build cost)
+export const RECYCLING_RECOVERY_RATES = {
+  standard: 0.4,    // Normal buildings
+  depleted: 0.25,   // Mining buildings on depleted deposits
+  active: 0.5,      // Mining buildings still producing
+  damaged: 0.15,    // Broken buildings
+} as const;
+
+// Recycling takes this fraction of original construction time
+export const RECYCLING_TIME_MULTIPLIER = 0.25;
+
+// Rush recycling reduces materials recovered by this amount
+export const RUSH_RECYCLING_PENALTY = 0.3;
+
+// Repurposing costs this fraction of the NEW building's materials
+export const REPURPOSE_COST_MULTIPLIER = 0.3;
+
+// Repurposing takes this fraction of the NEW building's construction time
+export const REPURPOSE_TIME_MULTIPLIER = 0.5;
