@@ -1,7 +1,7 @@
 import type { ResourceDelta } from "./Resources";
 import type { ColonistRole } from "./Colonist";
 
-export type BuildingStatus = "pending" | "active" | "disabled" | "idle";
+export type BuildingStatus = "pending" | "active" | "disabled" | "idle" | "recycling";
 
 export interface BuildingDefinition {
   id: string;
@@ -28,4 +28,5 @@ export interface Building {
   broken: boolean;
   repairProgress: number;
   depositId?: string; // linked deposit for mining buildings
+  recyclingProgress?: number;
 }
