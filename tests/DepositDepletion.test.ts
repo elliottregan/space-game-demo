@@ -1,6 +1,7 @@
 // tests/DepositDepletion.test.ts
 import { describe, test, expect } from "bun:test";
 import type { ProspectingSite } from "../src/core/models/Operation";
+import type { Building } from "../src/core/models/Building";
 import {
   DEPOSIT_RESERVES,
   EXTRACTION_RATE_MULTIPLIERS,
@@ -53,6 +54,25 @@ describe("Deposit Balance Constants", () => {
   test("DEPLETION_THRESHOLDS defines warning levels", () => {
     expect(DEPLETION_THRESHOLDS.warning).toBe(0.25);
     expect(DEPLETION_THRESHOLDS.critical).toBe(0.10);
+  });
+});
+
+describe("Building Model Extensions", () => {
+  test("Building can have idle status and depositId", () => {
+    const building: Building = {
+      id: "building_1",
+      definitionId: "water_extractor",
+      status: "idle",
+      constructionProgress: 0,
+      assignedWorkers: [],
+      mode: "normal",
+      broken: false,
+      repairProgress: 0,
+      depositId: "site_1",
+    };
+
+    expect(building.status).toBe("idle");
+    expect(building.depositId).toBe("site_1");
   });
 });
 
