@@ -94,3 +94,83 @@ describe("OperationsManager Deposit Generation", () => {
     expect(site.linkedBuildingId).toBeNull();
   });
 });
+
+describe("Deposit Extraction", () => {
+  test("extractFromDeposit reduces remainingReserves", () => {
+    const manager = new OperationsManager();
+
+    // Manually create a site with known reserves
+    const site = {
+      id: "test_site",
+      resourceType: "materials" as const,
+      quality: "moderate" as const,
+      revealed: true,
+      developed: true,
+      developmentProgress: 0,
+      reserves: 500,
+      estimatedReserves: { min: 400, max: 600 },
+      remainingReserves: 500,
+      linkedBuildingId: "building_1",
+    };
+
+    // Use internal method to add site
+    (manager as any).sites = [site];
+
+    const extracted = manager.extractFromDeposit("test_site", 15);
+
+    expect(extracted).toBe(15);
+    expect(manager.getSites()[0].remainingReserves).toBe(485);
+  });
+
+  test("extractFromDeposit returns 0 when deposit is empty", () => {
+    const manager = new OperationsManager();
+
+    const site = {
+      id: "test_site",
+      resourceType: "materials" as const,
+      quality: "moderate" as const,
+      revealed: true,
+      developed: true,
+      developmentProgress: 0,
+      reserves: 10,
+      estimatedReserves: { min: 8, max: 12 },
+      remainingReserves: 5,
+      linkedBuildingId: "building_1",
+    };
+
+    (manager as any).sites = [site];
+
+    const extracted = manager.extractFromDeposit("test_site", 15);
+
+    expect(extracted).toBe(5); // Only get what's left
+    expect(manager.getSites()[0].remainingReserves).toBe(0);
+  });
+
+  test("extractFromDeposit updates estimate accuracy over time", () => {
+    const manager = new OperationsManager();
+
+    const site = {
+      id: "test_site",
+      resourceType: "materials" as const,
+      quality: "moderate" as const,
+      revealed: true,
+      developed: true,
+      developmentProgress: 0,
+      reserves: 100,
+      estimatedReserves: { min: 70, max: 130 }, // ±30%
+      remainingReserves: 100,
+      linkedBuildingId: "building_1",
+    };
+
+    (manager as any).sites = [site];
+
+    // Extract 50% (should tighten estimate to ±10%)
+    manager.extractFromDeposit("test_site", 50);
+
+    const updatedSite = manager.getSites()[0];
+    const range = updatedSite.estimatedReserves.max - updatedSite.estimatedReserves.min;
+
+    // Range should be tighter (±10% of 50 remaining = 10, so range ~10)
+    expect(range).toBeLessThan(30);
+  });
+});

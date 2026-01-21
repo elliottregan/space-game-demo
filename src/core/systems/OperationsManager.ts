@@ -25,6 +25,7 @@ import {
   MAX_DEVELOPED_SITES,
   DEPOSIT_RESERVES,
   ESTIMATE_UNCERTAINTY,
+  DEPLETION_THRESHOLDS,
 } from "../balance/OperationsBalance";
 import type { ResourceManager } from "./ResourceManager";
 import type { ColonyManager } from "./ColonyManager";
@@ -373,6 +374,56 @@ export class OperationsManager {
 
     this.sites.splice(index, 1);
     return true;
+  }
+
+  extractFromDeposit(siteId: string, amount: number): number {
+    const site = this.sites.find(s => s.id === siteId);
+    if (!site || !site.developed || site.remainingReserves <= 0) return 0;
+
+    const actualExtracted = Math.min(amount, site.remainingReserves);
+    site.remainingReserves -= actualExtracted;
+
+    // Update estimate accuracy based on extraction progress
+    this.updateEstimateAccuracy(site);
+
+    return actualExtracted;
+  }
+
+  private updateEstimateAccuracy(site: ProspectingSite): void {
+    const extractedPercent = 1 - (site.remainingReserves / site.reserves);
+
+    let uncertainty: number;
+    if (extractedPercent >= 0.75) {
+      uncertainty = ESTIMATE_UNCERTAINTY.at75Percent;
+    } else if (extractedPercent >= 0.50) {
+      uncertainty = ESTIMATE_UNCERTAINTY.at50Percent;
+    } else if (extractedPercent >= 0.25) {
+      uncertainty = ESTIMATE_UNCERTAINTY.at25Percent;
+    } else {
+      uncertainty = ESTIMATE_UNCERTAINTY.initial;
+    }
+
+    site.estimatedReserves = {
+      min: Math.floor(site.remainingReserves * (1 - uncertainty)),
+      max: Math.ceil(site.remainingReserves * (1 + uncertainty)),
+    };
+  }
+
+  isDepositDepleted(siteId: string): boolean {
+    const site = this.sites.find(s => s.id === siteId);
+    return site ? site.remainingReserves <= 0 : true;
+  }
+
+  getDepletionWarningLevel(siteId: string): "none" | "warning" | "critical" | "depleted" {
+    const site = this.sites.find(s => s.id === siteId);
+    if (!site) return "depleted";
+
+    const percentRemaining = site.remainingReserves / site.reserves;
+
+    if (percentRemaining <= 0) return "depleted";
+    if (percentRemaining <= DEPLETION_THRESHOLDS.critical) return "critical";
+    if (percentRemaining <= DEPLETION_THRESHOLDS.warning) return "warning";
+    return "none";
   }
 
   toJSON() {
