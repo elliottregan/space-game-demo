@@ -159,7 +159,7 @@ export class OperationsManager {
     return true;
   }
 
-  tick(currentSol: number): GameEvent[] {
+  tick(_currentSol: number): GameEvent[] {
     const events: GameEvent[] = [];
 
     // Update expedition timers

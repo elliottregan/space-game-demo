@@ -9,6 +9,7 @@ import {
 } from "../../core/balance/OperationsBalance";
 
 const state = gameService.getState();
+// biome-ignore lint/correctness/noUnusedVariables: reserved for future tab-based UI
 const activeTab = ref<"policies" | "buildings" | "missions">("policies");
 
 // Policy helpers
