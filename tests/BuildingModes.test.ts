@@ -59,3 +59,69 @@ describe("Building Modes", () => {
     expect(overdriveProd.power).toBe(normalProd.power! * 1.5);
   });
 });
+
+describe("Building Breakdown", () => {
+  let buildings: BuildingManager;
+  let resources: ResourceManager;
+
+  beforeEach(() => {
+    buildings = new BuildingManager(BUILDINGS);
+    resources = new ResourceManager({
+      food: 500,
+      oxygen: 500,
+      water: 500,
+      power: 500,
+      materials: 500,
+    });
+  });
+
+  test("breakBuilding sets broken to true", () => {
+    const building = buildings.startBuilding("solar_panel", resources, {
+      isResearched: () => true,
+    } as never);
+    for (let i = 0; i < 10; i++) buildings.tick(resources);
+
+    buildings.breakBuilding(building!.id);
+    expect(buildings.getBuilding(building!.id)?.broken).toBe(true);
+  });
+
+  test("broken building produces nothing", () => {
+    const building = buildings.startBuilding("solar_panel", resources, {
+      isResearched: () => true,
+    } as never);
+    for (let i = 0; i < 10; i++) buildings.tick(resources);
+
+    buildings.breakBuilding(building!.id);
+    const prod = buildings.getEffectiveProduction(building!.id);
+    expect(prod).toEqual({});
+  });
+
+  test("startRepair begins repair process", () => {
+    const building = buildings.startBuilding("solar_panel", resources, {
+      isResearched: () => true,
+    } as never);
+    for (let i = 0; i < 10; i++) buildings.tick(resources);
+    buildings.breakBuilding(building!.id);
+
+    const repairCost = buildings.getRepairCost(building!.id);
+    expect(repairCost).toBeDefined();
+    expect(repairCost!.materials).toBeGreaterThan(0);
+
+    buildings.startRepair(building!.id, resources);
+    expect(buildings.getBuilding(building!.id)?.repairProgress).toBeGreaterThan(0);
+  });
+
+  test("repair completes after REPAIR_DURATION_SOLS", () => {
+    const building = buildings.startBuilding("solar_panel", resources, {
+      isResearched: () => true,
+    } as never);
+    for (let i = 0; i < 10; i++) buildings.tick(resources);
+    buildings.breakBuilding(building!.id);
+    buildings.startRepair(building!.id, resources);
+
+    for (let i = 0; i < 3; i++) buildings.tick(resources);
+
+    expect(buildings.getBuilding(building!.id)?.broken).toBe(false);
+    expect(buildings.getBuilding(building!.id)?.repairProgress).toBe(0);
+  });
+});
