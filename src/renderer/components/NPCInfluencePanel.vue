@@ -19,6 +19,7 @@ function canAfford(cost: Record<string, number>): boolean {
   return true;
 }
 
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 const canProposeProject = computed(() => {
   if (!selectedProject.value || state.npcInfluence.activeProject) return false;
   const project = state.npcInfluence.projects.find(p => p.id === selectedProject.value);
@@ -31,11 +32,13 @@ const lobbyCost = computed(() => {
   return gameService.getLobbyCost(selectedNPCForLobby.value, lobbyAmount.value);
 });
 
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 const canLobby = computed(() => {
   if (!state.npcInfluence.activeProject || !selectedNPCForLobby.value) return false;
   return state.resources.materials >= lobbyCost.value;
 });
 
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 const canCreateCouncil = computed(() => {
   return selectedCouncilMembers.value.length >= 2 &&
          councilName.value.trim() !== '' &&
