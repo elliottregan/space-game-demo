@@ -1,6 +1,6 @@
 // src/core/balance/NPCInfluenceBalance.ts
 
-import type { NPCFaction, ProjectType } from '../models/NPCInfluence';
+import type { NPCFaction, ProjectType } from "../models/NPCInfluence";
 
 /** Drift rate - how quickly NPCs respond to network influence (0.1-0.5) */
 export const DRIFT_RATE = 0.2;
@@ -12,21 +12,24 @@ export const PASS_THRESHOLD = 0.4;
 export const PROJECT_VOTE_DELAY = 10;
 
 /** Transmission factors: how receptive target faction is to source faction for each project type */
-export const TRANSMISSION_FACTORS: Record<ProjectType, Record<NPCFaction, Record<NPCFaction, number>>> = {
+export const TRANSMISSION_FACTORS: Record<
+  ProjectType,
+  Record<NPCFaction, Record<NPCFaction, number>>
+> = {
   futurist: {
-    futurist:      { futurist: 1.0, progressive: 0.6, traditionalist: 0.2 },
-    progressive:   { futurist: 0.7, progressive: 1.0, traditionalist: 0.4 },
-    traditionalist:{ futurist: 0.3, progressive: 0.5, traditionalist: 1.0 },
+    futurist: { futurist: 1.0, progressive: 0.6, traditionalist: 0.2 },
+    progressive: { futurist: 0.7, progressive: 1.0, traditionalist: 0.4 },
+    traditionalist: { futurist: 0.3, progressive: 0.5, traditionalist: 1.0 },
   },
   progressive: {
-    futurist:      { futurist: 1.0, progressive: 0.5, traditionalist: 0.3 },
-    progressive:   { futurist: 0.6, progressive: 1.0, traditionalist: 0.6 },
-    traditionalist:{ futurist: 0.3, progressive: 0.5, traditionalist: 1.0 },
+    futurist: { futurist: 1.0, progressive: 0.5, traditionalist: 0.3 },
+    progressive: { futurist: 0.6, progressive: 1.0, traditionalist: 0.6 },
+    traditionalist: { futurist: 0.3, progressive: 0.5, traditionalist: 1.0 },
   },
   traditionalist: {
-    futurist:      { futurist: 1.0, progressive: 0.4, traditionalist: 0.2 },
-    progressive:   { futurist: 0.5, progressive: 1.0, traditionalist: 0.6 },
-    traditionalist:{ futurist: 0.3, progressive: 0.7, traditionalist: 1.0 },
+    futurist: { futurist: 1.0, progressive: 0.4, traditionalist: 0.2 },
+    progressive: { futurist: 0.5, progressive: 1.0, traditionalist: 0.6 },
+    traditionalist: { futurist: 0.3, progressive: 0.7, traditionalist: 1.0 },
   },
 } as const;
 

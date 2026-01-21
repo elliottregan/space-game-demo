@@ -2,7 +2,11 @@ import type { GameEvent } from "../models/GameEvent";
 import type { Building, BuildingDefinition } from "../models/Building";
 import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
-import { BUILDING_MODES, REPAIR_COST_MULTIPLIER, REPAIR_DURATION_SOLS } from "../balance/OperationsBalance";
+import {
+  BUILDING_MODES,
+  REPAIR_COST_MULTIPLIER,
+  REPAIR_DURATION_SOLS,
+} from "../balance/OperationsBalance";
 import type { ResourceDelta } from "../models/Resources";
 
 export class BuildingManager {
@@ -124,7 +128,11 @@ export class BuildingManager {
     return this.buildings.get(id);
   }
 
-  setBuildingMode(buildingId: string, mode: "conservation" | "normal" | "overdrive", resources: ResourceManager): boolean {
+  setBuildingMode(
+    buildingId: string,
+    mode: "conservation" | "normal" | "overdrive",
+    resources: ResourceManager,
+  ): boolean {
     const building = this.buildings.get(buildingId);
     if (!building || building.status !== "active" || building.broken) return false;
     if (building.mode === mode) return true; // No change needed

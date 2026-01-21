@@ -153,7 +153,7 @@ export class GameState {
         data.npcInfluence,
         NPCS,
         INITIAL_RELATIONSHIPS,
-        PROJECTS
+        PROJECTS,
       );
     }
 

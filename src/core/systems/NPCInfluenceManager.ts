@@ -1,8 +1,8 @@
 // src/core/systems/NPCInfluenceManager.ts
 
-import type { GameEvent } from '../models/GameEvent';
-import type { ResourceManager } from './ResourceManager';
-import type { ResourceDelta } from '../models/Resources';
+import type { GameEvent } from "../models/GameEvent";
+import type { ResourceManager } from "./ResourceManager";
+import type { ResourceDelta } from "../models/Resources";
 import type {
   NPC,
   NPCFaction,
@@ -10,7 +10,7 @@ import type {
   ProjectType,
   ActiveProject,
   Council,
-} from '../models/NPCInfluence';
+} from "../models/NPCInfluence";
 import {
   COUNCIL_CREATION_COST,
   COUNCIL_RELATIONSHIP_BOOST,
@@ -21,7 +21,7 @@ import {
   PROJECT_VOTE_DELAY,
   SUCCESS_TRANSMISSION_BOOST,
   TRANSMISSION_FACTORS,
-} from '../balance/NPCInfluenceBalance';
+} from "../balance/NPCInfluenceBalance";
 
 // ============ Matrix Utilities ============
 
@@ -83,7 +83,7 @@ export function updateSupport(
   currentSupport: number[],
   W: number[][],
   T: number[][],
-  alpha: number
+  alpha: number,
 ): number[] {
   const N = currentSupport.length;
 
@@ -125,11 +125,7 @@ export class NPCInfluenceManager {
   /** Mutable transmission factors (modified by project outcomes) */
   private transmissionFactors: Record<ProjectType, Record<NPCFaction, Record<NPCFaction, number>>>;
 
-  constructor(
-    npcs: NPC[],
-    relationships: Record<string, number>,
-    projects: Project[]
-  ) {
+  constructor(npcs: NPC[], relationships: Record<string, number>, projects: Project[]) {
     this.npcs = [...npcs];
 
     // Build NPC index for fast lookup
@@ -152,7 +148,7 @@ export class NPCInfluenceManager {
       .map(() => Array(N).fill(0));
 
     for (const [key, weight] of Object.entries(relationships)) {
-      const [fromId, toId] = key.split(':');
+      const [fromId, toId] = key.split(":");
       const fromIdx = this.npcIndex.get(fromId);
       const toIdx = this.npcIndex.get(toId);
 
@@ -307,7 +303,7 @@ export class NPCInfluenceManager {
           // W[i][j] = influence from j to i
           this.relationshipMatrix[idx1][idx2] = Math.min(
             1.0,
-            this.relationshipMatrix[idx1][idx2] + COUNCIL_RELATIONSHIP_BOOST
+            this.relationshipMatrix[idx1][idx2] + COUNCIL_RELATIONSHIP_BOOST,
           );
         }
       }
@@ -373,7 +369,7 @@ export class NPCInfluenceManager {
         const current = this.transmissionFactors[pType][targetFaction][projectType];
         this.transmissionFactors[pType][targetFaction][projectType] = Math.max(
           0,
-          Math.min(1, current + delta)
+          Math.min(1, current + delta),
         );
       }
     }
@@ -396,19 +392,14 @@ export class NPCInfluenceManager {
 
     // Build current support vector
     const currentSupport: number[] = this.npcs.map(
-      (npc) => this.activeProject!.supportLevels.get(npc.id) || 0
+      (npc) => this.activeProject!.supportLevels.get(npc.id) || 0,
     );
 
     // Build transmission matrix for this project type
     const T = this.buildTransmissionMatrix(project.type);
 
     // Update support levels
-    const newSupport = updateSupport(
-      currentSupport,
-      this.relationshipMatrix,
-      T,
-      DRIFT_RATE
-    );
+    const newSupport = updateSupport(currentSupport, this.relationshipMatrix, T, DRIFT_RATE);
 
     // Store updated support
     for (let i = 0; i < this.npcs.length; i++) {
@@ -425,8 +416,8 @@ export class NPCInfluenceManager {
 
       if (passed) {
         events.push({
-          type: 'PROJECT_PASSED',
-          severity: 'info',
+          type: "PROJECT_PASSED",
+          severity: "info",
           projectId: project.id,
           projectName: project.name,
           averageSupport,
@@ -437,8 +428,8 @@ export class NPCInfluenceManager {
         this.modifyTransmissionFactors(project.type, SUCCESS_TRANSMISSION_BOOST);
       } else {
         events.push({
-          type: 'PROJECT_FAILED',
-          severity: 'warning',
+          type: "PROJECT_FAILED",
+          severity: "warning",
           projectId: project.id,
           projectName: project.name,
           averageSupport,
@@ -474,10 +465,10 @@ export class NPCInfluenceManager {
   }
 
   static fromJSON(
-    data: ReturnType<NPCInfluenceManager['toJSON']>,
+    data: ReturnType<NPCInfluenceManager["toJSON"]>,
     npcs: NPC[],
     relationships: Record<string, number>,
-    projects: Project[]
+    projects: Project[],
   ): NPCInfluenceManager {
     const manager = new NPCInfluenceManager(npcs, relationships, projects);
 
@@ -488,7 +479,9 @@ export class NPCInfluenceManager {
     if (data.activeProject) {
       manager.activeProject = {
         projectId: data.activeProject.projectId,
-        supportLevels: new Map(Object.entries(data.activeProject.supportLevels).map(([k, v]) => [k, Number(v)])),
+        supportLevels: new Map(
+          Object.entries(data.activeProject.supportLevels).map(([k, v]) => [k, Number(v)]),
+        ),
         solsRemaining: data.activeProject.solsRemaining,
       };
     }

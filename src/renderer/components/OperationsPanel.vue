@@ -17,17 +17,24 @@ const activeTab = ref<"policies" | "buildings" | "missions">("policies");
 const policyOptions = {
   workIntensity: Object.keys(WORK_INTENSITY) as Array<"relaxed" | "standard" | "crunch">,
   resourcePriority: Object.keys(RESOURCE_PRIORITY) as Array<"stockpile" | "balanced" | "burn">,
-  explorationStance: Object.keys(EXPLORATION_STANCE) as Array<"cautious" | "standard" | "aggressive">,
+  explorationStance: Object.keys(EXPLORATION_STANCE) as Array<
+    "cautious" | "standard" | "aggressive"
+  >,
 };
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function setPolicy(type: "workIntensity" | "resourcePriority" | "explorationStance", value: string) {
+function setPolicy(
+  type: "workIntensity" | "resourcePriority" | "explorationStance",
+  value: string,
+) {
   gameService.setPolicy(type, value);
 }
 
 // Expedition helpers
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-const expeditionTypes = Object.keys(EXPEDITIONS) as Array<"survey" | "salvage" | "science" | "deep">;
+const expeditionTypes = Object.keys(EXPEDITIONS) as Array<
+  "survey" | "salvage" | "science" | "deep"
+>;
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const canStartExpedition = computed(() => {
@@ -51,11 +58,13 @@ function developSite(siteId: string) {
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-const unrevealedSites = computed(() => state.prospectingSites.filter(s => !s.revealed));
+const unrevealedSites = computed(() => state.prospectingSites.filter((s) => !s.revealed));
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-const revealedSites = computed(() => state.prospectingSites.filter(s => s.revealed && !s.developed));
+const revealedSites = computed(() =>
+  state.prospectingSites.filter((s) => s.revealed && !s.developed),
+);
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-const developedSites = computed(() => state.prospectingSites.filter(s => s.developed));
+const developedSites = computed(() => state.prospectingSites.filter((s) => s.developed));
 </script>
 
 <template>
