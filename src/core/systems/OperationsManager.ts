@@ -308,6 +308,10 @@ export class OperationsManager {
       revealed: false,
       developed: false,
       developmentProgress: 0,
+      reserves: 0, // will be set properly when site is developed (Task 3)
+      estimatedReserves: { min: 0, max: 0 }, // will be set properly when revealed (Task 3)
+      remainingReserves: 0, // will be set properly when site is developed (Task 3)
+      linkedBuildingId: null, // no building linked initially
     };
   }
 

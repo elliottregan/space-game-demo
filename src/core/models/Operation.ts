@@ -33,6 +33,11 @@ export interface ProspectingSite {
   revealed: boolean;
   developed: boolean;
   developmentProgress: number;
+  // New fields for deposit depletion
+  reserves: number; // Actual amount (hidden from player)
+  estimatedReserves: { min: number; max: number }; // Player-visible estimate
+  remainingReserves: number; // Current amount left
+  linkedBuildingId: string | null; // Building extracting from this deposit
 }
 
 export interface ExpeditionResult {
