@@ -349,6 +349,69 @@ class GameService {
     return this.gameState.npcInfluence.getLobbyCost(npcId, supportBoost);
   }
 
+  // Deposit methods
+  getDeposits(): ProspectingSite[] {
+    return [...this.gameState.operations.getSites()];
+  }
+
+  linkBuildingToDeposit(buildingId: string, depositId: string): boolean {
+    const success = this.gameState.operations.linkBuildingToDeposit(buildingId, depositId);
+    if (success) {
+      const building = this.gameState.buildings.getBuilding(buildingId);
+      if (building) {
+        building.depositId = depositId;
+      }
+    }
+    this.syncState();
+    return success;
+  }
+
+  getDepositWarningLevel(depositId: string): "none" | "warning" | "critical" | "depleted" {
+    return this.gameState.operations.getDepletionWarningLevel(depositId);
+  }
+
+  // Recycling methods
+  getRecycleValue(buildingId: string): ResourceDelta | undefined {
+    return this.gameState.buildings.getRecycleValue(buildingId);
+  }
+
+  startRecycling(buildingId: string): boolean {
+    const success = this.gameState.buildings.startRecycling(buildingId, this.gameState.resources);
+    this.syncState();
+    return success;
+  }
+
+  rushRecycling(buildingId: string): boolean {
+    const success = this.gameState.buildings.rushRecycling(buildingId, this.gameState.resources);
+    this.syncState();
+    return success;
+  }
+
+  // Repurposing methods
+  canRepurpose(buildingId: string, targetDefId: string): boolean {
+    return this.gameState.buildings.canRepurpose(
+      buildingId,
+      targetDefId,
+      this.gameState.resources,
+      this.gameState.technology
+    );
+  }
+
+  getRepurposeCost(targetDefId: string): ResourceDelta | undefined {
+    return this.gameState.buildings.getRepurposeCost(targetDefId);
+  }
+
+  startRepurposing(buildingId: string, targetDefId: string): boolean {
+    const success = this.gameState.buildings.startRepurposing(
+      buildingId,
+      targetDefId,
+      this.gameState.resources,
+      this.gameState.technology
+    );
+    this.syncState();
+    return success;
+  }
+
   // Game management
   newGame(): void {
     this.gameState = new GameState();

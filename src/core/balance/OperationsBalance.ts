@@ -53,3 +53,63 @@ export const PROSPECTING_QUALITY = {
 
 export const MAX_REVEALED_SITES = 3;
 export const MAX_DEVELOPED_SITES = 5;
+
+// Deposit Reserves by Quality and Resource Type
+export const DEPOSIT_RESERVES = {
+  materials: {
+    poor: { min: 200, max: 400 },
+    moderate: { min: 400, max: 800 },
+    rich: { min: 800, max: 1500 },
+  },
+  water: {
+    poor: { min: 150, max: 300 },
+    moderate: { min: 300, max: 600 },
+    rich: { min: 600, max: 1000 },
+  },
+  research: {
+    poor: { min: 50, max: 100 },
+    moderate: { min: 100, max: 200 },
+    rich: { min: 200, max: 400 },
+  },
+} as const;
+
+// Extraction rate multipliers per quality
+export const EXTRACTION_RATE_MULTIPLIERS = {
+  poor: 0.5,
+  moderate: 1.0,
+  rich: 1.5,
+} as const;
+
+// Estimate uncertainty (as fraction of actual) at extraction thresholds
+export const ESTIMATE_UNCERTAINTY = {
+  initial: 0.3,      // ±30% at start
+  at25Percent: 0.2,  // ±20% after 25% extracted
+  at50Percent: 0.1,  // ±10% after 50% extracted
+  at75Percent: 0.05, // ±5% after 75% extracted
+} as const;
+
+// Depletion warning thresholds
+export const DEPLETION_THRESHOLDS = {
+  warning: 0.25,     // 25% remaining
+  critical: 0.10,    // 10% remaining
+} as const;
+
+// Recycling Recovery Rates (fraction of original build cost)
+export const RECYCLING_RECOVERY_RATES = {
+  standard: 0.4,    // Normal buildings
+  depleted: 0.25,   // Mining buildings on depleted deposits
+  active: 0.5,      // Mining buildings still producing
+  damaged: 0.15,    // Broken buildings
+} as const;
+
+// Recycling takes this fraction of original construction time
+export const RECYCLING_TIME_MULTIPLIER = 0.25;
+
+// Rush recycling reduces materials recovered by this amount
+export const RUSH_RECYCLING_PENALTY = 0.3;
+
+// Repurposing costs this fraction of the NEW building's materials
+export const REPURPOSE_COST_MULTIPLIER = 0.3;
+
+// Repurposing takes this fraction of the NEW building's construction time
+export const REPURPOSE_TIME_MULTIPLIER = 0.5;

@@ -6,6 +6,11 @@ import {
   BUILDING_MODES,
   REPAIR_COST_MULTIPLIER,
   REPAIR_DURATION_SOLS,
+  RECYCLING_RECOVERY_RATES,
+  RECYCLING_TIME_MULTIPLIER,
+  RUSH_RECYCLING_PENALTY,
+  REPURPOSE_COST_MULTIPLIER,
+  REPURPOSE_TIME_MULTIPLIER,
 } from "../balance/OperationsBalance";
 import type { ResourceDelta } from "../models/Resources";
 
@@ -23,6 +28,7 @@ export class BuildingManager {
 
   tick(resources: ResourceManager): GameEvent[] {
     const events: GameEvent[] = [];
+    const buildingsToDelete: string[] = [];
 
     for (const building of this.buildings.values()) {
       const def = this.definitions.get(building.definitionId);
@@ -32,9 +38,15 @@ export class BuildingManager {
         const speedMultiplier = 1.0 + this.constructionSpeedBonus;
         building.constructionProgress += speedMultiplier;
 
-        if (building.constructionProgress >= def.constructionTime) {
+        // Use repurpose time if repurposing
+        const constructionTime = building.repurposeFromDefId
+          ? this.getRepurposeTime(building.definitionId)
+          : def.constructionTime;
+
+        if (building.constructionProgress >= constructionTime) {
           building.status = "active";
-          building.constructionProgress = def.constructionTime;
+          building.constructionProgress = constructionTime;
+          building.repurposeFromDefId = undefined; // Clear repurpose flag
 
           // Add mode-adjusted production/consumption
           const effectiveProd = this.getEffectiveProduction(building.id);
@@ -82,6 +94,34 @@ export class BuildingManager {
           });
         }
       }
+
+      // Handle recycling progress
+      if (building.status === "recycling") {
+        building.recyclingProgress = (building.recyclingProgress || 0) + 1;
+        const recycleTime = this.getRecycleTime(building.id);
+
+        if (building.recyclingProgress >= recycleTime) {
+          const recycleValue = this.getRecycleValue(building.id);
+          if (recycleValue) {
+            resources.add(recycleValue);
+          }
+
+          events.push({
+            type: "BUILDING_RECYCLED",
+            buildingId: building.id,
+            buildingName: def.name,
+            severity: "info",
+            message: `${def.name} recycled for materials.`,
+          });
+
+          buildingsToDelete.push(building.id);
+        }
+      }
+    }
+
+    // Delete buildings that were recycled (outside of iteration loop)
+    for (const id of buildingsToDelete) {
+      this.buildings.delete(id);
     }
 
     return events;
@@ -213,6 +253,183 @@ export class BuildingManager {
     return building?.broken === true && building.repairProgress > 0;
   }
 
+  getRecycleValue(buildingId: string): ResourceDelta | undefined {
+    const building = this.buildings.get(buildingId);
+    if (!building) return undefined;
+
+    const def = this.definitions.get(building.definitionId);
+    if (!def) return undefined;
+
+    let rate = RECYCLING_RECOVERY_RATES.standard;
+
+    if (building.broken) {
+      rate = RECYCLING_RECOVERY_RATES.damaged;
+    } else if (building.status === "idle") {
+      rate = RECYCLING_RECOVERY_RATES.depleted;
+    } else if (building.status === "active" && building.depositId) {
+      rate = RECYCLING_RECOVERY_RATES.active;
+    }
+
+    const result: ResourceDelta = {};
+    for (const [key, value] of Object.entries(def.cost)) {
+      if (value) result[key as keyof ResourceDelta] = Math.floor(value * rate);
+    }
+    return result;
+  }
+
+  getRecycleTime(buildingId: string): number {
+    const building = this.buildings.get(buildingId);
+    if (!building) return 0;
+
+    const def = this.definitions.get(building.definitionId);
+    if (!def) return 0;
+
+    return Math.ceil(def.constructionTime * RECYCLING_TIME_MULTIPLIER);
+  }
+
+  startRecycling(buildingId: string, resources: ResourceManager): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+    if (building.status === "pending" || building.status === "recycling") return false;
+
+    // Remove production/consumption if active
+    if (building.status === "active" && !building.broken) {
+      const oldProd = this.getEffectiveProduction(buildingId);
+      const oldCons = this.getEffectiveConsumption(buildingId);
+      if (Object.keys(oldProd).length > 0) {
+        resources.removeProduction(oldProd);
+      }
+      if (Object.keys(oldCons).length > 0) {
+        resources.removeConsumption(oldCons);
+      }
+    }
+
+    building.status = "recycling";
+    building.recyclingProgress = 0;
+    return true;
+  }
+
+  rushRecycling(buildingId: string, resources: ResourceManager): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+    if (building.status !== "active" && building.status !== "idle") return false;
+
+    // Remove production/consumption if active
+    if (building.status === "active" && !building.broken) {
+      const oldProd = this.getEffectiveProduction(buildingId);
+      const oldCons = this.getEffectiveConsumption(buildingId);
+      if (Object.keys(oldProd).length > 0) {
+        resources.removeProduction(oldProd);
+      }
+      if (Object.keys(oldCons).length > 0) {
+        resources.removeConsumption(oldCons);
+      }
+    }
+
+    // Immediate completion with penalty
+    const recycleValue = this.getRecycleValue(buildingId);
+    if (recycleValue) {
+      const penalizedValue: ResourceDelta = {};
+      for (const [key, value] of Object.entries(recycleValue)) {
+        if (value) {
+          penalizedValue[key as keyof ResourceDelta] = Math.floor(value * (1 - RUSH_RECYCLING_PENALTY));
+        }
+      }
+      resources.add(penalizedValue);
+    }
+
+    this.buildings.delete(buildingId);
+    return true;
+  }
+
+  canRepurpose(
+    buildingId: string,
+    targetDefId: string,
+    resources: ResourceManager,
+    technology: TechnologyTree
+  ): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+    if (building.status !== "active" && building.status !== "idle") return false;
+    if (building.broken) return false; // Must repair before repurposing
+    if (building.assignedWorkers.length > 0) return false; // Must unassign workers first
+
+    const currentDef = this.definitions.get(building.definitionId);
+    if (!currentDef?.repurposeTargets?.includes(targetDefId)) return false;
+
+    const targetDef = this.definitions.get(targetDefId);
+    if (!targetDef) return false;
+
+    // Check tech requirements for target
+    if (targetDef.requiredTech && !technology.isResearched(targetDef.requiredTech)) {
+      return false;
+    }
+
+    // Check cost (30% of target building materials)
+    const cost = this.getRepurposeCost(targetDefId);
+    return cost ? resources.canAfford(cost) : false;
+  }
+
+  getRepurposeCost(targetDefId: string): ResourceDelta | undefined {
+    const targetDef = this.definitions.get(targetDefId);
+    if (!targetDef) return undefined;
+
+    const cost: ResourceDelta = {};
+    for (const [key, value] of Object.entries(targetDef.cost)) {
+      if (value) cost[key as keyof ResourceDelta] = Math.ceil(value * REPURPOSE_COST_MULTIPLIER);
+    }
+    return cost;
+  }
+
+  getRepurposeTime(targetDefId: string): number {
+    const targetDef = this.definitions.get(targetDefId);
+    if (!targetDef) return 0;
+    return Math.ceil(targetDef.constructionTime * REPURPOSE_TIME_MULTIPLIER);
+  }
+
+  startRepurposing(
+    buildingId: string,
+    targetDefId: string,
+    resources: ResourceManager,
+    technology: TechnologyTree
+  ): boolean {
+    if (!this.canRepurpose(buildingId, targetDefId, resources, technology)) return false;
+
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+
+    // Remove production/consumption if active
+    if (building.status === "active" && !building.broken) {
+      const oldProd = this.getEffectiveProduction(buildingId);
+      const oldCons = this.getEffectiveConsumption(buildingId);
+      if (Object.keys(oldProd).length > 0) {
+        resources.removeProduction(oldProd);
+      }
+      if (Object.keys(oldCons).length > 0) {
+        resources.removeConsumption(oldCons);
+      }
+    }
+
+    // Deduct cost
+    const cost = this.getRepurposeCost(targetDefId);
+    if (cost) resources.deduct(cost);
+
+    // Update building
+    const originalDefId = building.definitionId;
+    building.definitionId = targetDefId;
+    building.repurposeFromDefId = originalDefId;
+    building.status = "pending";
+    building.constructionProgress = 0;
+    building.mode = "normal";
+    building.repairProgress = 0;
+
+    // Clear depositId during repurposing - player must re-link to appropriate deposit
+    // (deposit types may not be compatible between building types)
+    building.depositId = undefined;
+
+    return true;
+  }
+
   getBuildingMode(buildingId: string): "conservation" | "normal" | "overdrive" | undefined {
     return this.buildings.get(buildingId)?.mode;
   }
@@ -336,6 +553,8 @@ export class BuildingManager {
         mode: b.mode ?? "normal",
         broken: b.broken ?? false,
         repairProgress: b.repairProgress ?? 0,
+        recyclingProgress: b.recyclingProgress,
+        repurposeFromDefId: b.repurposeFromDefId,
       };
       manager.buildings.set(building.id, building);
     });

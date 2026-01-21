@@ -27,24 +27,23 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
   {
     id: "meteor_strike",
     name: "Meteor Strike",
-    description: "A small meteor has damaged colony infrastructure.",
+    description:
+      "A meteor has impacted near the colony! Scans show it contains valuable minerals, but salvage operations carry risk.",
     minSol: 50,
+    weight: 5,
     chance: 0.03,
     choices: [
       {
-        id: "repair_immediately",
-        text: "Repair immediately",
+        id: "salvage",
+        text: "Send a salvage team (risky but rewarding)",
         effects: {
-          resources: { materials: -50 },
+          resources: { materials: 250 },
         },
       },
       {
-        id: "salvage_meteor",
-        text: "Salvage the meteor for materials",
-        effects: {
-          resources: { materials: 30 },
-          population: -1,
-        },
+        id: "ignore",
+        text: "Too dangerous, leave it alone",
+        effects: {},
       },
     ],
   },
@@ -199,6 +198,59 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
         text: "Quick patch (may fail again)",
         effects: {
           resources: { materials: -20, oxygen: -30 },
+        },
+      },
+    ],
+  },
+  // Resource windfall events
+  {
+    id: "abandoned_cache",
+    name: "Abandoned Supply Cache",
+    description:
+      "Survey teams discovered a supply cache from a previous mission! The containers are intact.",
+    weight: 8,
+    minSol: 30,
+    choices: [
+      {
+        id: "retrieve",
+        text: "Retrieve the supplies",
+        effects: {
+          resources: { materials: 75, food: 50, water: 40 },
+        },
+      },
+    ],
+  },
+  {
+    id: "geological_survey",
+    name: "Earth Survey Data",
+    description:
+      "Mission control has transmitted new geological survey data revealing promising deposit locations.",
+    weight: 6,
+    minSol: 40,
+    choices: [
+      {
+        id: "accept",
+        text: "Update our maps with the new data",
+        effects: {
+          // Placeholder for future deposit reveal functionality
+          resources: { materials: 50 },
+        },
+      },
+    ],
+  },
+  {
+    id: "equipment_windfall",
+    name: "Supply Ship Bonus",
+    description:
+      "The latest colonist transport brought extra equipment. The crew pooled their personal supplies for the colony.",
+    weight: 7,
+    minSol: 20,
+    choices: [
+      {
+        id: "accept",
+        text: "Gratefully accept the supplies",
+        effects: {
+          resources: { materials: 30, power: 20 },
         },
       },
     ],
