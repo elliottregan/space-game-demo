@@ -7,13 +7,21 @@ import type {
   ExplorationStance,
   ActiveExpedition,
   ProspectingSite,
+  ExpeditionType,
+  ExpeditionResult,
 } from "../models/Operation";
 import {
   POLICY_CHANGE_COOLDOWN_SOLS,
   WORK_INTENSITY,
   RESOURCE_PRIORITY,
   EXPLORATION_STANCE,
+  EXPEDITIONS,
+  MAX_CONCURRENT_EXPEDITIONS,
+  EXPEDITION_EXPERIENCE_BONUS,
+  EXPEDITION_EXPERIENCE_CAP,
 } from "../balance/OperationsBalance";
+import type { ResourceManager } from "./ResourceManager";
+import type { ColonyManager } from "./ColonyManager";
 
 export class OperationsManager {
   private policies: ColonyPolicies = {
@@ -26,6 +34,7 @@ export class OperationsManager {
   private expeditions: ActiveExpedition[] = [];
   private sites: ProspectingSite[] = [];
   private expeditionExperience: number = 0;
+  private nextExpeditionId: number = 1;
 
   getPolicies(): Readonly<ColonyPolicies> {
     return { ...this.policies };
@@ -86,9 +95,88 @@ export class OperationsManager {
     return EXPLORATION_STANCE[this.policies.explorationStance].successMod;
   }
 
+  getActiveExpeditions(): readonly ActiveExpedition[] {
+    return [...this.expeditions];
+  }
+
+  canStartExpedition(
+    type: ExpeditionType,
+    resources: ResourceManager,
+    colony: ColonyManager
+  ): boolean {
+    if (this.expeditions.length >= MAX_CONCURRENT_EXPEDITIONS) return false;
+
+    const config = EXPEDITIONS[type];
+    const costMult = this.getExpeditionCostMultiplier();
+    const materialCost = Math.ceil(config.materials * costMult);
+
+    if (!resources.canAfford({ materials: materialCost })) return false;
+
+    const availableCrew = this.getAvailableCrewCount(colony);
+    if (availableCrew < config.crew) return false;
+
+    return true;
+  }
+
+  private getAvailableCrewCount(colony: ColonyManager): number {
+    const assignedCrew = new Set(this.expeditions.flatMap(e => e.assignedCrew));
+    return colony.getColonists().filter(c => !assignedCrew.has(c.id)).length;
+  }
+
+  startExpedition(
+    type: ExpeditionType,
+    crewIds: string[],
+    resources: ResourceManager,
+    colony: ColonyManager,
+    currentSol: number
+  ): boolean {
+    if (!this.canStartExpedition(type, resources, colony)) return false;
+
+    const config = EXPEDITIONS[type];
+    if (crewIds.length !== config.crew) return false;
+
+    // Verify crew exists and is available
+    const assignedCrew = new Set(this.expeditions.flatMap(e => e.assignedCrew));
+    for (const id of crewIds) {
+      if (!colony.getColonist(id) || assignedCrew.has(id)) return false;
+    }
+
+    const costMult = this.getExpeditionCostMultiplier();
+    resources.deduct({ materials: Math.ceil(config.materials * costMult) });
+
+    this.expeditions.push({
+      id: `expedition_${this.nextExpeditionId++}`,
+      type,
+      assignedCrew: crewIds,
+      startedAt: currentSol,
+      solsRemaining: config.duration,
+    });
+
+    return true;
+  }
+
   tick(currentSol: number): GameEvent[] {
     const events: GameEvent[] = [];
-    // Expedition and prospecting tick logic will be added later
+
+    // Update expedition timers
+    for (const expedition of this.expeditions) {
+      expedition.solsRemaining--;
+    }
+
+    // Remove completed expeditions
+    const completed = this.expeditions.filter(e => e.solsRemaining <= 0);
+    this.expeditions = this.expeditions.filter(e => e.solsRemaining > 0);
+
+    for (const expedition of completed) {
+      events.push({
+        type: "EXPEDITION_COMPLETE",
+        expeditionId: expedition.id,
+        expeditionType: expedition.type,
+        severity: "info",
+        message: `${expedition.type} expedition has returned!`,
+      });
+    }
+
     return events;
   }
 
