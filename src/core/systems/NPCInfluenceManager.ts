@@ -1,5 +1,24 @@
 // src/core/systems/NPCInfluenceManager.ts
 
+import type { GameEvent } from '../models/GameEvent';
+import type { ResourceDelta } from '../models/Resources';
+import type {
+  NPC,
+  NPCFaction,
+  Project,
+  ProjectType,
+  ActiveProject,
+  Council,
+} from '../models/NPCInfluence';
+import {
+  DRIFT_RATE,
+  PASS_THRESHOLD,
+  PROJECT_VOTE_DELAY,
+  TRANSMISSION_FACTORS,
+} from '../balance/NPCInfluenceBalance';
+
+// ============ Matrix Utilities ============
+
 /**
  * Multiply two matrices A × B
  * A is m×n, B is n×p, result is m×p
@@ -85,4 +104,125 @@ export function updateSupport(
   }
 
   return newSupport;
+}
+
+// ============ Manager Class ============
+
+export class NPCInfluenceManager {
+  private npcs: NPC[];
+  private npcIndex: Map<string, number> = new Map();
+  private projects: Map<string, Project> = new Map();
+  private relationshipMatrix: number[][];
+  private councils: Council[] = [];
+  private activeProject: ActiveProject | null = null;
+
+  /** Mutable transmission factors (modified by project outcomes) */
+  private transmissionFactors: Record<ProjectType, Record<NPCFaction, Record<NPCFaction, number>>>;
+
+  constructor(
+    npcs: NPC[],
+    relationships: Record<string, number>,
+    projects: Project[]
+  ) {
+    this.npcs = [...npcs];
+
+    // Build NPC index for fast lookup
+    npcs.forEach((npc, i) => this.npcIndex.set(npc.id, i));
+
+    // Store projects
+    projects.forEach((p) => this.projects.set(p.id, p));
+
+    // Build relationship matrix
+    this.relationshipMatrix = this.buildRelationshipMatrix(relationships);
+
+    // Deep copy transmission factors so we can modify them
+    this.transmissionFactors = JSON.parse(JSON.stringify(TRANSMISSION_FACTORS));
+  }
+
+  private buildRelationshipMatrix(relationships: Record<string, number>): number[][] {
+    const N = this.npcs.length;
+    const matrix: number[][] = Array(N)
+      .fill(0)
+      .map(() => Array(N).fill(0));
+
+    for (const [key, weight] of Object.entries(relationships)) {
+      const [fromId, toId] = key.split(':');
+      const fromIdx = this.npcIndex.get(fromId);
+      const toIdx = this.npcIndex.get(toId);
+
+      if (fromIdx !== undefined && toIdx !== undefined) {
+        // W[i][j] = influence from j to i
+        // So if "fromId:toId" means fromId influences toId, we set W[toIdx][fromIdx]
+        matrix[toIdx][fromIdx] = weight;
+      }
+    }
+
+    return matrix;
+  }
+
+  // ============ Getters ============
+
+  getNPCs(): readonly NPC[] {
+    return this.npcs;
+  }
+
+  getProjects(): Project[] {
+    return Array.from(this.projects.values());
+  }
+
+  getProject(id: string): Project | undefined {
+    return this.projects.get(id);
+  }
+
+  getRelationshipMatrix(): readonly number[][] {
+    return this.relationshipMatrix;
+  }
+
+  getActiveProject(): ActiveProject | null {
+    return this.activeProject;
+  }
+
+  getCouncils(): readonly Council[] {
+    return this.councils;
+  }
+
+  // ============ Serialization ============
+
+  toJSON() {
+    return {
+      relationshipMatrix: this.relationshipMatrix,
+      councils: this.councils,
+      activeProject: this.activeProject
+        ? {
+            projectId: this.activeProject.projectId,
+            supportLevels: Object.fromEntries(this.activeProject.supportLevels),
+            solsRemaining: this.activeProject.solsRemaining,
+          }
+        : null,
+      transmissionFactors: this.transmissionFactors,
+    };
+  }
+
+  static fromJSON(
+    data: ReturnType<NPCInfluenceManager['toJSON']>,
+    npcs: NPC[],
+    relationships: Record<string, number>,
+    projects: Project[]
+  ): NPCInfluenceManager {
+    const manager = new NPCInfluenceManager(npcs, relationships, projects);
+
+    manager.relationshipMatrix = data.relationshipMatrix;
+    manager.councils = data.councils;
+    manager.transmissionFactors = data.transmissionFactors;
+
+    if (data.activeProject) {
+      manager.activeProject = {
+        projectId: data.activeProject.projectId,
+        supportLevels: new Map(Object.entries(data.activeProject.supportLevels).map(([k, v]) => [k, Number(v)])),
+        solsRemaining: data.activeProject.solsRemaining,
+      };
+    }
+
+    return manager;
+  }
 }
