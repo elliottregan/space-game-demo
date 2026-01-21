@@ -2,7 +2,7 @@ import type { GameEvent } from "../models/GameEvent";
 import type { Building, BuildingDefinition } from "../models/Building";
 import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
-import { BUILDING_MODES } from "../balance/OperationsBalance";
+import { BUILDING_MODES, REPAIR_COST_MULTIPLIER, REPAIR_DURATION_SOLS } from "../balance/OperationsBalance";
 import type { ResourceDelta } from "../models/Resources";
 
 export class BuildingManager {
@@ -45,6 +45,23 @@ export class BuildingManager {
             buildingName: def.name,
             severity: "info",
             message: `${def.name} construction complete!`,
+          });
+        }
+      }
+
+      // Handle repairs
+      if (building.broken && building.repairProgress > 0) {
+        building.repairProgress += 1;
+        if (building.repairProgress >= REPAIR_DURATION_SOLS) {
+          building.broken = false;
+          building.repairProgress = 0;
+
+          events.push({
+            type: "BUILDING_REPAIRED",
+            buildingId: building.id,
+            buildingName: def.name,
+            severity: "info",
+            message: `${def.name} repaired!`,
           });
         }
       }
@@ -99,6 +116,46 @@ export class BuildingManager {
     if (!building || building.broken) return false;
     building.mode = mode;
     return true;
+  }
+
+  breakBuilding(buildingId: string): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building || building.status !== "active") return false;
+
+    building.broken = true;
+    building.mode = "normal";
+    return true;
+  }
+
+  getRepairCost(buildingId: string): ResourceDelta | undefined {
+    const building = this.buildings.get(buildingId);
+    if (!building || !building.broken) return undefined;
+
+    const def = this.definitions.get(building.definitionId);
+    if (!def) return undefined;
+
+    const cost: ResourceDelta = {};
+    for (const [key, value] of Object.entries(def.cost)) {
+      if (value) cost[key as keyof ResourceDelta] = Math.ceil(value * REPAIR_COST_MULTIPLIER);
+    }
+    return cost;
+  }
+
+  startRepair(buildingId: string, resources: ResourceManager): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building || !building.broken) return false;
+
+    const cost = this.getRepairCost(buildingId);
+    if (!cost || !resources.canAfford(cost)) return false;
+
+    resources.deduct(cost);
+    building.repairProgress = 0.01; // Mark as repairing
+    return true;
+  }
+
+  isRepairing(buildingId: string): boolean {
+    const building = this.buildings.get(buildingId);
+    return building?.broken === true && building.repairProgress > 0;
   }
 
   getBuildingMode(buildingId: string): "conservation" | "normal" | "overdrive" | undefined {
