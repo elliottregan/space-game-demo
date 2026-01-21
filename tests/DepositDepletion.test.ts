@@ -198,3 +198,34 @@ describe("Recycling Balance Constants", () => {
     expect(REPURPOSE_TIME_MULTIPLIER).toBe(0.5);
   });
 });
+
+import { RANDOM_EVENTS } from "../src/core/data/events";
+
+describe("Resource Events", () => {
+  test("meteor strike event exists with salvage opportunity", () => {
+    const meteorEvent = RANDOM_EVENTS.find((e) => e.id === "meteor_strike");
+    expect(meteorEvent).toBeDefined();
+    expect(meteorEvent?.choices.some((c) => c.id === "salvage")).toBe(true);
+  });
+
+  test("abandoned cache event provides resources", () => {
+    const cacheEvent = RANDOM_EVENTS.find((e) => e.id === "abandoned_cache");
+    expect(cacheEvent).toBeDefined();
+    expect(cacheEvent?.choices[0].effects?.resources?.materials).toBe(75);
+  });
+
+  test("geological survey event reveals deposits", () => {
+    const surveyEvent = RANDOM_EVENTS.find(
+      (e) => e.id === "geological_survey"
+    );
+    expect(surveyEvent).toBeDefined();
+  });
+
+  test("equipment windfall event provides supplies", () => {
+    const windfallEvent = RANDOM_EVENTS.find(
+      (e) => e.id === "equipment_windfall"
+    );
+    expect(windfallEvent).toBeDefined();
+    expect(windfallEvent?.choices[0].effects?.resources?.materials).toBe(30);
+  });
+});
