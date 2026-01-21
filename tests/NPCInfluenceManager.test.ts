@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach } from 'bun:test';
 import { NPCInfluenceManager } from '../src/core/systems/NPCInfluenceManager';
 import { ResourceManager } from '../src/core/systems/ResourceManager';
 import { NPCS, INITIAL_RELATIONSHIPS, PROJECTS } from '../src/core/data/npcs';
+import { LOBBY_BASE_COST } from '../src/core/balance/NPCInfluenceBalance';
 
 describe('NPCInfluenceManager', () => {
   let manager: NPCInfluenceManager;
@@ -103,6 +104,74 @@ describe('NPCInfluenceManager', () => {
 
       expect(result).toBe(false);
       expect(manager.getActiveProject()!.projectId).toBe('generation_ship');
+    });
+  });
+
+  describe('lobbyNPC', () => {
+    it('should increase NPC support for active project', () => {
+      const resources = new ResourceManager({
+        food: 100,
+        oxygen: 100,
+        water: 100,
+        power: 100,
+        materials: 500,
+      });
+
+      manager.proposeProject('generation_ship', resources);
+
+      const result = manager.lobbyNPC('chen_wei', 0.3, resources);
+
+      expect(result).toBe(true);
+      expect(manager.getActiveProject()!.supportLevels.get('chen_wei')).toBe(0.3);
+    });
+
+    it('should cost materials based on NPC influence and boost amount', () => {
+      const resources = new ResourceManager({
+        food: 100,
+        oxygen: 100,
+        water: 100,
+        power: 100,
+        materials: 500,
+      });
+
+      manager.proposeProject('generation_ship', resources);
+      const startMaterials = resources.getResources().materials;
+
+      // chen_wei has influence 1.5, boosting by 0.3
+      // Cost = LOBBY_BASE_COST * influence * (boost / 0.1) = 10 * 1.5 * 3 = 45
+      manager.lobbyNPC('chen_wei', 0.3, resources);
+
+      expect(resources.getResources().materials).toBe(startMaterials - 45);
+    });
+
+    it('should fail if no active project', () => {
+      const resources = new ResourceManager({
+        food: 100,
+        oxygen: 100,
+        water: 100,
+        power: 100,
+        materials: 500,
+      });
+
+      const result = manager.lobbyNPC('chen_wei', 0.3, resources);
+
+      expect(result).toBe(false);
+    });
+
+    it('should clamp support to [-1, 1]', () => {
+      const resources = new ResourceManager({
+        food: 100,
+        oxygen: 100,
+        water: 100,
+        power: 100,
+        materials: 1000,
+      });
+
+      manager.proposeProject('generation_ship', resources);
+      manager.lobbyNPC('chen_wei', 0.8, resources);
+      manager.lobbyNPC('chen_wei', 0.8, resources); // Would be 1.6, should clamp
+
+      expect(manager.getActiveProject()!.supportLevels.get('chen_wei')).toBe(1.0);
     });
   });
 });

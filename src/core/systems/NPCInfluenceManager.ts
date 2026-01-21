@@ -13,6 +13,7 @@ import type {
 } from '../models/NPCInfluence';
 import {
   DRIFT_RATE,
+  LOBBY_BASE_COST,
   PASS_THRESHOLD,
   PROJECT_VOTE_DELAY,
   TRANSMISSION_FACTORS,
@@ -223,6 +224,49 @@ export class NPCInfluenceManager {
       supportLevels,
       solsRemaining: PROJECT_VOTE_DELAY,
     };
+
+    return true;
+  }
+
+  // ============ Lobbying ============
+
+  /**
+   * Calculate the cost to lobby an NPC for a given support boost.
+   */
+  getLobbyCost(npcId: string, supportBoost: number): number {
+    const npcIdx = this.npcIndex.get(npcId);
+    if (npcIdx === undefined) return Infinity;
+
+    const npc = this.npcs[npcIdx];
+    // Cost scales with NPC influence and boost amount
+    return Math.ceil(LOBBY_BASE_COST * npc.influence * (supportBoost / 0.1));
+  }
+
+  /**
+   * Lobby an NPC to increase their support for the active project.
+   * @returns true if lobbying succeeded
+   */
+  lobbyNPC(npcId: string, supportBoost: number, resources: ResourceManager): boolean {
+    if (!this.activeProject) {
+      return false;
+    }
+
+    const npcIdx = this.npcIndex.get(npcId);
+    if (npcIdx === undefined) {
+      return false;
+    }
+
+    const cost: ResourceDelta = { materials: this.getLobbyCost(npcId, supportBoost) };
+
+    if (!resources.canAfford(cost)) {
+      return false;
+    }
+
+    resources.deduct(cost);
+
+    const currentSupport = this.activeProject.supportLevels.get(npcId) || 0;
+    const newSupport = Math.max(-1.0, Math.min(1.0, currentSupport + supportBoost));
+    this.activeProject.supportLevels.set(npcId, newSupport);
 
     return true;
   }
