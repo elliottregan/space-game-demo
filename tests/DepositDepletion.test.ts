@@ -55,3 +55,22 @@ describe("Deposit Balance Constants", () => {
     expect(DEPLETION_THRESHOLDS.critical).toBe(0.10);
   });
 });
+
+import { OperationsManager } from "../src/core/systems/OperationsManager";
+
+describe("OperationsManager Deposit Generation", () => {
+  test("generateProspectingSite creates site with reserves", () => {
+    const manager = new OperationsManager();
+    manager.addUnrevealedSite();
+    const sites = manager.getSites();
+
+    expect(sites.length).toBe(1);
+    const site = sites[0];
+
+    expect(site.reserves).toBeGreaterThan(0);
+    expect(site.remainingReserves).toBe(site.reserves);
+    expect(site.estimatedReserves.min).toBeLessThan(site.reserves);
+    expect(site.estimatedReserves.max).toBeGreaterThan(site.reserves);
+    expect(site.linkedBuildingId).toBeNull();
+  });
+});

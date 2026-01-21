@@ -23,6 +23,8 @@ import {
   PROSPECTING_QUALITY,
   MAX_REVEALED_SITES,
   MAX_DEVELOPED_SITES,
+  DEPOSIT_RESERVES,
+  ESTIMATE_UNCERTAINTY,
 } from "../balance/OperationsBalance";
 import type { ResourceManager } from "./ResourceManager";
 import type { ColonyManager } from "./ColonyManager";
@@ -301,17 +303,29 @@ export class OperationsManager {
     const types: Array<"water" | "materials" | "research"> = ["water", "materials", "research"];
     const qualities: Array<"poor" | "moderate" | "rich"> = ["poor", "moderate", "rich"];
 
+    const resourceType = types[Math.floor(Math.random() * types.length)];
+    const quality = qualities[Math.floor(Math.random() * qualities.length)];
+
+    // Calculate reserves based on quality and resource type
+    const reserveRange = DEPOSIT_RESERVES[resourceType][quality];
+    const reserves = reserveRange.min + Math.floor(Math.random() * (reserveRange.max - reserveRange.min));
+
+    // Calculate estimated reserves with uncertainty
+    const uncertainty = ESTIMATE_UNCERTAINTY.initial;
+    const estimatedMin = Math.floor(reserves * (1 - uncertainty));
+    const estimatedMax = Math.ceil(reserves * (1 + uncertainty));
+
     return {
       id: `site_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      resourceType: types[Math.floor(Math.random() * types.length)],
-      quality: qualities[Math.floor(Math.random() * qualities.length)],
+      resourceType,
+      quality,
       revealed: false,
       developed: false,
       developmentProgress: 0,
-      reserves: 0, // will be set properly when site is developed (Task 3)
-      estimatedReserves: { min: 0, max: 0 }, // will be set properly when revealed (Task 3)
-      remainingReserves: 0, // will be set properly when site is developed (Task 3)
-      linkedBuildingId: null, // no building linked initially
+      reserves,
+      estimatedReserves: { min: estimatedMin, max: estimatedMax },
+      remainingReserves: reserves,
+      linkedBuildingId: null,
     };
   }
 
