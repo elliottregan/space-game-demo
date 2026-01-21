@@ -32,7 +32,7 @@ The game uses a strict separation between game logic and UI:
 
 ### Game Loop
 
-`GameState.tick()` executes systems in order: Resources → Buildings → Workforce → Colony → Technology → Politics → Events → Victory. Each system returns `GameEvent[]` for the event log.
+`GameState.tick()` executes systems in order: Resources → Buildings → Workforce → Colony → Technology → Politics → Operations → Events → Victory. Each system returns `GameEvent[]` for the event log.
 
 ### Data Flow
 

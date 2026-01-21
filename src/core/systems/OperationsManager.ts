@@ -159,7 +159,7 @@ export class OperationsManager {
     return true;
   }
 
-  tick(_currentSol: number): GameEvent[] {
+  tick(currentSol: number, resources: ResourceManager, colony: ColonyManager): GameEvent[] {
     const events: GameEvent[] = [];
 
     // Update expedition timers
@@ -167,21 +167,126 @@ export class OperationsManager {
       expedition.solsRemaining--;
     }
 
-    // Remove completed expeditions
+    // Resolve completed expeditions
     const completed = this.expeditions.filter(e => e.solsRemaining <= 0);
     this.expeditions = this.expeditions.filter(e => e.solsRemaining > 0);
 
     for (const expedition of completed) {
-      events.push({
-        type: "EXPEDITION_COMPLETE",
-        expeditionId: expedition.id,
-        expeditionType: expedition.type,
-        severity: "info",
-        message: `${expedition.type} expedition has returned!`,
-      });
+      const result = this.resolveExpedition(expedition, colony);
+
+      // Apply results
+      if (result.success && result.rewards) {
+        if (result.rewards.materials) {
+          resources.add({ materials: result.rewards.materials });
+        }
+        if (result.rewards.site) {
+          this.sites.push(result.rewards.site);
+        }
+        if (result.rewards.researchBonus) {
+          result.rewards.researchBonus.expiresAt = currentSol + 50;
+        }
+
+        events.push({
+          type: "EXPEDITION_SUCCESS",
+          expeditionId: expedition.id,
+          expeditionType: expedition.type,
+          severity: "info",
+          message: `${expedition.type} expedition succeeded!${result.rewards.materials ? ` Gained ${result.rewards.materials} materials.` : ""}${result.rewards.site ? " Discovered a prospecting site!" : ""}`,
+        });
+      } else {
+        // Handle failures
+        if (result.losses?.crewLost && result.losses.crewLost.length > 0) {
+          for (const crewId of result.losses.crewLost) {
+            colony.removeColonist(crewId);
+          }
+          events.push({
+            type: "EXPEDITION_FAILURE",
+            expeditionId: expedition.id,
+            expeditionType: expedition.type,
+            severity: "critical",
+            message: `${expedition.type} expedition failed! Lost ${result.losses.crewLost.length} crew member(s).`,
+          });
+        } else {
+          events.push({
+            type: "EXPEDITION_FAILURE",
+            expeditionId: expedition.id,
+            expeditionType: expedition.type,
+            severity: "warning",
+            message: `${expedition.type} expedition failed. Crew returned safely.`,
+          });
+        }
+      }
     }
 
     return events;
+  }
+
+  private resolveExpedition(expedition: ActiveExpedition, colony: ColonyManager): ExpeditionResult {
+    const config = EXPEDITIONS[expedition.type];
+    const successChance = config.baseSuccess + this.getExpeditionSuccessModifier() +
+      Math.min(this.expeditionExperience, EXPEDITION_EXPERIENCE_CAP);
+
+    const success = Math.random() < successChance;
+    this.expeditionExperience = Math.min(
+      this.expeditionExperience + EXPEDITION_EXPERIENCE_BONUS,
+      EXPEDITION_EXPERIENCE_CAP
+    );
+
+    if (success) {
+      return this.getSuccessResult(expedition.type);
+    } else {
+      return this.getFailureResult(expedition, colony);
+    }
+  }
+
+  private getSuccessResult(type: ExpeditionType): ExpeditionResult {
+    switch (type) {
+      case "survey":
+        return {
+          success: true,
+          type,
+          rewards: {
+            site: this.generateProspectingSite(),
+          },
+        };
+      case "salvage":
+        return {
+          success: true,
+          type,
+          rewards: { materials: 50 + Math.floor(Math.random() * 100) },
+        };
+      case "science":
+        return {
+          success: true,
+          type,
+          rewards: { researchBonus: { multiplier: 1.2, expiresAt: 0 } },
+        };
+      case "deep":
+        return {
+          success: true,
+          type,
+          rewards: { discovery: "rare_minerals", materials: 100 + Math.floor(Math.random() * 150) },
+        };
+    }
+  }
+
+  private getFailureResult(expedition: ActiveExpedition, _colony: ColonyManager): ExpeditionResult {
+    const type = expedition.type;
+    const crewLost: string[] = [];
+
+    if (type === "salvage" || type === "deep") {
+      // Lose 1-2 crew on dangerous expeditions
+      const lossCount = type === "deep" ? 1 + Math.floor(Math.random() * 2) : 1;
+      for (let i = 0; i < lossCount && i < expedition.assignedCrew.length; i++) {
+        crewLost.push(expedition.assignedCrew[i]);
+      }
+    }
+
+    return {
+      success: false,
+      type,
+      losses: { crewLost },
+    };
   }
 
   getSites(): readonly ProspectingSite[] {

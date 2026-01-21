@@ -32,11 +32,14 @@ export class BuildingManager {
           building.status = "active";
           building.constructionProgress = def.constructionTime;
 
-          if (def.production) {
-            resources.addProduction(def.production);
+          // Add mode-adjusted production/consumption
+          const effectiveProd = this.getEffectiveProduction(building.id);
+          const effectiveCons = this.getEffectiveConsumption(building.id);
+          if (Object.keys(effectiveProd).length > 0) {
+            resources.addProduction(effectiveProd);
           }
-          if (def.consumption) {
-            resources.addConsumption(def.consumption);
+          if (Object.keys(effectiveCons).length > 0) {
+            resources.addConsumption(effectiveCons);
           }
 
           events.push({
@@ -55,6 +58,16 @@ export class BuildingManager {
         if (building.repairProgress >= REPAIR_DURATION_SOLS) {
           building.broken = false;
           building.repairProgress = 0;
+
+          // Re-add production/consumption after repair
+          const effectiveProd = this.getEffectiveProduction(building.id);
+          const effectiveCons = this.getEffectiveConsumption(building.id);
+          if (Object.keys(effectiveProd).length > 0) {
+            resources.addProduction(effectiveProd);
+          }
+          if (Object.keys(effectiveCons).length > 0) {
+            resources.addConsumption(effectiveCons);
+          }
 
           events.push({
             type: "BUILDING_REPAIRED",
@@ -111,16 +124,50 @@ export class BuildingManager {
     return this.buildings.get(id);
   }
 
-  setBuildingMode(buildingId: string, mode: "conservation" | "normal" | "overdrive"): boolean {
+  setBuildingMode(buildingId: string, mode: "conservation" | "normal" | "overdrive", resources: ResourceManager): boolean {
     const building = this.buildings.get(buildingId);
-    if (!building || building.broken) return false;
+    if (!building || building.status !== "active" || building.broken) return false;
+    if (building.mode === mode) return true; // No change needed
+
+    // Remove old production/consumption
+    const oldProd = this.getEffectiveProduction(buildingId);
+    const oldCons = this.getEffectiveConsumption(buildingId);
+    if (Object.keys(oldProd).length > 0) {
+      resources.removeProduction(oldProd);
+    }
+    if (Object.keys(oldCons).length > 0) {
+      resources.removeConsumption(oldCons);
+    }
+
+    // Update mode
     building.mode = mode;
+
+    // Add new production/consumption
+    const newProd = this.getEffectiveProduction(buildingId);
+    const newCons = this.getEffectiveConsumption(buildingId);
+    if (Object.keys(newProd).length > 0) {
+      resources.addProduction(newProd);
+    }
+    if (Object.keys(newCons).length > 0) {
+      resources.addConsumption(newCons);
+    }
+
     return true;
   }
 
-  breakBuilding(buildingId: string): boolean {
+  breakBuilding(buildingId: string, resources: ResourceManager): boolean {
     const building = this.buildings.get(buildingId);
     if (!building || building.status !== "active") return false;
+
+    // Remove production/consumption before breaking
+    const oldProd = this.getEffectiveProduction(buildingId);
+    const oldCons = this.getEffectiveConsumption(buildingId);
+    if (Object.keys(oldProd).length > 0) {
+      resources.removeProduction(oldProd);
+    }
+    if (Object.keys(oldCons).length > 0) {
+      resources.removeConsumption(oldCons);
+    }
 
     building.broken = true;
     building.mode = "normal";
@@ -274,7 +321,16 @@ export class BuildingManager {
     defs: BuildingDefinition[],
   ): BuildingManager {
     const manager = new BuildingManager(defs);
-    data.buildings.forEach((b) => manager.buildings.set(b.id, b));
+    data.buildings.forEach((b) => {
+      // Add defaults for new fields (backward compatibility)
+      const building: Building = {
+        ...b,
+        mode: b.mode ?? "normal",
+        broken: b.broken ?? false,
+        repairProgress: b.repairProgress ?? 0,
+      };
+      manager.buildings.set(building.id, building);
+    });
     manager.nextId = data.nextId;
     manager.constructionSpeedBonus = data.constructionSpeedBonus || 0;
     return manager;

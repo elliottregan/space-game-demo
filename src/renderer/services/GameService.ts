@@ -262,7 +262,7 @@ class GameService {
   }
 
   setBuildingMode(buildingId: string, mode: "conservation" | "normal" | "overdrive"): boolean {
-    const result = this.gameState.buildings.setBuildingMode(buildingId, mode);
+    const result = this.gameState.buildings.setBuildingMode(buildingId, mode, this.gameState.resources);
     this.syncState();
     return result;
   }

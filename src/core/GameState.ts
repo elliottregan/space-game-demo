@@ -72,7 +72,7 @@ export class GameState {
     events.push(...this.politics.tick());
 
     // 6.5. Operations tick
-    events.push(...this.operations.tick(this.currentSol));
+    events.push(...this.operations.tick(this.currentSol, this.resources, this.colony));
 
     // 7. Random events tick
     events.push(...this.events.tick(this.currentSol));

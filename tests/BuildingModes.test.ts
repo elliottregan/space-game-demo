@@ -33,7 +33,10 @@ describe("Building Modes", () => {
     const building = buildings.startBuilding("solar_panel", resources, {
       isResearched: () => true,
     } as never);
-    buildings.setBuildingMode(building!.id, "overdrive");
+    // Complete construction first - mode can only change on active buildings
+    for (let i = 0; i < 10; i++) buildings.tick(resources);
+
+    buildings.setBuildingMode(building!.id, "overdrive", resources);
     expect(buildings.getBuilding(building!.id)?.mode).toBe("overdrive");
   });
 
@@ -53,7 +56,7 @@ describe("Building Modes", () => {
     for (let i = 0; i < 10; i++) buildings.tick(resources);
 
     const normalProd = buildings.getEffectiveProduction(building!.id);
-    buildings.setBuildingMode(building!.id, "overdrive");
+    buildings.setBuildingMode(building!.id, "overdrive", resources);
     const overdriveProd = buildings.getEffectiveProduction(building!.id);
 
     expect(overdriveProd.power).toBe(normalProd.power! * 1.5);
@@ -81,7 +84,7 @@ describe("Building Breakdown", () => {
     } as never);
     for (let i = 0; i < 10; i++) buildings.tick(resources);
 
-    buildings.breakBuilding(building!.id);
+    buildings.breakBuilding(building!.id, resources);
     expect(buildings.getBuilding(building!.id)?.broken).toBe(true);
   });
 
@@ -91,7 +94,7 @@ describe("Building Breakdown", () => {
     } as never);
     for (let i = 0; i < 10; i++) buildings.tick(resources);
 
-    buildings.breakBuilding(building!.id);
+    buildings.breakBuilding(building!.id, resources);
     const prod = buildings.getEffectiveProduction(building!.id);
     expect(prod).toEqual({});
   });
@@ -101,7 +104,7 @@ describe("Building Breakdown", () => {
       isResearched: () => true,
     } as never);
     for (let i = 0; i < 10; i++) buildings.tick(resources);
-    buildings.breakBuilding(building!.id);
+    buildings.breakBuilding(building!.id, resources);
 
     const repairCost = buildings.getRepairCost(building!.id);
     expect(repairCost).toBeDefined();
@@ -116,7 +119,7 @@ describe("Building Breakdown", () => {
       isResearched: () => true,
     } as never);
     for (let i = 0; i < 10; i++) buildings.tick(resources);
-    buildings.breakBuilding(building!.id);
+    buildings.breakBuilding(building!.id, resources);
     buildings.startRepair(building!.id, resources);
 
     for (let i = 0; i < 3; i++) buildings.tick(resources);
