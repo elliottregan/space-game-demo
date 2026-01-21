@@ -1,14 +1,14 @@
 <!-- src/renderer/components/NPCInfluencePanel.vue -->
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { gameService } from '../services/GameService';
+import { computed, ref } from "vue";
+import { gameService } from "../services/GameService";
 
 const state = gameService.getState();
 
 const selectedProject = ref<string | null>(null);
 const selectedNPCForLobby = ref<string | null>(null);
 const lobbyAmount = ref(0.3);
-const councilName = ref('');
+const councilName = ref("");
 const selectedCouncilMembers = ref<string[]>([]);
 
 function canAfford(cost: Record<string, number>): boolean {
@@ -22,7 +22,7 @@ function canAfford(cost: Record<string, number>): boolean {
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const canProposeProject = computed(() => {
   if (!selectedProject.value || state.npcInfluence.activeProject) return false;
-  const project = state.npcInfluence.projects.find(p => p.id === selectedProject.value);
+  const project = state.npcInfluence.projects.find((p) => p.id === selectedProject.value);
   if (!project) return false;
   return canAfford(project.proposalCost);
 });
@@ -40,9 +40,11 @@ const canLobby = computed(() => {
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const canCreateCouncil = computed(() => {
-  return selectedCouncilMembers.value.length >= 2 &&
-         councilName.value.trim() !== '' &&
-         state.resources.materials >= 50;
+  return (
+    selectedCouncilMembers.value.length >= 2 &&
+    councilName.value.trim() !== "" &&
+    state.resources.materials >= 50
+  );
 });
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -64,7 +66,7 @@ function lobbyNPC() {
 function createCouncil() {
   if (councilName.value && selectedCouncilMembers.value.length >= 2) {
     gameService.createCouncil(councilName.value, selectedCouncilMembers.value);
-    councilName.value = '';
+    councilName.value = "";
     selectedCouncilMembers.value = [];
   }
 }
@@ -82,18 +84,22 @@ function toggleCouncilMember(npcId: string) {
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function getFactionColor(faction: string): string {
   switch (faction) {
-    case 'futurist': return 'var(--color-info)';
-    case 'progressive': return 'var(--color-positive)';
-    case 'traditionalist': return 'var(--color-warning)';
-    default: return 'var(--color-muted)';
+    case "futurist":
+      return "var(--color-info)";
+    case "progressive":
+      return "var(--color-positive)";
+    case "traditionalist":
+      return "var(--color-warning)";
+    default:
+      return "var(--color-muted)";
   }
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function getSupportColor(support: number): string {
-  if (support > 0.3) return 'var(--color-positive)';
-  if (support < -0.3) return 'var(--color-danger)';
-  return 'var(--color-muted)';
+  if (support > 0.3) return "var(--color-positive)";
+  if (support < -0.3) return "var(--color-danger)";
+  return "var(--color-muted)";
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template

@@ -8,7 +8,11 @@ import type { Colonist, ColonistRole } from "../../core/models/Colonist";
 import type { Faction, Decision, DecisionResult } from "../../core/models/Politics";
 import type { RandomEventDefinition, EventChoice, ActiveEvent } from "../../core/models/GameEvent";
 import type { VictoryState } from "../../core/systems/VictoryManager";
-import type { ColonyPolicies, ActiveExpedition, ProspectingSite } from "../../core/models/Operation";
+import type {
+  ColonyPolicies,
+  ActiveExpedition,
+  ProspectingSite,
+} from "../../core/models/Operation";
 import type { NPC, Project, Council } from "../../core/models/NPCInfluence";
 
 interface GameUIState {
@@ -145,7 +149,9 @@ class GameService {
 
     // Operations
     this.state.policies = this.gameState.operations.getPolicies();
-    this.state.policyCooldownRemaining = this.gameState.operations.getSolsUntilPolicyChange(this.gameState.currentSol);
+    this.state.policyCooldownRemaining = this.gameState.operations.getSolsUntilPolicyChange(
+      this.gameState.currentSol,
+    );
     this.state.activeExpeditions = [...this.gameState.operations.getActiveExpeditions()];
     this.state.prospectingSites = [...this.gameState.operations.getSites()];
 
@@ -265,8 +271,15 @@ class GameService {
   }
 
   // Operations actions
-  setPolicy(type: "workIntensity" | "resourcePriority" | "explorationStance", value: string): boolean {
-    const result = this.gameState.operations.setPolicy(type, value as never, this.gameState.currentSol);
+  setPolicy(
+    type: "workIntensity" | "resourcePriority" | "explorationStance",
+    value: string,
+  ): boolean {
+    const result = this.gameState.operations.setPolicy(
+      type,
+      value as never,
+      this.gameState.currentSol,
+    );
     this.syncState();
     return result;
   }
@@ -277,7 +290,7 @@ class GameService {
       crewIds,
       this.gameState.resources,
       this.gameState.colony,
-      this.gameState.currentSol
+      this.gameState.currentSol,
     );
     this.syncState();
     return result;
@@ -296,7 +309,11 @@ class GameService {
   }
 
   setBuildingMode(buildingId: string, mode: "conservation" | "normal" | "overdrive"): boolean {
-    const result = this.gameState.buildings.setBuildingMode(buildingId, mode, this.gameState.resources);
+    const result = this.gameState.buildings.setBuildingMode(
+      buildingId,
+      mode,
+      this.gameState.resources,
+    );
     this.syncState();
     return result;
   }
@@ -309,13 +326,21 @@ class GameService {
   }
 
   lobbyNPC(npcId: string, supportBoost: number): boolean {
-    const result = this.gameState.npcInfluence.lobbyNPC(npcId, supportBoost, this.gameState.resources);
+    const result = this.gameState.npcInfluence.lobbyNPC(
+      npcId,
+      supportBoost,
+      this.gameState.resources,
+    );
     this.syncState();
     return result;
   }
 
   createCouncil(name: string, memberIds: string[]): boolean {
-    const result = this.gameState.npcInfluence.createCouncil(name, memberIds, this.gameState.resources);
+    const result = this.gameState.npcInfluence.createCouncil(
+      name,
+      memberIds,
+      this.gameState.resources,
+    );
     this.syncState();
     return result;
   }

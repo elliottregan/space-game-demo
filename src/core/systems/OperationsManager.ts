@@ -60,7 +60,7 @@ export class OperationsManager {
   setPolicy(
     type: "workIntensity" | "resourcePriority" | "explorationStance",
     value: WorkIntensity | ResourcePriority | ExplorationStance,
-    currentSol: number
+    currentSol: number,
   ): boolean {
     if (!this.canChangePolicy(currentSol)) return false;
 
@@ -110,7 +110,7 @@ export class OperationsManager {
   canStartExpedition(
     type: ExpeditionType,
     resources: ResourceManager,
-    colony: ColonyManager
+    colony: ColonyManager,
   ): boolean {
     if (this.expeditions.length >= MAX_CONCURRENT_EXPEDITIONS) return false;
 
@@ -127,8 +127,8 @@ export class OperationsManager {
   }
 
   private getAvailableCrewCount(colony: ColonyManager): number {
-    const assignedCrew = new Set(this.expeditions.flatMap(e => e.assignedCrew));
-    return colony.getColonists().filter(c => !assignedCrew.has(c.id)).length;
+    const assignedCrew = new Set(this.expeditions.flatMap((e) => e.assignedCrew));
+    return colony.getColonists().filter((c) => !assignedCrew.has(c.id)).length;
   }
 
   startExpedition(
@@ -136,7 +136,7 @@ export class OperationsManager {
     crewIds: string[],
     resources: ResourceManager,
     colony: ColonyManager,
-    currentSol: number
+    currentSol: number,
   ): boolean {
     if (!this.canStartExpedition(type, resources, colony)) return false;
 
@@ -144,7 +144,7 @@ export class OperationsManager {
     if (crewIds.length !== config.crew) return false;
 
     // Verify crew exists and is available
-    const assignedCrew = new Set(this.expeditions.flatMap(e => e.assignedCrew));
+    const assignedCrew = new Set(this.expeditions.flatMap((e) => e.assignedCrew));
     for (const id of crewIds) {
       if (!colony.getColonist(id) || assignedCrew.has(id)) return false;
     }
@@ -172,8 +172,8 @@ export class OperationsManager {
     }
 
     // Resolve completed expeditions
-    const completed = this.expeditions.filter(e => e.solsRemaining <= 0);
-    this.expeditions = this.expeditions.filter(e => e.solsRemaining > 0);
+    const completed = this.expeditions.filter((e) => e.solsRemaining <= 0);
+    this.expeditions = this.expeditions.filter((e) => e.solsRemaining > 0);
 
     for (const expedition of completed) {
       const result = this.resolveExpedition(expedition, colony);
@@ -227,13 +227,15 @@ export class OperationsManager {
 
   private resolveExpedition(expedition: ActiveExpedition, colony: ColonyManager): ExpeditionResult {
     const config = EXPEDITIONS[expedition.type];
-    const successChance = config.baseSuccess + this.getExpeditionSuccessModifier() +
+    const successChance =
+      config.baseSuccess +
+      this.getExpeditionSuccessModifier() +
       Math.min(this.expeditionExperience, EXPEDITION_EXPERIENCE_CAP);
 
     const success = Math.random() < successChance;
     this.expeditionExperience = Math.min(
       this.expeditionExperience + EXPEDITION_EXPERIENCE_BONUS,
-      EXPEDITION_EXPERIENCE_CAP
+      EXPEDITION_EXPERIENCE_CAP,
     );
 
     if (success) {
@@ -332,13 +334,13 @@ export class OperationsManager {
   }
 
   getRevealedSiteCount(): number {
-    return this.sites.filter(s => s.revealed && !s.developed).length;
+    return this.sites.filter((s) => s.revealed && !s.developed).length;
   }
 
   revealSite(siteId: string, resources: ResourceManager): boolean {
     if (this.getRevealedSiteCount() >= MAX_REVEALED_SITES) return false;
 
-    const site = this.sites.find(s => s.id === siteId);
+    const site = this.sites.find((s) => s.id === siteId);
     if (!site || site.revealed) return false;
 
     if (!resources.canAfford({ materials: PROSPECTING_REVEAL_COST.materials })) return false;
@@ -349,7 +351,7 @@ export class OperationsManager {
   }
 
   developSite(siteId: string, resources: ResourceManager): boolean {
-    const site = this.sites.find(s => s.id === siteId);
+    const site = this.sites.find((s) => s.id === siteId);
     if (!site || !site.revealed || site.developed) return false;
 
     const cost = PROSPECTING_QUALITY[site.quality].developCost;
@@ -362,12 +364,12 @@ export class OperationsManager {
 
   getDevelopedSiteBonus(resourceType: "water" | "materials" | "research"): number {
     return this.sites
-      .filter(s => s.developed && s.resourceType === resourceType)
+      .filter((s) => s.developed && s.resourceType === resourceType)
       .reduce((sum, s) => sum + PROSPECTING_QUALITY[s.quality].bonus, 0);
   }
 
   abandonSite(siteId: string): boolean {
-    const index = this.sites.findIndex(s => s.id === siteId);
+    const index = this.sites.findIndex((s) => s.id === siteId);
     if (index === -1) return false;
 
     const site = this.sites[index];

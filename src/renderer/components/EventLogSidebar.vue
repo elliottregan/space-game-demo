@@ -6,7 +6,7 @@ const state = gameService.getState();
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const displayedEvents = computed(() => {
-  return state.recentEvents.slice(-10).reverse();
+  return state.recentEvents.slice(-15).reverse();
 });
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -38,8 +38,8 @@ function getIcon(type: string): string {
 </script>
 
 <template>
-  <div class="panel event-log-panel">
-    <h2>Event Log</h2>
+  <aside class="event-log-sidebar">
+    <h2 class="sidebar-header">Event Log</h2>
     <div class="event-list">
       <div
         v-for="(event, index) in displayedEvents"
@@ -54,21 +54,41 @@ function getIcon(type: string): string {
         No recent events
       </div>
     </div>
-  </div>
+  </aside>
 </template>
 
 <style scoped>
-.event-log-panel {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%);
-  max-height: 250px;
+.event-log-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 2px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 180px);
+}
+
+.sidebar-header {
+  font-size: 1.2rem;
+  color: #ffd460;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 0;
+  position: sticky;
+  top: 0;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 8px 8px 0 0;
 }
 
 .event-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  max-height: 180px;
+  padding: 1rem;
   overflow-y: auto;
+  flex: 1;
 }
 
 .event-item {
@@ -77,7 +97,7 @@ function getIcon(type: string): string {
   gap: 0.5rem;
   padding: 0.5rem;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   background: rgba(255, 255, 255, 0.05);
   border-left: 3px solid;
 }
@@ -102,7 +122,7 @@ function getIcon(type: string): string {
 
 .event-message {
   color: #e8e8e8;
-  line-height: 1.4;
+  line-height: 1.3;
 }
 
 .no-events {
