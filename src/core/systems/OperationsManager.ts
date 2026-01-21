@@ -26,6 +26,7 @@ import {
   DEPOSIT_RESERVES,
   ESTIMATE_UNCERTAINTY,
   DEPLETION_THRESHOLDS,
+  EXTRACTION_RATE_MULTIPLIERS,
 } from "../balance/OperationsBalance";
 import type { ResourceManager } from "./ResourceManager";
 import type { ColonyManager } from "./ColonyManager";
@@ -374,6 +375,36 @@ export class OperationsManager {
 
     this.sites.splice(index, 1);
     return true;
+  }
+
+  linkBuildingToDeposit(buildingId: string, siteId: string): boolean {
+    const site = this.sites.find(s => s.id === siteId);
+    if (!site || !site.developed || site.linkedBuildingId) return false;
+
+    site.linkedBuildingId = buildingId;
+    return true;
+  }
+
+  unlinkBuildingFromDeposit(siteId: string): boolean {
+    const site = this.sites.find(s => s.id === siteId);
+    if (!site) return false;
+
+    site.linkedBuildingId = null;
+    return true;
+  }
+
+  getDepositForBuilding(buildingId: string): ProspectingSite | undefined {
+    return this.sites.find(s => s.linkedBuildingId === buildingId);
+  }
+
+  processExtraction(buildingId: string, baseProduction: number): number {
+    const site = this.sites.find(s => s.linkedBuildingId === buildingId);
+    if (!site || site.remainingReserves <= 0) return 0;
+
+    const qualityMult = EXTRACTION_RATE_MULTIPLIERS[site.quality];
+    const extractionRate = baseProduction * qualityMult;
+
+    return this.extractFromDeposit(site.id, extractionRate);
   }
 
   extractFromDeposit(siteId: string, amount: number): number {
