@@ -1,7 +1,7 @@
 import type { ResourceDelta } from "./Resources";
 import type { ColonistRole } from "./Colonist";
 
-export type BuildingStatus = "pending" | "active" | "disabled";
+export type BuildingStatus = "pending" | "active" | "disabled" | "idle" | "recycling";
 
 export interface BuildingDefinition {
   id: string;
@@ -14,6 +14,8 @@ export interface BuildingDefinition {
   workerSlots?: number;
   workerRole?: ColonistRole;
   requiredTech?: string;
+  requiresDeposit?: boolean; // true for mining buildings
+  repurposeTargets?: string[]; // building IDs this can convert to
 }
 
 export interface Building {
@@ -25,4 +27,7 @@ export interface Building {
   mode: "conservation" | "normal" | "overdrive";
   broken: boolean;
   repairProgress: number;
+  depositId?: string; // linked deposit for mining buildings
+  recyclingProgress?: number;
+  repurposeFromDefId?: string; // Set when repurposing, cleared when complete
 }

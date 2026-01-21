@@ -23,6 +23,10 @@ import {
   PROSPECTING_QUALITY,
   MAX_REVEALED_SITES,
   MAX_DEVELOPED_SITES,
+  DEPOSIT_RESERVES,
+  ESTIMATE_UNCERTAINTY,
+  DEPLETION_THRESHOLDS,
+  EXTRACTION_RATE_MULTIPLIERS,
 } from "../balance/OperationsBalance";
 import type { ResourceManager } from "./ResourceManager";
 import type { ColonyManager } from "./ColonyManager";
@@ -301,13 +305,29 @@ export class OperationsManager {
     const types: Array<"water" | "materials" | "research"> = ["water", "materials", "research"];
     const qualities: Array<"poor" | "moderate" | "rich"> = ["poor", "moderate", "rich"];
 
+    const resourceType = types[Math.floor(Math.random() * types.length)];
+    const quality = qualities[Math.floor(Math.random() * qualities.length)];
+
+    // Calculate reserves based on quality and resource type
+    const reserveRange = DEPOSIT_RESERVES[resourceType][quality];
+    const reserves = reserveRange.min + Math.floor(Math.random() * (reserveRange.max - reserveRange.min));
+
+    // Calculate estimated reserves with uncertainty
+    const uncertainty = ESTIMATE_UNCERTAINTY.initial;
+    const estimatedMin = Math.floor(reserves * (1 - uncertainty));
+    const estimatedMax = Math.ceil(reserves * (1 + uncertainty));
+
     return {
       id: `site_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      resourceType: types[Math.floor(Math.random() * types.length)],
-      quality: qualities[Math.floor(Math.random() * qualities.length)],
+      resourceType,
+      quality,
       revealed: false,
       developed: false,
       developmentProgress: 0,
+      reserves,
+      estimatedReserves: { min: estimatedMin, max: estimatedMax },
+      remainingReserves: reserves,
+      linkedBuildingId: null,
     };
   }
 
@@ -355,6 +375,86 @@ export class OperationsManager {
 
     this.sites.splice(index, 1);
     return true;
+  }
+
+  linkBuildingToDeposit(buildingId: string, siteId: string): boolean {
+    const site = this.sites.find(s => s.id === siteId);
+    if (!site || !site.developed || site.linkedBuildingId) return false;
+
+    site.linkedBuildingId = buildingId;
+    return true;
+  }
+
+  unlinkBuildingFromDeposit(siteId: string): boolean {
+    const site = this.sites.find(s => s.id === siteId);
+    if (!site) return false;
+
+    site.linkedBuildingId = null;
+    return true;
+  }
+
+  getDepositForBuilding(buildingId: string): ProspectingSite | undefined {
+    return this.sites.find(s => s.linkedBuildingId === buildingId);
+  }
+
+  processExtraction(buildingId: string, baseProduction: number): number {
+    const site = this.sites.find(s => s.linkedBuildingId === buildingId);
+    if (!site || site.remainingReserves <= 0) return 0;
+
+    const qualityMult = EXTRACTION_RATE_MULTIPLIERS[site.quality];
+    const extractionRate = baseProduction * qualityMult;
+
+    return this.extractFromDeposit(site.id, extractionRate);
+  }
+
+  extractFromDeposit(siteId: string, amount: number): number {
+    const site = this.sites.find(s => s.id === siteId);
+    if (!site || !site.developed || site.remainingReserves <= 0) return 0;
+
+    const actualExtracted = Math.min(amount, site.remainingReserves);
+    site.remainingReserves -= actualExtracted;
+
+    // Update estimate accuracy based on extraction progress
+    this.updateEstimateAccuracy(site);
+
+    return actualExtracted;
+  }
+
+  private updateEstimateAccuracy(site: ProspectingSite): void {
+    const extractedPercent = 1 - (site.remainingReserves / site.reserves);
+
+    let uncertainty: number;
+    if (extractedPercent >= 0.75) {
+      uncertainty = ESTIMATE_UNCERTAINTY.at75Percent;
+    } else if (extractedPercent >= 0.50) {
+      uncertainty = ESTIMATE_UNCERTAINTY.at50Percent;
+    } else if (extractedPercent >= 0.25) {
+      uncertainty = ESTIMATE_UNCERTAINTY.at25Percent;
+    } else {
+      uncertainty = ESTIMATE_UNCERTAINTY.initial;
+    }
+
+    site.estimatedReserves = {
+      min: Math.floor(site.remainingReserves * (1 - uncertainty)),
+      max: Math.ceil(site.remainingReserves * (1 + uncertainty)),
+    };
+  }
+
+  isDepositDepleted(siteId: string): boolean {
+    const site = this.sites.find(s => s.id === siteId);
+    return site ? site.remainingReserves <= 0 : true;
+  }
+
+  getDepletionWarningLevel(siteId: string): "none" | "warning" | "critical" | "depleted" {
+    const site = this.sites.find(s => s.id === siteId);
+    if (!site) return "depleted";
+
+    const percentRemaining = site.remainingReserves / site.reserves;
+
+    if (percentRemaining <= 0) return "depleted";
+    if (percentRemaining <= DEPLETION_THRESHOLDS.critical) return "critical";
+    if (percentRemaining <= DEPLETION_THRESHOLDS.warning) return "warning";
+    return "none";
   }
 
   toJSON() {
