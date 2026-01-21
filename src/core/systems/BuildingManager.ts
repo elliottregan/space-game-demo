@@ -2,6 +2,8 @@ import type { GameEvent } from "../models/GameEvent";
 import type { Building, BuildingDefinition } from "../models/Building";
 import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
+import { BUILDING_MODES } from "../balance/OperationsBalance";
+import type { ResourceDelta } from "../models/Resources";
 
 export class BuildingManager {
   private definitions: Map<string, BuildingDefinition> = new Map();
@@ -79,6 +81,9 @@ export class BuildingManager {
       status: "pending",
       constructionProgress: 0,
       assignedWorkers: [],
+      mode: "normal",
+      broken: false,
+      repairProgress: 0,
     };
 
     this.buildings.set(building.id, building);
@@ -87,6 +92,51 @@ export class BuildingManager {
 
   getBuilding(id: string): Building | undefined {
     return this.buildings.get(id);
+  }
+
+  setBuildingMode(buildingId: string, mode: "conservation" | "normal" | "overdrive"): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building || building.broken) return false;
+    building.mode = mode;
+    return true;
+  }
+
+  getBuildingMode(buildingId: string): "conservation" | "normal" | "overdrive" | undefined {
+    return this.buildings.get(buildingId)?.mode;
+  }
+
+  getEffectiveProduction(buildingId: string): ResourceDelta {
+    const building = this.buildings.get(buildingId);
+    if (!building || building.status !== "active" || building.broken) return {};
+
+    const def = this.definitions.get(building.definitionId);
+    if (!def?.production) return {};
+
+    const modeMultiplier = BUILDING_MODES[building.mode].production;
+    const result: ResourceDelta = {};
+
+    for (const [key, value] of Object.entries(def.production)) {
+      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier;
+    }
+
+    return result;
+  }
+
+  getEffectiveConsumption(buildingId: string): ResourceDelta {
+    const building = this.buildings.get(buildingId);
+    if (!building || building.status !== "active" || building.broken) return {};
+
+    const def = this.definitions.get(building.definitionId);
+    if (!def?.consumption) return {};
+
+    const modeMultiplier = BUILDING_MODES[building.mode].consumption;
+    const result: ResourceDelta = {};
+
+    for (const [key, value] of Object.entries(def.consumption)) {
+      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier;
+    }
+
+    return result;
   }
 
   getDefinition(defId: string): BuildingDefinition | undefined {
