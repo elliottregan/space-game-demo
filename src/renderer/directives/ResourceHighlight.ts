@@ -8,13 +8,11 @@ export const highlightState = reactive<{
   resources: Set<string>;
   insufficient: Set<string>;
   deltas: Record<string, number>;
-  rateDeltas: Record<string, number>;
 }>({
   active: false,
   resources: new Set(),
   insufficient: new Set(),
   deltas: {},
-  rateDeltas: {},
 });
 
 /**
@@ -22,13 +20,11 @@ export const highlightState = reactive<{
  * @param resourceKeys - Array of resource keys to highlight (e.g., ['food', 'power'])
  * @param insufficientKeys - Array of resource keys that are insufficient (will glow red)
  * @param deltas - Object mapping resource keys to their one-time change amounts (positive or negative)
- * @param rateDeltas - Object mapping resource keys to their rate change amounts (production/consumption per sol)
  */
 export function highlightResources(
   resourceKeys: string[],
   insufficientKeys: string[] = [],
   deltas: Record<string, number> = {},
-  rateDeltas: Record<string, number> = {},
 ): void {
   highlightState.active = true;
   highlightState.resources = new Set(resourceKeys);
@@ -41,14 +37,6 @@ export function highlightResources(
   for (const [key, value] of Object.entries(deltas)) {
     highlightState.deltas[key] = value;
   }
-
-  // Clear existing rate deltas and add new ones
-  for (const key of Object.keys(highlightState.rateDeltas)) {
-    delete highlightState.rateDeltas[key];
-  }
-  for (const [key, value] of Object.entries(rateDeltas)) {
-    highlightState.rateDeltas[key] = value;
-  }
 }
 
 /**
@@ -60,9 +48,6 @@ export function clearHighlights(): void {
   highlightState.insufficient.clear();
   for (const key of Object.keys(highlightState.deltas)) {
     delete highlightState.deltas[key];
-  }
-  for (const key of Object.keys(highlightState.rateDeltas)) {
-    delete highlightState.rateDeltas[key];
   }
 }
 

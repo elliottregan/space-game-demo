@@ -22,11 +22,6 @@ const currentDeltas = computed(() => {
   return { ...highlightState.deltas };
 });
 
-const currentRateDeltas = computed(() => {
-  if (!highlightState.active) return {};
-  return { ...highlightState.rateDeltas };
-});
-
 function getNetFlow(key: string): number {
   return (state.netFlow as Record<string, number | undefined>)[key] || 0;
 }
@@ -61,23 +56,6 @@ function hasDelta(key: string): boolean {
 function getDelta(key: string): number {
   return currentDeltas.value[key] || 0;
 }
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function hasRateDelta(key: string): boolean {
-  return currentRateDeltas.value[key] !== undefined;
-}
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function getRateDelta(key: string): number {
-  return currentRateDeltas.value[key] || 0;
-}
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function getProjectedRate(key: string): number {
-  const current = getNetFlow(key);
-  const delta = currentRateDeltas.value[key] || 0;
-  return current + delta;
-}
 </script>
 
 <template>
@@ -108,19 +86,12 @@ function getProjectedRate(key: string): number {
         <div
           class="resource-flow"
           :class="{
-            positive: hasRateDelta(resource.key) ? getProjectedRate(resource.key) > 0 : getNetFlow(resource.key) > 0,
-            negative: hasRateDelta(resource.key) ? getProjectedRate(resource.key) < 0 : getNetFlow(resource.key) < 0,
-            neutral: hasRateDelta(resource.key) ? getProjectedRate(resource.key) === 0 : getNetFlow(resource.key) === 0
+            positive: getNetFlow(resource.key) > 0,
+            negative: getNetFlow(resource.key) < 0,
+            neutral: getNetFlow(resource.key) === 0
           }"
         >
-          <template v-if="hasRateDelta(resource.key)">
-            <span class="projected-rate">{{ formatFlow(getProjectedRate(resource.key)) }}</span>
-            <span class="rate-arrow">←</span>
-            <span class="old-rate">{{ formatFlow(getNetFlow(resource.key)) }}</span>
-          </template>
-          <template v-else>
-            {{ formatFlow(getNetFlow(resource.key)) }}
-          </template>
+          {{ formatFlow(getNetFlow(resource.key)) }}
         </div>
       </div>
     </div>
@@ -211,19 +182,5 @@ function getProjectedRate(key: string): number {
   background: var(--bg-danger);
   padding: 0 0.25rem;
   border-radius: 2px;
-}
-
-.projected-rate {
-  font-weight: bold;
-}
-
-.rate-arrow {
-  margin: 0 0.25rem;
-  opacity: 0.7;
-}
-
-.old-rate {
-  opacity: 0.6;
-  font-size: 0.8em;
 }
 </style>

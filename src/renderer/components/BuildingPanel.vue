@@ -101,33 +101,12 @@ function getRequiredTechName(def: BuildingDefinition): string {
 function onBuildingHover(def: BuildingDefinition): void {
   const allResources = new Set<string>();
   const deltas: Record<string, number> = {};
-  const rateDeltas: Record<string, number> = {};
 
   // Add construction cost resources (one-time deduction)
   for (const [key, value] of Object.entries(def.cost)) {
     if (value > 0) {
       allResources.add(key);
       deltas[key] = -value;
-    }
-  }
-
-  // Add production resources (ongoing rate increase)
-  if (def.production) {
-    for (const [key, value] of Object.entries(def.production)) {
-      if (value && value > 0) {
-        allResources.add(key);
-        rateDeltas[key] = (rateDeltas[key] || 0) + value;
-      }
-    }
-  }
-
-  // Add consumption resources (ongoing rate decrease)
-  if (def.consumption) {
-    for (const [key, value] of Object.entries(def.consumption)) {
-      if (value && value > 0) {
-        allResources.add(key);
-        rateDeltas[key] = (rateDeltas[key] || 0) - value;
-      }
     }
   }
 
@@ -140,7 +119,7 @@ function onBuildingHover(def: BuildingDefinition): void {
     return available < required;
   });
 
-  highlightResources(requiredResources, insufficientResources, deltas, rateDeltas);
+  highlightResources(requiredResources, insufficientResources, deltas);
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
