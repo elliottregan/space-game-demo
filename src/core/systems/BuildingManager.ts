@@ -2,6 +2,8 @@ import type { GameEvent } from "../models/GameEvent";
 import type { Building, BuildingDefinition } from "../models/Building";
 import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
+import { BUILDING_MODES, REPAIR_COST_MULTIPLIER, REPAIR_DURATION_SOLS } from "../balance/OperationsBalance";
+import type { ResourceDelta } from "../models/Resources";
 
 export class BuildingManager {
   private definitions: Map<string, BuildingDefinition> = new Map();
@@ -30,11 +32,14 @@ export class BuildingManager {
           building.status = "active";
           building.constructionProgress = def.constructionTime;
 
-          if (def.production) {
-            resources.addProduction(def.production);
+          // Add mode-adjusted production/consumption
+          const effectiveProd = this.getEffectiveProduction(building.id);
+          const effectiveCons = this.getEffectiveConsumption(building.id);
+          if (Object.keys(effectiveProd).length > 0) {
+            resources.addProduction(effectiveProd);
           }
-          if (def.consumption) {
-            resources.addConsumption(def.consumption);
+          if (Object.keys(effectiveCons).length > 0) {
+            resources.addConsumption(effectiveCons);
           }
 
           events.push({
@@ -43,6 +48,33 @@ export class BuildingManager {
             buildingName: def.name,
             severity: "info",
             message: `${def.name} construction complete!`,
+          });
+        }
+      }
+
+      // Handle repairs
+      if (building.broken && building.repairProgress > 0) {
+        building.repairProgress += 1;
+        if (building.repairProgress >= REPAIR_DURATION_SOLS) {
+          building.broken = false;
+          building.repairProgress = 0;
+
+          // Re-add production/consumption after repair
+          const effectiveProd = this.getEffectiveProduction(building.id);
+          const effectiveCons = this.getEffectiveConsumption(building.id);
+          if (Object.keys(effectiveProd).length > 0) {
+            resources.addProduction(effectiveProd);
+          }
+          if (Object.keys(effectiveCons).length > 0) {
+            resources.addConsumption(effectiveCons);
+          }
+
+          events.push({
+            type: "BUILDING_REPAIRED",
+            buildingId: building.id,
+            buildingName: def.name,
+            severity: "info",
+            message: `${def.name} repaired!`,
           });
         }
       }
@@ -79,6 +111,9 @@ export class BuildingManager {
       status: "pending",
       constructionProgress: 0,
       assignedWorkers: [],
+      mode: "normal",
+      broken: false,
+      repairProgress: 0,
     };
 
     this.buildings.set(building.id, building);
@@ -87,6 +122,125 @@ export class BuildingManager {
 
   getBuilding(id: string): Building | undefined {
     return this.buildings.get(id);
+  }
+
+  setBuildingMode(buildingId: string, mode: "conservation" | "normal" | "overdrive", resources: ResourceManager): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building || building.status !== "active" || building.broken) return false;
+    if (building.mode === mode) return true; // No change needed
+
+    // Remove old production/consumption
+    const oldProd = this.getEffectiveProduction(buildingId);
+    const oldCons = this.getEffectiveConsumption(buildingId);
+    if (Object.keys(oldProd).length > 0) {
+      resources.removeProduction(oldProd);
+    }
+    if (Object.keys(oldCons).length > 0) {
+      resources.removeConsumption(oldCons);
+    }
+
+    // Update mode
+    building.mode = mode;
+
+    // Add new production/consumption
+    const newProd = this.getEffectiveProduction(buildingId);
+    const newCons = this.getEffectiveConsumption(buildingId);
+    if (Object.keys(newProd).length > 0) {
+      resources.addProduction(newProd);
+    }
+    if (Object.keys(newCons).length > 0) {
+      resources.addConsumption(newCons);
+    }
+
+    return true;
+  }
+
+  breakBuilding(buildingId: string, resources: ResourceManager): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building || building.status !== "active") return false;
+
+    // Remove production/consumption before breaking
+    const oldProd = this.getEffectiveProduction(buildingId);
+    const oldCons = this.getEffectiveConsumption(buildingId);
+    if (Object.keys(oldProd).length > 0) {
+      resources.removeProduction(oldProd);
+    }
+    if (Object.keys(oldCons).length > 0) {
+      resources.removeConsumption(oldCons);
+    }
+
+    building.broken = true;
+    building.mode = "normal";
+    return true;
+  }
+
+  getRepairCost(buildingId: string): ResourceDelta | undefined {
+    const building = this.buildings.get(buildingId);
+    if (!building || !building.broken) return undefined;
+
+    const def = this.definitions.get(building.definitionId);
+    if (!def) return undefined;
+
+    const cost: ResourceDelta = {};
+    for (const [key, value] of Object.entries(def.cost)) {
+      if (value) cost[key as keyof ResourceDelta] = Math.ceil(value * REPAIR_COST_MULTIPLIER);
+    }
+    return cost;
+  }
+
+  startRepair(buildingId: string, resources: ResourceManager): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building || !building.broken) return false;
+
+    const cost = this.getRepairCost(buildingId);
+    if (!cost || !resources.canAfford(cost)) return false;
+
+    resources.deduct(cost);
+    building.repairProgress = 0.01; // Mark as repairing
+    return true;
+  }
+
+  isRepairing(buildingId: string): boolean {
+    const building = this.buildings.get(buildingId);
+    return building?.broken === true && building.repairProgress > 0;
+  }
+
+  getBuildingMode(buildingId: string): "conservation" | "normal" | "overdrive" | undefined {
+    return this.buildings.get(buildingId)?.mode;
+  }
+
+  getEffectiveProduction(buildingId: string): ResourceDelta {
+    const building = this.buildings.get(buildingId);
+    if (!building || building.status !== "active" || building.broken) return {};
+
+    const def = this.definitions.get(building.definitionId);
+    if (!def?.production) return {};
+
+    const modeMultiplier = BUILDING_MODES[building.mode].production;
+    const result: ResourceDelta = {};
+
+    for (const [key, value] of Object.entries(def.production)) {
+      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier;
+    }
+
+    return result;
+  }
+
+  getEffectiveConsumption(buildingId: string): ResourceDelta {
+    const building = this.buildings.get(buildingId);
+    if (!building || building.status !== "active" || building.broken) return {};
+
+    const def = this.definitions.get(building.definitionId);
+    if (!def?.consumption) return {};
+
+    const modeMultiplier = BUILDING_MODES[building.mode].consumption;
+    const result: ResourceDelta = {};
+
+    for (const [key, value] of Object.entries(def.consumption)) {
+      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier;
+    }
+
+    return result;
   }
 
   getDefinition(defId: string): BuildingDefinition | undefined {
@@ -167,7 +321,16 @@ export class BuildingManager {
     defs: BuildingDefinition[],
   ): BuildingManager {
     const manager = new BuildingManager(defs);
-    data.buildings.forEach((b) => manager.buildings.set(b.id, b));
+    data.buildings.forEach((b) => {
+      // Add defaults for new fields (backward compatibility)
+      const building: Building = {
+        ...b,
+        mode: b.mode ?? "normal",
+        broken: b.broken ?? false,
+        repairProgress: b.repairProgress ?? 0,
+      };
+      manager.buildings.set(building.id, building);
+    });
     manager.nextId = data.nextId;
     manager.constructionSpeedBonus = data.constructionSpeedBonus || 0;
     return manager;

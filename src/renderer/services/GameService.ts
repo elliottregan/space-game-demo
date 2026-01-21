@@ -8,6 +8,7 @@ import type { Colonist, ColonistRole } from "../../core/models/Colonist";
 import type { Faction, Decision, DecisionResult } from "../../core/models/Politics";
 import type { RandomEventDefinition, EventChoice, ActiveEvent } from "../../core/models/GameEvent";
 import type { VictoryState } from "../../core/systems/VictoryManager";
+import type { ColonyPolicies, ActiveExpedition, ProspectingSite } from "../../core/models/Operation";
 
 interface GameUIState {
   currentSol: number;
@@ -33,6 +34,10 @@ interface GameUIState {
   eventChoices: EventChoice[];
   victoryState: VictoryState;
   recentEvents: GameEvent[];
+  policies: ColonyPolicies;
+  policyCooldownRemaining: number;
+  activeExpeditions: ActiveExpedition[];
+  prospectingSites: ProspectingSite[];
 }
 
 class GameService {
@@ -70,6 +75,15 @@ class GameService {
       eventChoices: [],
       victoryState: { status: "playing" },
       recentEvents: [],
+      policies: {
+        workIntensity: "standard",
+        resourcePriority: "balanced",
+        explorationStance: "standard",
+        lastChangeAt: 0,
+      },
+      policyCooldownRemaining: 0,
+      activeExpeditions: [],
+      prospectingSites: [],
     };
   }
 
@@ -110,6 +124,12 @@ class GameService {
 
     // Victory
     this.state.victoryState = this.gameState.victory.getState();
+
+    // Operations
+    this.state.policies = this.gameState.operations.getPolicies();
+    this.state.policyCooldownRemaining = this.gameState.operations.getSolsUntilPolicyChange(this.gameState.currentSol);
+    this.state.activeExpeditions = [...this.gameState.operations.getActiveExpeditions()];
+    this.state.prospectingSites = [...this.gameState.operations.getSites()];
   }
 
   getState() {
@@ -208,6 +228,43 @@ class GameService {
     );
     this.syncState();
     return events;
+  }
+
+  // Operations actions
+  setPolicy(type: "workIntensity" | "resourcePriority" | "explorationStance", value: string): boolean {
+    const result = this.gameState.operations.setPolicy(type, value as never, this.gameState.currentSol);
+    this.syncState();
+    return result;
+  }
+
+  startExpedition(type: string, crewIds: string[]): boolean {
+    const result = this.gameState.operations.startExpedition(
+      type as never,
+      crewIds,
+      this.gameState.resources,
+      this.gameState.colony,
+      this.gameState.currentSol
+    );
+    this.syncState();
+    return result;
+  }
+
+  revealSite(siteId: string): boolean {
+    const result = this.gameState.operations.revealSite(siteId, this.gameState.resources);
+    this.syncState();
+    return result;
+  }
+
+  developSite(siteId: string): boolean {
+    const result = this.gameState.operations.developSite(siteId, this.gameState.resources);
+    this.syncState();
+    return result;
+  }
+
+  setBuildingMode(buildingId: string, mode: "conservation" | "normal" | "overdrive"): boolean {
+    const result = this.gameState.buildings.setBuildingMode(buildingId, mode, this.gameState.resources);
+    this.syncState();
+    return result;
   }
 
   // Game management

@@ -22,4 +22,7 @@ export interface Building {
   status: BuildingStatus;
   constructionProgress: number;
   assignedWorkers: string[];
+  mode: "conservation" | "normal" | "overdrive";
+  broken: boolean;
+  repairProgress: number;
 }
