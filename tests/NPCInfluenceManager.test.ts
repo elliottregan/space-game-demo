@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach } from 'bun:test';
 import { NPCInfluenceManager } from '../src/core/systems/NPCInfluenceManager';
 import { ResourceManager } from '../src/core/systems/ResourceManager';
 import { NPCS, INITIAL_RELATIONSHIPS, PROJECTS } from '../src/core/data/npcs';
-import { LOBBY_BASE_COST } from '../src/core/balance/NPCInfluenceBalance';
+import { LOBBY_BASE_COST, COUNCIL_CREATION_COST, COUNCIL_RELATIONSHIP_BOOST } from '../src/core/balance/NPCInfluenceBalance';
 
 describe('NPCInfluenceManager', () => {
   let manager: NPCInfluenceManager;
@@ -172,6 +172,79 @@ describe('NPCInfluenceManager', () => {
       manager.lobbyNPC('chen_wei', 0.8, resources); // Would be 1.6, should clamp
 
       expect(manager.getActiveProject()!.supportLevels.get('chen_wei')).toBe(1.0);
+    });
+  });
+
+  describe('createCouncil', () => {
+    it('should create a council and boost relationships between members', () => {
+      const resources = new ResourceManager({
+        food: 100,
+        oxygen: 100,
+        water: 100,
+        power: 100,
+        materials: 500,
+      });
+
+      const memberIds = ['chen_wei', 'maria_santos', 'elena_volkov'];
+      const result = manager.createCouncil('Science Council', memberIds, resources);
+
+      expect(result).toBe(true);
+
+      const councils = manager.getCouncils();
+      expect(councils.length).toBe(1);
+      expect(councils[0].name).toBe('Science Council');
+      expect(councils[0].memberIds).toEqual(memberIds);
+    });
+
+    it('should increase relationship weights between council members', () => {
+      const resources = new ResourceManager({
+        food: 100,
+        oxygen: 100,
+        water: 100,
+        power: 100,
+        materials: 500,
+      });
+
+      // Get initial relationship between chen_wei and elena_volkov (should be 0 - no initial connection)
+      const chenIdx = 0; // chen_wei is first
+      const elenaIdx = 7; // elena_volkov is 8th (0-indexed: 7)
+
+      const initialMatrix = manager.getRelationshipMatrix();
+      const initialWeight = initialMatrix[elenaIdx][chenIdx];
+
+      manager.createCouncil('Science Council', ['chen_wei', 'elena_volkov'], resources);
+
+      const newMatrix = manager.getRelationshipMatrix();
+      expect(newMatrix[elenaIdx][chenIdx]).toBe(Math.min(1.0, initialWeight + COUNCIL_RELATIONSHIP_BOOST));
+    });
+
+    it('should deduct creation cost', () => {
+      const resources = new ResourceManager({
+        food: 100,
+        oxygen: 100,
+        water: 100,
+        power: 100,
+        materials: 500,
+      });
+
+      manager.createCouncil('Science Council', ['chen_wei', 'maria_santos'], resources);
+
+      expect(resources.getResources().materials).toBe(500 - COUNCIL_CREATION_COST);
+    });
+
+    it('should fail if cannot afford', () => {
+      const resources = new ResourceManager({
+        food: 100,
+        oxygen: 100,
+        water: 100,
+        power: 100,
+        materials: 10, // Not enough
+      });
+
+      const result = manager.createCouncil('Science Council', ['chen_wei', 'maria_santos'], resources);
+
+      expect(result).toBe(false);
+      expect(manager.getCouncils().length).toBe(0);
     });
   });
 });

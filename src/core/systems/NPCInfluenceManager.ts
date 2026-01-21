@@ -12,6 +12,8 @@ import type {
   Council,
 } from '../models/NPCInfluence';
 import {
+  COUNCIL_CREATION_COST,
+  COUNCIL_RELATIONSHIP_BOOST,
   DRIFT_RATE,
   LOBBY_BASE_COST,
   PASS_THRESHOLD,
@@ -267,6 +269,56 @@ export class NPCInfluenceManager {
     const currentSupport = this.activeProject.supportLevels.get(npcId) || 0;
     const newSupport = Math.max(-1.0, Math.min(1.0, currentSupport + supportBoost));
     this.activeProject.supportLevels.set(npcId, newSupport);
+
+    return true;
+  }
+
+  // ============ Council Creation ============
+
+  /**
+   * Create a council that permanently boosts relationships between members.
+   * @returns true if council created successfully
+   */
+  createCouncil(name: string, memberIds: string[], resources: ResourceManager): boolean {
+    const cost: ResourceDelta = { materials: COUNCIL_CREATION_COST };
+
+    if (!resources.canAfford(cost)) {
+      return false;
+    }
+
+    // Verify all members exist
+    for (const id of memberIds) {
+      if (!this.npcIndex.has(id)) {
+        return false;
+      }
+    }
+
+    resources.deduct(cost);
+
+    // Boost relationships between all members (both directions)
+    for (const id1 of memberIds) {
+      for (const id2 of memberIds) {
+        if (id1 !== id2) {
+          const idx1 = this.npcIndex.get(id1)!;
+          const idx2 = this.npcIndex.get(id2)!;
+
+          // W[i][j] = influence from j to i
+          this.relationshipMatrix[idx1][idx2] = Math.min(
+            1.0,
+            this.relationshipMatrix[idx1][idx2] + COUNCIL_RELATIONSHIP_BOOST
+          );
+        }
+      }
+    }
+
+    const council: Council = {
+      id: `council_${this.councils.length + 1}`,
+      name,
+      memberIds,
+      relationshipBoost: COUNCIL_RELATIONSHIP_BOOST,
+    };
+
+    this.councils.push(council);
 
     return true;
   }
