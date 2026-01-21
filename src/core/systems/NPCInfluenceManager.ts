@@ -1,6 +1,7 @@
 // src/core/systems/NPCInfluenceManager.ts
 
 import type { GameEvent } from '../models/GameEvent';
+import type { ResourceManager } from './ResourceManager';
 import type { ResourceDelta } from '../models/Resources';
 import type {
   NPC,
@@ -184,6 +185,46 @@ export class NPCInfluenceManager {
 
   getCouncils(): readonly Council[] {
     return this.councils;
+  }
+
+  // ============ Project Proposal ============
+
+  /**
+   * Propose a project for NPC consideration.
+   * @returns true if proposal succeeded, false if cannot afford or project already active
+   */
+  proposeProject(projectId: string, resources: ResourceManager): boolean {
+    // Cannot propose if project already active
+    if (this.activeProject) {
+      return false;
+    }
+
+    const project = this.projects.get(projectId);
+    if (!project) {
+      return false;
+    }
+
+    // Check if can afford proposal cost
+    if (!resources.canAfford(project.proposalCost)) {
+      return false;
+    }
+
+    // Deduct cost
+    resources.deduct(project.proposalCost);
+
+    // Initialize project with all NPCs at neutral support
+    const supportLevels = new Map<string, number>();
+    for (const npc of this.npcs) {
+      supportLevels.set(npc.id, 0.0);
+    }
+
+    this.activeProject = {
+      projectId,
+      supportLevels,
+      solsRemaining: PROJECT_VOTE_DELAY,
+    };
+
+    return true;
   }
 
   // ============ Serialization ============
