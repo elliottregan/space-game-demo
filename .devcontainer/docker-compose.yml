@@ -1,0 +1,27 @@
+services:
+  devcontainer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: space-game-devcontainer
+
+    ports:
+      - "2222:22"      # SSH
+      - "5173:5173"    # Vite dev server
+
+    volumes:
+      - ..:/workspace:cached
+      - devcontainer-claude-config:/home/dev/.claude
+      - ~/.ssh:/home/dev/.ssh:ro
+      - ~/.gitconfig:/home/dev/.gitconfig:ro
+
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - VITE_HOST=0.0.0.0
+
+    tty: true
+    stdin_open: true
+
+volumes:
+  devcontainer-claude-config:

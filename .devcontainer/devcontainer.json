@@ -1,0 +1,9 @@
+{
+  "name": "Space Game - Bun/Vue/Vite with Claude Code",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  "remoteUser": "dev",
+  "forwardPorts": [5173, 24678],
+  "postCreateCommand": "bun install"
+}
