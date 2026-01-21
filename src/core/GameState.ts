@@ -8,8 +8,10 @@ import { PoliticsEngine } from "./systems/PoliticsEngine";
 import { EventManager } from "./systems/EventManager";
 import { VictoryManager } from "./systems/VictoryManager";
 import { OperationsManager } from "./systems/OperationsManager";
+import { NPCInfluenceManager } from "./systems/NPCInfluenceManager";
 
 import { STARTING_RESOURCES, STARTING_POPULATION } from "./balance/EconomyBaseline";
+import { NPCS, INITIAL_RELATIONSHIPS, PROJECTS } from "./data/npcs";
 import { TECHNOLOGIES } from "./data/technologies";
 import { BUILDINGS } from "./data/buildings";
 import { FACTIONS, DECISIONS } from "./data/factions";
@@ -27,6 +29,7 @@ export class GameState {
   events: EventManager;
   victory: VictoryManager;
   operations: OperationsManager;
+  npcInfluence: NPCInfluenceManager;
 
   private eventLog: GameEvent[] = [];
 
@@ -40,6 +43,7 @@ export class GameState {
     this.events = new EventManager(RANDOM_EVENTS);
     this.victory = new VictoryManager();
     this.operations = new OperationsManager();
+    this.npcInfluence = new NPCInfluenceManager(NPCS, INITIAL_RELATIONSHIPS, PROJECTS);
 
     // Initialize colonist consumption
     this.colony.tick(this.resources);
@@ -71,7 +75,10 @@ export class GameState {
     // 6. Politics tick (support decay)
     events.push(...this.politics.tick());
 
-    // 6.5. Operations tick
+    // 6.5. NPC Influence tick
+    events.push(...this.npcInfluence.tick());
+
+    // 6.6. Operations tick
     events.push(...this.operations.tick(this.currentSol, this.resources, this.colony));
 
     // 7. Random events tick
@@ -121,6 +128,7 @@ export class GameState {
       events: this.events.toJSON(),
       victory: this.victory.toJSON(),
       operations: this.operations.toJSON(),
+      npcInfluence: this.npcInfluence.toJSON(),
     };
   }
 
@@ -138,6 +146,15 @@ export class GameState {
 
     if (data.operations) {
       state.operations = OperationsManager.fromJSON(data.operations);
+    }
+
+    if (data.npcInfluence) {
+      state.npcInfluence = NPCInfluenceManager.fromJSON(
+        data.npcInfluence,
+        NPCS,
+        INITIAL_RELATIONSHIPS,
+        PROJECTS
+      );
     }
 
     return state;

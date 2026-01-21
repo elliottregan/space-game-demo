@@ -9,6 +9,7 @@ import type { Faction, Decision, DecisionResult } from "../../core/models/Politi
 import type { RandomEventDefinition, EventChoice, ActiveEvent } from "../../core/models/GameEvent";
 import type { VictoryState } from "../../core/systems/VictoryManager";
 import type { ColonyPolicies, ActiveExpedition, ProspectingSite } from "../../core/models/Operation";
+import type { NPC, Project, Council } from "../../core/models/NPCInfluence";
 
 interface GameUIState {
   currentSol: number;
@@ -38,6 +39,17 @@ interface GameUIState {
   policyCooldownRemaining: number;
   activeExpeditions: ActiveExpedition[];
   prospectingSites: ProspectingSite[];
+  npcInfluence: {
+    npcs: NPC[];
+    projects: Project[];
+    activeProject: {
+      projectId: string;
+      supportLevels: Record<string, number>;
+      solsRemaining: number;
+      averageSupport: number;
+    } | null;
+    councils: Council[];
+  };
 }
 
 class GameService {
@@ -84,6 +96,12 @@ class GameService {
       policyCooldownRemaining: 0,
       activeExpeditions: [],
       prospectingSites: [],
+      npcInfluence: {
+        npcs: [],
+        projects: [],
+        activeProject: null,
+        councils: [],
+      },
     };
   }
 
@@ -130,6 +148,22 @@ class GameService {
     this.state.policyCooldownRemaining = this.gameState.operations.getSolsUntilPolicyChange(this.gameState.currentSol);
     this.state.activeExpeditions = [...this.gameState.operations.getActiveExpeditions()];
     this.state.prospectingSites = [...this.gameState.operations.getSites()];
+
+    // NPC Influence
+    const activeProject = this.gameState.npcInfluence.getActiveProject();
+    this.state.npcInfluence = {
+      npcs: [...this.gameState.npcInfluence.getNPCs()],
+      projects: this.gameState.npcInfluence.getProjects(),
+      activeProject: activeProject
+        ? {
+            projectId: activeProject.projectId,
+            supportLevels: Object.fromEntries(activeProject.supportLevels),
+            solsRemaining: activeProject.solsRemaining,
+            averageSupport: this.gameState.npcInfluence.getAverageSupport(),
+          }
+        : null,
+      councils: [...this.gameState.npcInfluence.getCouncils()],
+    };
   }
 
   getState() {
@@ -265,6 +299,29 @@ class GameService {
     const result = this.gameState.buildings.setBuildingMode(buildingId, mode, this.gameState.resources);
     this.syncState();
     return result;
+  }
+
+  // NPC Influence actions
+  proposeProject(projectId: string): boolean {
+    const result = this.gameState.npcInfluence.proposeProject(projectId, this.gameState.resources);
+    this.syncState();
+    return result;
+  }
+
+  lobbyNPC(npcId: string, supportBoost: number): boolean {
+    const result = this.gameState.npcInfluence.lobbyNPC(npcId, supportBoost, this.gameState.resources);
+    this.syncState();
+    return result;
+  }
+
+  createCouncil(name: string, memberIds: string[]): boolean {
+    const result = this.gameState.npcInfluence.createCouncil(name, memberIds, this.gameState.resources);
+    this.syncState();
+    return result;
+  }
+
+  getLobbyCost(npcId: string, supportBoost: number): number {
+    return this.gameState.npcInfluence.getLobbyCost(npcId, supportBoost);
   }
 
   // Game management

@@ -7,6 +7,7 @@ import BuildingPanel from "./components/BuildingPanel.vue";
 import TechnologyPanel from "./components/TechnologyPanel.vue";
 import PoliticsPanel from "./components/PoliticsPanel.vue";
 import OperationsPanel from "./components/OperationsPanel.vue";
+import NPCInfluencePanel from "./components/NPCInfluencePanel.vue";
 import EventModal from "./components/EventModal.vue";
 import GameOverModal from "./components/GameOverModal.vue";
 import EventLog from "./components/EventLog.vue";
@@ -62,6 +63,7 @@ function newGame() {
         <TechnologyPanel />
         <PoliticsPanel />
         <OperationsPanel />
+        <NPCInfluencePanel />
         </div>
       </div>
     </main>
