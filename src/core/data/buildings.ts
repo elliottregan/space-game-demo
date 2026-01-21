@@ -36,6 +36,16 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 7,
     production: { water: 4 },
     consumption: { power: 2 },
+    requiresDeposit: true,
+    repurposeTargets: ["storage_depot", "mining_station"],
+  },
+  {
+    id: "storage_depot",
+    name: "Storage Depot",
+    description: "Increases colony storage capacity. Can be built on depleted mining sites.",
+    cost: { materials: 40 },
+    constructionTime: 8,
+    consumption: { power: 1 },
   },
   {
     id: "basic_farm",
@@ -113,6 +123,8 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 5,
     workerRole: ColonistRole.ENGINEERING,
     requiredTech: "asteroid_mining",
+    requiresDeposit: true,
+    repurposeTargets: ["storage_depot", "water_extractor"],
   },
   {
     id: "nuclear_reactor",

@@ -9,6 +9,8 @@ import {
   RECYCLING_RECOVERY_RATES,
   RECYCLING_TIME_MULTIPLIER,
   RUSH_RECYCLING_PENALTY,
+  REPURPOSE_COST_MULTIPLIER,
+  REPURPOSE_TIME_MULTIPLIER,
 } from "../balance/OperationsBalance";
 import type { ResourceDelta } from "../models/Resources";
 
@@ -36,9 +38,15 @@ export class BuildingManager {
         const speedMultiplier = 1.0 + this.constructionSpeedBonus;
         building.constructionProgress += speedMultiplier;
 
-        if (building.constructionProgress >= def.constructionTime) {
+        // Use repurpose time if repurposing
+        const constructionTime = building.repurposeFromDefId
+          ? this.getRepurposeTime(building.definitionId)
+          : def.constructionTime;
+
+        if (building.constructionProgress >= constructionTime) {
           building.status = "active";
-          building.constructionProgress = def.constructionTime;
+          building.constructionProgress = constructionTime;
+          building.repurposeFromDefId = undefined; // Clear repurpose flag
 
           // Add mode-adjusted production/consumption
           const effectiveProd = this.getEffectiveProduction(building.id);
@@ -330,6 +338,94 @@ export class BuildingManager {
     return true;
   }
 
+  canRepurpose(
+    buildingId: string,
+    targetDefId: string,
+    resources: ResourceManager,
+    technology: TechnologyTree
+  ): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+    if (building.status !== "active" && building.status !== "idle") return false;
+    if (building.broken) return false; // Must repair before repurposing
+    if (building.assignedWorkers.length > 0) return false; // Must unassign workers first
+
+    const currentDef = this.definitions.get(building.definitionId);
+    if (!currentDef?.repurposeTargets?.includes(targetDefId)) return false;
+
+    const targetDef = this.definitions.get(targetDefId);
+    if (!targetDef) return false;
+
+    // Check tech requirements for target
+    if (targetDef.requiredTech && !technology.isResearched(targetDef.requiredTech)) {
+      return false;
+    }
+
+    // Check cost (30% of target building materials)
+    const cost = this.getRepurposeCost(targetDefId);
+    return cost ? resources.canAfford(cost) : false;
+  }
+
+  getRepurposeCost(targetDefId: string): ResourceDelta | undefined {
+    const targetDef = this.definitions.get(targetDefId);
+    if (!targetDef) return undefined;
+
+    const cost: ResourceDelta = {};
+    for (const [key, value] of Object.entries(targetDef.cost)) {
+      if (value) cost[key as keyof ResourceDelta] = Math.ceil(value * REPURPOSE_COST_MULTIPLIER);
+    }
+    return cost;
+  }
+
+  getRepurposeTime(targetDefId: string): number {
+    const targetDef = this.definitions.get(targetDefId);
+    if (!targetDef) return 0;
+    return Math.ceil(targetDef.constructionTime * REPURPOSE_TIME_MULTIPLIER);
+  }
+
+  startRepurposing(
+    buildingId: string,
+    targetDefId: string,
+    resources: ResourceManager,
+    technology: TechnologyTree
+  ): boolean {
+    if (!this.canRepurpose(buildingId, targetDefId, resources, technology)) return false;
+
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+
+    // Remove production/consumption if active
+    if (building.status === "active" && !building.broken) {
+      const oldProd = this.getEffectiveProduction(buildingId);
+      const oldCons = this.getEffectiveConsumption(buildingId);
+      if (Object.keys(oldProd).length > 0) {
+        resources.removeProduction(oldProd);
+      }
+      if (Object.keys(oldCons).length > 0) {
+        resources.removeConsumption(oldCons);
+      }
+    }
+
+    // Deduct cost
+    const cost = this.getRepurposeCost(targetDefId);
+    if (cost) resources.deduct(cost);
+
+    // Update building
+    const originalDefId = building.definitionId;
+    building.definitionId = targetDefId;
+    building.repurposeFromDefId = originalDefId;
+    building.status = "pending";
+    building.constructionProgress = 0;
+    building.mode = "normal";
+    building.repairProgress = 0;
+
+    // Clear depositId during repurposing - player must re-link to appropriate deposit
+    // (deposit types may not be compatible between building types)
+    building.depositId = undefined;
+
+    return true;
+  }
+
   getBuildingMode(buildingId: string): "conservation" | "normal" | "overdrive" | undefined {
     return this.buildings.get(buildingId)?.mode;
   }
@@ -454,6 +550,7 @@ export class BuildingManager {
         broken: b.broken ?? false,
         repairProgress: b.repairProgress ?? 0,
         recyclingProgress: b.recyclingProgress,
+        repurposeFromDefId: b.repurposeFromDefId,
       };
       manager.buildings.set(building.id, building);
     });

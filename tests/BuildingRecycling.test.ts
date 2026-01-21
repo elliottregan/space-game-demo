@@ -216,3 +216,197 @@ describe("Building Recycling", () => {
     expect(recycleEvent).toBeDefined();
   });
 });
+
+describe("Building Repurposing", () => {
+  test("canRepurpose returns true for valid target", () => {
+    const manager = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const tech = new TechnologyTree(TECHNOLOGIES);
+
+    const building = manager.startBuilding("water_extractor", resources, tech);
+
+    // Complete construction
+    for (let i = 0; i < 10; i++) {
+      manager.tick(resources);
+    }
+
+    const canRepurpose = manager.canRepurpose(building!.id, "storage_depot", resources, tech);
+    expect(canRepurpose).toBe(true);
+  });
+
+  test("canRepurpose returns false for invalid target", () => {
+    const manager = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const tech = new TechnologyTree(TECHNOLOGIES);
+
+    const building = manager.startBuilding("solar_panel", resources, tech);
+
+    // Complete construction
+    for (let i = 0; i < 10; i++) {
+      manager.tick(resources);
+    }
+
+    // Solar panel has no repurposeTargets
+    const canRepurpose = manager.canRepurpose(building!.id, "storage_depot", resources, tech);
+    expect(canRepurpose).toBe(false);
+  });
+
+  test("canRepurpose returns false when workers are assigned", () => {
+    const manager = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+
+    // Use fromJSON to pre-research required technologies for mining_station
+    const tech = TechnologyTree.fromJSON(
+      {
+        researched: ["advanced_materials", "robotics", "asteroid_mining"],
+        currentResearch: null,
+        researchSpeedBonus: 0,
+      },
+      TECHNOLOGIES
+    );
+
+    // mining_station has workerSlots and repurposeTargets
+    const building = manager.startBuilding("mining_station", resources, tech);
+
+    // Complete construction (mining_station takes 40 sols)
+    for (let i = 0; i < 50; i++) {
+      manager.tick(resources);
+    }
+
+    // Assign a worker
+    manager.assignWorker(building!.id, "colonist_1");
+
+    const canRepurpose = manager.canRepurpose(building!.id, "storage_depot", resources, tech);
+    expect(canRepurpose).toBe(false);
+  });
+
+  test("startRepurposing begins conversion process", () => {
+    const manager = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const tech = new TechnologyTree(TECHNOLOGIES);
+
+    const building = manager.startBuilding("water_extractor", resources, tech);
+
+    // Complete construction
+    for (let i = 0; i < 10; i++) {
+      manager.tick(resources);
+    }
+
+    const materialsBefore = resources.getResources().materials;
+    const success = manager.startRepurposing(building!.id, "storage_depot", resources, tech);
+
+    expect(success).toBe(true);
+    expect(resources.getResources().materials).toBeLessThan(materialsBefore); // Cost deducted
+
+    const updatedBuilding = manager.getBuilding(building!.id);
+    expect(updatedBuilding?.status).toBe("pending"); // Back to pending while converting
+    expect(updatedBuilding?.definitionId).toBe("storage_depot"); // Changed to target
+    expect(updatedBuilding?.repurposeFromDefId).toBe("water_extractor"); // Tracks original
+  });
+
+  test("repurposing uses correct time multiplier", () => {
+    const manager = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const tech = new TechnologyTree(TECHNOLOGIES);
+
+    const building = manager.startBuilding("water_extractor", resources, tech);
+
+    // Complete construction (water_extractor takes 7 sols)
+    for (let i = 0; i < 10; i++) {
+      manager.tick(resources);
+    }
+
+    manager.startRepurposing(building!.id, "storage_depot", resources, tech);
+
+    // storage_depot takes 8 sols, repurpose time = 50% = 4 sols
+    // So it should complete after 4 ticks
+    for (let i = 0; i < 3; i++) {
+      manager.tick(resources);
+    }
+
+    let updatedBuilding = manager.getBuilding(building!.id);
+    expect(updatedBuilding?.status).toBe("pending"); // Still pending after 3
+
+    manager.tick(resources); // 4th tick
+
+    updatedBuilding = manager.getBuilding(building!.id);
+    expect(updatedBuilding?.status).toBe("active"); // Complete after 4
+    expect(updatedBuilding?.repurposeFromDefId).toBeUndefined(); // Flag cleared
+  });
+
+  test("getRepurposeCost returns 30% of target cost", () => {
+    const manager = new BuildingManager(BUILDINGS);
+
+    // storage_depot costs 40 materials, 30% = 12
+    const cost = manager.getRepurposeCost("storage_depot");
+    expect(cost?.materials).toBe(12);
+  });
+
+  test("startRepurposing removes production from active building", () => {
+    const manager = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const tech = new TechnologyTree(TECHNOLOGIES);
+
+    const building = manager.startBuilding("water_extractor", resources, tech);
+
+    // Complete construction
+    for (let i = 0; i < 10; i++) {
+      manager.tick(resources);
+    }
+
+    // Water extractor produces 4 water
+    const prodBefore = resources.getProduction();
+    expect(prodBefore.water).toBe(4);
+
+    manager.startRepurposing(building!.id, "storage_depot", resources, tech);
+
+    // Production should be removed during conversion
+    const prodAfter = resources.getProduction();
+    expect(prodAfter.water).toBe(0);
+  });
+
+  test("canRepurpose returns false for broken buildings", () => {
+    const manager = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const tech = new TechnologyTree(TECHNOLOGIES);
+
+    const building = manager.startBuilding("water_extractor", resources, tech);
+
+    // Complete construction
+    for (let i = 0; i < 10; i++) {
+      manager.tick(resources);
+    }
+
+    // Break the building
+    manager.breakBuilding(building!.id, resources);
+
+    // Cannot repurpose broken buildings
+    const canRepurpose = manager.canRepurpose(building!.id, "storage_depot", resources, tech);
+    expect(canRepurpose).toBe(false);
+  });
+
+  test("startRepurposing clears depositId", () => {
+    const manager = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const tech = new TechnologyTree(TECHNOLOGIES);
+
+    const building = manager.startBuilding("water_extractor", resources, tech);
+
+    // Complete construction
+    for (let i = 0; i < 10; i++) {
+      manager.tick(resources);
+    }
+
+    // Manually set depositId (simulating linked deposit)
+    const b = manager.getBuilding(building!.id);
+    if (b) b.depositId = "site_123";
+
+    expect(manager.getBuilding(building!.id)?.depositId).toBe("site_123");
+
+    manager.startRepurposing(building!.id, "storage_depot", resources, tech);
+
+    // depositId should be cleared during repurposing
+    const updatedBuilding = manager.getBuilding(building!.id);
+    expect(updatedBuilding?.depositId).toBeUndefined();
+  });
+});

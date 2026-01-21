@@ -29,4 +29,5 @@ export interface Building {
   repairProgress: number;
   depositId?: string; // linked deposit for mining buildings
   recyclingProgress?: number;
+  repurposeFromDefId?: string; // Set when repurposing, cleared when complete
 }
