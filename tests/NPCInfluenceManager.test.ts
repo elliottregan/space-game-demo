@@ -5,6 +5,7 @@ import { NPCInfluenceManager } from '../src/core/systems/NPCInfluenceManager';
 import { ResourceManager } from '../src/core/systems/ResourceManager';
 import { NPCS, INITIAL_RELATIONSHIPS, PROJECTS } from '../src/core/data/npcs';
 import { LOBBY_BASE_COST, COUNCIL_CREATION_COST, COUNCIL_RELATIONSHIP_BOOST } from '../src/core/balance/NPCInfluenceBalance';
+import type { GameEvent } from '../src/core/models/GameEvent';
 
 describe('NPCInfluenceManager', () => {
   let manager: NPCInfluenceManager;
@@ -245,6 +246,125 @@ describe('NPCInfluenceManager', () => {
 
       expect(result).toBe(false);
       expect(manager.getCouncils().length).toBe(0);
+    });
+  });
+
+  describe('tick', () => {
+    it('should propagate support through network each tick', () => {
+      const resources = new ResourceManager({
+        food: 100,
+        oxygen: 100,
+        water: 100,
+        power: 100,
+        materials: 500,
+      });
+
+      manager.proposeProject('generation_ship', resources);
+
+      // Seed support for chen_wei (futurist)
+      manager.lobbyNPC('chen_wei', 0.8, resources);
+
+      // Run a tick
+      manager.tick();
+
+      // nova_silva (futurist, connected to chen_wei) should have gained some support
+      const novaSupport = manager.getActiveProject()!.supportLevels.get('nova_silva')!;
+      expect(novaSupport).toBeGreaterThan(0);
+    });
+
+    it('should decrement solsRemaining each tick', () => {
+      const resources = new ResourceManager({
+        food: 100,
+        oxygen: 100,
+        water: 100,
+        power: 100,
+        materials: 500,
+      });
+
+      manager.proposeProject('generation_ship', resources);
+      const initialSols = manager.getActiveProject()!.solsRemaining;
+
+      manager.tick();
+
+      expect(manager.getActiveProject()!.solsRemaining).toBe(initialSols - 1);
+    });
+
+    it('should resolve project when solsRemaining reaches 0', () => {
+      const resources = new ResourceManager({
+        food: 100,
+        oxygen: 100,
+        water: 100,
+        power: 100,
+        materials: 1000,
+      });
+
+      manager.proposeProject('generation_ship', resources);
+
+      // Lobby enough NPCs to pass
+      manager.lobbyNPC('chen_wei', 0.9, resources);
+      manager.lobbyNPC('nova_silva', 0.9, resources);
+      manager.lobbyNPC('alex_okonkwo', 0.9, resources);
+      manager.lobbyNPC('maria_santos', 0.7, resources);
+      manager.lobbyNPC('james_liu', 0.7, resources);
+
+      // Run 10 ticks to resolve
+      for (let i = 0; i < 10; i++) {
+        manager.tick();
+      }
+
+      // Project should be resolved (cleared)
+      expect(manager.getActiveProject()).toBeNull();
+    });
+
+    it('should emit PROJECT_PASSED event when project passes', () => {
+      const resources = new ResourceManager({
+        food: 100,
+        oxygen: 100,
+        water: 100,
+        power: 100,
+        materials: 1000,
+      });
+
+      manager.proposeProject('generation_ship', resources);
+
+      // Lobby most NPCs heavily
+      for (const npc of manager.getNPCs()) {
+        manager.lobbyNPC(npc.id, 0.9, resources);
+      }
+
+      // Run ticks until resolution
+      let events: GameEvent[] = [];
+      for (let i = 0; i < 10; i++) {
+        events = manager.tick();
+      }
+
+      const passedEvent = events.find((e) => e.type === 'PROJECT_PASSED');
+      expect(passedEvent).toBeDefined();
+      expect(passedEvent!.projectId).toBe('generation_ship');
+    });
+
+    it('should emit PROJECT_FAILED event when project fails', () => {
+      const resources = new ResourceManager({
+        food: 100,
+        oxygen: 100,
+        water: 100,
+        power: 100,
+        materials: 500,
+      });
+
+      manager.proposeProject('generation_ship', resources);
+
+      // Don't lobby anyone - all at 0.0, will fail
+
+      // Run ticks until resolution
+      let events: GameEvent[] = [];
+      for (let i = 0; i < 10; i++) {
+        events = manager.tick();
+      }
+
+      const failedEvent = events.find((e) => e.type === 'PROJECT_FAILED');
+      expect(failedEvent).toBeDefined();
+      expect(failedEvent!.projectId).toBe('generation_ship');
     });
   });
 });

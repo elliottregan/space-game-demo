@@ -15,9 +15,11 @@ import {
   COUNCIL_CREATION_COST,
   COUNCIL_RELATIONSHIP_BOOST,
   DRIFT_RATE,
+  FAILURE_TRANSMISSION_PENALTY,
   LOBBY_BASE_COST,
   PASS_THRESHOLD,
   PROJECT_VOTE_DELAY,
+  SUCCESS_TRANSMISSION_BOOST,
   TRANSMISSION_FACTORS,
 } from '../balance/NPCInfluenceBalance';
 
@@ -321,6 +323,137 @@ export class NPCInfluenceManager {
     this.councils.push(council);
 
     return true;
+  }
+
+  // ============ Tick / Game Loop ============
+
+  /**
+   * Build the transmission matrix T for a given project type.
+   * T[i][j] = how receptive NPC i is to influence from NPC j
+   */
+  private buildTransmissionMatrix(projectType: ProjectType): number[][] {
+    const N = this.npcs.length;
+    const T: number[][] = Array(N)
+      .fill(0)
+      .map(() => Array(N).fill(0));
+
+    const factors = this.transmissionFactors[projectType];
+
+    for (let i = 0; i < N; i++) {
+      for (let j = 0; j < N; j++) {
+        const targetFaction = this.npcs[i].faction;
+        const sourceFaction = this.npcs[j].faction;
+        T[i][j] = factors[targetFaction][sourceFaction];
+      }
+    }
+
+    return T;
+  }
+
+  /**
+   * Calculate average support across all NPCs for the active project.
+   */
+  getAverageSupport(): number {
+    if (!this.activeProject) return 0;
+
+    let sum = 0;
+    for (const support of this.activeProject.supportLevels.values()) {
+      sum += support;
+    }
+    return sum / this.npcs.length;
+  }
+
+  /**
+   * Modify transmission factors after project success/failure.
+   */
+  private modifyTransmissionFactors(projectType: ProjectType, delta: number): void {
+    for (const pType of Object.keys(this.transmissionFactors) as ProjectType[]) {
+      for (const targetFaction of Object.keys(this.transmissionFactors[pType]) as NPCFaction[]) {
+        // Modify how receptive everyone is to the project's faction
+        const current = this.transmissionFactors[pType][targetFaction][projectType];
+        this.transmissionFactors[pType][targetFaction][projectType] = Math.max(
+          0,
+          Math.min(1, current + delta)
+        );
+      }
+    }
+  }
+
+  /**
+   * Process one game tick. Propagates influence and resolves projects.
+   */
+  tick(): GameEvent[] {
+    const events: GameEvent[] = [];
+
+    if (!this.activeProject) {
+      return events;
+    }
+
+    const project = this.projects.get(this.activeProject.projectId);
+    if (!project) {
+      return events;
+    }
+
+    // Build current support vector
+    const currentSupport: number[] = this.npcs.map(
+      (npc) => this.activeProject!.supportLevels.get(npc.id) || 0
+    );
+
+    // Build transmission matrix for this project type
+    const T = this.buildTransmissionMatrix(project.type);
+
+    // Update support levels
+    const newSupport = updateSupport(
+      currentSupport,
+      this.relationshipMatrix,
+      T,
+      DRIFT_RATE
+    );
+
+    // Store updated support
+    for (let i = 0; i < this.npcs.length; i++) {
+      this.activeProject.supportLevels.set(this.npcs[i].id, newSupport[i]);
+    }
+
+    // Decrement sols remaining
+    this.activeProject.solsRemaining--;
+
+    // Check for resolution
+    if (this.activeProject.solsRemaining <= 0) {
+      const averageSupport = this.getAverageSupport();
+      const passed = averageSupport >= PASS_THRESHOLD;
+
+      if (passed) {
+        events.push({
+          type: 'PROJECT_PASSED',
+          severity: 'info',
+          projectId: project.id,
+          projectName: project.name,
+          averageSupport,
+          message: `Project "${project.name}" passed with ${(averageSupport * 100).toFixed(0)}% average support`,
+        });
+
+        // Boost transmission factors for this project type
+        this.modifyTransmissionFactors(project.type, SUCCESS_TRANSMISSION_BOOST);
+      } else {
+        events.push({
+          type: 'PROJECT_FAILED',
+          severity: 'warning',
+          projectId: project.id,
+          projectName: project.name,
+          averageSupport,
+          message: `Project "${project.name}" failed with only ${(averageSupport * 100).toFixed(0)}% average support`,
+        });
+
+        // Penalize transmission factors for this project type
+        this.modifyTransmissionFactors(project.type, FAILURE_TRANSMISSION_PENALTY);
+      }
+
+      // Clear active project
+      this.activeProject = null;
+    }
+
+    return events;
   }
 
   // ============ Serialization ============
