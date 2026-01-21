@@ -19,6 +19,10 @@ import {
   MAX_CONCURRENT_EXPEDITIONS,
   EXPEDITION_EXPERIENCE_BONUS,
   EXPEDITION_EXPERIENCE_CAP,
+  PROSPECTING_REVEAL_COST,
+  PROSPECTING_QUALITY,
+  MAX_REVEALED_SITES,
+  MAX_DEVELOPED_SITES,
 } from "../balance/OperationsBalance";
 import type { ResourceManager } from "./ResourceManager";
 import type { ColonyManager } from "./ColonyManager";
@@ -178,6 +182,74 @@ export class OperationsManager {
     }
 
     return events;
+  }
+
+  getSites(): readonly ProspectingSite[] {
+    return [...this.sites];
+  }
+
+  addUnrevealedSite(): void {
+    this.sites.push(this.generateProspectingSite());
+  }
+
+  private generateProspectingSite(): ProspectingSite {
+    const types: Array<"water" | "materials" | "research"> = ["water", "materials", "research"];
+    const qualities: Array<"poor" | "moderate" | "rich"> = ["poor", "moderate", "rich"];
+
+    return {
+      id: `site_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      resourceType: types[Math.floor(Math.random() * types.length)],
+      quality: qualities[Math.floor(Math.random() * qualities.length)],
+      revealed: false,
+      developed: false,
+      developmentProgress: 0,
+    };
+  }
+
+  getRevealedSiteCount(): number {
+    return this.sites.filter(s => s.revealed && !s.developed).length;
+  }
+
+  revealSite(siteId: string, resources: ResourceManager): boolean {
+    if (this.getRevealedSiteCount() >= MAX_REVEALED_SITES) return false;
+
+    const site = this.sites.find(s => s.id === siteId);
+    if (!site || site.revealed) return false;
+
+    if (!resources.canAfford({ materials: PROSPECTING_REVEAL_COST.materials })) return false;
+
+    resources.deduct({ materials: PROSPECTING_REVEAL_COST.materials });
+    site.revealed = true;
+    return true;
+  }
+
+  developSite(siteId: string, resources: ResourceManager): boolean {
+    const site = this.sites.find(s => s.id === siteId);
+    if (!site || !site.revealed || site.developed) return false;
+
+    const cost = PROSPECTING_QUALITY[site.quality].developCost;
+    if (!resources.canAfford({ materials: cost })) return false;
+
+    resources.deduct({ materials: cost });
+    site.developed = true;
+    return true;
+  }
+
+  getDevelopedSiteBonus(resourceType: "water" | "materials" | "research"): number {
+    return this.sites
+      .filter(s => s.developed && s.resourceType === resourceType)
+      .reduce((sum, s) => sum + PROSPECTING_QUALITY[s.quality].bonus, 0);
+  }
+
+  abandonSite(siteId: string): boolean {
+    const index = this.sites.findIndex(s => s.id === siteId);
+    if (index === -1) return false;
+
+    const site = this.sites[index];
+    if (site.developed) return false; // Can't abandon developed sites
+
+    this.sites.splice(index, 1);
+    return true;
   }
 
   toJSON() {
