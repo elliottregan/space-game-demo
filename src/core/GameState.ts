@@ -7,6 +7,7 @@ import { WorkforceManager } from "./systems/WorkforceManager";
 import { PoliticsEngine } from "./systems/PoliticsEngine";
 import { EventManager } from "./systems/EventManager";
 import { VictoryManager } from "./systems/VictoryManager";
+import { OperationsManager } from "./systems/OperationsManager";
 
 import { STARTING_RESOURCES, STARTING_POPULATION } from "./balance/EconomyBaseline";
 import { TECHNOLOGIES } from "./data/technologies";
@@ -25,6 +26,7 @@ export class GameState {
   politics: PoliticsEngine;
   events: EventManager;
   victory: VictoryManager;
+  operations: OperationsManager;
 
   private eventLog: GameEvent[] = [];
 
@@ -37,6 +39,7 @@ export class GameState {
     this.politics = new PoliticsEngine(FACTIONS, DECISIONS);
     this.events = new EventManager(RANDOM_EVENTS);
     this.victory = new VictoryManager();
+    this.operations = new OperationsManager();
 
     // Initialize colonist consumption
     this.colony.tick(this.resources);
@@ -67,6 +70,9 @@ export class GameState {
 
     // 6. Politics tick (support decay)
     events.push(...this.politics.tick());
+
+    // 6.5. Operations tick
+    events.push(...this.operations.tick(this.currentSol));
 
     // 7. Random events tick
     events.push(...this.events.tick(this.currentSol));
@@ -114,6 +120,7 @@ export class GameState {
       politics: this.politics.toJSON(),
       events: this.events.toJSON(),
       victory: this.victory.toJSON(),
+      operations: this.operations.toJSON(),
     };
   }
 
@@ -128,6 +135,10 @@ export class GameState {
     state.politics = PoliticsEngine.fromJSON(data.politics, DECISIONS);
     state.events = EventManager.fromJSON(data.events, RANDOM_EVENTS);
     state.victory = VictoryManager.fromJSON(data.victory);
+
+    if (data.operations) {
+      state.operations = OperationsManager.fromJSON(data.operations);
+    }
 
     return state;
   }
