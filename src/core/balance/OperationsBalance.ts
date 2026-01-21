@@ -53,3 +53,43 @@ export const PROSPECTING_QUALITY = {
 
 export const MAX_REVEALED_SITES = 3;
 export const MAX_DEVELOPED_SITES = 5;
+
+// Deposit Reserves by Quality and Resource Type
+export const DEPOSIT_RESERVES = {
+  materials: {
+    poor: { min: 200, max: 400 },
+    moderate: { min: 400, max: 800 },
+    rich: { min: 800, max: 1500 },
+  },
+  water: {
+    poor: { min: 150, max: 300 },
+    moderate: { min: 300, max: 600 },
+    rich: { min: 600, max: 1000 },
+  },
+  research: {
+    poor: { min: 50, max: 100 },
+    moderate: { min: 100, max: 200 },
+    rich: { min: 200, max: 400 },
+  },
+} as const;
+
+// Extraction rate multipliers per quality
+export const EXTRACTION_RATE_MULTIPLIERS = {
+  poor: 0.5,
+  moderate: 1.0,
+  rich: 1.5,
+} as const;
+
+// Estimate uncertainty (as fraction of actual) at extraction thresholds
+export const ESTIMATE_UNCERTAINTY = {
+  initial: 0.3,      // ±30% at start
+  at25Percent: 0.2,  // ±20% after 25% extracted
+  at50Percent: 0.1,  // ±10% after 50% extracted
+  at75Percent: 0.05, // ±5% after 75% extracted
+} as const;
+
+// Depletion warning thresholds
+export const DEPLETION_THRESHOLDS = {
+  warning: 0.25,     // 25% remaining
+  critical: 0.10,    // 10% remaining
+} as const;

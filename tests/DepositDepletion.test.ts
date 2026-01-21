@@ -1,6 +1,12 @@
 // tests/DepositDepletion.test.ts
 import { describe, test, expect } from "bun:test";
 import type { ProspectingSite } from "../src/core/models/Operation";
+import {
+  DEPOSIT_RESERVES,
+  EXTRACTION_RATE_MULTIPLIERS,
+  ESTIMATE_UNCERTAINTY,
+  DEPLETION_THRESHOLDS,
+} from "../src/core/balance/OperationsBalance";
 
 describe("Deposit Model", () => {
   test("ProspectingSite has reserve fields", () => {
@@ -21,5 +27,31 @@ describe("Deposit Model", () => {
     expect(site.estimatedReserves.min).toBe(400);
     expect(site.remainingReserves).toBe(500);
     expect(site.linkedBuildingId).toBeNull();
+  });
+});
+
+describe("Deposit Balance Constants", () => {
+  test("DEPOSIT_RESERVES defines ranges for each quality and resource", () => {
+    expect(DEPOSIT_RESERVES.materials.moderate.min).toBe(400);
+    expect(DEPOSIT_RESERVES.materials.moderate.max).toBe(800);
+    expect(DEPOSIT_RESERVES.water.rich.min).toBe(600);
+  });
+
+  test("EXTRACTION_RATE_MULTIPLIERS defines multipliers per quality", () => {
+    expect(EXTRACTION_RATE_MULTIPLIERS.poor).toBe(0.5);
+    expect(EXTRACTION_RATE_MULTIPLIERS.moderate).toBe(1.0);
+    expect(EXTRACTION_RATE_MULTIPLIERS.rich).toBe(1.5);
+  });
+
+  test("ESTIMATE_UNCERTAINTY defines accuracy at extraction thresholds", () => {
+    expect(ESTIMATE_UNCERTAINTY.initial).toBe(0.3);
+    expect(ESTIMATE_UNCERTAINTY.at25Percent).toBe(0.2);
+    expect(ESTIMATE_UNCERTAINTY.at50Percent).toBe(0.1);
+    expect(ESTIMATE_UNCERTAINTY.at75Percent).toBe(0.05);
+  });
+
+  test("DEPLETION_THRESHOLDS defines warning levels", () => {
+    expect(DEPLETION_THRESHOLDS.warning).toBe(0.25);
+    expect(DEPLETION_THRESHOLDS.critical).toBe(0.10);
   });
 });
