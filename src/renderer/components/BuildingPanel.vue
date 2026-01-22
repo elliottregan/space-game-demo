@@ -5,7 +5,9 @@ import type { BuildingDefinition } from "../../core/models/Building";
 import { highlightResources, clearHighlights } from "../directives/ResourceHighlight";
 import { GPanel, GButton, GProgress } from "../ui";
 
+// Access reactive state and the type-safe façade API
 const state = gameService.getState();
+const api = gameService.api;
 const selectedCategory = ref<"all" | "available" | "built">("available");
 
 const availableBuildings = computed(() => {
@@ -36,12 +38,25 @@ const filteredBuildings = computed(() => {
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function canBuild(defId: string): boolean {
-  return gameService.canBuild(defId);
+  // Use façade API for detailed check
+  return api.canBuild(defId).allowed;
+}
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function getBuildReason(defId: string): string | undefined {
+  // Get detailed reason why building can't be built
+  const check = api.canBuild(defId);
+  return check.allowed ? undefined : check.reason;
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function buildBuilding(defId: string): void {
-  gameService.startBuilding(defId);
+  // Use façade API with Result type for type-safe error handling
+  const result = api.buildStructure(defId);
+  if (!result.success) {
+    // Error is typed - we know exactly what fields are available
+    console.warn(`Build failed: ${result.error.type}`, result.error);
+  }
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -204,6 +219,7 @@ function getConstructionPercent(building: { constructionProgress: number; defini
           v-if="!isLocked(def)"
           variant="primary"
           :disabled="!canBuild(def.id)"
+          :title="getBuildReason(def.id)"
           @click="buildBuilding(def.id)"
         >
           Build
