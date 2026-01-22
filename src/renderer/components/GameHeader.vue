@@ -17,6 +17,11 @@ function advanceTurn() {
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
+function advanceOneSol() {
+  gameService.advanceTurn(1);
+}
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 function newGame() {
   gameService.newGame();
 }
@@ -28,11 +33,18 @@ function newGame() {
     <div class="sol-display">Sol {{ state.currentSol }}</div>
     <div class="header-actions">
       <GButton
+        variant="secondary"
+        @click="advanceOneSol"
+        :disabled="props.isGameOver || props.hasActiveEvent"
+      >
+        +1 Sol
+      </GButton>
+      <GButton
         variant="primary"
         @click="advanceTurn"
         :disabled="props.isGameOver || props.hasActiveEvent"
       >
-        Advance 10 Sols
+        +10 Sols
       </GButton>
       <GButton variant="secondary" @click="newGame">New Game</GButton>
     </div>
