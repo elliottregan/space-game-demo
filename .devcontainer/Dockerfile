@@ -1,19 +1,23 @@
-FROM oven/bun:1-debian
+FROM oven/bun:alpine
 
-# Install system dependencies for Claude Code and SSH
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git curl ca-certificates openssh-server sudo nodejs npm \
-    && rm -rf /var/lib/apt/lists/*
+# Install system dependencies for Claude Code, SSH, and GitHub CLI
+RUN apk add --no-cache \
+    git curl ca-certificates openssh sudo nodejs npm github-cli bash
 
 # Configure SSH
 RUN mkdir -p /var/run/sshd && \
+    ssh-keygen -A && \
     echo 'PermitRootLogin no' >> /etc/ssh/sshd_config && \
     echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config && \
     echo 'PubkeyAuthentication yes' >> /etc/ssh/sshd_config
 
 # Create non-root user
-RUN useradd -m -s /bin/bash -G sudo dev && \
+RUN adduser -D -s /bin/bash dev && \
+    adduser dev wheel && \
     echo 'dev ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers.d/dev
+
+# Set default password for dev user
+RUN echo 'dev:devpass' | chpasswd
 
 # Install Claude Code globally
 RUN npm install -g @anthropic-ai/claude-code
