@@ -3,7 +3,7 @@ import { ref } from "vue";
 import { gameService } from "../services/GameService";
 import type { Decision } from "../../core/models/Politics";
 import { highlightResources, clearHighlights } from "../directives/ResourceHighlight";
-import { GPanel, GButton, GProgress } from "../ui";
+import { GPanel, GButton, GProgress, GActionCard } from "../ui";
 
 const state = gameService.getState();
 const selectedDecision = ref<Decision | null>(null);
@@ -115,21 +115,17 @@ function onDecisionLeave(): void {
       </div>
 
       <div class="decisions-list">
-        <div
+        <GActionCard
           v-for="decision in state.decisions"
           :key="decision.id"
-          class="decision-card"
-          :class="{ disabled: !canMakeDecision(decision) }"
-          @click="canMakeDecision(decision) && selectDecision(decision)"
+          :title="decision.name"
+          :description="decision.description"
+          :cost="`Requires ${decision.requiredSupport}% support`"
+          :disabled="!canMakeDecision(decision)"
+          @click="selectDecision(decision)"
           @mouseenter="onDecisionHover(decision)"
           @mouseleave="onDecisionLeave"
-        >
-          <div class="decision-name">{{ decision.name }}</div>
-          <div class="decision-desc">{{ decision.description }}</div>
-          <div class="decision-requirement">
-            Requires {{ decision.requiredSupport }}% support
-          </div>
-        </div>
+        />
       </div>
     </div>
 
@@ -249,43 +245,6 @@ function onDecisionLeave(): void {
   gap: var(--g-space-xs);
   max-height: 200px;
   overflow-y: auto;
-}
-
-.decision-card {
-  background: var(--g-color-bg-elevated);
-  border-radius: 4px;
-  padding: var(--g-space-sm);
-  cursor: pointer;
-  border: 1px solid var(--g-color-border);
-  transition: all var(--g-transition-fast);
-}
-
-.decision-card:hover:not(.disabled) {
-  border-color: var(--g-color-border-focus);
-  box-shadow: var(--g-glow-subtle);
-}
-
-.decision-card.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.decision-name {
-  font-family: var(--g-font-mono);
-  font-weight: bold;
-  color: var(--g-color-warning);
-  margin-bottom: var(--g-space-xs);
-}
-
-.decision-desc {
-  font-size: var(--g-font-size-xs);
-  color: var(--g-color-text-muted);
-  margin-bottom: var(--g-space-xs);
-}
-
-.decision-requirement {
-  font-size: var(--g-font-size-xs);
-  color: oklch(70% 0.15 280);
 }
 
 .decision-modal-overlay {

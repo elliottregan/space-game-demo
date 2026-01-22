@@ -12,3 +12,4 @@ export { default as GBadge } from "./primitives/GBadge.vue";
 export { default as ResourceBadge } from "./composites/ResourceBadge.vue";
 export { default as BuildingCard } from "./composites/BuildingCard.vue";
 export { default as CountdownTimer } from "./composites/CountdownTimer.vue";
+export { default as GActionCard } from "./composites/GActionCard.vue";

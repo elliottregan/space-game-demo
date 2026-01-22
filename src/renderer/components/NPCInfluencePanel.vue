@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { gameService } from "../services/GameService";
-import { GPanel, GButton, GProgress, GInput, GSelect, GBadge } from "../ui";
+import { GPanel, GButton, GProgress, GInput, GSelect, GBadge, GActionCard } from "../ui";
 import type { SelectOption } from "../ui/primitives/GSelect.vue";
 
 const state = gameService.getState();
@@ -25,6 +25,11 @@ function canAfford(cost: Record<string, number>): boolean {
     if (available < value) return false;
   }
   return true;
+}
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function formatProjectCost(cost: Record<string, number>): string {
+  return "Cost: " + Object.entries(cost).map(([k, v]) => `${v} ${k}`).join(", ");
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -211,24 +216,21 @@ function handleLobbyAmountChange(value: string | number) {
     <section v-else class="section">
       <h3 class="section-title">Propose a Project</h3>
       <div class="project-list">
-        <div
+        <GActionCard
           v-for="project in state.npcInfluence.projects"
           :key="project.id"
-          class="project-option"
-          :class="{ selected: selectedProject === project.id }"
+          :title="project.name"
+          :description="project.description"
+          :cost="formatProjectCost(project.proposalCost)"
+          :selected="selectedProject === project.id"
           @click="selectedProject = project.id"
         >
-          <div class="project-header">
-            <span class="project-name">{{ project.name }}</span>
+          <template #tag>
             <GBadge :variant="getFactionVariant(project.type)">
               {{ project.type }}
             </GBadge>
-          </div>
-          <p class="project-desc">{{ project.description }}</p>
-          <small class="project-cost">
-            Cost: {{ Object.entries(project.proposalCost).map(([k,v]) => `${v} ${k}`).join(', ') }}
-          </small>
-        </div>
+          </template>
+        </GActionCard>
       </div>
       <GButton variant="primary" :disabled="!canProposeProject" @click="proposeProject">
         Propose Selected Project
@@ -354,7 +356,6 @@ function handleLobbyAmountChange(value: string | number) {
 }
 
 .npc-row,
-.project-option,
 .council-item {
   display: flex;
   align-items: center;
@@ -367,13 +368,11 @@ function handleLobbyAmountChange(value: string | number) {
   transition: border-color var(--g-transition-fast), background var(--g-transition-fast);
 }
 
-.npc-row:hover,
-.project-option:hover {
+.npc-row:hover {
   background: var(--g-color-bg-elevated);
 }
 
-.npc-row.selected,
-.project-option.selected {
+.npc-row.selected {
   border-color: var(--g-color-info);
   background: oklch(65% 0.15 250 / 0.1);
 }
@@ -438,29 +437,6 @@ function handleLobbyAmountChange(value: string | number) {
   font-family: var(--g-font-mono);
   font-size: var(--g-font-size-sm);
   color: var(--g-color-warning);
-}
-
-.project-option {
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.project-header {
-  display: flex;
-  align-items: center;
-  gap: var(--g-space-sm);
-  width: 100%;
-}
-
-.project-desc {
-  margin: var(--g-space-xs) 0;
-  font-size: var(--g-font-size-sm);
-  color: var(--g-color-text-muted);
-}
-
-.project-cost {
-  font-size: var(--g-font-size-xs);
-  color: var(--g-color-text-muted);
 }
 
 .council-item {
