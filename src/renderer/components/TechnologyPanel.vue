@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { gameService } from "../services/GameService";
 import type { Technology } from "../../core/models/Technology";
 import { highlightResources, clearHighlights } from "../directives/ResourceHighlight";
 import { GPanel, GButton, GProgress } from "../ui";
+import TechTreeGraph from "./TechTreeGraph.vue";
 
 const state = gameService.getState();
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+const viewMode = ref<"list" | "graph">("graph");
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const currentResearchTech = computed(() => {
@@ -93,21 +97,45 @@ function onTechLeave(): void {
 
 <template>
   <GPanel title="Research">
-    <div v-if="state.currentResearch && currentResearchTech" class="current-research">
-      <div class="research-header">
-        <span class="research-name">{{ currentResearchTech.name }}</span>
-        <GButton variant="secondary" size="sm" @click="cancelResearch">Cancel</GButton>
+    <template #header-actions>
+      <div class="view-toggle">
+        <button
+          class="toggle-btn"
+          :class="{ active: viewMode === 'graph' }"
+          @click="viewMode = 'graph'"
+          title="Graph View"
+        >
+          &#9638;
+        </button>
+        <button
+          class="toggle-btn"
+          :class="{ active: viewMode === 'list' }"
+          @click="viewMode = 'list'"
+          title="List View"
+        >
+          &#9776;
+        </button>
       </div>
-      <GProgress :percent="researchProgress" showLabel>
-        {{ Math.floor(state.currentResearch.progress) }} / {{ state.currentResearch.requiredSols }} sols
-      </GProgress>
-    </div>
+    </template>
 
-    <div v-else class="no-research">
-      No active research
-    </div>
+    <TechTreeGraph v-if="viewMode === 'graph'" />
 
-    <div class="tech-sections">
+    <template v-else>
+      <div v-if="state.currentResearch && currentResearchTech" class="current-research">
+        <div class="research-header">
+          <span class="research-name">{{ currentResearchTech.name }}</span>
+          <GButton variant="secondary" size="sm" @click="cancelResearch">Cancel</GButton>
+        </div>
+        <GProgress :percent="researchProgress" showLabel>
+          {{ Math.floor(state.currentResearch.progress) }} / {{ state.currentResearch.requiredSols }} sols
+        </GProgress>
+      </div>
+
+      <div v-else class="no-research">
+        No active research
+      </div>
+
+      <div class="tech-sections">
       <div v-if="state.availableTechs.length > 0" class="tech-section">
         <h3>Available</h3>
         <div class="tech-list">
@@ -165,10 +193,41 @@ function onTechLeave(): void {
         </div>
       </div>
     </div>
+    </template>
   </GPanel>
 </template>
 
 <style scoped>
+.view-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--g-color-bg);
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--g-color-text-muted);
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.toggle-btn:hover {
+  color: var(--g-color-text);
+  background: var(--g-color-bg-elevated);
+}
+
+.toggle-btn.active {
+  background: var(--g-color-info);
+  color: var(--g-color-bg);
+}
+
 .current-research {
   background: oklch(65% 0.15 250 / 0.1);
   border: 1px solid var(--g-color-info);

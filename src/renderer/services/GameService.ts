@@ -53,6 +53,7 @@ interface GameUIState {
       averageSupport: number;
     } | null;
     councils: Council[];
+    relationshipMatrix: readonly number[][];
   };
 }
 
@@ -105,6 +106,7 @@ class GameService {
         projects: [],
         activeProject: null,
         councils: [],
+        relationshipMatrix: [],
       },
     };
   }
@@ -169,6 +171,7 @@ class GameService {
           }
         : null,
       councils: [...this.gameState.npcInfluence.getCouncils()],
+      relationshipMatrix: this.gameState.npcInfluence.getRelationshipMatrix(),
     };
   }
 
