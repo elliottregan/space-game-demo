@@ -8,6 +8,6 @@
   "features": {
     "./features/network-firewall": {}
   },
-  "postCreateCommand": "bun install",
+  "postCreateCommand": "bun install && claude doctor",
   "postStartCommand": "sudo /usr/local/bin/init-firewall.sh"
 }
