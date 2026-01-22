@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { gameService } from "../services/GameService";
 import { ColonistRole } from "../../core/models/Colonist";
+import { GPanel, GProgress } from "../ui";
 
 const state = gameService.getState();
 
@@ -41,24 +42,22 @@ const roleIcons: Record<ColonistRole, string> = {
 };
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function getHealthColor(health: number): string {
-  if (health >= 80) return "#4ade80";
-  if (health >= 50) return "#fbbf24";
-  return "#f87171";
+function getHealthVariant(health: number): "positive" | "warning" | "negative" {
+  if (health >= 80) return "positive";
+  if (health >= 50) return "warning";
+  return "negative";
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function getMoraleColor(morale: number): string {
-  if (morale >= 70) return "#4ade80";
-  if (morale >= 40) return "#fbbf24";
-  return "#f87171";
+function getMoraleVariant(morale: number): "positive" | "warning" | "negative" {
+  if (morale >= 70) return "positive";
+  if (morale >= 40) return "warning";
+  return "negative";
 }
 </script>
 
 <template>
-  <div class="panel colony-panel">
-    <h2>Colony Status</h2>
-
+  <GPanel title="Colony Status">
     <div class="stat-row">
       <div class="stat">
         <span class="stat-label">Population</span>
@@ -69,32 +68,22 @@ function getMoraleColor(morale: number): string {
     <div class="stat-row">
       <div class="stat">
         <span class="stat-label">Health</span>
-        <div class="progress-bar">
-          <div
-            class="progress-fill"
-            :style="{
-              width: `${state.health}%`,
-              background: getHealthColor(state.health)
-            }"
-          ></div>
-        </div>
-        <span class="stat-percent">{{ Math.floor(state.health) }}%</span>
+        <GProgress
+          :percent="state.health"
+          :variant="getHealthVariant(state.health)"
+          showLabel
+        />
       </div>
     </div>
 
     <div class="stat-row">
       <div class="stat">
         <span class="stat-label">Morale</span>
-        <div class="progress-bar">
-          <div
-            class="progress-fill"
-            :style="{
-              width: `${state.morale}%`,
-              background: getMoraleColor(state.morale)
-            }"
-          ></div>
-        </div>
-        <span class="stat-percent">{{ Math.floor(state.morale) }}%</span>
+        <GProgress
+          :percent="state.morale"
+          :variant="getMoraleVariant(state.morale)"
+          showLabel
+        />
       </div>
     </div>
 
@@ -112,84 +101,62 @@ function getMoraleColor(morale: number): string {
         </div>
       </div>
     </div>
-  </div>
+  </GPanel>
 </template>
 
 <style scoped>
-.colony-panel {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%);
-}
-
 .stat-row {
-  margin-bottom: 1rem;
+  margin-bottom: var(--g-space-md);
 }
 
 .stat {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--g-space-sm);
 }
 
 .stat-label {
-  font-size: 0.875rem;
-  color: #888;
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-text-muted);
   min-width: 80px;
 }
 
 .stat-value {
+  font-family: var(--g-font-mono);
   font-size: 1.5rem;
   font-weight: bold;
 }
 
 .stat-value.population {
-  color: #60a5fa;
-}
-
-.progress-bar {
-  flex: 1;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  transition: width 0.3s ease, background 0.3s ease;
-}
-
-.stat-percent {
-  font-size: 0.875rem;
-  min-width: 40px;
-  text-align: right;
+  color: var(--g-color-info);
 }
 
 .workforce-section {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: var(--g-space-md);
+  padding-top: var(--g-space-md);
+  border-top: 1px solid var(--g-color-border);
 }
 
 .workforce-section h3 {
-  font-size: 0.875rem;
-  color: #888;
-  margin-bottom: 0.75rem;
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-text-muted);
+  margin-bottom: var(--g-space-sm);
 }
 
 .workforce-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
+  gap: var(--g-space-xs);
 }
 
 .workforce-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.05);
+  gap: var(--g-space-xs);
+  padding: var(--g-space-sm);
+  background: var(--g-color-bg-elevated);
   border-radius: 4px;
-  font-size: 0.875rem;
+  font-size: var(--g-font-size-sm);
 }
 
 .role-icon {
@@ -197,12 +164,13 @@ function getMoraleColor(morale: number): string {
 }
 
 .role-count {
+  font-family: var(--g-font-mono);
   font-weight: bold;
   min-width: 20px;
 }
 
 .role-name {
-  color: #888;
-  font-size: 0.75rem;
+  color: var(--g-color-text-muted);
+  font-size: var(--g-font-size-xs);
 }
 </style>

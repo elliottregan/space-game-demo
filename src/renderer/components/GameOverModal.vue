@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { gameService } from "../services/GameService";
+import { GButton } from "../ui";
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const state = gameService.getState();
@@ -38,9 +39,9 @@ function newGame(): void {
         </div>
       </div>
 
-      <button class="btn btn-primary new-game-btn" @click="newGame">
+      <GButton variant="primary" @click="newGame">
         Start New Game
-      </button>
+      </GButton>
     </div>
   </div>
 </template>
@@ -52,7 +53,7 @@ function newGame(): void {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.95);
+  background: oklch(10% 0.02 250 / 0.98);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -60,9 +61,9 @@ function newGame(): void {
 }
 
 .game-over-modal {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border-radius: 20px;
-  padding: 3rem;
+  background: var(--g-color-bg-surface);
+  border-radius: 8px;
+  padding: var(--g-space-xl);
   max-width: 450px;
   width: 90%;
   text-align: center;
@@ -70,70 +71,68 @@ function newGame(): void {
 }
 
 .game-over-modal.victory {
-  border-color: #4ade80;
-  box-shadow: 0 0 80px rgba(74, 222, 128, 0.4);
+  border-color: var(--g-color-positive);
+  box-shadow: 0 0 80px oklch(70% 0.17 145 / 0.4);
 }
 
 .game-over-modal.defeat {
-  border-color: #f87171;
-  box-shadow: 0 0 80px rgba(248, 113, 113, 0.4);
+  border-color: var(--g-color-negative);
+  box-shadow: 0 0 80px oklch(60% 0.2 25 / 0.4);
 }
 
 .icon {
   font-size: 5rem;
-  margin-bottom: 1rem;
+  margin-bottom: var(--g-space-md);
 }
 
 h1 {
+  font-family: var(--g-font-mono);
   font-size: 2.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: var(--g-space-md);
 }
 
 .victory h1 {
-  color: #4ade80;
+  color: var(--g-color-positive);
 }
 
 .defeat h1 {
-  color: #f87171;
+  color: var(--g-color-negative);
 }
 
 .reason {
-  color: #e8e8e8;
+  color: var(--g-color-text);
   font-size: 1.1rem;
-  margin-bottom: 2rem;
+  margin-bottom: var(--g-space-xl);
   line-height: 1.6;
 }
 
 .stats {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  margin-bottom: 2rem;
+  gap: var(--g-space-md);
+  margin-bottom: var(--g-space-xl);
 }
 
 .stat {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 1rem;
+  background: var(--g-color-bg-elevated);
+  border-radius: 4px;
+  padding: var(--g-space-md);
 }
 
 .stat-label {
   display: block;
-  font-size: 0.75rem;
-  color: #888;
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
   text-transform: uppercase;
-  margin-bottom: 0.25rem;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--g-space-xs);
 }
 
 .stat-value {
   display: block;
+  font-family: var(--g-font-mono);
   font-size: 1.5rem;
   font-weight: bold;
-  color: #ffd460;
-}
-
-.new-game-btn {
-  padding: 1rem 2rem;
-  font-size: 1.1rem;
+  color: var(--g-color-warning);
 }
 </style>

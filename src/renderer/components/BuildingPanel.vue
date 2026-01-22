@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { gameService } from "../services/GameService";
 import type { BuildingDefinition } from "../../core/models/Building";
 import { highlightResources, clearHighlights } from "../directives/ResourceHighlight";
+import { GPanel, GButton, GProgress } from "../ui";
 
 const state = gameService.getState();
 const selectedCategory = ref<"all" | "available" | "built">("available");
@@ -102,7 +103,6 @@ function onBuildingHover(def: BuildingDefinition): void {
   const allResources = new Set<string>();
   const deltas: Record<string, number> = {};
 
-  // Add construction cost resources (one-time deduction)
   for (const [key, value] of Object.entries(def.cost)) {
     if (value > 0) {
       allResources.add(key);
@@ -112,7 +112,6 @@ function onBuildingHover(def: BuildingDefinition): void {
 
   const requiredResources = Array.from(allResources);
 
-  // Check which construction cost resources are insufficient
   const insufficientResources = Object.keys(def.cost).filter((key) => {
     const required = (def.cost as Record<string, number>)[key] || 0;
     const available = (state.resources as Record<string, number>)[key] || 0;
@@ -126,31 +125,39 @@ function onBuildingHover(def: BuildingDefinition): void {
 function onBuildingLeave(): void {
   clearHighlights();
 }
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function getConstructionPercent(building: { constructionProgress: number; definitionId: string }): number {
+  const def = state.buildingDefinitions.find((d) => d.id === building.definitionId);
+  if (!def) return 0;
+  return (building.constructionProgress / def.constructionTime) * 100;
+}
 </script>
 
 <template>
-  <div class="panel building-panel">
-    <h2>Buildings</h2>
-
+  <GPanel title="Buildings">
     <div class="category-tabs">
-      <button
-        :class="{ active: selectedCategory === 'available' }"
+      <GButton
+        :variant="selectedCategory === 'available' ? 'primary' : 'ghost'"
+        size="sm"
         @click="selectedCategory = 'available'"
       >
         Available
-      </button>
-      <button
-        :class="{ active: selectedCategory === 'built' }"
+      </GButton>
+      <GButton
+        :variant="selectedCategory === 'built' ? 'primary' : 'ghost'"
+        size="sm"
         @click="selectedCategory = 'built'"
       >
         Built ({{ state.buildings.length }})
-      </button>
-      <button
-        :class="{ active: selectedCategory === 'all' }"
+      </GButton>
+      <GButton
+        :variant="selectedCategory === 'all' ? 'primary' : 'ghost'"
+        size="sm"
         @click="selectedCategory = 'all'"
       >
         All
-      </button>
+      </GButton>
     </div>
 
     <div class="building-list">
@@ -193,14 +200,14 @@ function onBuildingLeave(): void {
           </div>
         </div>
 
-        <button
+        <GButton
           v-if="!isLocked(def)"
-          class="btn btn-primary build-btn"
+          variant="primary"
           :disabled="!canBuild(def.id)"
           @click="buildBuilding(def.id)"
         >
           Build
-        </button>
+        </GButton>
       </div>
     </div>
 
@@ -214,72 +221,44 @@ function onBuildingLeave(): void {
         <span class="construction-name">
           {{ state.buildingDefinitions.find(d => d.id === building.definitionId)?.name }}
         </span>
-        <div class="construction-progress">
-          <div
-            class="progress-fill"
-            :style="{
-              width: `${(building.constructionProgress / (state.buildingDefinitions.find(d => d.id === building.definitionId)?.constructionTime || 1)) * 100}%`
-            }"
-          ></div>
-        </div>
-        <span class="construction-time">
+        <GProgress
+          :percent="getConstructionPercent(building)"
+          variant="warning"
+          showLabel
+        >
           {{ Math.ceil((state.buildingDefinitions.find(d => d.id === building.definitionId)?.constructionTime || 0) - building.constructionProgress) }} sols
-        </span>
+        </GProgress>
       </div>
     </div>
-  </div>
+  </GPanel>
 </template>
 
 <style scoped>
-.building-panel {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%);
-}
-
 .category-tabs {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.category-tabs button {
-  flex: 1;
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  border-radius: 4px;
-  color: #888;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.category-tabs button.active {
-  background: #e94560;
-  color: white;
-}
-
-.category-tabs button:hover:not(.active) {
-  background: rgba(255, 255, 255, 0.2);
+  gap: var(--g-space-xs);
+  margin-bottom: var(--g-space-md);
 }
 
 .building-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1rem;
+  gap: var(--g-space-md);
   max-height: 100%;
   overflow-y: auto;
 }
 
 .building-card {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.2s;
+  background: var(--g-color-bg-elevated);
+  border-radius: 4px;
+  padding: var(--g-space-md);
+  border: 1px solid var(--g-color-border);
+  transition: all var(--g-transition-fast);
 }
 
 .building-card:hover:not(.locked):not(.disabled) {
-  border-color: #e94560;
-  transform: translateY(-2px);
+  border-color: var(--g-color-border-focus);
+  box-shadow: var(--g-glow-subtle);
 }
 
 .building-card.locked {
@@ -294,113 +273,89 @@ function onBuildingLeave(): void {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--g-space-xs);
 }
 
 .building-name {
+  font-family: var(--g-font-mono);
   font-weight: bold;
-  color: #ffd460;
+  color: var(--g-color-warning);
 }
 
 .building-count {
-  font-size: 0.875rem;
-  color: #60a5fa;
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-info);
 }
 
 .building-count .pending {
-  color: #fbbf24;
+  color: var(--g-color-warning);
 }
 
 .building-desc {
-  font-size: 0.75rem;
-  color: #888;
-  margin-bottom: 0.75rem;
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  margin-bottom: var(--g-space-sm);
 }
 
 .locked-notice {
-  font-size: 0.75rem;
-  color: #f87171;
-  padding: 0.5rem;
-  background: rgba(248, 113, 113, 0.1);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-negative);
+  padding: var(--g-space-xs);
+  background: oklch(60% 0.2 25 / 0.1);
   border-radius: 4px;
 }
 
 .building-stats {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 0.75rem;
+  gap: 2px;
+  margin-bottom: var(--g-space-sm);
 }
 
 .stat {
-  font-size: 0.75rem;
+  font-size: var(--g-font-size-xs);
 }
 
 .stat.production {
-  color: #4ade80;
+  color: var(--g-color-positive);
 }
 
 .stat.consumption {
-  color: #f87171;
+  color: var(--g-color-negative);
 }
 
 .stat.cost {
-  color: #a78bfa;
+  color: oklch(70% 0.15 280);
 }
 
 .stat.time {
-  color: #888;
-}
-
-.build-btn {
-  width: 100%;
+  color: var(--g-color-text-muted);
 }
 
 .construction-queue {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: var(--g-space-lg);
+  padding-top: var(--g-space-md);
+  border-top: 1px solid var(--g-color-border);
 }
 
 .construction-queue h3 {
-  font-size: 0.875rem;
-  color: #fbbf24;
-  margin-bottom: 0.75rem;
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-warning);
+  margin-bottom: var(--g-space-sm);
 }
 
 .construction-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.05);
+  gap: var(--g-space-sm);
+  padding: var(--g-space-sm);
+  background: var(--g-color-bg-elevated);
   border-radius: 4px;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--g-space-xs);
 }
 
 .construction-name {
-  font-size: 0.875rem;
+  font-size: var(--g-font-size-sm);
   min-width: 120px;
-}
-
-.construction-progress {
-  flex: 1;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.construction-progress .progress-fill {
-  height: 100%;
-  background: #fbbf24;
-  transition: width 0.3s;
-}
-
-.construction-time {
-  font-size: 0.75rem;
-  color: #888;
-  min-width: 50px;
-  text-align: right;
 }
 </style>
