@@ -6,6 +6,7 @@ import "@vue-flow/core/dist/theme-default.css";
 import { gameService } from "../services/GameService";
 import type { Technology } from "../../core/models/Technology";
 import TechNode from "./TechNode.vue";
+import { GButton, GBadge } from "../ui";
 
 const state = gameService.getState();
 
@@ -183,29 +184,32 @@ function canResearch(techId: string): boolean {
       </div>
 
       <div class="actions">
-        <button
+        <GButton
           v-if="canResearch(selectedTech.id)"
-          class="research-btn"
+          variant="primary"
+          class="full-width"
           @click="startResearch"
         >
           Start Research
-        </button>
-        <button
+        </GButton>
+        <GButton
           v-else-if="state.currentResearch?.techId === selectedTech.id"
-          class="cancel-btn"
+          variant="danger"
+          class="full-width"
           @click="cancelResearch"
         >
           Cancel Research
-        </button>
-        <div
+        </GButton>
+        <GBadge
           v-else-if="state.researchedTechs.some((t) => t.id === selectedTech.id)"
-          class="status-badge researched"
+          variant="positive"
+          class="status-badge-centered"
         >
           Researched
-        </div>
-        <div v-else class="status-badge locked">
+        </GBadge>
+        <GBadge v-else variant="muted" class="status-badge-centered">
           Locked
-        </div>
+        </GBadge>
       </div>
 
       <div v-if="state.currentResearch?.techId === selectedTech.id" class="progress-section">
@@ -326,51 +330,14 @@ function canResearch(techId: string): boolean {
   margin-top: auto;
 }
 
-.research-btn {
+.actions .full-width {
   width: 100%;
-  padding: var(--g-space-sm) var(--g-space-md);
-  background: var(--g-color-info);
-  color: var(--g-color-bg);
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-family: var(--g-font-mono);
-  font-weight: bold;
 }
 
-.research-btn:hover {
-  filter: brightness(1.1);
-}
-
-.cancel-btn {
-  width: 100%;
-  padding: var(--g-space-sm) var(--g-space-md);
-  background: var(--g-color-negative);
-  color: var(--g-color-bg);
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-family: var(--g-font-mono);
-}
-
-.status-badge {
+.status-badge-centered {
+  display: block;
   text-align: center;
-  padding: var(--g-space-sm);
-  border-radius: 4px;
-  font-family: var(--g-font-mono);
-  font-size: var(--g-font-size-sm);
-}
-
-.status-badge.researched {
-  background: oklch(70% 0.17 145 / 0.2);
-  color: var(--g-color-positive);
-  border: 1px solid var(--g-color-positive);
-}
-
-.status-badge.locked {
-  background: oklch(50% 0.05 250 / 0.2);
-  color: var(--g-color-text-muted);
-  border: 1px solid var(--g-color-border);
+  width: 100%;
 }
 
 .progress-section {
