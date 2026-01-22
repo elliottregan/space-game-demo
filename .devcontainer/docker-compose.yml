@@ -13,8 +13,8 @@ services:
     volumes:
       - ..:/workspace:cached
       - devcontainer-claude-config:/home/dev/.claude
+      - devcontainer-gh-config:/home/dev/.config/gh
       - ~/.ssh:/home/dev/.ssh:ro
-      - ~/.gitconfig:/home/dev/.gitconfig:ro
 
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
@@ -25,3 +25,4 @@ services:
 
 volumes:
   devcontainer-claude-config:
+  devcontainer-gh-config:
