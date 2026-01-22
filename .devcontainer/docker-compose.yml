@@ -3,11 +3,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        TZ: ${TZ:-America/Los_Angeles}
+        CLAUDE_CODE_VERSION: latest
+        GIT_DELTA_VERSION: "0.18.2"
+        ZSH_IN_DOCKER_VERSION: "1.2.0"
 
     container_name: space-game-devcontainer
 
     cap_add:
       - NET_ADMIN  # Required for iptables firewall
+      - NET_RAW    # Required for iptables firewall
 
     ports:
       - "2222:22"      # SSH
@@ -15,18 +21,26 @@ services:
 
     volumes:
       - ..:/workspace:cached
-      - devcontainer-claude-config:/home/dev/.claude
-      - devcontainer-gh-config:/home/dev/.config/gh
-      - ~/.ssh:/home/dev/.ssh:ro
+      - claude-code-bashhistory:/commandhistory
+      - claude-code-config:/home/node/.claude
+      - gh-config:/home/node/.config/gh
+      - ~/.ssh:/home/node/.ssh:ro
 
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - VITE_HOST=0.0.0.0
-      - USE_BUILTIN_RIPGREP=0  # Use system ripgrep on Alpine
+      - NODE_OPTIONS=--max-old-space-size=4096
+      - CLAUDE_CONFIG_DIR=/home/node/.claude
+      - POWERLEVEL9K_DISABLE_GITSTATUS=true
 
     tty: true
     stdin_open: true
 
+    # Start SSH daemon for remote access
+    command: >
+      bash -c "sudo /usr/sbin/sshd && sleep infinity"
+
 volumes:
-  devcontainer-claude-config:
-  devcontainer-gh-config:
+  claude-code-bashhistory:
+  claude-code-config:
+  gh-config:

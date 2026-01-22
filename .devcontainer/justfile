@@ -8,11 +8,11 @@ down:
 
 # SSH into the container
 ssh:
-    ssh -p 2222 dev@localhost
+    ssh -p 2222 node@localhost
 
 # Run claude with skip permissions
 claude:
-    docker exec -it -u dev -w /workspace space-game-devcontainer claude --dangerously-skip-permissions
+    docker exec -it -u node -w /workspace space-game-devcontainer claude --dangerously-skip-permissions
 
 # Rebuild the container
 rebuild:
