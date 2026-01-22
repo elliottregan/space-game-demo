@@ -1,8 +1,10 @@
 FROM oven/bun:alpine
 
 # Install system dependencies for Claude Code, SSH, and GitHub CLI
+# Note: libgcc, libstdc++, ripgrep are required for Claude Code on Alpine/musl
 RUN apk add --no-cache \
-    git curl ca-certificates openssh sudo nodejs npm github-cli bash
+    git curl ca-certificates openssh sudo nodejs npm github-cli bash \
+    libgcc libstdc++ ripgrep
 
 # Configure SSH - key-based authentication only (no passwords)
 RUN mkdir -p /var/run/sshd && \
@@ -17,7 +19,7 @@ RUN adduser -D -s /bin/bash dev && \
     echo 'dev ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers.d/dev
 
 # Install Claude Code globally
-RUN npm install -g @anthropic-ai/claude-code
+RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # Workspace setup
 RUN mkdir -p /workspace && chown dev:dev /workspace
