@@ -5,5 +5,9 @@
   "workspaceFolder": "/workspace",
   "remoteUser": "dev",
   "forwardPorts": [5173, 24678],
+  "features": {
+    "./features/network-firewall": {}
+  },
   "postCreateCommand": "bun install",
+  "postStartCommand": "sudo /usr/local/bin/init-firewall.sh"
 }

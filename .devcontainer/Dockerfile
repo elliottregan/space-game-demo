@@ -4,20 +4,17 @@ FROM oven/bun:alpine
 RUN apk add --no-cache \
     git curl ca-certificates openssh sudo nodejs npm github-cli bash
 
-# Configure SSH
+# Configure SSH - key-based authentication only (no passwords)
 RUN mkdir -p /var/run/sshd && \
     ssh-keygen -A && \
     echo 'PermitRootLogin no' >> /etc/ssh/sshd_config && \
-    echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config && \
+    echo 'PasswordAuthentication no' >> /etc/ssh/sshd_config && \
     echo 'PubkeyAuthentication yes' >> /etc/ssh/sshd_config
 
-# Create non-root user
+# Create non-root user (no password set - SSH key auth only)
 RUN adduser -D -s /bin/bash dev && \
     adduser dev wheel && \
     echo 'dev ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers.d/dev
-
-# Set default password for dev user
-RUN echo 'dev:devpass' | chpasswd
 
 # Install Claude Code globally
 RUN npm install -g @anthropic-ai/claude-code
