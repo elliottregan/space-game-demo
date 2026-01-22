@@ -48,7 +48,7 @@ iptables -A OUTPUT -o lo -j ACCEPT
 # Create ipset with CIDR support
 ipset create allowed-domains hash:net
 
-# Fetch GitHub meta information and aggregate + add their IP ranges
+# Fetch GitHub meta information and add their IP ranges
 echo "Fetching GitHub IP ranges..."
 gh_ranges=$(curl -s https://api.github.com/meta)
 if [ -z "$gh_ranges" ]; then
@@ -62,15 +62,15 @@ if ! echo "$gh_ranges" | jq -e '.web and .api and .git' >/dev/null; then
 fi
 
 echo "Processing GitHub IPs..."
-echo "$gh_ranges" | jq -r '(.web + .api + .git)[]' | aggregate -q | while read -r cidr; do
-    # Validate CIDR format
+echo "$gh_ranges" | jq -r '(.web + .api + .git)[]' | sort -u | while read -r cidr; do
+    # Validate CIDR format (IPv4 only, skip IPv6)
     case "$cidr" in
         [0-9]*.[0-9]*.[0-9]*.[0-9]*/[0-9]*)
             echo "Adding GitHub range $cidr"
-            ipset add allowed-domains "$cidr"
+            ipset add allowed-domains "$cidr" 2>/dev/null || true
             ;;
         *)
-            echo "WARNING: Skipping invalid CIDR from GitHub meta: $cidr"
+            # Skip IPv6 and invalid entries silently
             ;;
     esac
 done

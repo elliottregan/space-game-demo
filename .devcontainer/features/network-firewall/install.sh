@@ -10,8 +10,7 @@ apk add --no-cache \
     curl \
     jq \
     bind-tools \
-    iproute2 \
-    aggregate
+    iproute2
 
 # Copy the firewall init script to a standard location
 cp "$(dirname "$0")/init-firewall.sh" /usr/local/bin/init-firewall.sh
