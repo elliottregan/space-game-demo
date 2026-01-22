@@ -13,9 +13,9 @@ const router = createRouter({
       component: () => import("./components/MainTab.vue"),
     },
     {
-      path: "/strategy",
-      name: "strategy",
-      component: () => import("./components/StrategyTab.vue"),
+      path: "/politics",
+      name: "politics",
+      component: () => import("./components/PoliticsTab.vue"),
     },
     {
       path: "/research",
