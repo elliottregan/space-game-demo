@@ -7,8 +7,13 @@ defineProps<{
 
 <template>
   <div class="g-panel" :class="{ 'g-panel--glow': glow }">
-    <header v-if="$slots.header || title" class="g-panel__header">
-      <slot name="header">{{ title }}</slot>
+    <header v-if="$slots.header || $slots['header-actions'] || title" class="g-panel__header">
+      <span class="g-panel__title">
+        <slot name="header">{{ title }}</slot>
+      </span>
+      <span v-if="$slots['header-actions']" class="g-panel__header-actions">
+        <slot name="header-actions" />
+      </span>
     </header>
     <div class="g-panel__body">
       <slot />
@@ -32,6 +37,9 @@ defineProps<{
 }
 
 .g-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: var(--g-space-sm) var(--g-space-md);
   background: var(--g-color-bg-elevated);
   border-bottom: 1px solid var(--g-color-border);
@@ -40,6 +48,16 @@ defineProps<{
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--g-color-text);
+}
+
+.g-panel__title {
+  flex: 1;
+}
+
+.g-panel__header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-sm);
 }
 
 .g-panel__body {
