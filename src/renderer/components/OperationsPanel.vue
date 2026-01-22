@@ -7,6 +7,7 @@ import {
   EXPLORATION_STANCE,
   EXPEDITIONS,
 } from "../../core/balance/OperationsBalance";
+import { GPanel, GButton } from "../ui";
 
 const state = gameService.getState();
 // biome-ignore lint/correctness/noUnusedVariables: reserved for future tab-based UI
@@ -68,22 +69,29 @@ const developedSites = computed(() => state.prospectingSites.filter((s) => s.dev
 </script>
 
 <template>
-  <div class="panel operations-panel">
-    <h2>Operations</h2>
-
+  <GPanel title="Operations">
     <div class="tabs">
-      <button
-        :class="{ active: activeTab === 'policies' }"
+      <GButton
+        :variant="activeTab === 'policies' ? 'primary' : 'ghost'"
+        size="sm"
         @click="activeTab = 'policies'"
-      >Policies</button>
-      <button
-        :class="{ active: activeTab === 'buildings' }"
+      >
+        Policies
+      </GButton>
+      <GButton
+        :variant="activeTab === 'buildings' ? 'primary' : 'ghost'"
+        size="sm"
         @click="activeTab = 'buildings'"
-      >Buildings</button>
-      <button
-        :class="{ active: activeTab === 'missions' }"
+      >
+        Buildings
+      </GButton>
+      <GButton
+        :variant="activeTab === 'missions' ? 'primary' : 'ghost'"
+        size="sm"
         @click="activeTab = 'missions'"
-      >Missions</button>
+      >
+        Missions
+      </GButton>
     </div>
 
     <!-- Policies Tab -->
@@ -91,39 +99,48 @@ const developedSites = computed(() => state.prospectingSites.filter((s) => s.dev
       <div class="policy-group">
         <div class="policy-label">Work Intensity</div>
         <div class="policy-buttons">
-          <button
+          <GButton
             v-for="option in policyOptions.workIntensity"
             :key="option"
-            :class="{ selected: state.policies.workIntensity === option }"
+            :variant="state.policies.workIntensity === option ? 'primary' : 'secondary'"
+            size="sm"
             :disabled="state.policyCooldownRemaining > 0 && state.policies.workIntensity !== option"
             @click="setPolicy('workIntensity', option)"
-          >{{ option }}</button>
+          >
+            {{ option }}
+          </GButton>
         </div>
       </div>
 
       <div class="policy-group">
         <div class="policy-label">Resource Priority</div>
         <div class="policy-buttons">
-          <button
+          <GButton
             v-for="option in policyOptions.resourcePriority"
             :key="option"
-            :class="{ selected: state.policies.resourcePriority === option }"
+            :variant="state.policies.resourcePriority === option ? 'primary' : 'secondary'"
+            size="sm"
             :disabled="state.policyCooldownRemaining > 0 && state.policies.resourcePriority !== option"
             @click="setPolicy('resourcePriority', option)"
-          >{{ option }}</button>
+          >
+            {{ option }}
+          </GButton>
         </div>
       </div>
 
       <div class="policy-group">
         <div class="policy-label">Exploration Stance</div>
         <div class="policy-buttons">
-          <button
+          <GButton
             v-for="option in policyOptions.explorationStance"
             :key="option"
-            :class="{ selected: state.policies.explorationStance === option }"
+            :variant="state.policies.explorationStance === option ? 'primary' : 'secondary'"
+            size="sm"
             :disabled="state.policyCooldownRemaining > 0 && state.policies.explorationStance !== option"
             @click="setPolicy('explorationStance', option)"
-          >{{ option }}</button>
+          >
+            {{ option }}
+          </GButton>
         </div>
       </div>
 
@@ -163,12 +180,12 @@ const developedSites = computed(() => state.prospectingSites.filter((s) => s.dev
 
         <div v-for="site in unrevealedSites" :key="site.id" class="site-item unrevealed">
           <span>??? (Unrevealed)</span>
-          <button @click="revealSite(site.id)">Reveal (30 mat)</button>
+          <GButton size="sm" @click="revealSite(site.id)">Reveal (30 mat)</GButton>
         </div>
 
         <div v-for="site in revealedSites" :key="site.id" class="site-item revealed">
           <span>{{ site.resourceType }} ({{ site.quality }})</span>
-          <button @click="developSite(site.id)">Develop</button>
+          <GButton size="sm" variant="primary" @click="developSite(site.id)">Develop</GButton>
         </div>
 
         <div v-for="site in developedSites" :key="site.id" class="site-item developed">
@@ -176,145 +193,100 @@ const developedSites = computed(() => state.prospectingSites.filter((s) => s.dev
         </div>
       </div>
     </div>
-  </div>
+  </GPanel>
 </template>
 
 <style scoped>
-.operations-panel {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%);
-}
-
 .tabs {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.tabs button {
-  flex: 1;
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  color: #ccc;
-  cursor: pointer;
-}
-
-.tabs button.active {
-  background: rgba(74, 222, 128, 0.2);
-  border-color: var(--color-positive);
-  color: var(--color-positive);
+  gap: var(--g-space-xs);
+  margin-bottom: var(--g-space-md);
 }
 
 .policy-group {
-  margin-bottom: 1rem;
+  margin-bottom: var(--g-space-md);
 }
 
 .policy-label {
-  font-size: 0.75rem;
-  color: #888;
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
   text-transform: uppercase;
-  margin-bottom: 0.25rem;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--g-space-xs);
 }
 
 .policy-buttons {
   display: flex;
-  gap: 0.25rem;
+  gap: var(--g-space-xs);
 }
 
-.policy-buttons button {
+.policy-buttons :deep(.g-button) {
   flex: 1;
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  color: #aaa;
-  cursor: pointer;
   text-transform: capitalize;
 }
 
-.policy-buttons button.selected {
-  background: rgba(74, 222, 128, 0.2);
-  border-color: var(--color-positive);
-  color: var(--color-positive);
-}
-
-.policy-buttons button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .cooldown-notice {
-  margin-top: 1rem;
-  padding: 0.5rem;
-  background: rgba(251, 191, 36, 0.1);
+  margin-top: var(--g-space-md);
+  padding: var(--g-space-sm);
+  background: oklch(75% 0.15 70 / 0.1);
   border-radius: 4px;
-  color: var(--color-warning);
-  font-size: 0.875rem;
+  color: var(--g-color-warning);
+  font-size: var(--g-font-size-sm);
   text-align: center;
 }
 
 .hint {
-  color: #888;
-  font-size: 0.875rem;
-  margin-bottom: 1rem;
+  color: var(--g-color-text-muted);
+  font-size: var(--g-font-size-sm);
+  margin-bottom: var(--g-space-md);
 }
 
 .mode-legend {
-  font-size: 0.8rem;
-  color: #aaa;
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--g-space-xs);
 }
 
 .missions-section {
-  margin-bottom: 1rem;
+  margin-bottom: var(--g-space-md);
 }
 
 .missions-section h3 {
-  font-size: 0.875rem;
-  color: #aaa;
-  margin-bottom: 0.5rem;
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-text-muted);
+  margin-bottom: var(--g-space-xs);
 }
 
 .empty-message {
-  color: #666;
+  color: var(--g-color-text-muted);
   font-style: italic;
-  font-size: 0.875rem;
+  font-size: var(--g-font-size-sm);
 }
 
 .expedition-item, .site-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.05);
+  padding: var(--g-space-sm);
+  background: var(--g-color-bg-elevated);
   border-radius: 4px;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--g-space-xs);
 }
 
 .expedition-name {
+  font-family: var(--g-font-mono);
   font-weight: bold;
 }
 
 .expedition-time {
-  color: var(--color-warning);
-  font-size: 0.875rem;
-}
-
-.site-item button {
-  padding: 0.25rem 0.5rem;
-  background: rgba(74, 222, 128, 0.2);
-  border: 1px solid var(--color-positive);
-  border-radius: 4px;
-  color: var(--color-positive);
-  cursor: pointer;
-  font-size: 0.75rem;
+  color: var(--g-color-warning);
+  font-size: var(--g-font-size-sm);
 }
 
 .site-item.developed {
-  background: rgba(74, 222, 128, 0.1);
-  border-left: 3px solid var(--color-positive);
+  background: oklch(70% 0.17 145 / 0.1);
+  border-left: 3px solid var(--g-color-positive);
 }
 </style>

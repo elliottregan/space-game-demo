@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { gameService } from "../services/GameService";
+import { GPanel } from "../ui";
 
 const state = gameService.getState();
 
@@ -39,21 +40,22 @@ function getIcon(type: string): string {
 
 <template>
   <aside class="event-log-sidebar">
-    <h2 class="sidebar-header">Event Log</h2>
-    <div class="event-list">
-      <div
-        v-for="(event, index) in displayedEvents"
-        :key="index"
-        class="event-item"
-        :class="getSeverityClass(event.severity)"
-      >
-        <span class="event-icon">{{ getIcon(event.type) }}</span>
-        <span class="event-message">{{ event.message || event.type }}</span>
+    <GPanel title="Event Log">
+      <div class="event-list">
+        <div
+          v-for="(event, index) in displayedEvents"
+          :key="index"
+          class="event-item"
+          :class="getSeverityClass(event.severity)"
+        >
+          <span class="event-icon">{{ getIcon(event.type) }}</span>
+          <span class="event-message">{{ event.message || event.type }}</span>
+        </div>
+        <div v-if="displayedEvents.length === 0" class="no-events">
+          No recent events
+        </div>
       </div>
-      <div v-if="displayedEvents.length === 0" class="no-events">
-        No recent events
-      </div>
-    </div>
+    </GPanel>
   </aside>
 </template>
 
@@ -61,59 +63,50 @@ function getIcon(type: string): string {
 .event-log-sidebar {
   width: 280px;
   flex-shrink: 0;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-left: 2px solid rgba(255, 255, 255, 0.15);
-  display: flex;
-  flex-direction: column;
   max-height: calc(100vh - 180px);
 }
 
-.sidebar-header {
-  font-size: 1.2rem;
-  color: #ffd460;
-  padding: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  margin: 0;
-  position: sticky;
-  top: 0;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 8px 8px 0 0;
+.event-log-sidebar :deep(.g-panel) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.event-log-sidebar :deep(.g-panel__body) {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--g-space-sm);
 }
 
 .event-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 1rem;
-  overflow-y: auto;
-  flex: 1;
+  gap: var(--g-space-xs);
 }
 
 .event-item {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.5rem;
+  gap: var(--g-space-xs);
+  padding: var(--g-space-xs);
   border-radius: 4px;
-  font-size: 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
+  font-size: var(--g-font-size-xs);
+  background: var(--g-color-bg-elevated);
   border-left: 3px solid;
 }
 
 .event-item.info {
-  border-color: #60a5fa;
+  border-color: var(--g-color-info);
 }
 
 .event-item.warning {
-  border-color: #fbbf24;
-  background: rgba(251, 191, 36, 0.1);
+  border-color: var(--g-color-warning);
+  background: oklch(75% 0.15 70 / 0.1);
 }
 
 .event-item.critical {
-  border-color: #f87171;
-  background: rgba(248, 113, 113, 0.1);
+  border-color: var(--g-color-negative);
+  background: oklch(60% 0.2 25 / 0.1);
 }
 
 .event-icon {
@@ -121,14 +114,14 @@ function getIcon(type: string): string {
 }
 
 .event-message {
-  color: #e8e8e8;
+  color: var(--g-color-text);
   line-height: 1.3;
 }
 
 .no-events {
-  color: #888;
+  color: var(--g-color-text-muted);
   font-style: italic;
   text-align: center;
-  padding: 1rem;
+  padding: var(--g-space-md);
 }
 </style>

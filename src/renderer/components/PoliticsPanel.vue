@@ -3,17 +3,17 @@ import { ref } from "vue";
 import { gameService } from "../services/GameService";
 import type { Decision } from "../../core/models/Politics";
 import { highlightResources, clearHighlights } from "../directives/ResourceHighlight";
+import { GPanel, GButton, GProgress } from "../ui";
 
 const state = gameService.getState();
 const selectedDecision = ref<Decision | null>(null);
 const decisionResult = ref<string | null>(null);
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function getSupportColor(support: number): string {
-  if (support >= 60) return "#4ade80";
-  if (support >= 40) return "#fbbf24";
-  if (support >= 20) return "#fb923c";
-  return "#f87171";
+function getSupportVariant(support: number): "positive" | "warning" | "negative" {
+  if (support >= 60) return "positive";
+  if (support >= 40) return "warning";
+  return "negative";
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -59,17 +59,14 @@ function canMakeDecision(decision: Decision): boolean {
 function onDecisionHover(decision: Decision): void {
   if (!decision.effects?.resources) return;
 
-  // For decisions, highlight affected resources (not required, but affected)
   const affectedResources = Object.keys(decision.effects.resources).filter(
     (key) => (decision.effects?.resources as Record<string, number>)?.[key] !== 0,
   );
 
-  // Resources with negative effects are shown as "insufficient" style (red glow)
   const negativeResources = affectedResources.filter(
     (key) => ((decision.effects?.resources as Record<string, number>)?.[key] || 0) < 0,
   );
 
-  // Pass the resource effects as deltas (can be positive or negative)
   const deltas: Record<string, number> = { ...decision.effects.resources };
 
   highlightResources(affectedResources, negativeResources, deltas);
@@ -82,12 +79,10 @@ function onDecisionLeave(): void {
 </script>
 
 <template>
-  <div class="panel politics-panel">
-    <h2>Politics</h2>
-
+  <GPanel title="Politics">
     <div class="average-support">
       <span class="label">Average Support:</span>
-      <span class="value" :style="{ color: getSupportColor(state.averageSupport) }">
+      <span class="value" :class="`support-${getSupportVariant(state.averageSupport)}`">
         {{ Math.floor(state.averageSupport) }}%
       </span>
     </div>
@@ -100,19 +95,14 @@ function onDecisionLeave(): void {
       >
         <div class="faction-header">
           <span class="faction-name">{{ faction.name }}</span>
-          <span class="faction-support" :style="{ color: getSupportColor(faction.support) }">
+          <span class="faction-support" :class="`support-${getSupportVariant(faction.support)}`">
             {{ Math.floor(faction.support) }}%
           </span>
         </div>
-        <div class="support-bar">
-          <div
-            class="support-fill"
-            :style="{
-              width: `${faction.support}%`,
-              background: getSupportColor(faction.support)
-            }"
-          ></div>
-        </div>
+        <GProgress
+          :percent="faction.support"
+          :variant="getSupportVariant(faction.support)"
+        />
         <div class="faction-desc">{{ faction.description }}</div>
       </div>
     </div>
@@ -166,122 +156,113 @@ function onDecisionLeave(): void {
         </div>
 
         <div class="modal-actions">
-          <button class="btn btn-secondary" @click="cancelDecision">Cancel</button>
-          <button class="btn btn-primary" @click="makeDecision">Confirm</button>
+          <GButton variant="secondary" @click="cancelDecision">Cancel</GButton>
+          <GButton variant="primary" @click="makeDecision">Confirm</GButton>
         </div>
       </div>
     </div>
-  </div>
+  </GPanel>
 </template>
 
 <style scoped>
-.politics-panel {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%);
-}
-
 .average-support {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
-  margin-bottom: 1rem;
+  padding: var(--g-space-sm);
+  background: var(--g-color-bg-elevated);
+  border-radius: 4px;
+  margin-bottom: var(--g-space-md);
 }
 
 .average-support .label {
-  color: #888;
+  color: var(--g-color-text-muted);
 }
 
 .average-support .value {
+  font-family: var(--g-font-mono);
   font-size: 1.25rem;
   font-weight: bold;
 }
 
+.support-positive { color: var(--g-color-positive); }
+.support-warning { color: var(--g-color-warning); }
+.support-negative { color: var(--g-color-negative); }
+
 .factions {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  gap: var(--g-space-sm);
+  margin-bottom: var(--g-space-lg);
 }
 
 .faction-card {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
-  padding: 0.75rem;
+  background: var(--g-color-bg-elevated);
+  border-radius: 4px;
+  padding: var(--g-space-sm);
 }
 
 .faction-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--g-space-xs);
 }
 
 .faction-name {
+  font-family: var(--g-font-mono);
   font-weight: bold;
-  color: #ffd460;
+  color: var(--g-color-warning);
 }
 
 .faction-support {
+  font-family: var(--g-font-mono);
   font-weight: bold;
 }
 
-.support-bar {
-  height: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-  overflow: hidden;
-  margin-bottom: 0.5rem;
-}
-
-.support-fill {
-  height: 100%;
-  transition: width 0.3s, background 0.3s;
-}
-
 .faction-desc {
-  font-size: 0.75rem;
-  color: #888;
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  margin-top: var(--g-space-xs);
 }
 
 .decisions-section h3 {
-  font-size: 0.875rem;
-  color: #888;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.25rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-text-muted);
+  margin-bottom: var(--g-space-sm);
+  padding-bottom: var(--g-space-xs);
+  border-bottom: 1px solid var(--g-color-border);
 }
 
 .decision-result {
-  padding: 0.75rem;
-  background: rgba(96, 165, 250, 0.1);
-  border: 1px solid #60a5fa;
-  border-radius: 6px;
-  margin-bottom: 0.75rem;
-  font-size: 0.875rem;
+  padding: var(--g-space-sm);
+  background: oklch(65% 0.15 250 / 0.1);
+  border: 1px solid var(--g-color-info);
+  border-radius: 4px;
+  margin-bottom: var(--g-space-sm);
+  font-size: var(--g-font-size-sm);
 }
 
 .decisions-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--g-space-xs);
   max-height: 200px;
   overflow-y: auto;
 }
 
 .decision-card {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
-  padding: 0.75rem;
+  background: var(--g-color-bg-elevated);
+  border-radius: 4px;
+  padding: var(--g-space-sm);
   cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.2s;
+  border: 1px solid var(--g-color-border);
+  transition: all var(--g-transition-fast);
 }
 
 .decision-card:hover:not(.disabled) {
-  border-color: #e94560;
-  transform: translateY(-1px);
+  border-color: var(--g-color-border-focus);
+  box-shadow: var(--g-glow-subtle);
 }
 
 .decision-card.disabled {
@@ -290,20 +271,21 @@ function onDecisionLeave(): void {
 }
 
 .decision-name {
+  font-family: var(--g-font-mono);
   font-weight: bold;
-  color: #ffd460;
-  margin-bottom: 0.25rem;
+  color: var(--g-color-warning);
+  margin-bottom: var(--g-space-xs);
 }
 
 .decision-desc {
-  font-size: 0.75rem;
-  color: #888;
-  margin-bottom: 0.25rem;
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  margin-bottom: var(--g-space-xs);
 }
 
 .decision-requirement {
-  font-size: 0.75rem;
-  color: #a78bfa;
+  font-size: var(--g-font-size-xs);
+  color: oklch(70% 0.15 280);
 }
 
 .decision-modal-overlay {
@@ -312,7 +294,7 @@ function onDecisionLeave(): void {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: oklch(10% 0.02 250 / 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -320,49 +302,50 @@ function onDecisionLeave(): void {
 }
 
 .decision-modal {
-  background: #1a1a2e;
-  border-radius: 12px;
-  padding: 1.5rem;
+  background: var(--g-color-bg-surface);
+  border-radius: 8px;
+  padding: var(--g-space-lg);
   max-width: 400px;
   width: 90%;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--g-color-border);
 }
 
 .decision-modal h3 {
-  color: #ffd460;
-  margin-bottom: 0.75rem;
+  font-family: var(--g-font-mono);
+  color: var(--g-color-warning);
+  margin-bottom: var(--g-space-sm);
 }
 
 .decision-modal p {
-  color: #888;
-  margin-bottom: 1rem;
+  color: var(--g-color-text-muted);
+  margin-bottom: var(--g-space-md);
 }
 
 .decision-effects h4 {
-  font-size: 0.875rem;
-  color: #60a5fa;
-  margin-bottom: 0.5rem;
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-info);
+  margin-bottom: var(--g-space-xs);
 }
 
 .decision-effects ul {
   list-style: none;
   padding: 0;
-  margin-bottom: 1rem;
+  margin-bottom: var(--g-space-md);
 }
 
 .decision-effects li {
-  font-size: 0.875rem;
-  color: #e8e8e8;
-  padding: 0.25rem 0;
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-text);
+  padding: var(--g-space-xs) 0;
 }
 
 .resource-effects {
-  margin-top: 0.75rem;
+  margin-top: var(--g-space-sm);
 }
 
 .modal-actions {
   display: flex;
-  gap: 1rem;
+  gap: var(--g-space-md);
   justify-content: flex-end;
 }
 </style>

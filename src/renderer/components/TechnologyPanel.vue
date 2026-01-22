@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { gameService } from "../services/GameService";
 import type { Technology } from "../../core/models/Technology";
 import { highlightResources, clearHighlights } from "../directives/ResourceHighlight";
+import { GPanel, GButton, GProgress } from "../ui";
 
 const state = gameService.getState();
 
@@ -91,25 +92,15 @@ function onTechLeave(): void {
 </script>
 
 <template>
-  <div class="panel technology-panel">
-    <h2>Research</h2>
-
+  <GPanel title="Research">
     <div v-if="state.currentResearch && currentResearchTech" class="current-research">
       <div class="research-header">
         <span class="research-name">{{ currentResearchTech.name }}</span>
-        <button class="btn btn-secondary cancel-btn" @click="cancelResearch">Cancel</button>
+        <GButton variant="secondary" size="sm" @click="cancelResearch">Cancel</GButton>
       </div>
-      <div class="research-progress-container">
-        <div class="progress-bar">
-          <div
-            class="progress-fill"
-            :style="{ width: `${researchProgress}%` }"
-          ></div>
-        </div>
-        <span class="progress-text">
-          {{ Math.floor(state.currentResearch.progress) }} / {{ state.currentResearch.requiredSols }} sols
-        </span>
-      </div>
+      <GProgress :percent="researchProgress" showLabel>
+        {{ Math.floor(state.currentResearch.progress) }} / {{ state.currentResearch.requiredSols }} sols
+      </GProgress>
     </div>
 
     <div v-else class="no-research">
@@ -133,13 +124,13 @@ function onTechLeave(): void {
             <div v-if="tech.unlocks.length > 0" class="tech-unlocks">
               Unlocks: {{ tech.unlocks.join(', ') }}
             </div>
-            <button
-              class="btn btn-primary"
+            <GButton
+              variant="primary"
               :disabled="!canResearch(tech.id) || !!state.currentResearch"
               @click="startResearch(tech.id)"
             >
               Research
-            </button>
+            </GButton>
           </div>
         </div>
       </div>
@@ -174,74 +165,39 @@ function onTechLeave(): void {
         </div>
       </div>
     </div>
-  </div>
+  </GPanel>
 </template>
 
 <style scoped>
-.technology-panel {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%);
-}
-
 .current-research {
-  background: rgba(96, 165, 250, 0.1);
-  border: 1px solid #60a5fa;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
+  background: oklch(65% 0.15 250 / 0.1);
+  border: 1px solid var(--g-color-info);
+  border-radius: 4px;
+  padding: var(--g-space-md);
+  margin-bottom: var(--g-space-md);
 }
 
 .research-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--g-space-sm);
 }
 
 .research-name {
+  font-family: var(--g-font-mono);
   font-weight: bold;
-  color: #60a5fa;
-}
-
-.cancel-btn {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-}
-
-.research-progress-container {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.progress-bar {
-  flex: 1;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: #60a5fa;
-  transition: width 0.3s;
-}
-
-.progress-text {
-  font-size: 0.75rem;
-  color: #888;
-  min-width: 80px;
-  text-align: right;
+  color: var(--g-color-info);
 }
 
 .no-research {
-  color: #888;
+  color: var(--g-color-text-muted);
   font-style: italic;
-  padding: 1rem;
+  padding: var(--g-space-md);
   text-align: center;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  margin-bottom: 1rem;
+  background: var(--g-color-bg-elevated);
+  border-radius: 4px;
+  margin-bottom: var(--g-space-md);
 }
 
 .tech-sections {
@@ -250,49 +206,50 @@ function onTechLeave(): void {
 }
 
 .tech-section {
-  margin-bottom: 1rem;
+  margin-bottom: var(--g-space-md);
 }
 
 .tech-section h3 {
-  font-size: 0.875rem;
-  color: #888;
-  margin-bottom: 0.5rem;
-  padding-bottom: 0.25rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-text-muted);
+  margin-bottom: var(--g-space-xs);
+  padding-bottom: var(--g-space-xs);
+  border-bottom: 1px solid var(--g-color-border);
 }
 
 .tech-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--g-space-xs);
 }
 
 .tech-list.completed {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--g-space-xs);
 }
 
 .tech-card {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
-  padding: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--g-color-bg-elevated);
+  border-radius: 4px;
+  padding: var(--g-space-sm);
+  border: 1px solid var(--g-color-border);
 }
 
 .tech-card.available {
-  border-color: rgba(96, 165, 250, 0.3);
+  border-color: oklch(65% 0.15 250 / 0.3);
 }
 
 .tech-card.available:hover {
-  border-color: #60a5fa;
+  border-color: var(--g-color-info);
+  box-shadow: var(--g-glow-subtle);
 }
 
 .tech-card.completed {
   display: inline-block;
-  padding: 0.5rem 0.75rem;
-  background: rgba(74, 222, 128, 0.1);
-  border-color: rgba(74, 222, 128, 0.3);
+  padding: var(--g-space-xs) var(--g-space-sm);
+  background: oklch(70% 0.17 145 / 0.1);
+  border-color: oklch(70% 0.17 145 / 0.3);
 }
 
 .tech-card.locked {
@@ -300,41 +257,42 @@ function onTechLeave(): void {
 }
 
 .tech-name {
+  font-family: var(--g-font-mono);
   font-weight: bold;
-  color: #ffd460;
-  margin-bottom: 0.25rem;
+  color: var(--g-color-warning);
+  margin-bottom: var(--g-space-xs);
 }
 
 .tech-card.completed .tech-name {
-  color: #4ade80;
+  color: var(--g-color-positive);
   margin-bottom: 0;
 }
 
 .tech-desc {
-  font-size: 0.75rem;
-  color: #888;
-  margin-bottom: 0.5rem;
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  margin-bottom: var(--g-space-xs);
 }
 
 .tech-cost {
-  font-size: 0.75rem;
-  color: #a78bfa;
-  margin-bottom: 0.25rem;
+  font-size: var(--g-font-size-xs);
+  color: oklch(70% 0.15 280);
+  margin-bottom: var(--g-space-xs);
 }
 
 .tech-unlocks {
-  font-size: 0.75rem;
-  color: #4ade80;
-  margin-bottom: 0.5rem;
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-positive);
+  margin-bottom: var(--g-space-xs);
 }
 
 .tech-prereqs {
-  font-size: 0.75rem;
-  color: #f87171;
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-negative);
 }
 
-.tech-card button {
-  margin-top: 0.5rem;
+.tech-card :deep(.g-button) {
+  margin-top: var(--g-space-xs);
   width: 100%;
 }
 </style>
