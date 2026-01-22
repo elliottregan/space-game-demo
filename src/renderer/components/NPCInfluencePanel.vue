@@ -1,7 +1,8 @@
-<!-- src/renderer/components/NPCInfluencePanel.vue -->
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { gameService } from "../services/GameService";
+import { GPanel, GButton, GProgress, GInput, GSelect, GBadge } from "../ui";
+import type { SelectOption } from "../ui/primitives/GSelect.vue";
 
 const state = gameService.getState();
 
@@ -10,6 +11,13 @@ const selectedNPCForLobby = ref<string | null>(null);
 const lobbyAmount = ref(0.3);
 const councilName = ref("");
 const selectedCouncilMembers = ref<string[]>([]);
+
+const lobbyOptions: SelectOption[] = [
+  { value: 0.1, label: "+10%" },
+  { value: 0.2, label: "+20%" },
+  { value: 0.3, label: "+30%" },
+  { value: 0.5, label: "+50%" },
+];
 
 function canAfford(cost: Record<string, number>): boolean {
   for (const [key, value] of Object.entries(cost)) {
@@ -82,24 +90,24 @@ function toggleCouncilMember(npcId: string) {
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function getFactionColor(faction: string): string {
+function getFactionVariant(faction: string): "info" | "positive" | "warning" | "muted" {
   switch (faction) {
     case "futurist":
-      return "var(--color-info)";
+      return "info";
     case "progressive":
-      return "var(--color-positive)";
+      return "positive";
     case "traditionalist":
-      return "var(--color-warning)";
+      return "warning";
     default:
-      return "var(--color-muted)";
+      return "muted";
   }
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function getSupportColor(support: number): string {
-  if (support > 0.3) return "var(--color-positive)";
-  if (support < -0.3) return "var(--color-danger)";
-  return "var(--color-muted)";
+function getSupportVariant(support: number): "positive" | "negative" | "default" {
+  if (support > 0.3) return "positive";
+  if (support < -0.3) return "negative";
+  return "default";
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -107,40 +115,51 @@ function formatSupport(support: number): string {
   const pct = (support * 100).toFixed(0);
   return support >= 0 ? `+${pct}%` : `${pct}%`;
 }
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+const supportPercent = computed(() => {
+  if (!state.npcInfluence.activeProject) return 0;
+  return Math.max(0, (state.npcInfluence.activeProject.averageSupport + 1) / 2 * 100);
+});
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function handleLobbyAmountChange(value: string | number) {
+  lobbyAmount.value = Number(value);
+}
 </script>
 
 <template>
-  <div class="npc-influence-panel">
-    <h2>Council Politics</h2>
-
+  <GPanel title="Council Politics">
     <!-- Active Project Status -->
-    <section v-if="state.npcInfluence.activeProject" class="active-project">
-      <h3>Active Proposal</h3>
+    <section v-if="state.npcInfluence.activeProject" class="section">
+      <h3 class="section-title">Active Proposal</h3>
       <div class="project-status">
-        <strong>{{ state.npcInfluence.projects.find(p => p.id === state.npcInfluence.activeProject?.projectId)?.name }}</strong>
+        <div class="project-name">
+          {{ state.npcInfluence.projects.find(p => p.id === state.npcInfluence.activeProject?.projectId)?.name }}
+        </div>
         <div class="status-row">
-          <span>Average Support:
-            <span :style="{ color: getSupportColor(state.npcInfluence.activeProject.averageSupport) }">
+          <span class="status-label">
+            Average Support:
+            <span :class="`support-${getSupportVariant(state.npcInfluence.activeProject.averageSupport)}`">
               {{ formatSupport(state.npcInfluence.activeProject.averageSupport) }}
             </span>
           </span>
-          <span>Sols until vote: {{ state.npcInfluence.activeProject.solsRemaining }}</span>
+          <span class="status-label">
+            Sols until vote: {{ state.npcInfluence.activeProject.solsRemaining }}
+          </span>
         </div>
-        <div class="threshold-bar">
-          <div
-            class="threshold-fill"
-            :style="{
-              width: `${Math.max(0, (state.npcInfluence.activeProject.averageSupport + 1) / 2 * 100)}%`,
-              backgroundColor: getSupportColor(state.npcInfluence.activeProject.averageSupport)
-            }"
-          ></div>
-          <div class="threshold-marker" style="left: 70%"></div>
+        <div class="threshold-container">
+          <GProgress
+            :percent="supportPercent"
+            :variant="getSupportVariant(state.npcInfluence.activeProject.averageSupport)"
+          />
+          <div class="threshold-marker" />
         </div>
-        <small>Need 40% average support to pass</small>
+        <small class="hint">Need 40% average support to pass</small>
       </div>
 
       <!-- NPC Support List -->
-      <h4>Council Members</h4>
+      <h4 class="subsection-title">Council Members</h4>
       <div class="npc-list">
         <div
           v-for="npc in state.npcInfluence.npcs"
@@ -150,10 +169,13 @@ function formatSupport(support: number): string {
           @click="selectedNPCForLobby = npc.id"
         >
           <span class="npc-name">{{ npc.name }}</span>
-          <span class="faction-badge" :style="{ backgroundColor: getFactionColor(npc.faction) }">
+          <GBadge :variant="getFactionVariant(npc.faction)">
             {{ npc.faction }}
-          </span>
-          <span class="support-value" :style="{ color: getSupportColor(state.npcInfluence.activeProject.supportLevels[npc.id] || 0) }">
+          </GBadge>
+          <span
+            class="support-value"
+            :class="`support-${getSupportVariant(state.npcInfluence.activeProject.supportLevels[npc.id] || 0)}`"
+          >
             {{ formatSupport(state.npcInfluence.activeProject.supportLevels[npc.id] || 0) }}
           </span>
         </div>
@@ -161,26 +183,33 @@ function formatSupport(support: number): string {
 
       <!-- Lobbying Controls -->
       <div v-if="selectedNPCForLobby" class="lobby-controls">
-        <h4>Lobby {{ state.npcInfluence.npcs.find(n => n.id === selectedNPCForLobby)?.name }}</h4>
+        <h4 class="subsection-title">
+          Lobby {{ state.npcInfluence.npcs.find(n => n.id === selectedNPCForLobby)?.name }}
+        </h4>
         <div class="lobby-row">
-          <label>
-            Boost:
-            <select v-model.number="lobbyAmount">
-              <option :value="0.1">+10%</option>
-              <option :value="0.2">+20%</option>
-              <option :value="0.3">+30%</option>
-              <option :value="0.5">+50%</option>
-            </select>
-          </label>
-          <span>Cost: {{ lobbyCost }} materials</span>
-          <button @click="lobbyNPC" :disabled="!canLobby">Lobby</button>
+          <div class="lobby-field">
+            <label class="field-label">Boost</label>
+            <GSelect
+              :model-value="lobbyAmount"
+              :options="lobbyOptions"
+              size="sm"
+              @update:model-value="handleLobbyAmountChange"
+            />
+          </div>
+          <div class="lobby-cost">
+            <span class="field-label">Cost</span>
+            <span class="cost-value">{{ lobbyCost }} materials</span>
+          </div>
+          <GButton variant="primary" size="sm" :disabled="!canLobby" @click="lobbyNPC">
+            Lobby
+          </GButton>
         </div>
       </div>
     </section>
 
     <!-- Propose New Project -->
-    <section v-else class="propose-project">
-      <h3>Propose a Project</h3>
+    <section v-else class="section">
+      <h3 class="section-title">Propose a Project</h3>
       <div class="project-list">
         <div
           v-for="project in state.npcInfluence.projects"
@@ -189,34 +218,42 @@ function formatSupport(support: number): string {
           :class="{ selected: selectedProject === project.id }"
           @click="selectedProject = project.id"
         >
-          <strong>{{ project.name }}</strong>
-          <span class="faction-badge" :style="{ backgroundColor: getFactionColor(project.type) }">
-            {{ project.type }}
-          </span>
-          <p>{{ project.description }}</p>
-          <small>Cost: {{ Object.entries(project.proposalCost).map(([k,v]) => `${v} ${k}`).join(', ') }}</small>
+          <div class="project-header">
+            <span class="project-name">{{ project.name }}</span>
+            <GBadge :variant="getFactionVariant(project.type)">
+              {{ project.type }}
+            </GBadge>
+          </div>
+          <p class="project-desc">{{ project.description }}</p>
+          <small class="project-cost">
+            Cost: {{ Object.entries(project.proposalCost).map(([k,v]) => `${v} ${k}`).join(', ') }}
+          </small>
         </div>
       </div>
-      <button @click="proposeProject" :disabled="!canProposeProject">
+      <GButton variant="primary" :disabled="!canProposeProject" @click="proposeProject">
         Propose Selected Project
-      </button>
+      </GButton>
     </section>
 
     <!-- Councils -->
-    <section class="councils">
-      <h3>Councils</h3>
+    <section class="section">
+      <h3 class="section-title">Councils</h3>
       <div v-if="state.npcInfluence.councils.length === 0" class="empty-state">
         No councils formed yet.
       </div>
       <div v-else class="council-list">
         <div v-for="council in state.npcInfluence.councils" :key="council.id" class="council-item">
-          <strong>{{ council.name }}</strong>
-          <span>{{ council.memberIds.length }} members</span>
+          <span class="council-name">{{ council.name }}</span>
+          <GBadge variant="muted">{{ council.memberIds.length }} members</GBadge>
         </div>
       </div>
 
-      <h4>Form New Council</h4>
-      <input v-model="councilName" placeholder="Council name" />
+      <h4 class="subsection-title">Form New Council</h4>
+      <GInput
+        v-model="councilName"
+        placeholder="Council name"
+        size="sm"
+      />
       <div class="council-member-select">
         <div
           v-for="npc in state.npcInfluence.npcs"
@@ -228,153 +265,245 @@ function formatSupport(support: number): string {
           {{ npc.name }}
         </div>
       </div>
-      <button @click="createCouncil" :disabled="!canCreateCouncil">
+      <GButton variant="primary" :disabled="!canCreateCouncil" @click="createCouncil">
         Create Council (50 materials)
-      </button>
+      </GButton>
     </section>
-  </div>
+  </GPanel>
 </template>
 
 <style scoped>
-.npc-influence-panel {
-  padding: 1rem;
+.section {
+  margin-bottom: var(--g-space-lg);
+  padding-bottom: var(--g-space-md);
+  border-bottom: 1px solid var(--g-color-border);
 }
 
-h2, h3, h4 {
-  margin-top: 1rem;
-  margin-bottom: 0.5rem;
+.section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
-.active-project, .propose-project, .councils {
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  border: 1px solid var(--color-muted);
-  border-radius: 4px;
+.section-title {
+  margin: 0 0 var(--g-space-sm);
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.subsection-title {
+  margin: var(--g-space-md) 0 var(--g-space-sm);
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.project-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-xs);
+}
+
+.project-name {
+  font-weight: 600;
+  color: var(--g-color-text);
 }
 
 .status-row {
   display: flex;
   justify-content: space-between;
-  margin: 0.5rem 0;
+  font-size: var(--g-font-size-sm);
 }
 
-.threshold-bar {
+.status-label {
+  color: var(--g-color-text-muted);
+}
+
+.threshold-container {
   position: relative;
-  height: 20px;
-  background: #333;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.threshold-fill {
-  height: 100%;
-  transition: width 0.3s;
+  margin: var(--g-space-xs) 0;
 }
 
 .threshold-marker {
   position: absolute;
   top: 0;
   bottom: 0;
+  left: 70%;
   width: 2px;
-  background: white;
+  background: var(--g-color-text);
+  opacity: 0.5;
 }
 
-.npc-list, .project-list, .council-list {
+.hint {
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+}
+
+.npc-list,
+.project-list,
+.council-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin: 0.5rem 0;
+  gap: var(--g-space-xs);
+  margin: var(--g-space-sm) 0;
 }
 
-.npc-row, .project-option, .council-item {
+.npc-row,
+.project-option,
+.council-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  border: 1px solid var(--color-muted);
+  gap: var(--g-space-sm);
+  padding: var(--g-space-sm);
+  background: var(--g-color-bg);
+  border: 1px solid var(--g-color-border);
   border-radius: 4px;
   cursor: pointer;
+  transition: border-color var(--g-transition-fast), background var(--g-transition-fast);
 }
 
-.npc-row:hover, .project-option:hover {
-  background: rgba(255,255,255,0.05);
+.npc-row:hover,
+.project-option:hover {
+  background: var(--g-color-bg-elevated);
 }
 
-.npc-row.selected, .project-option.selected {
-  border-color: var(--color-info);
+.npc-row.selected,
+.project-option.selected {
+  border-color: var(--g-color-info);
+  background: oklch(65% 0.15 250 / 0.1);
 }
 
 .npc-name {
   flex: 1;
-}
-
-.faction-badge {
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 0.75rem;
-  text-transform: uppercase;
+  font-size: var(--g-font-size-sm);
 }
 
 .support-value {
-  font-weight: bold;
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-sm);
+  font-weight: 600;
   min-width: 50px;
   text-align: right;
 }
 
-.lobby-controls, .councils {
-  margin-top: 1rem;
+.support-positive {
+  color: var(--g-color-positive);
+}
+
+.support-negative {
+  color: var(--g-color-negative);
+}
+
+.support-default {
+  color: var(--g-color-text-muted);
+}
+
+.lobby-controls {
+  margin-top: var(--g-space-md);
+  padding: var(--g-space-sm);
+  background: var(--g-color-bg);
+  border-radius: 4px;
 }
 
 .lobby-row {
   display: flex;
-  gap: 1rem;
+  align-items: flex-end;
+  gap: var(--g-space-md);
+}
+
+.lobby-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-xs);
+}
+
+.lobby-cost {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-xs);
+}
+
+.field-label {
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  text-transform: uppercase;
+}
+
+.cost-value {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-warning);
+}
+
+.project-option {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.project-header {
+  display: flex;
   align-items: center;
+  gap: var(--g-space-sm);
+  width: 100%;
+}
+
+.project-desc {
+  margin: var(--g-space-xs) 0;
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-text-muted);
+}
+
+.project-cost {
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+}
+
+.council-item {
+  cursor: default;
+}
+
+.council-name {
+  flex: 1;
+  font-size: var(--g-font-size-sm);
 }
 
 .council-member-select {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0.5rem 0;
+  gap: var(--g-space-xs);
+  margin: var(--g-space-sm) 0;
 }
 
 .council-member-option {
-  padding: 0.25rem 0.5rem;
-  border: 1px solid var(--color-muted);
-  border-radius: 3px;
+  padding: var(--g-space-xs) var(--g-space-sm);
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  background: var(--g-color-bg);
+  border: 1px solid var(--g-color-border);
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 0.875rem;
+  transition: border-color var(--g-transition-fast), background var(--g-transition-fast);
+}
+
+.council-member-option:hover {
+  border-color: var(--g-color-border-focus);
 }
 
 .council-member-option.selected {
-  border-color: var(--color-positive);
-  background: rgba(0,255,0,0.1);
-}
-
-.project-option p {
-  margin: 0.25rem 0;
-  font-size: 0.875rem;
-  color: var(--color-muted);
-}
-
-button {
-  margin-top: 0.5rem;
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  border-color: var(--g-color-positive);
+  background: oklch(70% 0.17 145 / 0.15);
+  color: var(--g-color-positive);
 }
 
 .empty-state {
-  color: var(--color-muted);
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-text-muted);
   font-style: italic;
-}
-
-input {
-  padding: 0.5rem;
-  margin: 0.5rem 0;
-  width: 100%;
-  box-sizing: border-box;
+  padding: var(--g-space-sm) 0;
 }
 </style>
