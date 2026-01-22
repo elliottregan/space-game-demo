@@ -226,7 +226,8 @@ function canResearch(techId: string): boolean {
 <style scoped>
 .tech-tree-container {
   display: flex;
-  height: 500px;
+  height: 100%;
+  min-height: 400px;
   gap: var(--g-space-md);
 }
 

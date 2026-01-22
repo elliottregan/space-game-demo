@@ -18,6 +18,11 @@ const router = createRouter({
       component: () => import("./components/StrategyTab.vue"),
     },
     {
+      path: "/research",
+      name: "research",
+      component: () => import("./components/ResearchTab.vue"),
+    },
+    {
       path: "/ui",
       name: "ui-showcase",
       component: () => import("./components/UIShowcase.vue"),

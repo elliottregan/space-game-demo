@@ -10,6 +10,9 @@ import { RouterLink } from "vue-router";
     <RouterLink to="/strategy" class="tab-link" active-class="active">
       Strategy
     </RouterLink>
+    <RouterLink to="/research" class="tab-link" active-class="active">
+      Research
+    </RouterLink>
   </nav>
 </template>
 

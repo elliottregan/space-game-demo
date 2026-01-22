@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import TechnologyPanel from "./TechnologyPanel.vue";
 import PoliticsPanel from "./PoliticsPanel.vue";
 import OperationsPanel from "./OperationsPanel.vue";
 import NPCInfluencePanel from "./NPCInfluencePanel.vue";
@@ -8,11 +7,10 @@ import NPCInfluencePanel from "./NPCInfluencePanel.vue";
 <template>
   <div class="strategy-tab">
     <div class="strategy-tab-left">
-      <TechnologyPanel />
       <PoliticsPanel />
+      <OperationsPanel />
     </div>
     <div class="strategy-tab-right">
-      <OperationsPanel />
       <NPCInfluencePanel />
     </div>
   </div>
