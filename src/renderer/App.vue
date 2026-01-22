@@ -54,6 +54,10 @@ const hasActiveEvent = computed(() => state.activeEvent !== null);
   box-sizing: border-box;
 }
 
+html {
+  background: #1a1a2e;
+}
+
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
