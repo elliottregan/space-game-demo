@@ -249,7 +249,6 @@ const selectedRelationships = computed(() => {
 .npc-graph-container {
   display: flex;
   height: 100%;
-  min-height: 350px;
   gap: var(--g-space-md);
 }
 
