@@ -31,3 +31,17 @@ export interface Building {
   recyclingProgress?: number;
   repurposeFromDefId?: string; // Set when repurposing, cleared when complete
 }
+
+/**
+ * PlacedBuilding is a UI-oriented representation that combines a Building instance
+ * with its BuildingDefinition template for convenient display in components.
+ */
+export interface PlacedBuilding {
+  id: string;
+  template: BuildingDefinition;
+  workers?: number;
+  constructionProgress?: {
+    current: number;
+    required: number;
+  };
+}
