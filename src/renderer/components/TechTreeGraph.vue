@@ -106,7 +106,7 @@ const edges = computed<Edge[]>(() => {
 const selectedTech = ref<Technology | null>(null);
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function onNodeClick(_event: MouseEvent, node: Node) {
+function onNodeClick({ node }: { event: MouseEvent; node: Node }) {
   selectedTech.value = node.data.tech;
 }
 
