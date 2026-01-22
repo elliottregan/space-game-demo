@@ -56,6 +56,8 @@ function newGame() {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--g-space-sm);
   padding: var(--g-space-md);
   background: var(--g-color-bg-surface);
   border: 1px solid var(--g-color-border);
@@ -78,6 +80,45 @@ function newGame() {
 
 .header-actions {
   display: flex;
-  gap: var(--g-space-md);
+  gap: var(--g-space-sm);
+}
+
+@media (max-width: 768px) {
+  .game-header {
+    padding: var(--g-space-sm);
+  }
+
+  .game-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .sol-display {
+    font-size: 1.1rem;
+  }
+
+  .header-actions {
+    gap: var(--g-space-xs);
+  }
+}
+
+@media (max-width: 480px) {
+  .game-header {
+    justify-content: center;
+  }
+
+  .game-header h1 {
+    width: 100%;
+    text-align: center;
+    font-size: 1.1rem;
+  }
+
+  .sol-display {
+    font-size: 1rem;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>
