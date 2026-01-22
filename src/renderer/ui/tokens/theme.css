@@ -1,0 +1,40 @@
+:root {
+  /* Color palette - cool blues/cyans with warm accents */
+  --g-color-bg-base: oklch(10% 0.02 250);
+  --g-color-bg-surface: oklch(15% 0.02 250);
+  --g-color-bg-elevated: oklch(20% 0.03 250);
+
+  --g-color-border: oklch(30% 0.03 250);
+  --g-color-border-focus: oklch(65% 0.15 250);
+
+  --g-color-text: oklch(90% 0.01 250);
+  --g-color-text-muted: oklch(55% 0.02 250);
+
+  /* Semantic colors */
+  --g-color-positive: oklch(70% 0.17 145);
+  --g-color-negative: oklch(60% 0.2 25);
+  --g-color-warning: oklch(75% 0.15 70);
+  --g-color-info: oklch(65% 0.15 250);
+
+  /* Effects - sci-fi glow */
+  --g-glow-subtle: 0 0 8px oklch(65% 0.15 250 / 0.2);
+  --g-glow-focus: 0 0 12px oklch(65% 0.15 250 / 0.4);
+
+  /* Spacing scale (4px base) */
+  --g-space-xs: 4px;
+  --g-space-sm: 8px;
+  --g-space-md: 16px;
+  --g-space-lg: 24px;
+  --g-space-xl: 32px;
+
+  /* Typography */
+  --g-font-mono: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
+  --g-font-size-xs: 0.625rem;
+  --g-font-size-sm: 0.75rem;
+  --g-font-size-md: 0.875rem;
+  --g-font-size-lg: 1rem;
+
+  /* Transitions */
+  --g-transition-fast: 150ms ease;
+  --g-transition-normal: 250ms ease;
+}

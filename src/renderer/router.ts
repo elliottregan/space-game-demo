@@ -17,6 +17,11 @@ const router = createRouter({
       name: "strategy",
       component: () => import("./components/StrategyTab.vue"),
     },
+    {
+      path: "/ui",
+      name: "ui-showcase",
+      component: () => import("./components/UIShowcase.vue"),
+    },
   ],
 });
 
