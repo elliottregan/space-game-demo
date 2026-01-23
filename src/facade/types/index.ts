@@ -52,7 +52,7 @@ export type BuildingAction =
 export type { TechnologySnapshot, Technology, TechResearch } from "./technology";
 
 // Colony types
-export type { ColonySnapshot, Colonist, ColonistRole } from "./colony";
+export type { ColonySnapshot, Colonist, ColonistRole, SkillDefinition } from "./colony";
 
 // Politics types
 export type { PoliticsSnapshot, Faction, Decision, DecisionResult } from "./politics";

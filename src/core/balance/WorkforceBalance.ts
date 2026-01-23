@@ -54,3 +54,9 @@ export const MASTERY_EFFICIENCY: Record<number, number> = {
 };
 
 export const MASTER_EVENT_CHANCE = 0.01;
+
+/** Maximum total efficiency bonus from skills */
+export const MAX_SKILL_EFFICIENCY_BONUS = 0.2;
+
+/** Number of skills assigned to each colonist (min, max) */
+export const COLONIST_SKILL_COUNT = { min: 1, max: 2 };

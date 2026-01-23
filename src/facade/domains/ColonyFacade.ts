@@ -2,6 +2,7 @@
 // Colony and colonist queries and commands facade
 
 import type { GameState } from "../../core/GameState";
+import { SKILLS } from "../../core/data/skills";
 import { ok, err, type Result, type CanDoResult } from "../types/common";
 import type { ColonySnapshot, Colonist, ColonistRole, Queryable, EntityLookup } from "../types";
 
@@ -33,6 +34,7 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
       health: this.gameState.colony.getHealth(),
       morale: this.gameState.colony.getMorale(),
       colonists: Object.freeze([...this.gameState.colony.getColonists()]),
+      skillDefinitions: Object.freeze([...SKILLS]),
     };
   }
 

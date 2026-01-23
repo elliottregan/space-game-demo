@@ -21,4 +21,5 @@ export interface Colonist {
   masteryLevel: MasteryLevel;
   trainingTarget?: ColonistRole;
   trainingProgress?: number;
+  skills: string[];
 }

@@ -8,6 +8,8 @@ import {
   POPULATION_GROWTH_RATE,
   MIN_POPULATION_FOR_GROWTH,
 } from "../balance/EconomyBaseline";
+import { SKILLS } from "../data/skills";
+import { COLONIST_SKILL_COUNT } from "../balance/WorkforceBalance";
 
 const FIRST_NAMES = [
   "Alex",
@@ -64,6 +66,15 @@ export class ColonyManager {
     for (let i = 0; i < initialPopulation; i++) {
       this.addColonist();
     }
+  }
+
+  private assignRandomSkills(): string[] {
+    const skillCount =
+      Math.floor(Math.random() * (COLONIST_SKILL_COUNT.max - COLONIST_SKILL_COUNT.min + 1)) +
+      COLONIST_SKILL_COUNT.min;
+
+    const shuffled = [...SKILLS].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, skillCount).map((s) => s.id);
   }
 
   tick(
@@ -195,6 +206,7 @@ export class ColonyManager {
       role: ColonistRole.UNASSIGNED,
       experience: 0,
       masteryLevel: MasteryLevel.NOVICE,
+      skills: this.assignRandomSkills(),
     };
 
     this.colonists.set(colonist.id, colonist);
@@ -272,7 +284,13 @@ export class ColonyManager {
     morale: number;
   }): ColonyManager {
     const manager = new ColonyManager(0);
-    data.colonists.forEach((c) => manager.colonists.set(c.id, c));
+    data.colonists.forEach((c) => {
+      // Handle backwards compatibility for saves without skills
+      if (!c.skills) {
+        c.skills = [];
+      }
+      manager.colonists.set(c.id, c);
+    });
     manager.nextId = data.nextId;
     manager.health = data.health;
     manager.morale = data.morale;

@@ -5,6 +5,7 @@ import { ColonistRole } from "../../../core/models/Colonist";
 import { GPanel } from "../../ui";
 import StatRow from "./StatRow.vue";
 import WorkforceGrid from "./WorkforceGrid.vue";
+import ColonistCard from "./ColonistCard.vue";
 
 // Reactive state for template bindings (auto-updates when API syncs)
 const state = gameService.getState();
@@ -62,6 +63,18 @@ function getMoraleVariant(morale: number): "positive" | "warning" | "negative" {
     </div>
 
     <WorkforceGrid :workforce-stats="workforceStats" />
+
+    <div class="colonist-list" v-if="state.colonists.length > 0">
+      <h3>Colonists</h3>
+      <div class="colonist-grid">
+        <ColonistCard
+          v-for="colonist in state.colonists"
+          :key="colonist.id"
+          :colonist="colonist"
+          :skill-definitions="state.skillDefinitions"
+        />
+      </div>
+    </div>
   </GPanel>
 </template>
 
@@ -76,5 +89,25 @@ function getMoraleVariant(morale: number): "positive" | "warning" | "negative" {
 }
 .morale-bonus .positive {
   color: var(--g-color-positive);
+}
+
+.colonist-list {
+  margin-top: var(--g-space-md);
+  padding-top: var(--g-space-md);
+  border-top: 1px solid var(--g-color-border);
+}
+
+.colonist-list h3 {
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-text-muted);
+  margin-bottom: var(--g-space-sm);
+}
+
+.colonist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--g-space-sm);
+  max-height: 300px;
+  overflow-y: auto;
 }
 </style>

@@ -7,7 +7,10 @@ import {
   EXPERIENCE_GAIN_RATE,
   MASTERY_THRESHOLDS,
   MASTER_EVENT_CHANCE,
+  MASTERY_EFFICIENCY,
+  MAX_SKILL_EFFICIENCY_BONUS,
 } from "../balance/WorkforceBalance";
+import { SKILLS } from "../data/skills";
 
 export class WorkforceManager {
   tick(colony: ColonyManager): GameEvent[] {
@@ -145,5 +148,26 @@ export class WorkforceManager {
     }
 
     return stats;
+  }
+
+  /**
+   * Calculate the total efficiency multiplier for a colonist.
+   * Combines mastery level bonus with skill bonuses (capped).
+   */
+  getColonistEfficiency(colonist: Colonist): number {
+    const masteryEfficiency = MASTERY_EFFICIENCY[colonist.masteryLevel];
+
+    let skillBonus = 0;
+    for (const skillId of colonist.skills) {
+      const skill = SKILLS.find((s) => s.id === skillId);
+      if (skill?.affinity.includes(colonist.role)) {
+        skillBonus += skill.efficiencyBonus;
+      }
+    }
+
+    // Cap skill bonus
+    skillBonus = Math.min(skillBonus, MAX_SKILL_EFFICIENCY_BONUS);
+
+    return masteryEfficiency + skillBonus;
   }
 }
