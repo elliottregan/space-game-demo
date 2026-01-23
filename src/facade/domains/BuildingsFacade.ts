@@ -8,9 +8,11 @@ import type {
   Building,
   BuildingDefinition,
   BuildingMode,
+  BuildingAction,
   ResourceDelta,
   Queryable,
   EntityLookup,
+  ActionChecker,
 } from "../types";
 
 type CommandExecutor = <T>(fn: () => Result<T>) => Result<T>;
@@ -22,9 +24,10 @@ type AffordabilityChecker = (cost: ResourceDelta) => CanDoResult;
  * Implements:
  * - Queryable<BuildingSnapshot> - for snapshot()
  * - EntityLookup<Building> - for getById()
+ * - ActionChecker<[BuildingAction]> - for canDo()
  */
 export class BuildingsFacade
-  implements Queryable<BuildingSnapshot>, EntityLookup<Building>
+  implements Queryable<BuildingSnapshot>, EntityLookup<Building>, ActionChecker<[BuildingAction]>
 {
   constructor(
     private gameState: GameState,
@@ -59,6 +62,21 @@ export class BuildingsFacade
    */
   getDefinition(defId: string): Readonly<BuildingDefinition> | undefined {
     return this.gameState.buildings.getDefinition(defId);
+  }
+
+  /**
+   * Unified action checker implementing ActionChecker interface.
+   * Routes to the appropriate canX method based on action type.
+   */
+  canDo(action: BuildingAction): CanDoResult {
+    switch (action.action) {
+      case "build":
+        return this.canBuild(action.defId);
+      case "recycle":
+        return this.canRecycle(action.buildingId);
+      case "repurpose":
+        return this.canRepurpose(action.buildingId, action.targetDefId);
+    }
   }
 
   /**

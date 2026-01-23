@@ -42,6 +42,12 @@ export type {
   BuildingMode,
 } from "./buildings";
 
+// Building action discriminated union for ActionChecker
+export type BuildingAction =
+  | { action: "build"; defId: string }
+  | { action: "recycle"; buildingId: string }
+  | { action: "repurpose"; buildingId: string; targetDefId: string };
+
 // Technology types
 export type { TechnologySnapshot, Technology, TechResearch } from "./technology";
 
