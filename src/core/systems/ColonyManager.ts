@@ -284,7 +284,13 @@ export class ColonyManager {
     morale: number;
   }): ColonyManager {
     const manager = new ColonyManager(0);
-    data.colonists.forEach((c) => manager.colonists.set(c.id, c));
+    data.colonists.forEach((c) => {
+      // Handle backwards compatibility for saves without skills
+      if (!c.skills) {
+        c.skills = [];
+      }
+      manager.colonists.set(c.id, c);
+    });
     manager.nextId = data.nextId;
     manager.health = data.health;
     manager.morale = data.morale;
