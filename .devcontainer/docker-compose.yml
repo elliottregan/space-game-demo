@@ -6,6 +6,9 @@ services:
 
     container_name: space-game-devcontainer
 
+    env_file:
+      - ../.env
+
     ports:
       - "2222:22" # SSH
       - "5173:5173" # Vite dev server
