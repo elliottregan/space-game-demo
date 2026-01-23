@@ -168,4 +168,43 @@ export const BUILDINGS: BuildingDefinition[] = [
     consumption: { power: 15 },
     requiredTech: "cryosleep",
   },
+
+  // Recreation buildings (morale boost, no production)
+  {
+    id: "common_room",
+    name: "Common Room",
+    description: "A shared space for colonists to relax and socialize",
+    cost: { materials: 60 },
+    constructionTime: 10,
+    consumption: { power: 3 },
+    moraleBoost: 5,
+  },
+  {
+    id: "gymnasium",
+    name: "Gymnasium",
+    description: "Exercise facility to maintain physical and mental health",
+    cost: { materials: 80 },
+    constructionTime: 12,
+    consumption: { power: 4 },
+    moraleBoost: 6,
+  },
+  {
+    id: "hydroponic_garden",
+    name: "Hydroponic Garden",
+    description: "Decorative plants providing a calming environment",
+    cost: { materials: 70 },
+    constructionTime: 14,
+    consumption: { power: 2, water: 1 },
+    moraleBoost: 4,
+  },
+  {
+    id: "observatory_dome",
+    name: "Observatory Dome",
+    description: "A dome for stargazing, reminding colonists why they came",
+    cost: { materials: 150 },
+    constructionTime: 20,
+    consumption: { power: 5 },
+    moraleBoost: 8,
+    requiredTech: "advanced_materials",
+  },
 ];
