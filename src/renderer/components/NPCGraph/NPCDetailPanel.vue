@@ -11,14 +11,17 @@ interface Props {
 
 const props = defineProps<Props>();
 
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 const emit = defineEmits<{
   close: [];
 }>();
 
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 const npcCouncils = computed(() =>
   props.councils.filter((c) => c.memberIds.includes(props.npc.id))
 );
 
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 function formatPercent(value: number): string {
   const pct = (value * 100).toFixed(0);
   return value >= 0 ? `+${pct}%` : `${pct}%`;

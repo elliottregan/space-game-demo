@@ -18,6 +18,7 @@ const selectedNpc = computed(() => {
 });
 
 // Build relationships for selected NPC
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 const selectedRelationships = computed(() => {
   if (!selectedNpc.value) return [];
 
@@ -50,6 +51,7 @@ const selectedRelationships = computed(() => {
 });
 
 // Get support level for selected NPC
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 const selectedSupportLevel = computed(() => {
   if (!selectedNpc.value || !state.npcInfluence.activeProject) return null;
   return state.npcInfluence.activeProject.supportLevels[selectedNpc.value.id] ?? null;
