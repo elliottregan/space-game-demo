@@ -29,11 +29,13 @@ digraph pipeline {
   "3. discussion-analyzer" [label="3. discussion-analyzer\nRank features by sentiment"];
   "4. dev-evaluator" [label="4. dev-evaluator\nEvaluate top feature"];
   "Summary" [label="5. Summary\nReport final results"];
+  "6. implement-feature" [label="6. implement-feature (optional)\nBuild & create PR", style=dashed];
 
   "1. start-discussion" -> "2. discussion-perspectives";
   "2. discussion-perspectives" -> "3. discussion-analyzer";
   "3. discussion-analyzer" -> "4. dev-evaluator";
   "4. dev-evaluator" -> "Summary";
+  "Summary" -> "6. implement-feature" [style=dashed];
 }
 ```
 
@@ -89,7 +91,8 @@ This skill will:
 - Assess architecture fit
 - Design implementation approach
 - Estimate effort and risks
-- Post development evaluation
+- Post development evaluation with `🎫 DEV-EVAL-{number}` header
+- Add `ready-for-ticket` label to the discussion
 
 **Capture:** Recommendation (Build/Defer/Reject) and effort estimate
 
@@ -116,14 +119,16 @@ After all stages complete, report:
 ...
 
 ### Development Evaluation: [Top Feature]
+- **Ticket ID:** 🎫 DEV-EVAL-[NUMBER]
 - **Architecture Fit:** [Rating]
 - **Complexity:** [Size]
 - **Recommendation:** [Build/Defer/Reject]
 - **Effort:** [Estimate]
+- **Label:** `ready-for-ticket` added
 
 ### Next Steps
-1. [Suggested action based on evaluation]
-2. [Suggested action]
+1. Run `brainstorm-game-feature:implement-feature` with DEV-EVAL-[NUMBER] to build it
+2. Or manually implement following the evaluation's implementation plan
 ```
 
 ## Invoking Sub-Skills
@@ -168,7 +173,9 @@ Users may want to run only part of the pipeline:
 | "Get perspectives on discussion #N" | Run only `discussion-perspectives` |
 | "Analyze discussion #N" | Run only `discussion-analyzer` |
 | "Evaluate feature X" | Run only `dev-evaluator` |
-| "Full pipeline for X" | Run all stages |
+| "Full pipeline for X" | Run stages 1-5 |
+| "Implement DEV-EVAL-N" | Run only `implement-feature` |
+| "Full pipeline with implementation" | Run all stages including implementation |
 
 ## Example Invocation
 

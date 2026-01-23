@@ -160,6 +160,7 @@ mutation {
 | `events` | `LA_kwDOQ-Dazc8AAAACVxbcVQ` | Random events, disasters |
 | `operations` | `LA_kwDOQ-Dazc8AAAACVxcBbA` | Expeditions, prospecting, missions |
 | `victory` | `LA_kwDOQ-Dazc8AAAACVxbc8Q` | Win conditions, endgame |
+| `ready-for-ticket` | `LA_kwDOQ-Dazc8AAAACVxsOKg` | Dev evaluation complete, ready to convert to issue |
 
 ## Discussion Content Template
 

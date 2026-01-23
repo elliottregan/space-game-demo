@@ -204,6 +204,8 @@ Rate Likelihood and Impact as: Low, Medium, High
 Structure the output as:
 
 ```markdown
+## 🎫 DEV-EVAL-{discussion_number}
+
 # Development Evaluation: [Feature Name]
 
 ## Summary
@@ -341,6 +343,21 @@ skill bonuses can use the same pattern. No new managers needed.
 **Build** — This is a straightforward extension that adds player value with minimal
 architectural risk. Start with 6-8 well-designed skills and expand based on feedback.
 ```
+
+## Step 8: Apply Label
+
+After posting the evaluation comment, add the `ready-for-ticket` label to the discussion:
+
+```bash
+gh api graphql -f query='mutation {
+  addLabelsToLabelable(input: {
+    labelableId: "{discussion_node_id}",
+    labelIds: ["LA_kwDOQ-Dazc8AAAACVxsOKg"]
+  }) { labelable { labels(first: 5) { nodes { name } } } }
+}'
+```
+
+This marks the discussion as having a completed dev evaluation ready for ticket conversion.
 
 ## Quick Reference
 
