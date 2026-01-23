@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { gameService } from "../services/GameService";
-import { highlightState } from "../directives/ResourceHighlight";
-import { GPanel, ResourceBadge } from "../ui";
+import { gameService } from "../../services/GameService";
+import { highlightState } from "../../directives/ResourceHighlight";
+import { GPanel, ResourceBadge } from "../../ui";
 
 // Reactive state for template bindings (auto-updates when API syncs)
 const state = gameService.getState();

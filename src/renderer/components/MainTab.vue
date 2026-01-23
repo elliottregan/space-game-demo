@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import ResourcePanel from "./ResourcePanel.vue";
-import ColonyPanel from "./ColonyPanel.vue";
-import BuildingPanel from "./BuildingPanel.vue";
+import { ResourcePanel } from "./ResourcePanel";
+import { ColonyPanel } from "./ColonyPanel";
+import { BuildingPanel } from "./BuildingPanel";
 </script>
 
 <template>
