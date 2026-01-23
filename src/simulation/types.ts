@@ -70,9 +70,9 @@ export interface AggregateStats {
   /** Standard deviation of sols to victory */
   stdDevTimeToWin: number;
   /** Count of defeats by reason */
-  defeatBreakdown: Record<DefeatReason, number>;
+  defeatBreakdown: Record<string, number>;
   /** Count of victories by type */
-  victoryBreakdown: Record<VictoryType, number>;
+  victoryBreakdown: Record<string, number>;
   /** Minimum sols to achieve victory */
   fastestWin: number;
   /** Maximum sols to achieve victory */

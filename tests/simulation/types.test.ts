@@ -144,16 +144,35 @@ describe("simulation/types", () => {
           suffocation: 3,
           population_collapse: 2,
         },
-        victoryBreakdown: {
-          population: 0,
-          generation_ship: 0,
-        },
+        victoryBreakdown: {},
         fastestWin: 0,
         slowestWin: 0,
       };
 
       expect(stats.winRate).toBe(0);
       expect(stats.fastestWin).toBe(0);
+    });
+
+    it("allows partial breakdowns with only outcomes that occurred", () => {
+      const stats: AggregateStats = {
+        totalRuns: 50,
+        winRate: 0.8,
+        avgTimeToWin: 300,
+        stdDevTimeToWin: 30,
+        defeatBreakdown: {
+          starvation: 10,
+        },
+        victoryBreakdown: {
+          population: 40,
+        },
+        fastestWin: 250,
+        slowestWin: 400,
+      };
+
+      expect(stats.defeatBreakdown.starvation).toBe(10);
+      expect(stats.defeatBreakdown.suffocation).toBeUndefined();
+      expect(stats.victoryBreakdown.population).toBe(40);
+      expect(stats.victoryBreakdown.generation_ship).toBeUndefined();
     });
   });
 
