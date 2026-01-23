@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { Decision } from "../../core/models/Politics";
-import { GButton } from "../ui";
+import type { Decision } from "../../../core/models/Politics";
+import { GButton } from "../../ui";
 
 defineProps<{
   decision: Decision;

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { Faction } from "../../core/models/Politics";
-import { GProgress } from "../ui";
+import type { Faction } from "../../../core/models/Politics";
+import { GProgress } from "../../ui";
 
 defineProps<{
   faction: Faction;

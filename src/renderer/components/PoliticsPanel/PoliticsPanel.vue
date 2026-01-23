@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { gameService } from "../services/GameService";
-import type { Decision } from "../../core/models/Politics";
-import { GPanel } from "../ui";
+import { gameService } from "../../services/GameService";
+import type { Decision } from "../../../core/models/Politics";
+import { GPanel } from "../../ui";
 import AverageSupportDisplay from "./AverageSupportDisplay.vue";
 import FactionCard from "./FactionCard.vue";
 import DecisionsList from "./DecisionsList.vue";
