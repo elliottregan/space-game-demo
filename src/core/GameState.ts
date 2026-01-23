@@ -46,7 +46,7 @@ export class GameState {
     this.npcInfluence = new NPCInfluenceManager(NPCS, INITIAL_RELATIONSHIPS, PROJECTS);
 
     // Initialize colonist consumption
-    this.colony.tick(this.resources);
+    this.colony.tick(this.resources, this.buildings);
   }
 
   tick(): GameEvent[] {
@@ -67,7 +67,7 @@ export class GameState {
     events.push(...this.workforce.tick(this.colony));
 
     // 4. Colony tick (population, health, morale)
-    events.push(...this.colony.tick(this.resources));
+    events.push(...this.colony.tick(this.resources, this.buildings));
 
     // 5. Technology tick (research progress)
     events.push(...this.technology.tick());

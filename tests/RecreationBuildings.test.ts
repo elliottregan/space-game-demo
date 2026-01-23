@@ -99,8 +99,10 @@ describe("Recreation Buildings", () => {
     // Record morale before additional ticks
     const moraleBefore = gameState.colony.getMorale();
 
-    // Tick a few times with positive resources to see morale boost
-    gameState.resources.add({ food: 1000, oxygen: 1000, water: 1000 });
+    // Add production to create positive net flow (required for morale recovery)
+    gameState.resources.addProduction({ food: 100, oxygen: 100, water: 100 });
+
+    // Tick a few times with positive net flow to see morale boost
     for (let i = 0; i < 5; i++) {
       gameState.tick();
     }

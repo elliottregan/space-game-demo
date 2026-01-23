@@ -2,6 +2,7 @@ import type { GameEvent } from "../models/GameEvent";
 import type { Colonist } from "../models/Colonist";
 import { ColonistRole, MasteryLevel } from "../models/Colonist";
 import type { ResourceManager } from "./ResourceManager";
+import type { BuildingManager } from "./BuildingManager";
 import {
   COLONIST_NEEDS,
   POPULATION_GROWTH_RATE,
@@ -65,7 +66,7 @@ export class ColonyManager {
     }
   }
 
-  tick(resources: ResourceManager): GameEvent[] {
+  tick(resources: ResourceManager, buildings?: BuildingManager): GameEvent[] {
     const events: GameEvent[] = [];
     const population = this.colonists.size;
 
@@ -101,7 +102,14 @@ export class ColonyManager {
 
     // Positive conditions improve morale
     if ((netFlow.food || 0) > 0 && (netFlow.oxygen || 0) > 0 && (netFlow.water || 0) > 0) {
-      this.morale = Math.min(100, this.morale + 0.5);
+      let moraleRecovery = 0.5;
+
+      // Add morale boost from recreation buildings
+      if (buildings) {
+        moraleRecovery += buildings.getTotalMoraleBoost() * 0.1;
+      }
+
+      this.morale = Math.min(100, this.morale + moraleRecovery);
       this.health = Math.min(100, this.health + 0.2);
     }
 
