@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { PoliticsPanel } from "./PoliticsPanel";
-import NPCInfluencePanel from "./NPCInfluencePanel.vue";
+import { NPCInfluencePanel } from "./NPCInfluencePanel";
 import OperationsPanel from "./OperationsPanel.vue";
 import NPCRelationshipGraph from "./NPCRelationshipGraph.vue";
 import { GPanel } from "../ui";
