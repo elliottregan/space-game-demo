@@ -14,7 +14,7 @@ const state = gameService.getState();
 // Domain API for commands and one-off queries
 const api = gameService.api;
 
-const selectedCategory = ref<"all" | "available" | "built">("available");
+const selectedCategory = ref<"all" | "available" | "built" | "recreation">("available");
 
 // Computed properties use reactive state for proper Vue reactivity
 const availableBuildings = computed(() => {
@@ -37,6 +37,8 @@ const filteredBuildings = computed(() => {
           state.buildings.some((b) => b.definitionId === def.id) ||
           state.pendingBuildings.some((b) => b.definitionId === def.id),
       );
+    case "recreation":
+      return availableBuildings.value.filter((def) => def.moraleBoost !== undefined);
     default:
       return state.buildingDefinitions;
   }

@@ -2,13 +2,13 @@
 import { GButton } from "../../ui";
 
 defineProps<{
-  selectedCategory: "all" | "available" | "built";
+  selectedCategory: "all" | "available" | "built" | "recreation";
   activeCount: number;
 }>();
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const emit = defineEmits<{
-  "update:selectedCategory": [category: "all" | "available" | "built"];
+  "update:selectedCategory": [category: "all" | "available" | "built" | "recreation"];
 }>();
 </script>
 
@@ -27,6 +27,13 @@ const emit = defineEmits<{
       @click="emit('update:selectedCategory', 'built')"
     >
       Built ({{ activeCount }})
+    </GButton>
+    <GButton
+      :variant="selectedCategory === 'recreation' ? 'primary' : 'ghost'"
+      size="sm"
+      @click="emit('update:selectedCategory', 'recreation')"
+    >
+      Recreation
     </GButton>
     <GButton
       :variant="selectedCategory === 'all' ? 'primary' : 'ghost'"
