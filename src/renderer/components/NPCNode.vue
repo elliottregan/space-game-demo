@@ -25,7 +25,9 @@ function getInitials(name: string): string {
 
 <template>
   <div class="npc-node" :class="{ 'in-council': data.inCouncil }">
-    <Handle type="target" :position="Position.Top" />
+    <Handle id="top" type="target" :position="Position.Top" />
+    <Handle id="right" type="target" :position="Position.Right" />
+    <Handle id="left" type="source" :position="Position.Left" />
 
     <div class="node-content" :style="{ borderColor: data.color }">
       <div class="avatar" :style="{ background: data.color }">
@@ -48,7 +50,7 @@ function getInitials(name: string): string {
       </div>
     </div>
 
-    <Handle type="source" :position="Position.Bottom" />
+    <Handle id="bottom" type="source" :position="Position.Bottom" />
   </div>
 </template>
 
