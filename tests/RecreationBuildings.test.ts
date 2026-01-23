@@ -79,4 +79,35 @@ describe("Recreation Buildings", () => {
     const totalBoost = gameState.buildings.getTotalMoraleBoost();
     expect(totalBoost).toBe(11); // 5 + 6
   });
+
+  it("should apply morale boost during colony tick", () => {
+    // Lower morale to see the effect
+    gameState.colony.setMorale(50);
+
+    // Build a common room
+    gameState.buildings.startBuilding(
+      "common_room",
+      gameState.resources,
+      gameState.technology
+    );
+
+    // Fast-forward construction
+    for (let i = 0; i < 10; i++) {
+      gameState.tick();
+    }
+
+    // Record morale before additional ticks
+    const moraleBefore = gameState.colony.getMorale();
+
+    // Tick a few times with positive resources to see morale boost
+    gameState.resources.add({ food: 1000, oxygen: 1000, water: 1000 });
+    for (let i = 0; i < 5; i++) {
+      gameState.tick();
+    }
+
+    const moraleAfter = gameState.colony.getMorale();
+
+    // Morale should have increased (base recovery + morale boost)
+    expect(moraleAfter).toBeGreaterThan(moraleBefore);
+  });
 });
