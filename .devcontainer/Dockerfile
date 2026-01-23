@@ -30,6 +30,10 @@ USER root
 RUN mkdir -p /workspace && chown dev:dev /workspace
 RUN mkdir -p /home/dev/.claude && chown dev:dev /home/dev/.claude
 
+# Copy Claude authentication files from host
+# Note: These must exist - host must have authenticated Claude Code first
+# COPY .claude.json /tmp/.claude.json
+
 WORKDIR /workspace
 EXPOSE 22 5173
 

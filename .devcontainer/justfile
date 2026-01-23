@@ -19,3 +19,15 @@ rebuild:
     docker compose down
     docker compose build --no-cache
     docker compose up -d
+
+# Extract Claude OAuth credentials from macOS Keychain
+extract-credentials:
+    security find-generic-password -s "Claude Code-credentials" -a "$(whoami)" -w > .credentials.json
+    @echo "Credentials extracted to .credentials.json"
+
+# Refresh credentials and restart container
+refresh-auth:
+    just extract-credentials
+    docker compose down
+    docker compose up -d
+    @echo "Auth refreshed and container restarted"
