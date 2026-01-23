@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { gameService } from "../services/GameService";
-import type { BuildingDefinition } from "../../core/models/Building";
+import type { BuildingDefinition } from "../../facade";
 import { highlightResources, clearHighlights } from "../directives/ResourceHighlight";
 import { GPanel, GButton, GProgress } from "../ui";
 
-// Access reactive state and the type-safe façade API
+// Access reactive state and the type-safe domain API
 const state = gameService.getState();
 const api = gameService.api;
 const selectedCategory = ref<"all" | "available" | "built">("available");
@@ -38,21 +38,21 @@ const filteredBuildings = computed(() => {
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function canBuild(defId: string): boolean {
-  // Use façade API for detailed check
-  return api.canBuild(defId).allowed;
+  // Use domain API for detailed check
+  return api.buildings.canBuild(defId).allowed;
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function getBuildReason(defId: string): string | undefined {
   // Get detailed reason why building can't be built
-  const check = api.canBuild(defId);
+  const check = api.buildings.canBuild(defId);
   return check.allowed ? undefined : check.reason;
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function buildBuilding(defId: string): void {
-  // Use façade API with Result type for type-safe error handling
-  const result = api.buildStructure(defId);
+  // Use domain API with Result type for type-safe error handling
+  const result = api.buildings.build(defId);
   if (!result.success) {
     // Error is typed - we know exactly what fields are available
     console.warn(`Build failed: ${result.error.type}`, result.error);

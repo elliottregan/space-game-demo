@@ -1,6 +1,6 @@
 import { reactive, readonly } from "vue";
 import {
-  GameFacade,
+  GameAPI,
   type Resources,
   type ResourceDelta,
   type Building,
@@ -24,7 +24,7 @@ import {
   type PolicyType,
   type PolicyValue,
   type ExpeditionType,
-} from "../../core/facade";
+} from "../../facade";
 import type { NPC, Project, Council } from "../../core/models/NPCInfluence";
 
 /**
@@ -74,42 +74,62 @@ interface GameUIState {
 }
 
 /**
- * GameService bridges the core game façade with Vue's reactivity system.
+ * GameService bridges the core game API with Vue's reactivity system.
  *
  * It provides two ways to interact with the game:
  * 1. Legacy methods (backward compatible) - Simple methods that return booleans/objects
- * 2. Façade API (recommended) - Type-safe API with Result<T> return types via `api` getter
+ * 2. Domain API (recommended) - Type-safe API with Result<T> return types via `api` getter
  *
- * The façade automatically notifies the service when state changes,
+ * The API automatically notifies the service when state changes,
  * triggering a sync to the reactive Vue state.
+ *
+ * @example
+ * // Domain API (recommended)
+ * const result = gameService.api.buildings.build("solar_panel");
+ * if (result.success) {
+ *   console.log("Built:", result.data.id);
+ * } else {
+ *   console.error("Failed:", result.error.type);
+ * }
+ *
+ * // Check if action is allowed
+ * const canBuild = gameService.api.buildings.canBuild("solar_panel");
+ * if (canBuild.allowed) { ... }
+ *
+ * // Get state snapshots
+ * const buildings = gameService.api.buildings.snapshot();
+ * const resources = gameService.api.resources.snapshot();
  */
 class GameService {
-  private facade: GameFacade;
+  private facade: GameAPI;
   private state: GameUIState;
 
   constructor() {
-    this.facade = new GameFacade();
+    this.facade = new GameAPI();
     this.state = reactive(this.createInitialState());
 
-    // Subscribe to façade state changes for automatic sync
+    // Subscribe to API state changes for automatic sync
     this.facade.onStateChange(() => this.syncState());
 
     this.syncState();
   }
 
   /**
-   * Get the type-safe façade API for direct access.
+   * Get the type-safe domain API for direct access.
    * Prefer using this for new code.
    *
-   * @example
-   * const result = gameService.api.buildStructure("solar_panel");
-   * if (result.success) {
-   *   console.log("Built:", result.data.id);
-   * } else {
-   *   console.error("Failed:", result.error.type);
-   * }
+   * Available domains:
+   * - api.resources - Resource queries
+   * - api.buildings - Building queries and commands
+   * - api.technology - Technology queries and commands
+   * - api.colony - Colony queries and workforce commands
+   * - api.politics - Politics queries and decision commands
+   * - api.operations - Operations queries and commands
+   * - api.npc - NPC influence queries and commands
+   * - api.events - Event queries and resolve command
+   * - api.game - Game flow (advanceSol, save, load, newGame)
    */
-  get api(): GameFacade {
+  get api(): GameAPI {
     return this.facade;
   }
 
@@ -158,65 +178,65 @@ class GameService {
   }
 
   /**
-   * Sync façade state to reactive Vue state.
-   * Called automatically when façade notifies state change.
+   * Sync API state to reactive Vue state.
+   * Called automatically when API notifies state change.
    */
   private syncState(): void {
     // Game state
-    this.state.currentSol = this.facade.currentSol();
+    this.state.currentSol = this.facade.game.currentSol();
 
     // Resources
-    const resources = this.facade.resources();
+    const resources = this.facade.resources.snapshot();
     this.state.resources = { ...resources.current };
     this.state.production = { ...resources.production };
     this.state.consumption = { ...resources.consumption };
     this.state.netFlow = { ...resources.netFlow };
 
     // Colony
-    const colony = this.facade.colony();
+    const colony = this.facade.colony.snapshot();
     this.state.population = colony.population;
     this.state.health = colony.health;
     this.state.morale = colony.morale;
     this.state.colonists = [...colony.colonists];
 
     // Buildings
-    const buildings = this.facade.buildings();
+    const buildings = this.facade.buildings.snapshot();
     this.state.buildings = [...buildings.active];
     this.state.pendingBuildings = [...buildings.pending];
     this.state.buildingDefinitions = [...buildings.definitions];
 
     // Technology
-    const techs = this.facade.technologies();
+    const techs = this.facade.technology.snapshot();
     this.state.technologies = [...techs.all];
     this.state.availableTechs = [...techs.available];
     this.state.researchedTechs = [...techs.researched];
     this.state.currentResearch = techs.currentResearch ? { ...techs.currentResearch } : null;
 
     // Politics
-    const politics = this.facade.politics();
+    const politics = this.facade.politics.snapshot();
     this.state.factions = [...politics.factions];
     this.state.averageSupport = politics.averageSupport;
     this.state.decisions = [...politics.decisions];
 
     // Events
-    const activeEvent = this.facade.activeEvent();
+    const activeEvent = this.facade.events.getActive();
     this.state.activeEvent = activeEvent
       ? { definition: { ...activeEvent.definition }, active: { ...activeEvent.active } }
       : null;
     this.state.eventChoices = activeEvent ? [...activeEvent.choices] : [];
 
     // Victory
-    this.state.victoryState = { ...this.facade.victoryState() };
+    this.state.victoryState = { ...this.facade.game.victoryState() };
 
     // Operations
-    const ops = this.facade.operations();
+    const ops = this.facade.operations.snapshot();
     this.state.policies = { ...ops.policies };
     this.state.policyCooldownRemaining = ops.policyCooldownRemaining;
     this.state.activeExpeditions = [...ops.expeditions];
     this.state.prospectingSites = [...ops.sites];
 
     // NPC Influence
-    const npc = this.facade.npcInfluence();
+    const npc = this.facade.npc.snapshot();
     this.state.npcInfluence = {
       npcs: [...npc.npcs],
       projects: [...npc.projects],
@@ -235,13 +255,13 @@ class GameService {
 
   // ==========================================================================
   // Legacy API (backward compatible)
-  // These methods wrap the façade and return simple types.
+  // These methods wrap the domain API and return simple types.
   // New code should prefer using gameService.api.* methods directly.
   // ==========================================================================
 
   // Game actions
   tick(): GameEvent[] {
-    const result = this.facade.advanceSol();
+    const result = this.facade.game.advanceSol();
     if (result.success) {
       this.state.recentEvents = result.data;
       return result.data;
@@ -250,7 +270,7 @@ class GameService {
   }
 
   advanceTurn(sols: number = 10): GameEvent[] {
-    const result = this.facade.advanceSols(sols);
+    const result = this.facade.game.advanceSols(sols);
     if (result.success) {
       this.state.recentEvents = result.data.events;
       return result.data.events;
@@ -260,127 +280,127 @@ class GameService {
 
   // Building actions
   canBuild(defId: string): boolean {
-    return this.facade.canBuild(defId).allowed;
+    return this.facade.buildings.canBuild(defId).allowed;
   }
 
   startBuilding(defId: string): Building | null {
-    const result = this.facade.buildStructure(defId);
+    const result = this.facade.buildings.build(defId);
     return result.success ? result.data : null;
   }
 
   getBuildingDefinition(defId: string): BuildingDefinition | undefined {
-    return this.facade.getBuildingDefinition(defId);
+    return this.facade.buildings.getDefinition(defId);
   }
 
   // Technology actions
   canResearch(techId: string): boolean {
-    return this.facade.canResearch(techId).allowed;
+    return this.facade.technology.canResearch(techId).allowed;
   }
 
   startResearch(techId: string): boolean {
-    return this.facade.startResearch(techId).success;
+    return this.facade.technology.startResearch(techId).success;
   }
 
   cancelResearch(): void {
-    this.facade.cancelResearch();
+    this.facade.technology.cancelResearch();
   }
 
   // Workforce actions
   startTraining(colonistId: string, targetRole: ColonistRole): boolean {
-    return this.facade.trainColonist(colonistId, targetRole).success;
+    return this.facade.colony.trainColonist(colonistId, targetRole).success;
   }
 
   cancelTraining(colonistId: string): void {
-    this.facade.cancelTraining(colonistId);
+    this.facade.colony.cancelTraining(colonistId);
   }
 
   // Politics actions
   makeDecision(decisionId: string): DecisionResult | null {
-    const result = this.facade.makeDecision(decisionId);
+    const result = this.facade.politics.makeDecision(decisionId);
     return result.success ? result.data : null;
   }
 
   // Event actions
   resolveEvent(choiceId: string): GameEvent[] {
-    const result = this.facade.resolveEvent(choiceId);
+    const result = this.facade.events.resolve(choiceId);
     return result.success ? result.data : [];
   }
 
   // Operations actions
   setPolicy(type: PolicyType, value: string): boolean {
-    return this.facade.setPolicy(type, value as PolicyValue).success;
+    return this.facade.operations.setPolicy(type, value as PolicyValue).success;
   }
 
   startExpedition(type: string, crewIds: string[]): boolean {
-    return this.facade.launchExpedition(type as ExpeditionType, crewIds).success;
+    return this.facade.operations.launchExpedition(type as ExpeditionType, crewIds).success;
   }
 
   revealSite(siteId: string): boolean {
-    return this.facade.revealSite(siteId).success;
+    return this.facade.operations.revealSite(siteId).success;
   }
 
   developSite(siteId: string): boolean {
-    return this.facade.developSite(siteId).success;
+    return this.facade.operations.developSite(siteId).success;
   }
 
   setBuildingMode(buildingId: string, mode: BuildingMode): boolean {
-    return this.facade.setBuildingMode(buildingId, mode).success;
+    return this.facade.buildings.setMode(buildingId, mode).success;
   }
 
   // NPC Influence actions
   proposeProject(projectId: string): boolean {
-    return this.facade.proposeProject(projectId).success;
+    return this.facade.npc.proposeProject(projectId).success;
   }
 
   lobbyNPC(npcId: string, supportBoost: number): boolean {
-    return this.facade.lobbyNPC(npcId, supportBoost).success;
+    return this.facade.npc.lobbyNPC(npcId, supportBoost).success;
   }
 
   createCouncil(name: string, memberIds: string[]): boolean {
-    return this.facade.createCouncil(name, memberIds).success;
+    return this.facade.npc.createCouncil(name, memberIds).success;
   }
 
   getLobbyCost(npcId: string, supportBoost: number): number {
-    return this.facade.getLobbyCost(npcId, supportBoost);
+    return this.facade.npc.getLobbyCost(npcId, supportBoost);
   }
 
   // Deposit methods
   getDeposits(): ProspectingSite[] {
-    return [...this.facade.operations().sites];
+    return [...this.facade.operations.snapshot().sites];
   }
 
   linkBuildingToDeposit(buildingId: string, depositId: string): boolean {
-    return this.facade.linkBuildingToDeposit(buildingId, depositId).success;
+    return this.facade.buildings.linkToDeposit(buildingId, depositId).success;
   }
 
   getDepositWarningLevel(depositId: string): "none" | "warning" | "critical" | "depleted" {
-    return this.facade.getDepositWarningLevel(depositId);
+    return this.facade.operations.getDepositWarningLevel(depositId);
   }
 
   // Recycling methods
   getRecycleValue(buildingId: string): ResourceDelta | undefined {
-    return this.facade.getRecycleValue(buildingId);
+    return this.facade.buildings.getRecycleValue(buildingId);
   }
 
   startRecycling(buildingId: string): boolean {
-    return this.facade.recycleBuilding(buildingId).success;
+    return this.facade.buildings.recycle(buildingId).success;
   }
 
   rushRecycling(buildingId: string): boolean {
-    return this.facade.rushRecycling(buildingId).success;
+    return this.facade.buildings.rushRecycling(buildingId).success;
   }
 
   // Repurposing methods
   canRepurpose(buildingId: string, targetDefId: string): boolean {
-    return this.facade.canRepurpose(buildingId, targetDefId).allowed;
+    return this.facade.buildings.canRepurpose(buildingId, targetDefId).allowed;
   }
 
   getRepurposeCost(targetDefId: string): ResourceDelta | undefined {
-    return this.facade.getRepurposeCost(targetDefId);
+    return this.facade.buildings.getRepurposeCost(targetDefId);
   }
 
   startRepurposing(buildingId: string, targetDefId: string): boolean {
-    return this.facade.repurposeBuilding(buildingId, targetDefId).success;
+    return this.facade.buildings.repurpose(buildingId, targetDefId).success;
   }
 
   // Game management
@@ -390,11 +410,11 @@ class GameService {
   }
 
   saveGame(): string {
-    return this.facade.saveGame();
+    return this.facade.save();
   }
 
   loadGame(saveData: string): void {
-    const result = this.facade.loadGame(saveData);
+    const result = this.facade.load(saveData);
     if (!result.success) {
       console.error("Failed to load game:", result.error);
     }
