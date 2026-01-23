@@ -39,12 +39,24 @@ export class HeuristicStrategy {
    */
   private handleSurvival(): boolean {
     const resources = this.api.resources.snapshot();
+    const buildings = this.api.buildings.snapshot();
     const currentFood = resources.current.food;
     const currentOxygen = resources.current.oxygen;
     const foodProduction = resources.production.food ?? 0;
     const foodConsumption = resources.consumption.food ?? 0;
     const oxygenProduction = resources.production.oxygen ?? 0;
     const oxygenConsumption = resources.consumption.oxygen ?? 0;
+
+    // Early game: Build oxygen generator first if we don't have one
+    const hasOxygenGenerator = buildings.active.some(b => b.definitionId === "oxygen_generator") ||
+                               buildings.pending.some(b => b.definitionId === "oxygen_generator");
+    if (!hasOxygenGenerator) {
+      const canBuildOxygenGen = this.api.buildings.canBuild("oxygen_generator");
+      if (canBuildOxygenGen.allowed) {
+        this.api.buildings.build("oxygen_generator");
+        return true;
+      }
+    }
 
     // IF food < 50 AND can build "basic_farm" -> build farm
     if (currentFood < 50) {
