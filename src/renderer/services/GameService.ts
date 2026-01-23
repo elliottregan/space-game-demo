@@ -9,6 +9,7 @@ import {
   type TechResearch,
   type Colonist,
   type ColonistRole,
+  type SkillDefinition,
   type Faction,
   type Decision,
   type DecisionResult,
@@ -42,6 +43,7 @@ interface GameUIState {
   morale: number;
   moraleBoost: number;
   colonists: Colonist[];
+  skillDefinitions: SkillDefinition[];
   buildings: Building[];
   pendingBuildings: Building[];
   buildingDefinitions: BuildingDefinition[];
@@ -146,6 +148,7 @@ class GameService {
       morale: 100,
       moraleBoost: 0,
       colonists: [],
+      skillDefinitions: [],
       buildings: [],
       pendingBuildings: [],
       buildingDefinitions: [],
@@ -200,6 +203,7 @@ class GameService {
     this.state.health = colony.health;
     this.state.morale = colony.morale;
     this.state.colonists = [...colony.colonists];
+    this.state.skillDefinitions = [...colony.skillDefinitions];
 
     // Buildings
     const buildings = this.facade.buildings.snapshot();
