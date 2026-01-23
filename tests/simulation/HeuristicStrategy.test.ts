@@ -4,6 +4,7 @@ import type { GameAPI } from "../../src/facade/GameAPI";
 import type { ResourceSnapshot } from "../../src/facade/types/resources";
 import type { ColonySnapshot } from "../../src/facade/types/colony";
 import type { TechnologySnapshot } from "../../src/facade/types/technology";
+import type { BuildingSnapshot } from "../../src/facade/types/buildings";
 import type { ActiveEventSnapshot, EventChoice } from "../../src/facade/types/events";
 import type { CanDoResult, Result } from "../../src/facade/types/common";
 
@@ -51,7 +52,12 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
         if (overrides.buildCalled) overrides.buildCalled(defId);
         return successResult({ id: "b1", definitionId: defId, status: "pending" as const, mode: "normal" as const, progress: 0 });
       }),
-      snapshot: mock(() => ({ active: [], pending: [], definitions: [], moraleBoost: 0 })),
+      snapshot: mock(() => overrides.buildingsSnapshot ?? {
+        active: [{ id: "b0", definitionId: "oxygen_generator", status: "active" as const, mode: "normal" as const, progress: 100 }],
+        pending: [],
+        definitions: [],
+        moraleBoost: 0,
+      }),
       getById: mock(() => undefined),
       getDefinition: mock(() => undefined),
       canDo: mock(() => allowed),
@@ -139,6 +145,7 @@ interface MockedAPI {
   resourceSnapshot?: ResourceSnapshot;
   colonySnapshot?: ColonySnapshot;
   techSnapshot?: TechnologySnapshot;
+  buildingsSnapshot?: BuildingSnapshot;
   canBuild?: (defId: string) => CanDoResult;
   buildCalled?: (defId: string) => void;
   canResearch?: (techId: string) => CanDoResult;
