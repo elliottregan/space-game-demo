@@ -9,6 +9,11 @@ services:
     env_file:
       - ../.env
 
+    # Required for iptables firewall
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+
     ports:
       - "2222:22" # SSH
       - "5173:5173" # Vite dev server

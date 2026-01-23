@@ -2,8 +2,13 @@ FROM oven/bun:alpine
 
 # Install system dependencies for Claude Code, SSH, and GitHub CLI
 RUN apk add --no-cache \
-    git curl ca-certificates openssh sudo nodejs github-cli bash \
-    libgcc libstdc++ ripgrep
+    git curl ca-certificates openssh sudo github-cli bash \
+    # Claude Code dependencies for native install
+    libgcc libstdc++ ripgrep \
+    # Context7 dependencies for install
+    nodejs \
+    # Firewall dependencies
+    iptables ipset bind-tools jq iproute2
 
 # Configure SSH
 RUN mkdir -p /var/run/sshd && \
@@ -33,6 +38,10 @@ RUN mkdir -p /home/dev/.claude && chown dev:dev /home/dev/.claude
 # Copy Claude authentication files from host
 # Note: These must exist - host must have authenticated Claude Code first
 # COPY .claude.json /tmp/.claude.json
+
+# Copy firewall initialization script
+COPY init-firewall.sh /usr/local/bin/init-firewall.sh
+RUN chmod +x /usr/local/bin/init-firewall.sh
 
 WORKDIR /workspace
 EXPOSE 22 5173

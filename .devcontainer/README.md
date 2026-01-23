@@ -130,3 +130,56 @@ docker volume rm devcontainer_devcontainer-gh-config
 
 - `ANTHROPIC_API_KEY` - Optional API key (alternative to OAuth)
 - `VITE_HOST=0.0.0.0` - Allows Vite to accept external connections
+
+## Network Firewall
+
+The container runs a restrictive firewall that only allows outbound connections to whitelisted domains. This is based on [Anthropic's Claude Code implementation](https://github.com/anthropics/claude-code/blob/main/.devcontainer/init-firewall.sh).
+
+### Allowed Destinations
+
+| Domain | Purpose |
+|--------|---------|
+| GitHub (all IPs) | Git operations, API access |
+| `registry.npmjs.org` | npm package installation |
+| `api.anthropic.com` | Claude API |
+| `claude.ai` | Claude authentication |
+| `sentry.io` | Error reporting |
+| `statsig.anthropic.com`, `statsig.com` | Feature flags |
+| Host network (Docker bridge) | Local development |
+
+### How It Works
+
+The firewall uses `iptables` and `ipset` to:
+
+1. Allow DNS resolution (required for domain-based rules)
+2. Allow localhost and host network access
+3. Fetch GitHub's IP ranges from their API
+4. Resolve allowed domains via DNS
+5. Block all other outbound traffic
+
+### Verification
+
+The firewall verifies itself on startup by:
+- Confirming `https://example.com` is blocked
+- Confirming `https://api.github.com` is accessible
+
+### Troubleshooting
+
+If you need to temporarily disable the firewall:
+
+```bash
+sudo iptables -P INPUT ACCEPT
+sudo iptables -P OUTPUT ACCEPT
+sudo iptables -P FORWARD ACCEPT
+sudo iptables -F
+```
+
+To re-enable:
+
+```bash
+sudo /usr/local/bin/init-firewall.sh
+```
+
+### Security Note
+
+The container requires `NET_ADMIN` and `NET_RAW` capabilities to configure iptables. This is necessary for the firewall to function but grants elevated network privileges to the container.
