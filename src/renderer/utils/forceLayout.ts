@@ -117,12 +117,12 @@ export function computeForceLayout(input: LayoutInput): PositionedNode[] {
       "link",
       forceLink<SimNode, SimLink>(links)
         .id((d) => d.id)
-        .strength((link) => 0.1 + link.weight * 0.7)
-        .distance(100)
+        .strength((link) => 0.05 + link.weight * 0.5)
+        .distance(140)
     )
-    .force("charge", forceManyBody().strength(-300))
+    .force("charge", forceManyBody().strength(-400))
     .force("center", forceCenter(width / 2, height / 2))
-    .force("collide", forceCollide(30))
+    .force("collide", forceCollide(50).strength(1))
     .alphaDecay(0.02)
     .velocityDecay(0.4);
 

@@ -141,7 +141,7 @@ describe("computeForceLayout", () => {
 
     // Both should be relatively close together (same faction)
     const distance = Math.hypot(pos1.x - pos2.x, pos1.y - pos2.y);
-    expect(distance).toBeLessThan(150);
+    expect(distance).toBeLessThan(200);
   });
 
   it("pulls strongly connected cross-faction NPCs closer together", () => {
