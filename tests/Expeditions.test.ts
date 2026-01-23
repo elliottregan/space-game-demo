@@ -41,13 +41,13 @@ describe("Expeditions", () => {
     const colonists = colony.getColonists();
 
     // Start first expedition
-    operations.startExpedition("survey", [colonists[0].id, colonists[1].id], resources, colony, 0);
+    operations.startExpedition("survey", [colonists[0]!.id, colonists[1]!.id], resources, colony, 0);
 
     // Start second expedition
-    operations.startExpedition("survey", [colonists[2].id, colonists[3].id], resources, colony, 0);
+    operations.startExpedition("survey", [colonists[2]!.id, colonists[3]!.id], resources, colony, 0);
 
     // Third should fail
-    const result = operations.startExpedition("survey", [colonists[4].id, colonists[5].id], resources, colony, 0);
+    const result = operations.startExpedition("survey", [colonists[4]!.id, colonists[5]!.id], resources, colony, 0);
     expect(result).toBe(false);
   });
 
@@ -57,7 +57,7 @@ describe("Expeditions", () => {
 
     // Tick for duration
     for (let sol = 1; sol <= EXPEDITIONS.survey.duration; sol++) {
-      operations.tick(sol);
+      operations.tick(sol, resources, colony);
     }
 
     expect(operations.getActiveExpeditions().length).toBe(0);
