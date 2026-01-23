@@ -90,12 +90,12 @@ describe("OperationsManager Deposit Generation", () => {
     const sites = manager.getSites();
 
     expect(sites.length).toBe(1);
-    const site = sites[0];
+    const site = sites[0]!;
 
     expect(site.reserves).toBeGreaterThan(0);
     expect(site.remainingReserves).toBe(site.reserves);
-    expect(site.estimatedReserves.min).toBeLessThan(site.reserves);
-    expect(site.estimatedReserves.max).toBeGreaterThan(site.reserves);
+    expect(site.estimatedReserves.min).toBeLessThan(site.reserves!);
+    expect(site.estimatedReserves.max).toBeGreaterThan(site.reserves!);
     expect(site.linkedBuildingId).toBeNull();
   });
 });
@@ -124,7 +124,7 @@ describe("Deposit Extraction", () => {
     const extracted = manager.extractFromDeposit("test_site", 15);
 
     expect(extracted).toBe(15);
-    expect(manager.getSites()[0].remainingReserves).toBe(485);
+    expect(manager.getSites()[0]!.remainingReserves).toBe(485);
   });
 
   test("extractFromDeposit returns 0 when deposit is empty", () => {
@@ -148,7 +148,7 @@ describe("Deposit Extraction", () => {
     const extracted = manager.extractFromDeposit("test_site", 15);
 
     expect(extracted).toBe(5); // Only get what's left
-    expect(manager.getSites()[0].remainingReserves).toBe(0);
+    expect(manager.getSites()[0]!.remainingReserves).toBe(0);
   });
 
   test("extractFromDeposit updates estimate accuracy over time", () => {
@@ -172,7 +172,7 @@ describe("Deposit Extraction", () => {
     // Extract 50% (should tighten estimate to ±10%)
     manager.extractFromDeposit("test_site", 50);
 
-    const updatedSite = manager.getSites()[0];
+    const updatedSite = manager.getSites()[0]!;
     const range = updatedSite.estimatedReserves.max - updatedSite.estimatedReserves.min;
 
     // Range should be tighter (±10% of 50 remaining = 10, so range ~10)
@@ -211,7 +211,7 @@ describe("Resource Events", () => {
   test("abandoned cache event provides resources", () => {
     const cacheEvent = RANDOM_EVENTS.find((e) => e.id === "abandoned_cache");
     expect(cacheEvent).toBeDefined();
-    expect(cacheEvent?.choices[0].effects?.resources?.materials).toBe(75);
+    expect(cacheEvent!.choices[0]!.effects?.resources?.materials).toBe(75);
   });
 
   test("geological survey event reveals deposits", () => {
@@ -226,6 +226,6 @@ describe("Resource Events", () => {
       (e) => e.id === "equipment_windfall"
     );
     expect(windfallEvent).toBeDefined();
-    expect(windfallEvent?.choices[0].effects?.resources?.materials).toBe(30);
+    expect(windfallEvent!.choices[0]!.effects?.resources?.materials).toBe(30);
   });
 });

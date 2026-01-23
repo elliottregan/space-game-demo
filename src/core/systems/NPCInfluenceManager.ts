@@ -31,7 +31,7 @@ import {
  */
 export function matrixMultiply(A: number[][], B: number[][]): number[][] {
   const rows = A.length;
-  const cols = B[0].length;
+  const cols = B[0]!.length;
   const inner = B.length;
 
   const result: number[][] = Array(rows)
@@ -41,7 +41,7 @@ export function matrixMultiply(A: number[][], B: number[][]): number[][] {
   for (let i = 0; i < rows; i++) {
     for (let j = 0; j < cols; j++) {
       for (let k = 0; k < inner; k++) {
-        result[i][j] += A[i][k] * B[k][j];
+        result[i]![j]! += A[i]![k]! * B[k]![j]!;
       }
     }
   }
@@ -58,7 +58,7 @@ export function matrixVectorMultiply(M: number[][], v: number[]): number[] {
 
   for (let i = 0; i < M.length; i++) {
     for (let j = 0; j < v.length; j++) {
-      result[i] += M[i][j] * v[j];
+      result[i] += M[i]![j]! * v[j]!;
     }
   }
 
@@ -94,7 +94,7 @@ export function updateSupport(
 
   for (let i = 0; i < N; i++) {
     for (let j = 0; j < N; j++) {
-      WT[i][j] = W[i][j] * T[i][j];
+      WT[i]![j] = W[i]![j]! * T[i]![j]!;
     }
   }
 
@@ -104,7 +104,7 @@ export function updateSupport(
   // Move toward target by alpha
   const newSupport = new Array(N);
   for (let i = 0; i < N; i++) {
-    newSupport[i] = currentSupport[i] + alpha * (target[i] - currentSupport[i]);
+    newSupport[i] = currentSupport[i]! + alpha * (target[i]! - currentSupport[i]!);
     // Clamp to valid range
     newSupport[i] = Math.max(-1.0, Math.min(1.0, newSupport[i]));
   }
@@ -149,13 +149,13 @@ export class NPCInfluenceManager {
 
     for (const [key, weight] of Object.entries(relationships)) {
       const [fromId, toId] = key.split(":");
-      const fromIdx = this.npcIndex.get(fromId);
-      const toIdx = this.npcIndex.get(toId);
+      const fromIdx = this.npcIndex.get(fromId!);
+      const toIdx = this.npcIndex.get(toId!);
 
       if (fromIdx !== undefined && toIdx !== undefined) {
         // W[i][j] = influence from j to i
         // So if "fromId:toId" means fromId influences toId, we set W[toIdx][fromIdx]
-        matrix[toIdx][fromIdx] = weight;
+        matrix[toIdx]![fromIdx] = weight;
       }
     }
 
@@ -237,7 +237,7 @@ export class NPCInfluenceManager {
     const npcIdx = this.npcIndex.get(npcId);
     if (npcIdx === undefined) return Infinity;
 
-    const npc = this.npcs[npcIdx];
+    const npc = this.npcs[npcIdx]!;
     // Cost scales with NPC influence and boost amount
     return Math.ceil(LOBBY_BASE_COST * npc.influence * (supportBoost / 0.1));
   }
@@ -302,9 +302,9 @@ export class NPCInfluenceManager {
           if (idx1 === undefined || idx2 === undefined) continue;
 
           // W[i][j] = influence from j to i
-          this.relationshipMatrix[idx1][idx2] = Math.min(
+          this.relationshipMatrix[idx1]![idx2] = Math.min(
             1.0,
-            this.relationshipMatrix[idx1][idx2] + COUNCIL_RELATIONSHIP_BOOST,
+            this.relationshipMatrix[idx1]![idx2]! + COUNCIL_RELATIONSHIP_BOOST,
           );
         }
       }
@@ -338,9 +338,9 @@ export class NPCInfluenceManager {
 
     for (let i = 0; i < N; i++) {
       for (let j = 0; j < N; j++) {
-        const targetFaction = this.npcs[i].faction;
-        const sourceFaction = this.npcs[j].faction;
-        T[i][j] = factors[targetFaction][sourceFaction];
+        const targetFaction = this.npcs[i]!.faction;
+        const sourceFaction = this.npcs[j]!.faction;
+        T[i]![j] = factors[targetFaction][sourceFaction];
       }
     }
 
@@ -404,7 +404,7 @@ export class NPCInfluenceManager {
 
     // Store updated support
     for (let i = 0; i < this.npcs.length; i++) {
-      this.activeProject.supportLevels.set(this.npcs[i].id, newSupport[i]);
+      this.activeProject.supportLevels.set(this.npcs[i]!.id, newSupport[i]!);
     }
 
     // Decrement sols remaining

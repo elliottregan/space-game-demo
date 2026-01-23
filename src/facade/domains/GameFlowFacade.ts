@@ -1,7 +1,7 @@
 // src/facade/domains/GameFlowFacade.ts
 // Game flow queries and commands facade
 
-import type { GameState } from "../../core/GameState";
+import { GameState } from "../../core/GameState";
 import { ok, err, type Result } from "../types/common";
 import type { VictoryState, GameEvent, AdvanceSolsResult } from "../types";
 

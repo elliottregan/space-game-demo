@@ -24,7 +24,7 @@ describe("Deposit-Building Linking", () => {
     expect(success).toBe(true);
 
     const sites = manager.getSites();
-    expect(sites[0].linkedBuildingId).toBe("building_1");
+    expect(sites[0]!.linkedBuildingId).toBe("building_1");
   });
 
   test("linkBuildingToDeposit fails for undeveloped deposits", () => {
@@ -87,7 +87,7 @@ describe("Deposit-Building Linking", () => {
     expect(success).toBe(true);
 
     const sites = manager.getSites();
-    expect(sites[0].linkedBuildingId).toBeNull();
+    expect(sites[0]!.linkedBuildingId).toBeNull();
   });
 
   test("getDepositForBuilding returns linked deposit", () => {
@@ -154,7 +154,7 @@ describe("Deposit Extraction Processing", () => {
     expect(extracted).toBe(15);
 
     const sites = manager.getSites();
-    expect(sites[0].remainingReserves).toBe(485);
+    expect(sites[0]!.remainingReserves).toBe(485);
   });
 
   test("processExtraction returns 0 for depleted deposit", () => {
@@ -217,11 +217,11 @@ describe("GameState Deposit Extraction Integration", () => {
     state.operations.linkBuildingToDeposit(building!.id, "site_1");
 
     // Tick the game state
-    const initialReserves = state.operations.getSites()[0].remainingReserves;
+    const initialReserves = state.operations.getSites()[0]!.remainingReserves;
     state.tick();
 
     // Reserves should have decreased (water_extractor produces 4 water, moderate = 1.0x)
-    const newReserves = state.operations.getSites()[0].remainingReserves;
+    const newReserves = state.operations.getSites()[0]!.remainingReserves;
     expect(newReserves).toBeLessThan(initialReserves);
     expect(newReserves).toBe(initialReserves - 4);
   });

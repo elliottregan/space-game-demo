@@ -26,9 +26,13 @@ export interface PositionedNode {
 interface SimNode extends SimulationNodeDatum {
   id: string;
   faction: NPCFaction;
+  x?: number;
+  y?: number;
 }
 
 interface SimLink extends SimulationLinkDatum<SimNode> {
+  source: SimNode;
+  target: SimNode;
   weight: number;
 }
 
@@ -82,8 +86,8 @@ export function computeForceLayout(input: LayoutInput): PositionedNode[] {
       const weight = (relationshipMatrix[i]?.[j] ?? 0) + (relationshipMatrix[j]?.[i] ?? 0);
       if (weight > 0.1) {
         links.push({
-          source: nodes[i],
-          target: nodes[j],
+          source: nodes[i]!,
+          target: nodes[j]!,
           weight: weight / 2,
         });
       }
@@ -93,17 +97,17 @@ export function computeForceLayout(input: LayoutInput): PositionedNode[] {
   // Add implicit same-faction links for clustering
   for (let i = 0; i < npcs.length; i++) {
     for (let j = i + 1; j < npcs.length; j++) {
-      if (npcs[i].faction === npcs[j].faction) {
+      if (npcs[i]!.faction === npcs[j]!.faction) {
         // Check if link already exists
         const exists = links.some(
           (l) =>
-            (l.source === nodes[i] && l.target === nodes[j]) ||
-            (l.source === nodes[j] && l.target === nodes[i]),
+            (l.source === nodes[i]! && l.target === nodes[j]!) ||
+            (l.source === nodes[j]! && l.target === nodes[i]!),
         );
         if (!exists) {
           links.push({
-            source: nodes[i],
-            target: nodes[j],
+            source: nodes[i]!,
+            target: nodes[j]!,
             weight: 0.5, // Implicit faction attraction
           });
         }
@@ -116,8 +120,8 @@ export function computeForceLayout(input: LayoutInput): PositionedNode[] {
     .force(
       "link",
       forceLink<SimNode, SimLink>(links)
-        .id((d) => d.id)
-        .strength((link) => 0.05 + link.weight * 0.5)
+        .id((d: SimNode) => d.id)
+        .strength((link: SimLink) => 0.05 + link.weight * 0.5)
         .distance(140),
     )
     .force("charge", forceManyBody().strength(-400))
