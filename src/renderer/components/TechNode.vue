@@ -15,7 +15,7 @@ defineProps<Props>();
 
 <template>
   <div class="tech-node" :class="data.status">
-    <Handle type="target" :position="Position.Top" />
+    <Handle type="target" :position="Position.Top" :connectable="false" />
 
     <div class="node-content">
       <div class="node-icon">
@@ -46,7 +46,7 @@ defineProps<Props>();
       </svg>
     </div>
 
-    <Handle type="source" :position="Position.Bottom" />
+    <Handle type="source" :position="Position.Bottom" :connectable="false" />
   </div>
 </template>
 

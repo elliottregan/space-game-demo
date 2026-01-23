@@ -93,7 +93,7 @@ const edges = computed<Edge[]>(() => {
           stroke:
             sourceStatus === "researched" ? "var(--g-color-positive)" : "var(--g-color-border)",
           strokeWidth: sourceStatus === "researched" ? 2 : 1,
-          opacity: targetStatus === "locked" ? 0.3 : 1,
+          opacity: targetStatus === "locked" ? 0.6 : 1,
         },
       });
     }
