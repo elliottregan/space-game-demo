@@ -14,6 +14,14 @@
     "verbatimModuleSyntax": true,
     "noEmit": true,
 
+    // Path aliases
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@core/*": ["src/core/*"],
+      "@ui/*": ["src/renderer/*"]
+    },
+
     // Best practices
     "strict": true,
     "skipLibCheck": true,
