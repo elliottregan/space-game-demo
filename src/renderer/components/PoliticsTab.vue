@@ -1,16 +1,85 @@
 <script setup lang="ts">
+import { ref, computed } from "vue";
 import { PoliticsPanel } from "./PoliticsPanel";
 import { NPCInfluencePanel } from "./NPCInfluencePanel";
 import { OperationsPanel } from "./OperationsPanel";
-import NPCRelationshipGraph from "./NPCRelationshipGraph.vue";
+import { NPCGraph, NPCDetailPanel } from "./NPCGraph";
 import { GPanel } from "../ui";
+import { gameService } from "../services/GameService";
+import type { NPC } from "../../core/models/NPCInfluence";
+
+const state = gameService.getState();
+
+const selectedNpcId = ref<string | null>(null);
+
+const selectedNpc = computed(() => {
+  if (!selectedNpcId.value) return null;
+  return state.npcInfluence.npcs.find((n) => n.id === selectedNpcId.value) ?? null;
+});
+
+// Build relationships for selected NPC
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+const selectedRelationships = computed(() => {
+  if (!selectedNpc.value) return [];
+
+  const npcs = state.npcInfluence.npcs;
+  const matrix = state.npcInfluence.relationshipMatrix;
+  const selectedIndex = npcs.findIndex((n) => n.id === selectedNpc.value?.id);
+
+  if (selectedIndex === -1) return [];
+
+  const relationships: { npc: NPC; influenceFrom: number; influenceTo: number }[] = [];
+
+  for (let i = 0; i < npcs.length; i++) {
+    if (i === selectedIndex) continue;
+
+    const influenceFrom = matrix[selectedIndex]?.[i] ?? 0;
+    const influenceTo = matrix[i]?.[selectedIndex] ?? 0;
+
+    if (influenceFrom > 0.05 || influenceTo > 0.05) {
+      relationships.push({
+        npc: npcs[i],
+        influenceFrom,
+        influenceTo,
+      });
+    }
+  }
+
+  return relationships.sort(
+    (a, b) => b.influenceFrom + b.influenceTo - (a.influenceFrom + a.influenceTo)
+  );
+});
+
+// Get support level for selected NPC
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+const selectedSupportLevel = computed(() => {
+  if (!selectedNpc.value || !state.npcInfluence.activeProject) return null;
+  return state.npcInfluence.activeProject.supportLevels[selectedNpc.value.id] ?? null;
+});
 </script>
 
 <template>
   <div class="politics-tab">
     <div class="politics-top">
       <GPanel title="NPC Relationships" class="relationship-panel">
-        <NPCRelationshipGraph />
+        <div class="graph-container">
+          <NPCGraph
+            :npcs="state.npcInfluence.npcs"
+            :relationship-matrix="state.npcInfluence.relationshipMatrix"
+            :councils="state.npcInfluence.councils"
+            :active-project-support="state.npcInfluence.activeProject?.supportLevels ?? null"
+            :selected-npc-id="selectedNpcId"
+            @select="selectedNpcId = $event"
+          />
+          <NPCDetailPanel
+            v-if="selectedNpc"
+            :npc="selectedNpc"
+            :support-level="selectedSupportLevel"
+            :relationships="selectedRelationships"
+            :councils="state.npcInfluence.councils"
+            @close="selectedNpcId = null"
+          />
+        </div>
       </GPanel>
     </div>
 
@@ -52,6 +121,16 @@ import { GPanel } from "../ui";
   overflow: hidden;
 }
 
+.graph-container {
+  display: flex;
+  gap: var(--g-space-md);
+  height: 100%;
+}
+
+.graph-container > :first-child {
+  flex: 1;
+}
+
 .politics-bottom {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -72,11 +151,22 @@ import { GPanel } from "../ui";
 
 @media (max-width: 768px) {
   .politics-top {
-    height: 300px;
+    height: auto;
+    min-height: 300px;
   }
 
   .politics-bottom {
     grid-template-columns: 1fr;
+  }
+
+  .graph-container {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .graph-container > :first-child {
+    flex: none;
+    height: 300px;
   }
 }
 </style>

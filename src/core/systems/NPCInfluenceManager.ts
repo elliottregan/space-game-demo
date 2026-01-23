@@ -297,8 +297,9 @@ export class NPCInfluenceManager {
     for (const id1 of memberIds) {
       for (const id2 of memberIds) {
         if (id1 !== id2) {
-          const idx1 = this.npcIndex.get(id1)!;
-          const idx2 = this.npcIndex.get(id2)!;
+          const idx1 = this.npcIndex.get(id1);
+          const idx2 = this.npcIndex.get(id2);
+          if (idx1 === undefined || idx2 === undefined) continue;
 
           // W[i][j] = influence from j to i
           this.relationshipMatrix[idx1][idx2] = Math.min(
@@ -392,7 +393,7 @@ export class NPCInfluenceManager {
 
     // Build current support vector
     const currentSupport: number[] = this.npcs.map(
-      (npc) => this.activeProject!.supportLevels.get(npc.id) || 0,
+      (npc) => this.activeProject?.supportLevels.get(npc.id) || 0,
     );
 
     // Build transmission matrix for this project type

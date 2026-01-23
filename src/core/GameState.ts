@@ -147,7 +147,7 @@ export class GameState {
       if (baseProduction === 0) continue;
 
       // Process extraction
-      const extracted = this.operations.processExtraction(building.id, baseProduction);
+      this.operations.processExtraction(building.id, baseProduction);
 
       // Check warning level after extraction
       const warningAfter = this.operations.getDepletionWarningLevel(site.id);
