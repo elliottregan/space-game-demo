@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ResourcePanel from "./ResourcePanel.vue";
+import { ResourcePanel } from "./ResourcePanel";
 import { ColonyPanel } from "./ColonyPanel";
 import { BuildingPanel } from "./BuildingPanel";
 </script>
