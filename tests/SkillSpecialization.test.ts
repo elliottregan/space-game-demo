@@ -1,7 +1,10 @@
 // tests/SkillSpecialization.test.ts
 import { describe, it, expect, beforeEach } from "bun:test";
 import { ColonyManager } from "../src/core/systems/ColonyManager";
+import { WorkforceManager } from "../src/core/systems/WorkforceManager";
+import { ColonistRole, MasteryLevel } from "../src/core/models/Colonist";
 import { SKILLS } from "../src/core/data/skills";
+import { MASTERY_EFFICIENCY, MAX_SKILL_EFFICIENCY_BONUS } from "../src/core/balance/WorkforceBalance";
 
 describe("SkillSpecialization", () => {
   describe("Skill Assignment", () => {
@@ -33,6 +36,71 @@ describe("SkillSpecialization", () => {
         const uniqueSkills = new Set(colonist.skills);
         expect(uniqueSkills.size).toBe(colonist.skills.length);
       }
+    });
+  });
+
+  describe("Skill Efficiency", () => {
+    let workforce: WorkforceManager;
+
+    beforeEach(() => {
+      workforce = new WorkforceManager();
+    });
+
+    it("should return base mastery efficiency for colonist with no matching skills", () => {
+      const colonist = {
+        id: "test_1",
+        name: "Test",
+        role: ColonistRole.ENGINEERING,
+        experience: 0,
+        masteryLevel: MasteryLevel.NOVICE,
+        skills: ["green_thumb"], // Farming skill, not Engineering
+      };
+
+      const efficiency = workforce.getColonistEfficiency(colonist);
+      expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.NOVICE]);
+    });
+
+    it("should add skill bonus for matching skill", () => {
+      const colonist = {
+        id: "test_1",
+        name: "Test",
+        role: ColonistRole.ENGINEERING,
+        experience: 0,
+        masteryLevel: MasteryLevel.NOVICE,
+        skills: ["jury_rigger"], // +15% for Engineering
+      };
+
+      const efficiency = workforce.getColonistEfficiency(colonist);
+      expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.NOVICE] + 0.15);
+    });
+
+    it("should stack multiple matching skill bonuses", () => {
+      const colonist = {
+        id: "test_1",
+        name: "Test",
+        role: ColonistRole.ENGINEERING,
+        experience: 0,
+        masteryLevel: MasteryLevel.NOVICE,
+        skills: ["jury_rigger", "calm_under_pressure"], // +15% + +10%
+      };
+
+      const efficiency = workforce.getColonistEfficiency(colonist);
+      // Should be capped at MAX_SKILL_EFFICIENCY_BONUS (0.2)
+      expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.NOVICE] + MAX_SKILL_EFFICIENCY_BONUS);
+    });
+
+    it("should cap skill bonus at MAX_SKILL_EFFICIENCY_BONUS", () => {
+      const colonist = {
+        id: "test_1",
+        name: "Test",
+        role: ColonistRole.RESEARCH,
+        experience: 0,
+        masteryLevel: MasteryLevel.MASTER,
+        skills: ["lab_rat", "calm_under_pressure"], // +15% + +10% = +25%, but capped at +20%
+      };
+
+      const efficiency = workforce.getColonistEfficiency(colonist);
+      expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.MASTER] + MAX_SKILL_EFFICIENCY_BONUS);
     });
   });
 });
