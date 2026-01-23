@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import type { NPC } from "../../../core/models/NPCInfluence";
 import { computeForceLayout } from "../../utils/forceLayout";
 import { renderGraph, type GraphData, type GraphNode, type GraphLink } from "./renderGraph";
@@ -18,18 +18,29 @@ const emit = defineEmits<{
   select: [npcId: string | null];
 }>();
 
+const containerRef = ref<HTMLDivElement | null>(null);
 const svgRef = ref<SVGSVGElement | null>(null);
 
-const GRAPH_WIDTH = 600;
-const GRAPH_HEIGHT = 400;
+// Reactive dimensions from container
+const dimensions = ref({ width: 600, height: 400 });
 
-// Compute force layout positions
+function updateDimensions() {
+  if (containerRef.value) {
+    const rect = containerRef.value.getBoundingClientRect();
+    dimensions.value = {
+      width: Math.max(200, rect.width),
+      height: Math.max(200, rect.height),
+    };
+  }
+}
+
+// Compute force layout positions using actual dimensions
 const layoutPositions = computed(() => {
   return computeForceLayout({
     npcs: props.npcs,
     relationshipMatrix: props.relationshipMatrix,
-    width: GRAPH_WIDTH,
-    height: GRAPH_HEIGHT,
+    width: dimensions.value.width,
+    height: dimensions.value.height,
   });
 });
 
@@ -86,20 +97,40 @@ function render() {
   if (!svgRef.value) return;
 
   renderGraph(svgRef.value, graphData.value, {
-    width: GRAPH_WIDTH,
-    height: GRAPH_HEIGHT,
+    width: dimensions.value.width,
+    height: dimensions.value.height,
     selectedId: props.selectedNpcId,
     onNodeClick: (id) => emit("select", id),
   });
 }
 
-onMounted(render);
+// ResizeObserver to track container size changes
+let resizeObserver: ResizeObserver | null = null;
+
+onMounted(() => {
+  updateDimensions();
+  render();
+
+  // Watch for container resizes
+  if (containerRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      updateDimensions();
+      render();
+    });
+    resizeObserver.observe(containerRef.value);
+  }
+});
+
+onUnmounted(() => {
+  resizeObserver?.disconnect();
+});
 
 watch([graphData, () => props.selectedNpcId], render);
+watch(dimensions, render);
 </script>
 
 <template>
-  <div class="npc-graph">
+  <div ref="containerRef" class="npc-graph">
     <svg ref="svgRef" class="graph-svg" />
 
     <!-- Faction Legend -->
@@ -123,6 +154,8 @@ watch([graphData, () => props.selectedNpcId], render);
 <style scoped>
 .npc-graph {
   position: relative;
+  width: 100%;
+  height: 100%;
   background: var(--g-color-bg);
   border: 1px solid var(--g-color-border);
   border-radius: 4px;
@@ -131,6 +164,8 @@ watch([graphData, () => props.selectedNpcId], render);
 
 .graph-svg {
   display: block;
+  width: 100%;
+  height: 100%;
   background: radial-gradient(
     circle at center,
     oklch(20% 0.02 280 / 0.3) 0%,
