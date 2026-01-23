@@ -6,7 +6,11 @@ import { highlightResources, clearHighlights } from "../directives/ResourceHighl
 import { GPanel, GButton, GProgress } from "../ui";
 import TechTreeGraph from "./TechTreeGraph.vue";
 
+// Reactive state for template bindings (auto-updates when API syncs)
 const state = gameService.getState();
+
+// Domain API for commands and one-off queries
+const api = gameService.api;
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const viewMode = ref<"list" | "graph">("graph");
@@ -25,27 +29,39 @@ const researchProgress = computed(() => {
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function canResearch(techId: string): boolean {
-  return gameService.canResearch(techId);
+  return api.technology.canResearch(techId).allowed;
+}
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function getResearchReason(techId: string): string | undefined {
+  const check = api.technology.canResearch(techId);
+  return check.allowed ? undefined : check.reason;
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function startResearch(techId: string): void {
-  gameService.startResearch(techId);
+  const result = api.technology.startResearch(techId);
+  if (!result.success) {
+    console.warn(`Research failed: ${result.error.type}`, result.error);
+  }
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function cancelResearch(): void {
-  gameService.cancelResearch();
+  const result = api.technology.cancelResearch();
+  if (!result.success) {
+    console.warn(`Cancel research failed: ${result.error.type}`, result.error);
+  }
 }
 
 function isResearched(techId: string): boolean {
-  return state.researchedTechs.some((t) => t.id === techId);
+  return api.technology.isResearched(techId);
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function getPrerequisiteNames(tech: Technology): string[] {
   return tech.prerequisites.map((prereqId) => {
-    const prereq = state.technologies.find((t) => t.id === prereqId);
+    const prereq = api.technology.getById(prereqId);
     return prereq?.name || prereqId;
   });
 }

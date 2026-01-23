@@ -4,7 +4,11 @@ import { gameService } from "../services/GameService";
 import { GPanel, GButton, GProgress, GInput, GSelect, GBadge, GActionCard } from "../ui";
 import type { SelectOption } from "../ui/primitives/GSelect.vue";
 
+// Reactive state for template bindings (auto-updates when API syncs)
 const state = gameService.getState();
+
+// Domain API for commands and one-off queries
+const api = gameService.api;
 
 const selectedProject = ref<string | null>(null);
 const selectedNPCForLobby = ref<string | null>(null);
@@ -12,20 +16,13 @@ const lobbyAmount = ref(0.3);
 const councilName = ref("");
 const selectedCouncilMembers = ref<string[]>([]);
 
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 const lobbyOptions: SelectOption[] = [
   { value: 0.1, label: "+10%" },
   { value: 0.2, label: "+20%" },
   { value: 0.3, label: "+30%" },
   { value: 0.5, label: "+50%" },
 ];
-
-function canAfford(cost: Record<string, number>): boolean {
-  for (const [key, value] of Object.entries(cost)) {
-    const available = state.resources[key as keyof typeof state.resources] ?? 0;
-    if (available < value) return false;
-  }
-  return true;
-}
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function formatProjectCost(cost: Record<string, number>): string {
@@ -39,21 +36,20 @@ function formatProjectCost(cost: Record<string, number>): string {
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const canProposeProject = computed(() => {
-  if (!selectedProject.value || state.npcInfluence.activeProject) return false;
-  const project = state.npcInfluence.projects.find((p) => p.id === selectedProject.value);
-  if (!project) return false;
-  return canAfford(project.proposalCost);
+  if (!selectedProject.value) return false;
+  return api.npc.canProposeProject(selectedProject.value).allowed;
 });
 
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 const lobbyCost = computed(() => {
   if (!selectedNPCForLobby.value) return 0;
-  return gameService.getLobbyCost(selectedNPCForLobby.value, lobbyAmount.value);
+  return api.npc.getLobbyCost(selectedNPCForLobby.value, lobbyAmount.value);
 });
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const canLobby = computed(() => {
   if (!state.npcInfluence.activeProject || !selectedNPCForLobby.value) return false;
-  return state.resources.materials >= lobbyCost.value;
+  return api.npc.canLobbyNPC(selectedNPCForLobby.value, lobbyAmount.value).allowed;
 });
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -66,27 +62,33 @@ const canCreateCouncil = computed(() => {
 });
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function proposeProject() {
-  if (selectedProject.value) {
-    gameService.proposeProject(selectedProject.value);
-    selectedProject.value = null;
+function proposeProject(): void {
+  if (!selectedProject.value) return;
+  const result = api.npc.proposeProject(selectedProject.value);
+  if (!result.success) {
+    console.warn(`Proposal failed: ${result.error.type}`, result.error);
+  }
+  selectedProject.value = null;
+}
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function lobbyNPC(): void {
+  if (!selectedNPCForLobby.value) return;
+  const result = api.npc.lobbyNPC(selectedNPCForLobby.value, lobbyAmount.value);
+  if (!result.success) {
+    console.warn(`Lobbying failed: ${result.error.type}`, result.error);
   }
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function lobbyNPC() {
-  if (selectedNPCForLobby.value) {
-    gameService.lobbyNPC(selectedNPCForLobby.value, lobbyAmount.value);
+function createCouncil(): void {
+  if (!councilName.value || selectedCouncilMembers.value.length < 2) return;
+  const result = api.npc.createCouncil(councilName.value, selectedCouncilMembers.value);
+  if (!result.success) {
+    console.warn(`Council creation failed: ${result.error.type}`, result.error);
   }
-}
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function createCouncil() {
-  if (councilName.value && selectedCouncilMembers.value.length >= 2) {
-    gameService.createCouncil(councilName.value, selectedCouncilMembers.value);
-    councilName.value = "";
-    selectedCouncilMembers.value = [];
-  }
+  councilName.value = "";
+  selectedCouncilMembers.value = [];
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template

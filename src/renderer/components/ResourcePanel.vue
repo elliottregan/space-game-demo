@@ -4,7 +4,12 @@ import { gameService } from "../services/GameService";
 import { highlightState } from "../directives/ResourceHighlight";
 import { GPanel, ResourceBadge } from "../ui";
 
+// Reactive state for template bindings (auto-updates when API syncs)
 const state = gameService.getState();
+
+// Domain API for commands and one-off queries (for future extensibility)
+// biome-ignore lint/correctness/noUnusedVariables: reserved for future API usage
+const api = gameService.api;
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const resources = computed(
