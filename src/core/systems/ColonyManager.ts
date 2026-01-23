@@ -58,7 +58,7 @@ export class ColonyManager {
   private colonists: Map<string, Colonist> = new Map();
   private nextId: number = 1;
   private health: number = 100;
-  private morale: number = 100;
+  private morale: number = 80;
 
   constructor(initialPopulation: number) {
     for (let i = 0; i < initialPopulation; i++) {
@@ -66,7 +66,11 @@ export class ColonyManager {
     }
   }
 
-  tick(resources: ResourceManager, buildings?: BuildingManager): GameEvent[] {
+  tick(
+    resources: ResourceManager,
+    buildings?: BuildingManager,
+    policyEffects?: { morale: number; health: number },
+  ): GameEvent[] {
     const events: GameEvent[] = [];
     const population = this.colonists.size;
 
@@ -90,6 +94,16 @@ export class ColonyManager {
     // Check for morale/health effects
     const resourceState = resources.getResources();
     const netFlow = resources.getNetFlow();
+
+    // Base morale decay - colonists need entertainment/recreation
+    const BASE_MORALE_DECAY = 0.3;
+    this.morale = Math.max(0, this.morale - BASE_MORALE_DECAY);
+
+    // Apply operations policy effects (e.g., crunch mode)
+    if (policyEffects) {
+      this.morale = Math.max(0, this.morale + policyEffects.morale);
+      this.health = Math.max(0, Math.min(100, this.health + policyEffects.health));
+    }
 
     // Resource shortages affect morale and health
     if (resourceState.food < population * 2) {
