@@ -151,7 +151,8 @@ const selectedSupportLevel = computed(() => {
 
 @media (max-width: 768px) {
   .politics-top {
-    height: 300px;
+    height: auto;
+    min-height: 300px;
   }
 
   .politics-bottom {
@@ -160,6 +161,12 @@ const selectedSupportLevel = computed(() => {
 
   .graph-container {
     flex-direction: column;
+    height: auto;
+  }
+
+  .graph-container > :first-child {
+    flex: none;
+    height: 300px;
   }
 }
 </style>

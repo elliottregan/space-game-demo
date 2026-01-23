@@ -156,6 +156,7 @@ watch(dimensions, render);
   position: relative;
   width: 100%;
   height: 100%;
+  min-height: 250px;
   background: var(--g-color-bg);
   border: 1px solid var(--g-color-border);
   border-radius: 4px;
