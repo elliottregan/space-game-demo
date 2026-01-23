@@ -16,6 +16,7 @@ export interface BuildingDefinition {
   requiredTech?: string;
   requiresDeposit?: boolean; // true for mining buildings
   repurposeTargets?: string[]; // building IDs this can convert to
+  moraleBoost?: number; // Passive morale boost when active
 }
 
 export interface Building {

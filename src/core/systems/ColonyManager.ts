@@ -2,6 +2,7 @@ import type { GameEvent } from "../models/GameEvent";
 import type { Colonist } from "../models/Colonist";
 import { ColonistRole, MasteryLevel } from "../models/Colonist";
 import type { ResourceManager } from "./ResourceManager";
+import type { BuildingManager } from "./BuildingManager";
 import {
   COLONIST_NEEDS,
   POPULATION_GROWTH_RATE,
@@ -57,7 +58,7 @@ export class ColonyManager {
   private colonists: Map<string, Colonist> = new Map();
   private nextId: number = 1;
   private health: number = 100;
-  private morale: number = 100;
+  private morale: number = 80;
 
   constructor(initialPopulation: number) {
     for (let i = 0; i < initialPopulation; i++) {
@@ -65,7 +66,11 @@ export class ColonyManager {
     }
   }
 
-  tick(resources: ResourceManager): GameEvent[] {
+  tick(
+    resources: ResourceManager,
+    buildings?: BuildingManager,
+    policyEffects?: { morale: number; health: number },
+  ): GameEvent[] {
     const events: GameEvent[] = [];
     const population = this.colonists.size;
 
@@ -90,6 +95,16 @@ export class ColonyManager {
     const resourceState = resources.getResources();
     const netFlow = resources.getNetFlow();
 
+    // Base morale decay - colonists need entertainment/recreation
+    const BASE_MORALE_DECAY = 0.3;
+    this.morale = Math.max(0, this.morale - BASE_MORALE_DECAY);
+
+    // Apply operations policy effects (e.g., crunch mode)
+    if (policyEffects) {
+      this.morale = Math.max(0, this.morale + policyEffects.morale);
+      this.health = Math.max(0, Math.min(100, this.health + policyEffects.health));
+    }
+
     // Resource shortages affect morale and health
     if (resourceState.food < population * 2) {
       this.morale = Math.max(0, this.morale - 2);
@@ -101,7 +116,14 @@ export class ColonyManager {
 
     // Positive conditions improve morale
     if ((netFlow.food || 0) > 0 && (netFlow.oxygen || 0) > 0 && (netFlow.water || 0) > 0) {
-      this.morale = Math.min(100, this.morale + 0.5);
+      let moraleRecovery = 0.5;
+
+      // Add morale boost from recreation buildings
+      if (buildings) {
+        moraleRecovery += buildings.getTotalMoraleBoost() * 0.1;
+      }
+
+      this.morale = Math.min(100, this.morale + moraleRecovery);
       this.health = Math.min(100, this.health + 0.2);
     }
 
