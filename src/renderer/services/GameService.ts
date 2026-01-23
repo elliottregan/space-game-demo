@@ -1,20 +1,36 @@
 import { reactive, readonly } from "vue";
-import { GameState } from "../../core/GameState";
-import type { GameEvent } from "../../core/models/GameEvent";
-import type { Resources, ResourceDelta } from "../../core/models/Resources";
-import type { Building, BuildingDefinition } from "../../core/models/Building";
-import type { Technology, TechResearch } from "../../core/models/Technology";
-import type { Colonist, ColonistRole } from "../../core/models/Colonist";
-import type { Faction, Decision, DecisionResult } from "../../core/models/Politics";
-import type { RandomEventDefinition, EventChoice, ActiveEvent } from "../../core/models/GameEvent";
-import type { VictoryState } from "../../core/systems/VictoryManager";
-import type {
-  ColonyPolicies,
-  ActiveExpedition,
-  ProspectingSite,
-} from "../../core/models/Operation";
+import {
+  GameAPI,
+  type Resources,
+  type ResourceDelta,
+  type Building,
+  type BuildingDefinition,
+  type Technology,
+  type TechResearch,
+  type Colonist,
+  type ColonistRole,
+  type Faction,
+  type Decision,
+  type DecisionResult,
+  type RandomEventDefinition,
+  type EventChoice,
+  type ActiveEvent,
+  type VictoryState,
+  type ColonyPolicies,
+  type ActiveExpedition,
+  type ProspectingSite,
+  type GameEvent,
+  type BuildingMode,
+  type PolicyType,
+  type PolicyValue,
+  type ExpeditionType,
+} from "../../facade";
 import type { NPC, Project, Council } from "../../core/models/NPCInfluence";
 
+/**
+ * Reactive UI state interface.
+ * This is the shape of state exposed to Vue components.
+ */
 interface GameUIState {
   currentSol: number;
   resources: Resources;
@@ -57,14 +73,64 @@ interface GameUIState {
   };
 }
 
+/**
+ * GameService bridges the core game API with Vue's reactivity system.
+ *
+ * It provides two ways to interact with the game:
+ * 1. Legacy methods (backward compatible) - Simple methods that return booleans/objects
+ * 2. Domain API (recommended) - Type-safe API with Result<T> return types via `api` getter
+ *
+ * The API automatically notifies the service when state changes,
+ * triggering a sync to the reactive Vue state.
+ *
+ * @example
+ * // Domain API (recommended)
+ * const result = gameService.api.buildings.build("solar_panel");
+ * if (result.success) {
+ *   console.log("Built:", result.data.id);
+ * } else {
+ *   console.error("Failed:", result.error.type);
+ * }
+ *
+ * // Check if action is allowed
+ * const canBuild = gameService.api.buildings.canBuild("solar_panel");
+ * if (canBuild.allowed) { ... }
+ *
+ * // Get state snapshots
+ * const buildings = gameService.api.buildings.snapshot();
+ * const resources = gameService.api.resources.snapshot();
+ */
 class GameService {
-  private gameState: GameState;
+  private facade: GameAPI;
   private state: GameUIState;
 
   constructor() {
-    this.gameState = new GameState();
+    this.facade = new GameAPI();
     this.state = reactive(this.createInitialState());
+
+    // Subscribe to API state changes for automatic sync
+    this.facade.onStateChange(() => this.syncState());
+
     this.syncState();
+  }
+
+  /**
+   * Get the type-safe domain API for direct access.
+   * Prefer using this for new code.
+   *
+   * Available domains:
+   * - api.resources - Resource queries
+   * - api.buildings - Building queries and commands
+   * - api.technology - Technology queries and commands
+   * - api.colony - Colony queries and workforce commands
+   * - api.politics - Politics queries and decision commands
+   * - api.operations - Operations queries and commands
+   * - api.npc - NPC influence queries and commands
+   * - api.events - Event queries and resolve command
+   * - api.game - Game flow (advanceSol, save, load, newGame)
+   */
+  get api(): GameAPI {
+    return this.facade;
   }
 
   private createInitialState(): GameUIState {
@@ -111,325 +177,247 @@ class GameService {
     };
   }
 
+  /**
+   * Sync API state to reactive Vue state.
+   * Called automatically when API notifies state change.
+   */
   private syncState(): void {
-    this.state.currentSol = this.gameState.currentSol;
+    // Game state
+    this.state.currentSol = this.facade.game.currentSol();
 
     // Resources
-    this.state.resources = this.gameState.resources.getResources();
-    this.state.production = this.gameState.resources.getProduction();
-    this.state.consumption = this.gameState.resources.getConsumption();
-    this.state.netFlow = this.gameState.resources.getNetFlow();
+    const resources = this.facade.resources.snapshot();
+    this.state.resources = { ...resources.current };
+    this.state.production = { ...resources.production };
+    this.state.consumption = { ...resources.consumption };
+    this.state.netFlow = { ...resources.netFlow };
 
     // Colony
-    this.state.population = this.gameState.colony.getPopulation();
-    this.state.health = this.gameState.colony.getHealth();
-    this.state.morale = this.gameState.colony.getMorale();
-    this.state.colonists = this.gameState.colony.getColonists();
+    const colony = this.facade.colony.snapshot();
+    this.state.population = colony.population;
+    this.state.health = colony.health;
+    this.state.morale = colony.morale;
+    this.state.colonists = [...colony.colonists];
 
     // Buildings
-    this.state.buildings = this.gameState.buildings.getActiveBuildings();
-    this.state.pendingBuildings = this.gameState.buildings.getPendingBuildings();
-    this.state.buildingDefinitions = this.gameState.buildings.getAllDefinitions();
+    const buildings = this.facade.buildings.snapshot();
+    this.state.buildings = [...buildings.active];
+    this.state.pendingBuildings = [...buildings.pending];
+    this.state.buildingDefinitions = [...buildings.definitions];
 
     // Technology
-    this.state.technologies = this.gameState.technology.getAllTechs();
-    this.state.availableTechs = this.gameState.technology.getAvailableTechs();
-    this.state.researchedTechs = this.gameState.technology.getResearchedTechs();
-    this.state.currentResearch = this.gameState.technology.getCurrentResearch();
+    const techs = this.facade.technology.snapshot();
+    this.state.technologies = [...techs.all];
+    this.state.availableTechs = [...techs.available];
+    this.state.researchedTechs = [...techs.researched];
+    this.state.currentResearch = techs.currentResearch ? { ...techs.currentResearch } : null;
 
     // Politics
-    this.state.factions = this.gameState.politics.getFactions();
-    this.state.averageSupport = this.gameState.politics.getAverageSupport();
-    this.state.decisions = this.gameState.politics.getAvailableDecisions();
+    const politics = this.facade.politics.snapshot();
+    this.state.factions = [...politics.factions];
+    this.state.averageSupport = politics.averageSupport;
+    this.state.decisions = [...politics.decisions];
 
     // Events
-    this.state.activeEvent = this.gameState.events.getActiveEvent();
-    this.state.eventChoices = this.gameState.events.getEventChoices();
+    const activeEvent = this.facade.events.getActive();
+    this.state.activeEvent = activeEvent
+      ? { definition: { ...activeEvent.definition }, active: { ...activeEvent.active } }
+      : null;
+    this.state.eventChoices = activeEvent ? [...activeEvent.choices] : [];
 
     // Victory
-    this.state.victoryState = this.gameState.victory.getState();
+    this.state.victoryState = { ...this.facade.game.victoryState() };
 
     // Operations
-    this.state.policies = this.gameState.operations.getPolicies();
-    this.state.policyCooldownRemaining = this.gameState.operations.getSolsUntilPolicyChange(
-      this.gameState.currentSol,
-    );
-    this.state.activeExpeditions = [...this.gameState.operations.getActiveExpeditions()];
-    this.state.prospectingSites = [...this.gameState.operations.getSites()];
+    const ops = this.facade.operations.snapshot();
+    this.state.policies = { ...ops.policies };
+    this.state.policyCooldownRemaining = ops.policyCooldownRemaining;
+    this.state.activeExpeditions = [...ops.expeditions];
+    this.state.prospectingSites = [...ops.sites];
 
     // NPC Influence
-    const activeProject = this.gameState.npcInfluence.getActiveProject();
+    const npc = this.facade.npc.snapshot();
     this.state.npcInfluence = {
-      npcs: [...this.gameState.npcInfluence.getNPCs()],
-      projects: this.gameState.npcInfluence.getProjects(),
-      activeProject: activeProject
-        ? {
-            projectId: activeProject.projectId,
-            supportLevels: Object.fromEntries(activeProject.supportLevels),
-            solsRemaining: activeProject.solsRemaining,
-            averageSupport: this.gameState.npcInfluence.getAverageSupport(),
-          }
-        : null,
-      councils: [...this.gameState.npcInfluence.getCouncils()],
-      relationshipMatrix: this.gameState.npcInfluence.getRelationshipMatrix(),
+      npcs: [...npc.npcs],
+      projects: [...npc.projects],
+      activeProject: npc.activeProject ? { ...npc.activeProject } : null,
+      councils: [...npc.councils],
+      relationshipMatrix: npc.relationshipMatrix,
     };
   }
 
+  /**
+   * Get readonly reactive state for Vue components.
+   */
   getState() {
     return readonly(this.state);
   }
 
+  // ==========================================================================
+  // Legacy API (backward compatible)
+  // These methods wrap the domain API and return simple types.
+  // New code should prefer using gameService.api.* methods directly.
+  // ==========================================================================
+
   // Game actions
   tick(): GameEvent[] {
-    const events = this.gameState.tick();
-    this.syncState();
-    this.state.recentEvents = events;
-    return events;
+    const result = this.facade.game.advanceSol();
+    if (result.success) {
+      this.state.recentEvents = result.data;
+      return result.data;
+    }
+    return [];
   }
 
   advanceTurn(sols: number = 10): GameEvent[] {
-    const events = this.gameState.advanceTurn(sols);
-    this.syncState();
-    this.state.recentEvents = events;
-    return events;
+    const result = this.facade.game.advanceSols(sols);
+    if (result.success) {
+      this.state.recentEvents = result.data.events;
+      return result.data.events;
+    }
+    return [];
   }
 
   // Building actions
   canBuild(defId: string): boolean {
-    return this.gameState.buildings.canBuild(
-      defId,
-      this.gameState.resources,
-      this.gameState.technology,
-    );
+    return this.facade.buildings.canBuild(defId).allowed;
   }
 
   startBuilding(defId: string): Building | null {
-    const building = this.gameState.buildings.startBuilding(
-      defId,
-      this.gameState.resources,
-      this.gameState.technology,
-    );
-    this.syncState();
-    return building;
+    const result = this.facade.buildings.build(defId);
+    return result.success ? result.data : null;
   }
 
   getBuildingDefinition(defId: string): BuildingDefinition | undefined {
-    return this.gameState.buildings.getDefinition(defId);
+    return this.facade.buildings.getDefinition(defId);
   }
 
   // Technology actions
   canResearch(techId: string): boolean {
-    return this.gameState.technology.canResearch(techId);
+    return this.facade.technology.canResearch(techId).allowed;
   }
 
   startResearch(techId: string): boolean {
-    const result = this.gameState.technology.startResearch(techId, this.gameState.resources);
-    this.syncState();
-    return result;
+    return this.facade.technology.startResearch(techId).success;
   }
 
   cancelResearch(): void {
-    this.gameState.technology.cancelResearch();
-    this.syncState();
+    this.facade.technology.cancelResearch();
   }
 
   // Workforce actions
   startTraining(colonistId: string, targetRole: ColonistRole): boolean {
-    const colonist = this.gameState.colony.getColonist(colonistId);
-    if (!colonist) return false;
-
-    const result = this.gameState.workforce.startTraining(colonist, targetRole);
-    this.syncState();
-    return result;
+    return this.facade.colony.trainColonist(colonistId, targetRole).success;
   }
 
   cancelTraining(colonistId: string): void {
-    const colonist = this.gameState.colony.getColonist(colonistId);
-    if (colonist) {
-      this.gameState.workforce.cancelTraining(colonist);
-      this.syncState();
-    }
+    this.facade.colony.cancelTraining(colonistId);
   }
 
   // Politics actions
   makeDecision(decisionId: string): DecisionResult | null {
-    const decision = this.gameState.politics.getDecision(decisionId);
-    if (!decision) return null;
-
-    const result = this.gameState.politics.makeDecision(decision, this.gameState.resources);
-    this.syncState();
-    return result;
+    const result = this.facade.politics.makeDecision(decisionId);
+    return result.success ? result.data : null;
   }
 
   // Event actions
   resolveEvent(choiceId: string): GameEvent[] {
-    const events = this.gameState.events.resolveEvent(
-      choiceId,
-      this.gameState.resources,
-      this.gameState.colony,
-      this.gameState.politics,
-    );
-    this.syncState();
-    return events;
+    const result = this.facade.events.resolve(choiceId);
+    return result.success ? result.data : [];
   }
 
   // Operations actions
-  setPolicy(
-    type: "workIntensity" | "resourcePriority" | "explorationStance",
-    value: string,
-  ): boolean {
-    const result = this.gameState.operations.setPolicy(
-      type,
-      value as never,
-      this.gameState.currentSol,
-    );
-    this.syncState();
-    return result;
+  setPolicy(type: PolicyType, value: string): boolean {
+    return this.facade.operations.setPolicy(type, value as PolicyValue).success;
   }
 
   startExpedition(type: string, crewIds: string[]): boolean {
-    const result = this.gameState.operations.startExpedition(
-      type as never,
-      crewIds,
-      this.gameState.resources,
-      this.gameState.colony,
-      this.gameState.currentSol,
-    );
-    this.syncState();
-    return result;
+    return this.facade.operations.launchExpedition(type as ExpeditionType, crewIds).success;
   }
 
   revealSite(siteId: string): boolean {
-    const result = this.gameState.operations.revealSite(siteId, this.gameState.resources);
-    this.syncState();
-    return result;
+    return this.facade.operations.revealSite(siteId).success;
   }
 
   developSite(siteId: string): boolean {
-    const result = this.gameState.operations.developSite(siteId, this.gameState.resources);
-    this.syncState();
-    return result;
+    return this.facade.operations.developSite(siteId).success;
   }
 
-  setBuildingMode(buildingId: string, mode: "conservation" | "normal" | "overdrive"): boolean {
-    const result = this.gameState.buildings.setBuildingMode(
-      buildingId,
-      mode,
-      this.gameState.resources,
-    );
-    this.syncState();
-    return result;
+  setBuildingMode(buildingId: string, mode: BuildingMode): boolean {
+    return this.facade.buildings.setMode(buildingId, mode).success;
   }
 
   // NPC Influence actions
   proposeProject(projectId: string): boolean {
-    const result = this.gameState.npcInfluence.proposeProject(projectId, this.gameState.resources);
-    this.syncState();
-    return result;
+    return this.facade.npc.proposeProject(projectId).success;
   }
 
   lobbyNPC(npcId: string, supportBoost: number): boolean {
-    const result = this.gameState.npcInfluence.lobbyNPC(
-      npcId,
-      supportBoost,
-      this.gameState.resources,
-    );
-    this.syncState();
-    return result;
+    return this.facade.npc.lobbyNPC(npcId, supportBoost).success;
   }
 
   createCouncil(name: string, memberIds: string[]): boolean {
-    const result = this.gameState.npcInfluence.createCouncil(
-      name,
-      memberIds,
-      this.gameState.resources,
-    );
-    this.syncState();
-    return result;
+    return this.facade.npc.createCouncil(name, memberIds).success;
   }
 
   getLobbyCost(npcId: string, supportBoost: number): number {
-    return this.gameState.npcInfluence.getLobbyCost(npcId, supportBoost);
+    return this.facade.npc.getLobbyCost(npcId, supportBoost);
   }
 
   // Deposit methods
   getDeposits(): ProspectingSite[] {
-    return [...this.gameState.operations.getSites()];
+    return [...this.facade.operations.snapshot().sites];
   }
 
   linkBuildingToDeposit(buildingId: string, depositId: string): boolean {
-    const success = this.gameState.operations.linkBuildingToDeposit(buildingId, depositId);
-    if (success) {
-      const building = this.gameState.buildings.getBuilding(buildingId);
-      if (building) {
-        building.depositId = depositId;
-      }
-    }
-    this.syncState();
-    return success;
+    return this.facade.buildings.linkToDeposit(buildingId, depositId).success;
   }
 
   getDepositWarningLevel(depositId: string): "none" | "warning" | "critical" | "depleted" {
-    return this.gameState.operations.getDepletionWarningLevel(depositId);
+    return this.facade.operations.getDepositWarningLevel(depositId);
   }
 
   // Recycling methods
   getRecycleValue(buildingId: string): ResourceDelta | undefined {
-    return this.gameState.buildings.getRecycleValue(buildingId);
+    return this.facade.buildings.getRecycleValue(buildingId);
   }
 
   startRecycling(buildingId: string): boolean {
-    const success = this.gameState.buildings.startRecycling(buildingId, this.gameState.resources);
-    this.syncState();
-    return success;
+    return this.facade.buildings.recycle(buildingId).success;
   }
 
   rushRecycling(buildingId: string): boolean {
-    const success = this.gameState.buildings.rushRecycling(buildingId, this.gameState.resources);
-    this.syncState();
-    return success;
+    return this.facade.buildings.rushRecycling(buildingId).success;
   }
 
   // Repurposing methods
   canRepurpose(buildingId: string, targetDefId: string): boolean {
-    return this.gameState.buildings.canRepurpose(
-      buildingId,
-      targetDefId,
-      this.gameState.resources,
-      this.gameState.technology
-    );
+    return this.facade.buildings.canRepurpose(buildingId, targetDefId).allowed;
   }
 
   getRepurposeCost(targetDefId: string): ResourceDelta | undefined {
-    return this.gameState.buildings.getRepurposeCost(targetDefId);
+    return this.facade.buildings.getRepurposeCost(targetDefId);
   }
 
   startRepurposing(buildingId: string, targetDefId: string): boolean {
-    const success = this.gameState.buildings.startRepurposing(
-      buildingId,
-      targetDefId,
-      this.gameState.resources,
-      this.gameState.technology
-    );
-    this.syncState();
-    return success;
+    return this.facade.buildings.repurpose(buildingId, targetDefId).success;
   }
 
   // Game management
   newGame(): void {
-    this.gameState = new GameState();
-    this.syncState();
+    this.facade.newGame();
     this.state.recentEvents = [];
   }
 
   saveGame(): string {
-    return JSON.stringify(this.gameState.toJSON());
+    return this.facade.save();
   }
 
   loadGame(saveData: string): void {
-    const data = JSON.parse(saveData);
-    this.gameState = GameState.fromJSON(data);
-    this.syncState();
+    const result = this.facade.load(saveData);
+    if (!result.success) {
+      console.error("Failed to load game:", result.error);
+    }
   }
 }
 

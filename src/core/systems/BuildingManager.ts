@@ -260,7 +260,7 @@ export class BuildingManager {
     const def = this.definitions.get(building.definitionId);
     if (!def) return undefined;
 
-    let rate = RECYCLING_RECOVERY_RATES.standard;
+    let rate: number = RECYCLING_RECOVERY_RATES.standard;
 
     if (building.broken) {
       rate = RECYCLING_RECOVERY_RATES.damaged;

@@ -1,18 +1,23 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { gameService } from "../services/GameService";
-import type { BuildingDefinition } from "../../core/models/Building";
+import type { BuildingDefinition } from "../../facade";
 import { highlightResources, clearHighlights } from "../directives/ResourceHighlight";
 import { GPanel, GButton, GProgress } from "../ui";
 
+// Reactive state for template bindings (auto-updates when API syncs)
 const state = gameService.getState();
+
+// Domain API for commands and one-off queries
+const api = gameService.api;
+
 const selectedCategory = ref<"all" | "available" | "built">("available");
 
+// Computed properties use reactive state for proper Vue reactivity
 const availableBuildings = computed(() => {
   return state.buildingDefinitions.filter((def) => {
     if (def.requiredTech) {
-      const isResearched = state.researchedTechs.some((t) => t.id === def.requiredTech);
-      if (!isResearched) return false;
+      return api.technology.isResearched(def.requiredTech);
     }
     return true;
   });
@@ -35,13 +40,28 @@ const filteredBuildings = computed(() => {
 });
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
+const activeBuildings = computed(() => state.buildings);
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+const pendingBuildings = computed(() => state.pendingBuildings);
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 function canBuild(defId: string): boolean {
-  return gameService.canBuild(defId);
+  return api.buildings.canBuild(defId).allowed;
+}
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function getBuildReason(defId: string): string | undefined {
+  const check = api.buildings.canBuild(defId);
+  return check.allowed ? undefined : check.reason;
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function buildBuilding(defId: string): void {
-  gameService.startBuilding(defId);
+  const result = api.buildings.build(defId);
+  if (!result.success) {
+    console.warn(`Build failed: ${result.error.type}`, result.error);
+  }
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -88,13 +108,13 @@ function formatConsumption(def: BuildingDefinition): string {
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function isLocked(def: BuildingDefinition): boolean {
   if (!def.requiredTech) return false;
-  return !state.researchedTechs.some((t) => t.id === def.requiredTech);
+  return !api.technology.isResearched(def.requiredTech);
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function getRequiredTechName(def: BuildingDefinition): string {
   if (!def.requiredTech) return "";
-  const tech = state.technologies.find((t) => t.id === def.requiredTech);
+  const tech = api.technology.getById(def.requiredTech);
   return tech?.name || def.requiredTech;
 }
 
@@ -111,10 +131,11 @@ function onBuildingHover(def: BuildingDefinition): void {
   }
 
   const requiredResources = Array.from(allResources);
+  const currentResources = api.resources.snapshot().current;
 
   const insufficientResources = Object.keys(def.cost).filter((key) => {
     const required = (def.cost as Record<string, number>)[key] || 0;
-    const available = (state.resources as Record<string, number>)[key] || 0;
+    const available = (currentResources as Record<string, number>)[key] || 0;
     return available < required;
   });
 
@@ -128,9 +149,21 @@ function onBuildingLeave(): void {
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function getConstructionPercent(building: { constructionProgress: number; definitionId: string }): number {
-  const def = state.buildingDefinitions.find((d) => d.id === building.definitionId);
+  const def = api.buildings.getDefinition(building.definitionId);
   if (!def) return 0;
   return (building.constructionProgress / def.constructionTime) * 100;
+}
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function getBuildingName(definitionId: string): string {
+  return api.buildings.getDefinition(definitionId)?.name || definitionId;
+}
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function getRemainingBuildTime(building: { constructionProgress: number; definitionId: string }): number {
+  const def = api.buildings.getDefinition(building.definitionId);
+  if (!def) return 0;
+  return Math.ceil(def.constructionTime - building.constructionProgress);
 }
 </script>
 
@@ -149,7 +182,7 @@ function getConstructionPercent(building: { constructionProgress: number; defini
         size="sm"
         @click="selectedCategory = 'built'"
       >
-        Built ({{ state.buildings.length }})
+        Built ({{ activeBuildings.length }})
       </GButton>
       <GButton
         :variant="selectedCategory === 'all' ? 'primary' : 'ghost'"
@@ -204,6 +237,7 @@ function getConstructionPercent(building: { constructionProgress: number; defini
           v-if="!isLocked(def)"
           variant="primary"
           :disabled="!canBuild(def.id)"
+          :title="getBuildReason(def.id)"
           @click="buildBuilding(def.id)"
         >
           Build
@@ -211,22 +245,22 @@ function getConstructionPercent(building: { constructionProgress: number; defini
       </div>
     </div>
 
-    <div v-if="state.pendingBuildings.length > 0" class="construction-queue">
+    <div v-if="pendingBuildings.length > 0" class="construction-queue">
       <h3>Under Construction</h3>
       <div
-        v-for="building in state.pendingBuildings"
+        v-for="building in pendingBuildings"
         :key="building.id"
         class="construction-item"
       >
         <span class="construction-name">
-          {{ state.buildingDefinitions.find(d => d.id === building.definitionId)?.name }}
+          {{ getBuildingName(building.definitionId) }}
         </span>
         <GProgress
           :percent="getConstructionPercent(building)"
           variant="warning"
           showLabel
         >
-          {{ Math.ceil((state.buildingDefinitions.find(d => d.id === building.definitionId)?.constructionTime || 0) - building.constructionProgress) }} sols
+          {{ getRemainingBuildTime(building) }} sols
         </GProgress>
       </div>
     </div>
