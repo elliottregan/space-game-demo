@@ -56,7 +56,25 @@ function getMoraleVariant(morale: number): "positive" | "warning" | "negative" {
       :variant="getMoraleVariant(state.morale)"
       show-progress-label
     />
+    <div v-if="state.moraleBoost > 0" class="morale-bonus">
+      <span class="label">Recreation Bonus:</span>
+      <span class="value positive">+{{ state.moraleBoost }}</span>
+    </div>
 
     <WorkforceGrid :workforce-stats="workforceStats" />
   </GPanel>
 </template>
+
+<style scoped>
+.morale-bonus {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85em;
+  color: var(--g-color-muted);
+  margin-top: -0.5em;
+  margin-bottom: 0.5em;
+}
+.morale-bonus .positive {
+  color: var(--g-color-positive);
+}
+</style>
