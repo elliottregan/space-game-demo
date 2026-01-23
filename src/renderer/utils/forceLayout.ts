@@ -2,9 +2,8 @@ import {
   forceSimulation,
   forceLink,
   forceManyBody,
-  forceX,
-  forceY,
   forceCenter,
+  forceCollide,
   type Simulation,
   type SimulationNodeDatum,
   type SimulationLinkDatum,
@@ -33,12 +32,26 @@ interface SimLink extends SimulationLinkDatum<SimNode> {
   weight: number;
 }
 
-// Faction anchor positions (triangle layout)
-const FACTION_ANCHORS: Record<NPCFaction, { x: number; y: number }> = {
-  futurist: { x: 0.5, y: 0.15 },      // top center
-  progressive: { x: 0.2, y: 0.75 },   // bottom left
-  traditionalist: { x: 0.8, y: 0.75 }, // bottom right
-};
+// Deterministic initial positions based on faction (for consistent layouts)
+function getInitialPosition(
+  faction: NPCFaction,
+  index: number,
+  width: number,
+  height: number
+): { x: number; y: number } {
+  const factionOffsets: Record<NPCFaction, { x: number; y: number }> = {
+    futurist: { x: 0.5, y: 0.2 },
+    progressive: { x: 0.25, y: 0.7 },
+    traditionalist: { x: 0.75, y: 0.7 },
+  };
+  const offset = factionOffsets[faction];
+  // Add small deterministic offset per NPC to avoid exact overlap
+  const jitter = (index * 17) % 50;
+  return {
+    x: offset.x * width + jitter,
+    y: offset.y * height + (jitter * 0.5),
+  };
+}
 
 export function computeForceLayout(input: LayoutInput): PositionedNode[] {
   const { npcs, relationshipMatrix, width, height } = input;
@@ -47,14 +60,18 @@ export function computeForceLayout(input: LayoutInput): PositionedNode[] {
     return [];
   }
 
-  // Create simulation nodes with initial positions at faction anchors
-  const nodes: SimNode[] = npcs.map((npc) => {
-    const anchor = FACTION_ANCHORS[npc.faction];
+  const padding = 40;
+  const effectiveWidth = width - padding * 2;
+  const effectiveHeight = height - padding * 2;
+
+  // Create simulation nodes with deterministic initial positions
+  const nodes: SimNode[] = npcs.map((npc, i) => {
+    const pos = getInitialPosition(npc.faction, i, effectiveWidth, effectiveHeight);
     return {
       id: npc.id,
       faction: npc.faction,
-      x: anchor.x * width,
-      y: anchor.y * height,
+      x: pos.x + padding,
+      y: pos.y + padding,
     };
   });
 
@@ -67,8 +84,29 @@ export function computeForceLayout(input: LayoutInput): PositionedNode[] {
         links.push({
           source: nodes[i],
           target: nodes[j],
-          weight: weight / 2, // Average of bidirectional
+          weight: weight / 2,
         });
+      }
+    }
+  }
+
+  // Add implicit same-faction links for clustering
+  for (let i = 0; i < npcs.length; i++) {
+    for (let j = i + 1; j < npcs.length; j++) {
+      if (npcs[i].faction === npcs[j].faction) {
+        // Check if link already exists
+        const exists = links.some(
+          (l) =>
+            (l.source === nodes[i] && l.target === nodes[j]) ||
+            (l.source === nodes[j] && l.target === nodes[i])
+        );
+        if (!exists) {
+          links.push({
+            source: nodes[i],
+            target: nodes[j],
+            weight: 0.5, // Implicit faction attraction
+          });
+        }
       }
     }
   }
@@ -80,18 +118,11 @@ export function computeForceLayout(input: LayoutInput): PositionedNode[] {
       forceLink<SimNode, SimLink>(links)
         .id((d) => d.id)
         .strength((link) => 0.1 + link.weight * 0.7)
-        .distance(80)
+        .distance(100)
     )
-    .force("charge", forceManyBody().strength(-200))
-    .force("center", forceCenter(width / 2, height / 2).strength(0.05))
-    .force(
-      "factionX",
-      forceX<SimNode>((d) => FACTION_ANCHORS[d.faction].x * width).strength(0.3)
-    )
-    .force(
-      "factionY",
-      forceY<SimNode>((d) => FACTION_ANCHORS[d.faction].y * height).strength(0.3)
-    )
+    .force("charge", forceManyBody().strength(-300))
+    .force("center", forceCenter(width / 2, height / 2))
+    .force("collide", forceCollide(30))
     .alphaDecay(0.02)
     .velocityDecay(0.4);
 
@@ -99,10 +130,10 @@ export function computeForceLayout(input: LayoutInput): PositionedNode[] {
   simulation.tick(300);
   simulation.stop();
 
-  // Extract final positions
+  // Extract final positions, clamped to bounds
   return nodes.map((node) => ({
     id: node.id,
-    x: node.x ?? 0,
-    y: node.y ?? 0,
+    x: Math.max(padding, Math.min(width - padding, node.x ?? width / 2)),
+    y: Math.max(padding, Math.min(height - padding, node.y ?? height / 2)),
   }));
 }
