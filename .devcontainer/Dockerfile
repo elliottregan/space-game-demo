@@ -2,7 +2,8 @@ FROM oven/bun:alpine
 
 # Install system dependencies for Claude Code, SSH, and GitHub CLI
 RUN apk add --no-cache \
-    git curl ca-certificates openssh sudo nodejs npm github-cli bash
+    git curl ca-certificates openssh sudo github-cli bash \
+    libgcc libstdc++ ripgrep
 
 # Configure SSH
 RUN mkdir -p /var/run/sshd && \
@@ -19,8 +20,11 @@ RUN adduser -D -s /bin/bash dev && \
 # Set default password for dev user
 RUN echo 'dev:devpass' | chpasswd
 
-# Install Claude Code globally
-RUN npm install -g @anthropic-ai/claude-code
+# Install Claude Code as dev user
+USER dev
+ENV PATH="/home/dev/.local/bin:$PATH"
+RUN curl -fsSL https://claude.ai/install.sh | bash
+USER root
 
 # Workspace setup
 RUN mkdir -p /workspace && chown dev:dev /workspace
