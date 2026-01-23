@@ -210,6 +210,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
       "Survey teams discovered a supply cache from a previous mission! The containers are intact.",
     weight: 8,
     minSol: 30,
+    chance: 0.05,
     choices: [
       {
         id: "retrieve",
@@ -227,6 +228,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
       "Mission control has transmitted new geological survey data revealing promising deposit locations.",
     weight: 6,
     minSol: 40,
+    chance: 0.04,
     choices: [
       {
         id: "accept",
@@ -245,6 +247,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
       "The latest colonist transport brought extra equipment. The crew pooled their personal supplies for the colony.",
     weight: 7,
     minSol: 20,
+    chance: 0.05,
     choices: [
       {
         id: "accept",

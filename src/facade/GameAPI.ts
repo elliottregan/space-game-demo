@@ -132,7 +132,7 @@ export class GameAPI {
     return {
       allowed: false,
       reason: "Insufficient resources",
-      missingResources: missing,
+      missingResources: missing as Record<string, number>,
     };
   };
 
@@ -176,7 +176,7 @@ export class GameAPI {
    */
   get resources(): ResourcesFacade {
     if (!this._resources) {
-      this._resources = new ResourcesFacade(this.gameState, this.checkAffordability);
+      this._resources = new ResourcesFacade(this.gameState);
     }
     return this._resources;
   }

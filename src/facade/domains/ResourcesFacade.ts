@@ -57,7 +57,7 @@ export class ResourcesFacade implements Queryable<ResourceSnapshot> {
     return {
       allowed: false,
       reason: "Insufficient resources",
-      missingResources: missing,
+      missingResources: missing as Record<string, number>,
     };
   }
 }

@@ -124,8 +124,8 @@ describe("GameAPI", () => {
     it("should fail to research when already researching", () => {
       const techs = api.technology.snapshot();
       if (techs.available.length >= 2) {
-        api.technology.startResearch(techs.available[0].id);
-        const result = api.technology.startResearch(techs.available[1].id);
+        api.technology.startResearch(techs.available[0]!.id);
+        const result = api.technology.startResearch(techs.available[1]!.id);
         expect(result.success).toBe(false);
         if (!result.success) {
           expect(result.error.type).toBe("PREREQUISITE_NOT_MET");
@@ -136,7 +136,7 @@ describe("GameAPI", () => {
     it("should cancel research", () => {
       const techs = api.technology.snapshot();
       if (techs.available.length > 0) {
-        api.technology.startResearch(techs.available[0].id);
+        api.technology.startResearch(techs.available[0]!.id);
         const result = api.technology.cancelResearch();
         expect(result.success).toBe(true);
         expect(api.technology.snapshot().currentResearch).toBeNull();

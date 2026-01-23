@@ -69,7 +69,7 @@ interface GameUIState {
       averageSupport: number;
     } | null;
     councils: Council[];
-    relationshipMatrix: readonly number[][];
+    relationshipMatrix: readonly (readonly number[])[];
   };
 }
 

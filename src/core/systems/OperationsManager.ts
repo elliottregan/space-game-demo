@@ -284,7 +284,7 @@ export class OperationsManager {
       // Lose 1-2 crew on dangerous expeditions
       const lossCount = type === "deep" ? 1 + Math.floor(Math.random() * 2) : 1;
       for (let i = 0; i < lossCount && i < expedition.assignedCrew.length; i++) {
-        crewLost.push(expedition.assignedCrew[i]);
+        crewLost.push(expedition.assignedCrew[i]!);
       }
     }
 
@@ -307,8 +307,8 @@ export class OperationsManager {
     const types: Array<"water" | "materials" | "research"> = ["water", "materials", "research"];
     const qualities: Array<"poor" | "moderate" | "rich"> = ["poor", "moderate", "rich"];
 
-    const resourceType = types[Math.floor(Math.random() * types.length)];
-    const quality = qualities[Math.floor(Math.random() * qualities.length)];
+    const resourceType = types[Math.floor(Math.random() * types.length)]!;
+    const quality = qualities[Math.floor(Math.random() * qualities.length)]!;
 
     // Calculate reserves based on quality and resource type
     const reserveRange = DEPOSIT_RESERVES[resourceType][quality];
@@ -373,7 +373,7 @@ export class OperationsManager {
     const index = this.sites.findIndex((s) => s.id === siteId);
     if (index === -1) return false;
 
-    const site = this.sites[index];
+    const site = this.sites[index]!;
     if (site.developed) return false; // Can't abandon developed sites
 
     this.sites.splice(index, 1);

@@ -23,16 +23,16 @@ describe("Prospecting", () => {
     // First add an unrevealed site (normally from expedition)
     operations.addUnrevealedSite();
 
-    operations.revealSite(operations.getSites()[0].id, resources);
+    operations.revealSite(operations.getSites()[0]!.id, resources);
     expect(resources.getResources().materials).toBe(500 - PROSPECTING_REVEAL_COST.materials);
   });
 
   test("revealed site shows quality", () => {
     operations.addUnrevealedSite();
-    const site = operations.getSites()[0];
+    const site = operations.getSites()[0]!;
 
     operations.revealSite(site.id, resources);
-    expect(operations.getSites()[0].revealed).toBe(true);
+    expect(operations.getSites()[0]!.revealed).toBe(true);
   });
 
   test("cannot reveal more than MAX_REVEALED_SITES", () => {
@@ -42,10 +42,10 @@ describe("Prospecting", () => {
 
     const sites = operations.getSites();
     for (let i = 0; i < MAX_REVEALED_SITES; i++) {
-      operations.revealSite(sites[i].id, resources);
+      operations.revealSite(sites[i]!.id, resources);
     }
 
-    const result = operations.revealSite(sites[MAX_REVEALED_SITES].id, resources);
+    const result = operations.revealSite(sites[MAX_REVEALED_SITES]!.id, resources);
     expect(result).toBe(false);
   });
 });

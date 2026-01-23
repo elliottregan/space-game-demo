@@ -89,18 +89,18 @@ describe("computeForceLayout", () => {
 
     // Distance between same-faction NPCs
     const f1f2 = Math.hypot(
-      positions.f1.x - positions.f2.x,
-      positions.f1.y - positions.f2.y
+      positions.f1!.x - positions.f2!.x,
+      positions.f1!.y - positions.f2!.y
     );
     const p1p2 = Math.hypot(
-      positions.p1.x - positions.p2.x,
-      positions.p1.y - positions.p2.y
+      positions.p1!.x - positions.p2!.x,
+      positions.p1!.y - positions.p2!.y
     );
 
     // Distance between different-faction NPCs
     const f1p1 = Math.hypot(
-      positions.f1.x - positions.p1.x,
-      positions.f1.y - positions.p1.y
+      positions.f1!.x - positions.p1!.x,
+      positions.f1!.y - positions.p1!.y
     );
 
     // Same-faction should be closer than different-faction

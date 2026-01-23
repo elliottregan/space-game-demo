@@ -28,7 +28,7 @@ describe('NPCInfluenceManager', () => {
     it('should build relationship matrix from initial data', () => {
       const matrix = manager.getRelationshipMatrix();
       expect(matrix.length).toBe(10);
-      expect(matrix[0].length).toBe(10);
+      expect(matrix[0]!.length).toBe(10);
     });
 
     it('should have no active project initially', () => {
@@ -193,8 +193,8 @@ describe('NPCInfluenceManager', () => {
 
       const councils = manager.getCouncils();
       expect(councils.length).toBe(1);
-      expect(councils[0].name).toBe('Science Council');
-      expect(councils[0].memberIds).toEqual(memberIds);
+      expect(councils[0]!.name).toBe('Science Council');
+      expect(councils[0]!.memberIds).toEqual(memberIds);
     });
 
     it('should increase relationship weights between council members', () => {
@@ -211,12 +211,12 @@ describe('NPCInfluenceManager', () => {
       const elenaIdx = 7; // elena_volkov is 8th (0-indexed: 7)
 
       const initialMatrix = manager.getRelationshipMatrix();
-      const initialWeight = initialMatrix[elenaIdx][chenIdx];
+      const initialWeight = initialMatrix[elenaIdx]![chenIdx]!;
 
       manager.createCouncil('Science Council', ['chen_wei', 'elena_volkov'], resources);
 
       const newMatrix = manager.getRelationshipMatrix();
-      expect(newMatrix[elenaIdx][chenIdx]).toBe(Math.min(1.0, initialWeight + COUNCIL_RELATIONSHIP_BOOST));
+      expect(newMatrix[elenaIdx]![chenIdx]!).toBe(Math.min(1.0, initialWeight + COUNCIL_RELATIONSHIP_BOOST));
     });
 
     it('should deduct creation cost', () => {

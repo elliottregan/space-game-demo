@@ -16,6 +16,7 @@ export interface RandomEventDefinition {
   minSol: number;
   maxSol?: number;
   chance: number;
+  weight?: number;
   choices: EventChoice[];
 }
 

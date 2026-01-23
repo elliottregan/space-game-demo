@@ -197,6 +197,15 @@ export class OperationsFacade {
       const expeditions = this.gameState.operations.getActiveExpeditions();
       const newExpedition = expeditions[expeditions.length - 1];
 
+      if (!newExpedition) {
+        return err({
+          type: "INVALID_STATE",
+          current: "no expeditions",
+          expected: "expedition created",
+          reason: "Expedition was not added to active list",
+        });
+      }
+
       return ok(newExpedition);
     });
   }
