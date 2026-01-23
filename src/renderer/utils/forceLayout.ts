@@ -37,7 +37,7 @@ function getInitialPosition(
   faction: NPCFaction,
   index: number,
   width: number,
-  height: number
+  height: number,
 ): { x: number; y: number } {
   const factionOffsets: Record<NPCFaction, { x: number; y: number }> = {
     futurist: { x: 0.5, y: 0.2 },
@@ -49,7 +49,7 @@ function getInitialPosition(
   const jitter = (index * 17) % 50;
   return {
     x: offset.x * width + jitter,
-    y: offset.y * height + (jitter * 0.5),
+    y: offset.y * height + jitter * 0.5,
   };
 }
 
@@ -98,7 +98,7 @@ export function computeForceLayout(input: LayoutInput): PositionedNode[] {
         const exists = links.some(
           (l) =>
             (l.source === nodes[i] && l.target === nodes[j]) ||
-            (l.source === nodes[j] && l.target === nodes[i])
+            (l.source === nodes[j] && l.target === nodes[i]),
         );
         if (!exists) {
           links.push({
@@ -118,7 +118,7 @@ export function computeForceLayout(input: LayoutInput): PositionedNode[] {
       forceLink<SimNode, SimLink>(links)
         .id((d) => d.id)
         .strength((link) => 0.05 + link.weight * 0.5)
-        .distance(140)
+        .distance(140),
     )
     .force("charge", forceManyBody().strength(-400))
     .force("center", forceCenter(width / 2, height / 2))

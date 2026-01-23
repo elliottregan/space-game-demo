@@ -18,7 +18,7 @@ const emit = defineEmits<{
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const npcCouncils = computed(() =>
-  props.councils.filter((c) => c.memberIds.includes(props.npc.id))
+  props.councils.filter((c) => c.memberIds.includes(props.npc.id)),
 );
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template

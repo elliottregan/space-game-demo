@@ -38,7 +38,7 @@ const NODE_RADIUS = 20;
 export function renderGraph(
   container: SVGSVGElement,
   data: GraphData,
-  options: RenderOptions
+  options: RenderOptions,
 ): void {
   const { width, height, selectedId, onNodeClick } = options;
   const svg = select(container);
@@ -47,10 +47,7 @@ export function renderGraph(
   svg.selectAll("*").remove();
 
   // Set dimensions
-  svg
-    .attr("width", width)
-    .attr("height", height)
-    .attr("viewBox", `0 0 ${width} ${height}`);
+  svg.attr("width", width).attr("height", height).attr("viewBox", `0 0 ${width} ${height}`);
 
   // Background click to deselect
   svg
@@ -113,9 +110,7 @@ export function renderGraph(
 
     // Drop shadow for selected
     if (isSelected) {
-      nodeGroup
-        .select("circle")
-        .attr("filter", "drop-shadow(0 0 4px rgba(255,255,255,0.5))");
+      nodeGroup.select("circle").attr("filter", "drop-shadow(0 0 4px rgba(255,255,255,0.5))");
     }
 
     // Council glow

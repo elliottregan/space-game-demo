@@ -57,7 +57,7 @@ const canCreateCouncil = computed(() => {
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const selectedNPC = computed(() => {
-  return state.npcInfluence.npcs.find(n => n.id === selectedNPCForLobby.value);
+  return state.npcInfluence.npcs.find((n) => n.id === selectedNPCForLobby.value);
 });
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template

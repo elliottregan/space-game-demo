@@ -46,7 +46,7 @@ const selectedRelationships = computed(() => {
   }
 
   return relationships.sort(
-    (a, b) => b.influenceFrom + b.influenceTo - (a.influenceFrom + a.influenceTo)
+    (a, b) => b.influenceFrom + b.influenceTo - (a.influenceFrom + a.influenceTo),
   );
 });
 

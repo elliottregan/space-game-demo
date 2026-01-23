@@ -32,7 +32,7 @@ const researchProgress = computed(() => {
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const lockedTechs = computed(() => {
-  return state.technologies.filter(t => !isResearched(t.id) && !canResearch(t.id));
+  return state.technologies.filter((t) => !isResearched(t.id) && !canResearch(t.id));
 });
 
 function canResearch(techId: string): boolean {

@@ -51,9 +51,7 @@ function isInCouncil(npcId: string): boolean {
 
 // Check if two NPCs are in the same council
 function areInSameCouncil(id1: string, id2: string): boolean {
-  return props.councils.some(
-    (c) => c.memberIds.includes(id1) && c.memberIds.includes(id2)
-  );
+  return props.councils.some((c) => c.memberIds.includes(id1) && c.memberIds.includes(id2));
 }
 
 // Build graph data for rendering
@@ -76,8 +74,7 @@ const graphData = computed<GraphData>(() => {
   for (let i = 0; i < props.npcs.length; i++) {
     for (let j = i + 1; j < props.npcs.length; j++) {
       const weight =
-        (props.relationshipMatrix[i]?.[j] ?? 0) +
-        (props.relationshipMatrix[j]?.[i] ?? 0);
+        (props.relationshipMatrix[i]?.[j] ?? 0) + (props.relationshipMatrix[j]?.[i] ?? 0);
       if (weight < 0.1) continue;
 
       links.push({
