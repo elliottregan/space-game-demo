@@ -2,7 +2,7 @@ FROM oven/bun:alpine
 
 # Install system dependencies for Claude Code, SSH, and GitHub CLI
 RUN apk add --no-cache \
-    git curl ca-certificates openssh sudo github-cli bash \
+    git curl ca-certificates openssh sudo nodejs github-cli bash \
     libgcc libstdc++ ripgrep
 
 # Configure SSH

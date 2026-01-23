@@ -14,6 +14,10 @@ ssh:
 claude:
     docker exec -it -u dev -w /workspace space-game-devcontainer claude --dangerously-skip-permissions
 
+# Run claude with debug logging
+claude-debug:
+    docker exec -it -u dev -w /workspace space-game-devcontainer claude --debug
+
 # Rebuild the container
 rebuild:
     docker compose down
