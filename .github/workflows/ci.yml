@@ -3,8 +3,18 @@ name: CI
 on:
   push:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'index.ts'
+      - 'bun.lock'
   pull_request:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'index.ts'
+      - 'bun.lock'
 
 jobs:
   lint-and-test:
