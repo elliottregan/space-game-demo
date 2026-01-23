@@ -43,6 +43,41 @@ export class OperationsManager {
   private sites: ProspectingSite[] = [];
   private expeditionExperience: number = 0;
   private nextExpeditionId: number = 1;
+  private nextSiteId: number = 1;
+
+  constructor() {
+    // Add initial water deposits to enable early-game water production
+    // This allows heuristic strategy to build water extractors without expeditions
+    this.addInitialWaterSite("moderate");
+    this.addInitialWaterSite("poor");
+  }
+
+  /**
+   * Add an initial water site with specified quality.
+   * Used during game initialization to provide starting water deposits.
+   */
+  private addInitialWaterSite(quality: "poor" | "moderate" | "rich"): void {
+    const reserveRange = DEPOSIT_RESERVES.water[quality];
+    const reserves =
+      reserveRange.min + Math.floor(Math.random() * (reserveRange.max - reserveRange.min));
+
+    const uncertainty = ESTIMATE_UNCERTAINTY.initial;
+    const estimatedMin = Math.floor(reserves * (1 - uncertainty));
+    const estimatedMax = Math.ceil(reserves * (1 + uncertainty));
+
+    this.sites.push({
+      id: `site_initial_water_${this.nextSiteId++}`,
+      resourceType: "water",
+      quality,
+      revealed: false,
+      developed: false,
+      developmentProgress: 0,
+      reserves,
+      estimatedReserves: { min: estimatedMin, max: estimatedMax },
+      remainingReserves: reserves,
+      linkedBuildingId: null,
+    });
+  }
 
   getPolicies(): Readonly<ColonyPolicies> {
     return { ...this.policies };

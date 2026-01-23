@@ -15,8 +15,12 @@ describe("Prospecting", () => {
     });
   });
 
-  test("getSites returns all sites", () => {
-    expect(operations.getSites()).toEqual([]);
+  test("getSites returns all sites including initial water sites", () => {
+    // OperationsManager now starts with 2 initial water sites for early-game water production
+    const sites = operations.getSites();
+    expect(sites.length).toBe(2);
+    expect(sites.every(s => s.resourceType === "water")).toBe(true);
+    expect(sites.every(s => !s.revealed)).toBe(true);
   });
 
   test("revealSite costs materials", () => {

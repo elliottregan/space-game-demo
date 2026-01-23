@@ -34,7 +34,7 @@ export class HeuristicStrategy {
   }
 
   /**
-   * Priority 1 - Survival: Ensure food and oxygen are maintained.
+   * Priority 1 - Survival: Ensure food, oxygen, and water are maintained.
    * @returns true if an action was taken
    */
   private handleSurvival(): boolean {
@@ -42,10 +42,13 @@ export class HeuristicStrategy {
     const buildings = this.api.buildings.snapshot();
     const currentFood = resources.current.food;
     const currentOxygen = resources.current.oxygen;
+    const currentWater = resources.current.water;
     const foodProduction = resources.production.food ?? 0;
     const foodConsumption = resources.consumption.food ?? 0;
     const oxygenProduction = resources.production.oxygen ?? 0;
     const oxygenConsumption = resources.consumption.oxygen ?? 0;
+    const waterProduction = resources.production.water ?? 0;
+    const waterConsumption = resources.consumption.water ?? 0;
 
     // Early game: Build oxygen generator first if we don't have one
     const hasOxygenGenerator = buildings.active.some(b => b.definitionId === "oxygen_generator") ||
@@ -56,6 +59,11 @@ export class HeuristicStrategy {
         this.api.buildings.build("oxygen_generator");
         return true;
       }
+    }
+
+    // Handle water production early - needed for morale recovery
+    if (this.handleWaterProduction(waterProduction, waterConsumption, currentWater)) {
+      return true;
     }
 
     // IF food < 50 AND can build "basic_farm" -> build farm
@@ -91,6 +99,83 @@ export class HeuristicStrategy {
       if (canBuildOxygenGen.allowed) {
         this.api.buildings.build("oxygen_generator");
         return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Handle water production by building water extractors on deposits.
+   * @returns true if an action was taken
+   */
+  private handleWaterProduction(
+    waterProduction: number,
+    waterConsumption: number,
+    currentWater: number
+  ): boolean {
+    // Check if we need water production
+    const waterFlow = waterProduction - waterConsumption;
+    if (waterFlow > 0 && currentWater > 30) {
+      return false; // Water is fine
+    }
+
+    const operations = this.api.operations.snapshot();
+    const buildings = this.api.buildings.snapshot();
+
+    // Check if we already have a water extractor building or pending
+    const hasWaterExtractor = buildings.active.some(b => b.definitionId === "water_extractor") ||
+                              buildings.pending.some(b => b.definitionId === "water_extractor");
+    if (hasWaterExtractor && waterFlow >= 0) {
+      return false; // Already have one and not in crisis
+    }
+
+    // Find water sites in various states
+    const waterSites = operations.sites.filter(s => s.resourceType === "water");
+    const unrevealedWaterSites = waterSites.filter(s => !s.revealed);
+    const revealedUndevelopedWaterSites = waterSites.filter(s => s.revealed && !s.developed);
+    const developedAvailableWaterSites = waterSites.filter(s => s.developed && !s.linkedBuildingId);
+
+    // Priority 1: Build water extractor on available developed deposit
+    if (developedAvailableWaterSites.length > 0) {
+      const canBuildExtractor = this.api.buildings.canBuild("water_extractor");
+      if (canBuildExtractor.allowed) {
+        const result = this.api.buildings.build("water_extractor");
+        if (result.ok) {
+          // Link the new building to the deposit
+          const newBuilding = buildings.pending.find(b =>
+            b.definitionId === "water_extractor" && !b.depositId
+          ) ?? result.value;
+          const deposit = developedAvailableWaterSites[0];
+          if (newBuilding && deposit) {
+            this.api.buildings.linkToDeposit(newBuilding.id, deposit.id);
+          }
+          return true;
+        }
+      }
+    }
+
+    // Priority 2: Develop a revealed water site
+    if (revealedUndevelopedWaterSites.length > 0) {
+      const site = revealedUndevelopedWaterSites[0];
+      if (site) {
+        const canDevelop = this.api.operations.canDevelopSite(site.id);
+        if (canDevelop.allowed) {
+          this.api.operations.developSite(site.id);
+          return true;
+        }
+      }
+    }
+
+    // Priority 3: Reveal an unrevealed water site
+    if (unrevealedWaterSites.length > 0) {
+      const site = unrevealedWaterSites[0];
+      if (site) {
+        const canReveal = this.api.operations.canRevealSite(site.id);
+        if (canReveal.allowed) {
+          this.api.operations.revealSite(site.id);
+          return true;
+        }
       }
     }
 

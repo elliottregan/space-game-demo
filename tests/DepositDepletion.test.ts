@@ -86,11 +86,16 @@ import { OperationsManager } from "../src/core/systems/OperationsManager";
 describe("OperationsManager Deposit Generation", () => {
   test("generateProspectingSite creates site with reserves", () => {
     const manager = new OperationsManager();
+    // Manager starts with 2 initial water sites
+    const initialCount = manager.getSites().length;
+    expect(initialCount).toBe(2);
+
     manager.addUnrevealedSite();
     const sites = manager.getSites();
 
-    expect(sites.length).toBe(1);
-    const site = sites[0]!;
+    expect(sites.length).toBe(initialCount + 1);
+    // Get the last site (the one we just added)
+    const site = sites[sites.length - 1]!;
 
     expect(site.reserves).toBeGreaterThan(0);
     expect(site.remainingReserves).toBe(site.reserves);

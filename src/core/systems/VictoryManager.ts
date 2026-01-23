@@ -15,23 +15,19 @@ export interface VictoryState {
  * Target: ~500 sols for a faster victory path.
  *
  * Balance rationale:
- * - Population 10: Starting population (no growth required due to morale issues)
- * - Morale 0: Disabled due to morale decay issue (water production not maintained by heuristic)
- * - 300 sustained sols: Extended stability window after techs complete
+ * - Population 10: Starting population (modest requirement)
+ * - Morale 60: Achievable once water production is established
+ * - 300 sustained sols: Stability window after techs complete
  * - 3 techs: hydroponics (60) + water_recycling (45) + advanced_materials (75) = 180 sols
  *
- * NOTE: Morale requirement disabled because the current heuristic doesn't maintain
- * positive water flow, causing morale to decay constantly. This needs to be fixed
- * in a future balance pass by either:
- * 1. Having HeuristicStrategy build water extractors
- * 2. Adding passive water production to some building
- * 3. Changing morale recovery to not require all three resources
- *
  * Expected timeline: ~180 (tech) + ~300 (sustained) = ~480 sols
+ *
+ * Note: The simulation uses HeuristicStrategy which builds water extractors on
+ * initial water deposits to maintain positive water flow and morale recovery.
  */
 export const COLONY_CHARTER_REQUIREMENTS = {
   minPopulation: 10,
-  minMorale: 0,
+  minMorale: 60,
   sustainedSols: 300,
   requiredTechs: ["hydroponics", "water_recycling", "advanced_materials"],
 };
