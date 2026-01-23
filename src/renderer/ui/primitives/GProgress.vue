@@ -11,7 +11,7 @@ const props = withDefaults(
   {
     variant: "default",
     showLabel: false,
-  }
+  },
 );
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template

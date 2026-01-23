@@ -1,7 +1,12 @@
 // src/facade/types/events.ts
 // Event-related types for the facade
 
-import type { GameEvent, RandomEventDefinition, EventChoice, ActiveEvent } from "../../core/models/GameEvent";
+import type {
+  GameEvent,
+  RandomEventDefinition,
+  EventChoice,
+  ActiveEvent,
+} from "../../core/models/GameEvent";
 
 /**
  * Immutable snapshot of active event state.

@@ -15,7 +15,7 @@ export class NPCFacade {
   constructor(
     private gameState: GameState,
     private executeCommand: CommandExecutor,
-    private checkAffordability: AffordabilityChecker
+    private checkAffordability: AffordabilityChecker,
   ) {}
 
   // ==========================================================================
@@ -40,7 +40,7 @@ export class NPCFacade {
         : null,
       councils: Object.freeze([...this.gameState.npcInfluence.getCouncils()]),
       relationshipMatrix: Object.freeze(
-        this.gameState.npcInfluence.getRelationshipMatrix().map((row) => Object.freeze([...row]))
+        this.gameState.npcInfluence.getRelationshipMatrix().map((row) => Object.freeze([...row])),
       ),
     };
   }
@@ -112,7 +112,7 @@ export class NPCFacade {
 
       const success = this.gameState.npcInfluence.proposeProject(
         projectId,
-        this.gameState.resources
+        this.gameState.resources,
       );
 
       if (!success) {
@@ -144,7 +144,7 @@ export class NPCFacade {
       const success = this.gameState.npcInfluence.lobbyNPC(
         npcId,
         supportBoost,
-        this.gameState.resources
+        this.gameState.resources,
       );
 
       if (!success) {
@@ -179,7 +179,7 @@ export class NPCFacade {
       const success = this.gameState.npcInfluence.createCouncil(
         name,
         memberIds,
-        this.gameState.resources
+        this.gameState.resources,
       );
 
       if (!success) {

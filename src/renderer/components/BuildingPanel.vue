@@ -148,7 +148,10 @@ function onBuildingLeave(): void {
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function getConstructionPercent(building: { constructionProgress: number; definitionId: string }): number {
+function getConstructionPercent(building: {
+  constructionProgress: number;
+  definitionId: string;
+}): number {
   const def = api.buildings.getDefinition(building.definitionId);
   if (!def) return 0;
   return (building.constructionProgress / def.constructionTime) * 100;
@@ -160,7 +163,10 @@ function getBuildingName(definitionId: string): string {
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function getRemainingBuildTime(building: { constructionProgress: number; definitionId: string }): number {
+function getRemainingBuildTime(building: {
+  constructionProgress: number;
+  definitionId: string;
+}): number {
   const def = api.buildings.getDefinition(building.definitionId);
   if (!def) return 0;
   return Math.ceil(def.constructionTime - building.constructionProgress);

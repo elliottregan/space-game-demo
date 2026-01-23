@@ -63,7 +63,7 @@ const nodes = computed<Node[]>(() =>
       inCouncil: isInCouncil(npc.id),
       supportLevel: getSupportLevel(npc.id),
     },
-  }))
+  })),
 );
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -81,7 +81,7 @@ const edges = computed<Edge[]>(() => {
 
       // Check if both are in the same council
       const inSameCouncil = state.npcInfluence.councils.some(
-        (c) => c.memberIds.includes(npcs[i].id) && c.memberIds.includes(npcs[j].id)
+        (c) => c.memberIds.includes(npcs[i].id) && c.memberIds.includes(npcs[j].id),
       );
 
       result.push({
@@ -138,7 +138,9 @@ const selectedRelationships = computed(() => {
     }
   }
 
-  return relationships.sort((a, b) => (b.influenceFrom + b.influenceTo) - (a.influenceFrom + a.influenceTo));
+  return relationships.sort(
+    (a, b) => b.influenceFrom + b.influenceTo - (a.influenceFrom + a.influenceTo),
+  );
 });
 </script>
 

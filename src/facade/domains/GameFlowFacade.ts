@@ -17,7 +17,7 @@ export class GameFlowFacade {
     private getGameState: () => GameState,
     private executeCommand: CommandExecutor,
     private resetGameState: ResetGameState,
-    private addEvents: AddEvents
+    private addEvents: AddEvents,
   ) {}
 
   private get gameState(): GameState {

@@ -32,7 +32,7 @@ export class BuildingsFacade
   constructor(
     private gameState: GameState,
     private executeCommand: CommandExecutor,
-    private checkAffordability: AffordabilityChecker
+    private checkAffordability: AffordabilityChecker,
   ) {}
 
   // ==========================================================================
@@ -161,7 +161,7 @@ export class BuildingsFacade
       buildingId,
       targetDefId,
       this.gameState.resources,
-      this.gameState.technology
+      this.gameState.technology,
     );
 
     if (!canDo) {
@@ -176,11 +176,17 @@ export class BuildingsFacade
       }
 
       const targetDef = this.gameState.buildings.getDefinition(targetDefId);
-      if (targetDef?.requiredTech && !this.gameState.technology.isResearched(targetDef.requiredTech)) {
+      if (
+        targetDef?.requiredTech &&
+        !this.gameState.technology.isResearched(targetDef.requiredTech)
+      ) {
         return { allowed: false, reason: `Requires technology: ${targetDef.requiredTech}` };
       }
 
-      return { allowed: false, reason: "Cannot repurpose (insufficient resources or invalid state)" };
+      return {
+        allowed: false,
+        reason: "Cannot repurpose (insufficient resources or invalid state)",
+      };
     }
 
     return { allowed: true };
@@ -214,7 +220,7 @@ export class BuildingsFacade
       const building = this.gameState.buildings.startBuilding(
         defId,
         this.gameState.resources,
-        this.gameState.technology
+        this.gameState.technology,
       );
 
       if (!building) {
@@ -247,7 +253,7 @@ export class BuildingsFacade
       const success = this.gameState.buildings.setBuildingMode(
         buildingId,
         mode,
-        this.gameState.resources
+        this.gameState.resources,
       );
 
       if (!success) {
@@ -346,7 +352,7 @@ export class BuildingsFacade
         buildingId,
         targetDefId,
         this.gameState.resources,
-        this.gameState.technology
+        this.gameState.technology,
       );
 
       if (!success) {

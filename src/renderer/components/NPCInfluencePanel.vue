@@ -29,7 +29,12 @@ function canAfford(cost: Record<string, number>): boolean {
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function formatProjectCost(cost: Record<string, number>): string {
-  return "Cost: " + Object.entries(cost).map(([k, v]) => `${v} ${k}`).join(", ");
+  return (
+    "Cost: " +
+    Object.entries(cost)
+      .map(([k, v]) => `${v} ${k}`)
+      .join(", ")
+  );
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -124,7 +129,7 @@ function formatSupport(support: number): string {
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const supportPercent = computed(() => {
   if (!state.npcInfluence.activeProject) return 0;
-  return Math.max(0, (state.npcInfluence.activeProject.averageSupport + 1) / 2 * 100);
+  return Math.max(0, ((state.npcInfluence.activeProject.averageSupport + 1) / 2) * 100);
 });
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template

@@ -312,7 +312,8 @@ export class OperationsManager {
 
     // Calculate reserves based on quality and resource type
     const reserveRange = DEPOSIT_RESERVES[resourceType][quality];
-    const reserves = reserveRange.min + Math.floor(Math.random() * (reserveRange.max - reserveRange.min));
+    const reserves =
+      reserveRange.min + Math.floor(Math.random() * (reserveRange.max - reserveRange.min));
 
     // Calculate estimated reserves with uncertainty
     const uncertainty = ESTIMATE_UNCERTAINTY.initial;
@@ -380,7 +381,7 @@ export class OperationsManager {
   }
 
   linkBuildingToDeposit(buildingId: string, siteId: string): boolean {
-    const site = this.sites.find(s => s.id === siteId);
+    const site = this.sites.find((s) => s.id === siteId);
     if (!site || !site.developed || site.linkedBuildingId) return false;
 
     site.linkedBuildingId = buildingId;
@@ -388,7 +389,7 @@ export class OperationsManager {
   }
 
   unlinkBuildingFromDeposit(siteId: string): boolean {
-    const site = this.sites.find(s => s.id === siteId);
+    const site = this.sites.find((s) => s.id === siteId);
     if (!site) return false;
 
     site.linkedBuildingId = null;
@@ -396,11 +397,11 @@ export class OperationsManager {
   }
 
   getDepositForBuilding(buildingId: string): ProspectingSite | undefined {
-    return this.sites.find(s => s.linkedBuildingId === buildingId);
+    return this.sites.find((s) => s.linkedBuildingId === buildingId);
   }
 
   processExtraction(buildingId: string, baseProduction: number): number {
-    const site = this.sites.find(s => s.linkedBuildingId === buildingId);
+    const site = this.sites.find((s) => s.linkedBuildingId === buildingId);
     if (!site || site.remainingReserves <= 0) return 0;
 
     const qualityMult = EXTRACTION_RATE_MULTIPLIERS[site.quality];
@@ -410,7 +411,7 @@ export class OperationsManager {
   }
 
   extractFromDeposit(siteId: string, amount: number): number {
-    const site = this.sites.find(s => s.id === siteId);
+    const site = this.sites.find((s) => s.id === siteId);
     if (!site || !site.developed || site.remainingReserves <= 0) return 0;
 
     const actualExtracted = Math.min(amount, site.remainingReserves);
@@ -423,12 +424,12 @@ export class OperationsManager {
   }
 
   private updateEstimateAccuracy(site: ProspectingSite): void {
-    const extractedPercent = 1 - (site.remainingReserves / site.reserves);
+    const extractedPercent = 1 - site.remainingReserves / site.reserves;
 
     let uncertainty: number;
     if (extractedPercent >= 0.75) {
       uncertainty = ESTIMATE_UNCERTAINTY.at75Percent;
-    } else if (extractedPercent >= 0.50) {
+    } else if (extractedPercent >= 0.5) {
       uncertainty = ESTIMATE_UNCERTAINTY.at50Percent;
     } else if (extractedPercent >= 0.25) {
       uncertainty = ESTIMATE_UNCERTAINTY.at25Percent;
@@ -443,12 +444,12 @@ export class OperationsManager {
   }
 
   isDepositDepleted(siteId: string): boolean {
-    const site = this.sites.find(s => s.id === siteId);
+    const site = this.sites.find((s) => s.id === siteId);
     return site ? site.remainingReserves <= 0 : true;
   }
 
   getDepletionWarningLevel(siteId: string): "none" | "warning" | "critical" | "depleted" {
-    const site = this.sites.find(s => s.id === siteId);
+    const site = this.sites.find((s) => s.id === siteId);
     if (!site) return "depleted";
 
     const percentRemaining = site.remainingReserves / site.reserves;

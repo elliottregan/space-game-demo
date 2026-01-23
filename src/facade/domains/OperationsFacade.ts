@@ -20,7 +20,7 @@ type CommandExecutor = <T>(fn: () => Result<T>) => Result<T>;
 export class OperationsFacade {
   constructor(
     private gameState: GameState,
-    private executeCommand: CommandExecutor
+    private executeCommand: CommandExecutor,
   ) {}
 
   // ==========================================================================
@@ -34,7 +34,7 @@ export class OperationsFacade {
     return {
       policies: Object.freeze({ ...this.gameState.operations.getPolicies() }),
       policyCooldownRemaining: this.gameState.operations.getSolsUntilPolicyChange(
-        this.gameState.currentSol
+        this.gameState.currentSol,
       ),
       expeditions: Object.freeze([...this.gameState.operations.getActiveExpeditions()]),
       sites: Object.freeze([...this.gameState.operations.getSites()]),
@@ -124,9 +124,7 @@ export class OperationsFacade {
    * Get developed sites that can be linked to buildings.
    */
   getAvailableDeposits(): readonly Readonly<ProspectingSite>[] {
-    return this.gameState.operations
-      .getSites()
-      .filter((s) => s.developed && !s.linkedBuildingId);
+    return this.gameState.operations.getSites().filter((s) => s.developed && !s.linkedBuildingId);
   }
 
   // ==========================================================================
@@ -143,7 +141,7 @@ export class OperationsFacade {
         return err({
           type: "COOLDOWN_ACTIVE",
           remainingSols: this.gameState.operations.getSolsUntilPolicyChange(
-            this.gameState.currentSol
+            this.gameState.currentSol,
           ),
         });
       }
@@ -151,7 +149,7 @@ export class OperationsFacade {
       const success = this.gameState.operations.setPolicy(
         type,
         value as never,
-        this.gameState.currentSol
+        this.gameState.currentSol,
       );
 
       if (!success) {
@@ -185,7 +183,7 @@ export class OperationsFacade {
         crewIds,
         this.gameState.resources,
         this.gameState.colony,
-        this.gameState.currentSol
+        this.gameState.currentSol,
       );
 
       if (!success) {

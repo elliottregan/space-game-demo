@@ -10,7 +10,7 @@ withDefaults(
   {
     disabled: false,
     selected: false,
-  }
+  },
 );
 
 defineEmits<{

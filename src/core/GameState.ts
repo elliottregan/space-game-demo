@@ -135,14 +135,15 @@ export class GameState {
       if (!def?.requiresDeposit || !building.depositId) continue;
       if (building.broken) continue;
 
-      const site = this.operations.getSites().find(s => s.id === building.depositId);
+      const site = this.operations.getSites().find((s) => s.id === building.depositId);
       if (!site) continue;
 
       // Check warning level before extraction
       const warningBefore = this.operations.getDepletionWarningLevel(site.id);
 
       // Get base production for the resource type this building produces
-      const baseProduction = def.production?.[site.resourceType as keyof typeof def.production] ?? 0;
+      const baseProduction =
+        def.production?.[site.resourceType as keyof typeof def.production] ?? 0;
       if (baseProduction === 0) continue;
 
       // Process extraction

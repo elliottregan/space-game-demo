@@ -70,7 +70,7 @@ const nodes = computed<Node[]>(() =>
       status: getTechStatus(tech),
       progress: getResearchProgress(tech),
     },
-  }))
+  })),
 );
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -91,9 +91,7 @@ const edges = computed<Edge[]>(() => {
         animated: targetStatus === "in_progress",
         style: {
           stroke:
-            sourceStatus === "researched"
-              ? "var(--g-color-positive)"
-              : "var(--g-color-border)",
+            sourceStatus === "researched" ? "var(--g-color-positive)" : "var(--g-color-border)",
           strokeWidth: sourceStatus === "researched" ? 2 : 1,
           opacity: targetStatus === "locked" ? 0.3 : 1,
         },

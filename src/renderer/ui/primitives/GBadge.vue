@@ -7,7 +7,7 @@ withDefaults(
   {
     variant: "default",
     size: "sm",
-  }
+  },
 );
 </script>
 

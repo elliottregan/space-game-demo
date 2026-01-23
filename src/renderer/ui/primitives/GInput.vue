@@ -11,7 +11,7 @@ withDefaults(
     placeholder: "",
     disabled: false,
     size: "md",
-  }
+  },
 );
 
 defineEmits<{

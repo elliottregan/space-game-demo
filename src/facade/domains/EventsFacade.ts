@@ -15,7 +15,7 @@ export class EventsFacade {
     private gameState: GameState,
     private executeCommand: CommandExecutor,
     private getLastEvents: () => GameEvent[],
-    private addEvents: (events: GameEvent[]) => void
+    private addEvents: (events: GameEvent[]) => void,
   ) {}
 
   // ==========================================================================
@@ -72,7 +72,7 @@ export class EventsFacade {
         choiceId,
         this.gameState.resources,
         this.gameState.colony,
-        this.gameState.politics
+        this.gameState.politics,
       );
 
       this.addEvents(events);

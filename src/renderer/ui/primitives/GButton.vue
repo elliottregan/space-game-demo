@@ -11,7 +11,7 @@ withDefaults(
     size: "md",
     disabled: false,
     loading: false,
-  }
+  },
 );
 </script>
 

@@ -82,24 +82,24 @@ export const EXTRACTION_RATE_MULTIPLIERS = {
 
 // Estimate uncertainty (as fraction of actual) at extraction thresholds
 export const ESTIMATE_UNCERTAINTY = {
-  initial: 0.3,      // ±30% at start
-  at25Percent: 0.2,  // ±20% after 25% extracted
-  at50Percent: 0.1,  // ±10% after 50% extracted
+  initial: 0.3, // ±30% at start
+  at25Percent: 0.2, // ±20% after 25% extracted
+  at50Percent: 0.1, // ±10% after 50% extracted
   at75Percent: 0.05, // ±5% after 75% extracted
 } as const;
 
 // Depletion warning thresholds
 export const DEPLETION_THRESHOLDS = {
-  warning: 0.25,     // 25% remaining
-  critical: 0.10,    // 10% remaining
+  warning: 0.25, // 25% remaining
+  critical: 0.1, // 10% remaining
 } as const;
 
 // Recycling Recovery Rates (fraction of original build cost)
 export const RECYCLING_RECOVERY_RATES = {
-  standard: 0.4,    // Normal buildings
-  depleted: 0.25,   // Mining buildings on depleted deposits
-  active: 0.5,      // Mining buildings still producing
-  damaged: 0.15,    // Broken buildings
+  standard: 0.4, // Normal buildings
+  depleted: 0.25, // Mining buildings on depleted deposits
+  active: 0.5, // Mining buildings still producing
+  damaged: 0.15, // Broken buildings
 } as const;
 
 // Recycling takes this fraction of original construction time

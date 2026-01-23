@@ -332,7 +332,9 @@ export class BuildingManager {
       const penalizedValue: ResourceDelta = {};
       for (const [key, value] of Object.entries(recycleValue)) {
         if (value) {
-          penalizedValue[key as keyof ResourceDelta] = Math.floor(value * (1 - RUSH_RECYCLING_PENALTY));
+          penalizedValue[key as keyof ResourceDelta] = Math.floor(
+            value * (1 - RUSH_RECYCLING_PENALTY),
+          );
         }
       }
       resources.add(penalizedValue);
@@ -346,7 +348,7 @@ export class BuildingManager {
     buildingId: string,
     targetDefId: string,
     resources: ResourceManager,
-    technology: TechnologyTree
+    technology: TechnologyTree,
   ): boolean {
     const building = this.buildings.get(buildingId);
     if (!building) return false;
@@ -391,7 +393,7 @@ export class BuildingManager {
     buildingId: string,
     targetDefId: string,
     resources: ResourceManager,
-    technology: TechnologyTree
+    technology: TechnologyTree,
   ): boolean {
     if (!this.canRepurpose(buildingId, targetDefId, resources, technology)) return false;
 

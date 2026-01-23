@@ -63,7 +63,15 @@ export interface AlreadyInProgressError {
 
 export interface NotFoundError {
   type: "NOT_FOUND";
-  entity: "building" | "technology" | "colonist" | "decision" | "expedition" | "site" | "project" | "npc";
+  entity:
+    | "building"
+    | "technology"
+    | "colonist"
+    | "decision"
+    | "expedition"
+    | "site"
+    | "project"
+    | "npc";
   id: string;
 }
 

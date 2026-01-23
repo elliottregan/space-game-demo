@@ -176,10 +176,7 @@ export class GameAPI {
    */
   get resources(): ResourcesFacade {
     if (!this._resources) {
-      this._resources = new ResourcesFacade(
-        this.gameState,
-        this.checkAffordability
-      );
+      this._resources = new ResourcesFacade(this.gameState, this.checkAffordability);
     }
     return this._resources;
   }
@@ -192,7 +189,7 @@ export class GameAPI {
       this._buildings = new BuildingsFacade(
         this.gameState,
         this.executeCommand,
-        this.checkAffordability
+        this.checkAffordability,
       );
     }
     return this._buildings;
@@ -206,7 +203,7 @@ export class GameAPI {
       this._technology = new TechnologyFacade(
         this.gameState,
         this.executeCommand,
-        this.checkAffordability
+        this.checkAffordability,
       );
     }
     return this._technology;
@@ -217,10 +214,7 @@ export class GameAPI {
    */
   get colony(): ColonyFacade {
     if (!this._colony) {
-      this._colony = new ColonyFacade(
-        this.gameState,
-        this.executeCommand
-      );
+      this._colony = new ColonyFacade(this.gameState, this.executeCommand);
     }
     return this._colony;
   }
@@ -230,10 +224,7 @@ export class GameAPI {
    */
   get politics(): PoliticsFacade {
     if (!this._politics) {
-      this._politics = new PoliticsFacade(
-        this.gameState,
-        this.executeCommand
-      );
+      this._politics = new PoliticsFacade(this.gameState, this.executeCommand);
     }
     return this._politics;
   }
@@ -243,10 +234,7 @@ export class GameAPI {
    */
   get operations(): OperationsFacade {
     if (!this._operations) {
-      this._operations = new OperationsFacade(
-        this.gameState,
-        this.executeCommand
-      );
+      this._operations = new OperationsFacade(this.gameState, this.executeCommand);
     }
     return this._operations;
   }
@@ -256,11 +244,7 @@ export class GameAPI {
    */
   get npc(): NPCFacade {
     if (!this._npc) {
-      this._npc = new NPCFacade(
-        this.gameState,
-        this.executeCommand,
-        this.checkAffordability
-      );
+      this._npc = new NPCFacade(this.gameState, this.executeCommand, this.checkAffordability);
     }
     return this._npc;
   }
@@ -274,7 +258,7 @@ export class GameAPI {
         this.gameState,
         this.executeCommand,
         this.getLastEvents,
-        this.addEvents
+        this.addEvents,
       );
     }
     return this._events;
@@ -289,7 +273,7 @@ export class GameAPI {
         this.getGameState,
         this.executeCommand,
         this.resetGameState,
-        this.addEvents
+        this.addEvents,
       );
     }
     return this._game;

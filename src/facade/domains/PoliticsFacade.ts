@@ -17,7 +17,7 @@ type CommandExecutor = <T>(fn: () => Result<T>) => Result<T>;
 export class PoliticsFacade implements Queryable<PoliticsSnapshot> {
   constructor(
     private gameState: GameState,
-    private executeCommand: CommandExecutor
+    private executeCommand: CommandExecutor,
   ) {}
 
   // ==========================================================================

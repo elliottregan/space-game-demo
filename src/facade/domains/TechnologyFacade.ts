@@ -21,13 +21,11 @@ type AffordabilityChecker = (cost: ResourceDelta) => CanDoResult;
  * - Queryable<TechnologySnapshot> - for snapshot()
  * - EntityLookup<Technology> - for getById()
  */
-export class TechnologyFacade
-  implements Queryable<TechnologySnapshot>, EntityLookup<Technology>
-{
+export class TechnologyFacade implements Queryable<TechnologySnapshot>, EntityLookup<Technology> {
   constructor(
     private gameState: GameState,
     private executeCommand: CommandExecutor,
-    private checkAffordability: AffordabilityChecker
+    private checkAffordability: AffordabilityChecker,
   ) {}
 
   // ==========================================================================

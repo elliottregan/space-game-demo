@@ -10,7 +10,7 @@ const props = withDefaults(
   }>(),
   {
     size: "md",
-  }
+  },
 );
 
 const resourceConfig = {
