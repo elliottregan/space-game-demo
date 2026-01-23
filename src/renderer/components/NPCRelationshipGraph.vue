@@ -6,8 +6,12 @@ import "@vue-flow/core/dist/theme-default.css";
 import { gameService } from "../services/GameService";
 import type { NPC, NPCFaction } from "../../core/models/NPCInfluence";
 import NPCNode from "./NPCNode.vue";
+import { computeForceLayout } from "../utils/forceLayout";
 
 const state = gameService.getState();
+
+const GRAPH_WIDTH = 600;
+const GRAPH_HEIGHT = 400;
 
 const selectedNPC = ref<NPC | null>(null);
 
@@ -18,27 +22,14 @@ const factionColors: Record<NPCFaction, string> = {
   traditionalist: "var(--g-color-warning)",
 };
 
-// Position NPCs in faction clusters
-function getNodePosition(npc: NPC, index: number): { x: number; y: number } {
-  const factionPositions: Record<NPCFaction, { baseX: number; baseY: number }> = {
-    futurist: { baseX: 400, baseY: 50 },
-    progressive: { baseX: 100, baseY: 250 },
-    traditionalist: { baseX: 500, baseY: 350 },
-  };
-
-  const base = factionPositions[npc.faction];
-  const factionNPCs = state.npcInfluence.npcs.filter((n) => n.faction === npc.faction);
-  const factionIndex = factionNPCs.findIndex((n) => n.id === npc.id);
-
-  // Arrange in a small cluster
-  const angle = (factionIndex / factionNPCs.length) * Math.PI * 2;
-  const radius = 80;
-
-  return {
-    x: base.baseX + Math.cos(angle) * radius,
-    y: base.baseY + Math.sin(angle) * radius,
-  };
-}
+const layoutPositions = computed(() => {
+  return computeForceLayout({
+    npcs: state.npcInfluence.npcs,
+    relationshipMatrix: state.npcInfluence.relationshipMatrix,
+    width: GRAPH_WIDTH,
+    height: GRAPH_HEIGHT,
+  });
+});
 
 // Check if NPC is in a council
 function isInCouncil(npcId: string): boolean {
@@ -53,17 +44,20 @@ function getSupportLevel(npcId: string): number | null {
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const nodes = computed<Node[]>(() =>
-  state.npcInfluence.npcs.map((npc, index) => ({
-    id: npc.id,
-    type: "npc",
-    position: getNodePosition(npc, index),
-    data: {
-      npc,
-      color: factionColors[npc.faction],
-      inCouncil: isInCouncil(npc.id),
-      supportLevel: getSupportLevel(npc.id),
-    },
-  })),
+  state.npcInfluence.npcs.map((npc) => {
+    const pos = layoutPositions.value.find((p) => p.id === npc.id);
+    return {
+      id: npc.id,
+      type: "npc",
+      position: { x: pos?.x ?? 0, y: pos?.y ?? 0 },
+      data: {
+        npc,
+        color: factionColors[npc.faction],
+        inCouncil: isInCouncil(npc.id),
+        supportLevel: getSupportLevel(npc.id),
+      },
+    };
+  }),
 );
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -88,16 +82,15 @@ const edges = computed<Edge[]>(() => {
         id: `${npcs[j].id}-${npcs[i].id}`,
         source: npcs[j].id,
         target: npcs[i].id,
-        type: "default",
+        type: "smoothstep",
         animated: inSameCouncil,
         style: {
-          stroke: inSameCouncil ? "var(--g-color-positive)" : "var(--g-color-border)",
+          stroke: inSameCouncil ? "rgba(134, 239, 172, 0.8)" : "rgba(255, 255, 255, 0.4)",
           strokeWidth: Math.max(1, weight * 4),
-          opacity: Math.max(0.2, weight),
         },
         markerEnd: {
           type: "arrowclosed",
-          color: inSameCouncil ? "var(--g-color-positive)" : "var(--g-color-border)",
+          color: inSameCouncil ? "rgba(134, 239, 172, 0.8)" : "rgba(255, 255, 255, 0.5)",
         },
       });
     }
