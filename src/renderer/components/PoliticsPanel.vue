@@ -5,7 +5,11 @@ import type { Decision } from "../../core/models/Politics";
 import { highlightResources, clearHighlights } from "../directives/ResourceHighlight";
 import { GPanel, GButton, GProgress, GActionCard } from "../ui";
 
+// Reactive state for template bindings (auto-updates when API syncs)
 const state = gameService.getState();
+
+// Domain API for commands and one-off queries
+const api = gameService.api;
 const selectedDecision = ref<Decision | null>(null);
 const decisionResult = ref<string | null>(null);
 
@@ -26,9 +30,9 @@ function selectDecision(decision: Decision): void {
 function makeDecision(): void {
   if (!selectedDecision.value) return;
 
-  const result = gameService.makeDecision(selectedDecision.value.id);
-  if (result) {
-    const impacts = result.impacts
+  const result = api.politics.makeDecision(selectedDecision.value.id);
+  if (result.success) {
+    const impacts = result.data.impacts
       .map((i) => {
         const faction = state.factions.find((f) => f.id === i.factionId);
         const changeStr = i.change >= 0 ? `+${i.change}` : `${i.change}`;
@@ -36,9 +40,11 @@ function makeDecision(): void {
       })
       .join(", ");
 
-    decisionResult.value = result.success
+    decisionResult.value = result.data.success
       ? `Decision made! ${impacts}`
       : `Decision failed. ${impacts}`;
+  } else {
+    console.warn(`Decision failed: ${result.error.type}`, result.error);
   }
 
   selectedDecision.value = null;
@@ -52,7 +58,7 @@ function cancelDecision(): void {
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function canMakeDecision(decision: Decision): boolean {
-  return state.averageSupport >= decision.requiredSupport;
+  return api.politics.canMakeDecision(decision.id).allowed;
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template

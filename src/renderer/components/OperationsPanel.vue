@@ -7,9 +7,14 @@ import {
   EXPLORATION_STANCE,
   EXPEDITIONS,
 } from "../../core/balance/OperationsBalance";
+import type { PolicyType, PolicyValue } from "../../facade";
 import { GPanel, GButton } from "../ui";
 
+// Reactive state for template bindings (auto-updates when API syncs)
 const state = gameService.getState();
+
+// Domain API for commands and one-off queries
+const api = gameService.api;
 // biome-ignore lint/correctness/noUnusedVariables: reserved for future tab-based UI
 const activeTab = ref<"policies" | "buildings" | "missions">("policies");
 
@@ -24,11 +29,11 @@ const policyOptions = {
 };
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function setPolicy(
-  type: "workIntensity" | "resourcePriority" | "explorationStance",
-  value: string,
-) {
-  gameService.setPolicy(type, value);
+function setPolicy(type: PolicyType, value: string): void {
+  const result = api.operations.setPolicy(type, value as PolicyValue);
+  if (!result.success) {
+    console.warn(`Policy change failed: ${result.error.type}`, result.error);
+  }
 }
 
 // Expedition helpers
@@ -49,13 +54,19 @@ function formatExpeditionName(type: string): string {
 
 // Site helpers
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function revealSite(siteId: string) {
-  gameService.revealSite(siteId);
+function revealSite(siteId: string): void {
+  const result = api.operations.revealSite(siteId);
+  if (!result.success) {
+    console.warn(`Reveal failed: ${result.error.type}`, result.error);
+  }
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function developSite(siteId: string) {
-  gameService.developSite(siteId);
+function developSite(siteId: string): void {
+  const result = api.operations.developSite(siteId);
+  if (!result.success) {
+    console.warn(`Development failed: ${result.error.type}`, result.error);
+  }
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
