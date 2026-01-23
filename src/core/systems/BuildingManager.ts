@@ -502,6 +502,18 @@ export class BuildingManager {
     return this.getActiveBuildings().length;
   }
 
+  getTotalMoraleBoost(): number {
+    let total = 0;
+    for (const building of this.buildings.values()) {
+      if (building.status !== "active" || building.broken) continue;
+      const def = this.definitions.get(building.definitionId);
+      if (def?.moraleBoost) {
+        total += def.moraleBoost;
+      }
+    }
+    return total;
+  }
+
   setConstructionSpeedBonus(bonus: number): void {
     this.constructionSpeedBonus = bonus;
   }
