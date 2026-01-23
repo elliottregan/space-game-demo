@@ -296,4 +296,105 @@ describe("GameAPI", () => {
       expect(Object.isFrozen(buildings.definitions)).toBe(true);
     });
   });
+
+  describe("State Reactivity", () => {
+    it("should reflect new pending building immediately after build command", () => {
+      const initialPending = api.buildings.snapshot().pending.length;
+
+      const result = api.buildings.build("solar_panel");
+      expect(result.success).toBe(true);
+
+      // The next snapshot call should immediately show the new building
+      const newPending = api.buildings.snapshot().pending.length;
+      expect(newPending).toBe(initialPending + 1);
+    });
+
+    it("should notify state change listener when building is built", () => {
+      let notificationCount = 0;
+      api.onStateChange(() => {
+        notificationCount++;
+      });
+
+      api.buildings.build("solar_panel");
+
+      expect(notificationCount).toBe(1);
+    });
+
+    it("should accumulate multiple buildings in snapshot", () => {
+      const initialPending = api.buildings.snapshot().pending.length;
+
+      api.buildings.build("solar_panel");
+      api.buildings.build("solar_panel");
+      api.buildings.build("solar_panel");
+
+      const finalPending = api.buildings.snapshot().pending.length;
+      expect(finalPending).toBe(initialPending + 3);
+    });
+
+    it("should update building counts correctly after each build", () => {
+      // Track pending count after each build
+      const counts: number[] = [];
+
+      api.onStateChange(() => {
+        counts.push(api.buildings.snapshot().pending.length);
+      });
+
+      api.buildings.build("solar_panel");
+      api.buildings.build("solar_panel");
+
+      // Each notification should see the updated count
+      expect(counts).toEqual([1, 2]);
+    });
+
+    it("should reflect resource changes after building", () => {
+      const initialMaterials = api.resources.snapshot().current.materials ?? 0;
+      const solarPanelDef = api.buildings.getDefinition("solar_panel");
+      const cost = solarPanelDef?.cost.materials ?? 0;
+
+      api.buildings.build("solar_panel");
+
+      const newMaterials = api.resources.snapshot().current.materials ?? 0;
+      expect(newMaterials).toBe(initialMaterials - cost);
+    });
+
+    it("should show building in active list after construction completes", () => {
+      api.buildings.build("solar_panel");
+      const solarPanelDef = api.buildings.getDefinition("solar_panel");
+      const buildTime = solarPanelDef?.constructionTime ?? 1;
+
+      // Advance time to complete construction
+      for (let i = 0; i < buildTime; i++) {
+        api.game.advanceSol();
+      }
+
+      const snapshot = api.buildings.snapshot();
+      const activeSolarPanels = snapshot.active.filter(
+        (b) => b.definitionId === "solar_panel"
+      );
+      expect(activeSolarPanels.length).toBeGreaterThan(0);
+    });
+
+    it("should move building from pending to active after completion", () => {
+      const initialActive = api.buildings.snapshot().active.length;
+      const initialPending = api.buildings.snapshot().pending.length;
+
+      api.buildings.build("solar_panel");
+
+      // Verify it's in pending
+      expect(api.buildings.snapshot().pending.length).toBe(initialPending + 1);
+      expect(api.buildings.snapshot().active.length).toBe(initialActive);
+
+      // Complete construction
+      const solarPanelDef = api.buildings.getDefinition("solar_panel");
+      const buildTime = solarPanelDef?.constructionTime ?? 1;
+      for (let i = 0; i < buildTime; i++) {
+        api.game.advanceSol();
+      }
+
+      // Verify it moved to active
+      expect(api.buildings.snapshot().active.length).toBe(initialActive + 1);
+      // Pending should be back to initial (the built one moved to active)
+      expect(api.buildings.snapshot().pending.length).toBe(initialPending);
+    });
+  });
 });
