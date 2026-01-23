@@ -3,7 +3,7 @@
 // CLI entry point for running Monte Carlo simulations
 
 import { writeFileSync } from "node:fs";
-import { SimulationRunner, MetricsCollector } from "../src/simulation";
+import { SimulationRunner } from "../src/simulation";
 import type { SimulationConfig } from "../src/simulation";
 
 /**
@@ -130,12 +130,8 @@ function main(): void {
   console.log(`Simulation completed in ${elapsed}s`);
   console.log("");
 
-  // Create a collector to use its printSummary method
-  // We need to reconstruct it since runner doesn't expose the collector
-  const collector = new MetricsCollector();
-
-  // Print summary using stats directly
-  const victories = Math.round(stats.winRate * stats.totalRuns);
+  // Calculate victories from breakdown to avoid rounding errors
+  const victories = Object.values(stats.victoryBreakdown).reduce((a, b) => a + b, 0);
   const defeats = stats.totalRuns - victories;
 
   console.log(`=== Simulation Results (${stats.totalRuns} runs) ===`);
@@ -192,8 +188,14 @@ function main(): void {
       },
       timestamp: new Date().toISOString(),
     };
-    writeFileSync(args.output, JSON.stringify(outputData, null, 2));
-    console.log(`\nResults written to: ${args.output}`);
+    try {
+      writeFileSync(args.output, JSON.stringify(outputData, null, 2));
+      console.log(`\nResults written to: ${args.output}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`\nError writing results to ${args.output}: ${message}`);
+      process.exit(1);
+    }
   }
 }
 
