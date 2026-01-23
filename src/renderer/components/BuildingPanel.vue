@@ -5,16 +5,17 @@ import type { BuildingDefinition } from "../../facade";
 import { highlightResources, clearHighlights } from "../directives/ResourceHighlight";
 import { GPanel, GButton, GProgress } from "../ui";
 
-// Access the type-safe domain API
+// Reactive state for template bindings (auto-updates when API syncs)
+const state = gameService.getState();
+
+// Domain API for commands and one-off queries
 const api = gameService.api;
 
 const selectedCategory = ref<"all" | "available" | "built">("available");
 
-// Computed property for reactive building data
-const buildingsSnapshot = computed(() => api.buildings.snapshot());
-
+// Computed properties use reactive state for proper Vue reactivity
 const availableBuildings = computed(() => {
-  return buildingsSnapshot.value.definitions.filter((def) => {
+  return state.buildingDefinitions.filter((def) => {
     if (def.requiredTech) {
       return api.technology.isResearched(def.requiredTech);
     }
@@ -24,26 +25,25 @@ const availableBuildings = computed(() => {
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const filteredBuildings = computed(() => {
-  const snapshot = buildingsSnapshot.value;
   switch (selectedCategory.value) {
     case "available":
       return availableBuildings.value;
     case "built":
-      return snapshot.definitions.filter(
+      return state.buildingDefinitions.filter(
         (def) =>
-          snapshot.active.some((b) => b.definitionId === def.id) ||
-          snapshot.pending.some((b) => b.definitionId === def.id),
+          state.buildings.some((b) => b.definitionId === def.id) ||
+          state.pendingBuildings.some((b) => b.definitionId === def.id),
       );
     default:
-      return snapshot.definitions;
+      return state.buildingDefinitions;
   }
 });
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-const activeBuildings = computed(() => buildingsSnapshot.value.active);
+const activeBuildings = computed(() => state.buildings);
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-const pendingBuildings = computed(() => buildingsSnapshot.value.pending);
+const pendingBuildings = computed(() => state.pendingBuildings);
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function canBuild(defId: string): boolean {
@@ -66,16 +66,15 @@ function buildBuilding(defId: string): void {
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function getBuildingCount(defId: string): number {
-  const snapshot = api.buildings.snapshot();
   return (
-    snapshot.active.filter((b) => b.definitionId === defId).length +
-    snapshot.pending.filter((b) => b.definitionId === defId).length
+    state.buildings.filter((b) => b.definitionId === defId).length +
+    state.pendingBuildings.filter((b) => b.definitionId === defId).length
   );
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function getPendingCount(defId: string): number {
-  return api.buildings.snapshot().pending.filter((b) => b.definitionId === defId).length;
+  return state.pendingBuildings.filter((b) => b.definitionId === defId).length;
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
