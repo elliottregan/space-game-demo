@@ -15,10 +15,11 @@ export interface SimulationConfig {
 
 /**
  * Victory condition types.
+ * - colony_charter: Colony Charter achieved (pop 40+, morale 60+ sustained)
  * - population: Colony reached 100 population
  * - generation_ship: Generation Ship technology researched
  */
-export type VictoryType = "population" | "generation_ship";
+export type VictoryType = "colony_charter" | "population" | "generation_ship";
 
 /**
  * Defeat condition types.

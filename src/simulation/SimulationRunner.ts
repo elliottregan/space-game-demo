@@ -190,6 +190,11 @@ export class SimulationRunner {
   private mapVictoryType(reason?: string): VictoryType {
     if (!reason) return "population";
 
+    // Check for colony charter victory
+    if (reason.toLowerCase().includes("colony charter")) {
+      return "colony_charter";
+    }
+
     // Check for generation ship victory
     if (reason.toLowerCase().includes("generation ship")) {
       return "generation_ship";

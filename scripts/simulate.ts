@@ -167,6 +167,7 @@ function main(): void {
   if (victories > 0) {
     console.log("\nVictory Breakdown:");
     const victoryNames: Record<string, string> = {
+      colony_charter: "Colony Charter",
       population: "Population (100)",
       generation_ship: "Generation Ship",
     };

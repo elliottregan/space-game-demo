@@ -160,6 +160,7 @@ describe("SimulationRunner", () => {
       // If there are victories, they should be categorized
       if (stats.winRate > 0) {
         const hasCategories =
+          stats.victoryBreakdown["colony_charter"] !== undefined ||
           stats.victoryBreakdown["population"] !== undefined ||
           stats.victoryBreakdown["generation_ship"] !== undefined;
         expect(hasCategories).toBe(true);
