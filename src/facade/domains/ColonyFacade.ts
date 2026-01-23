@@ -3,14 +3,26 @@
 
 import type { GameState } from "../../core/GameState";
 import { ok, err, type Result, type CanDoResult } from "../types/common";
-import type { ColonySnapshot, Colonist, ColonistRole } from "../types";
+import type {
+  ColonySnapshot,
+  Colonist,
+  ColonistRole,
+  Queryable,
+  EntityLookup,
+} from "../types";
 
 type CommandExecutor = <T>(fn: () => Result<T>) => Result<T>;
 
 /**
  * Facade for colony-related queries and commands.
+ *
+ * Implements:
+ * - Queryable<ColonySnapshot> - for snapshot()
+ * - EntityLookup<Colonist> - for getById()
  */
-export class ColonyFacade {
+export class ColonyFacade
+  implements Queryable<ColonySnapshot>, EntityLookup<Colonist>
+{
   constructor(
     private gameState: GameState,
     private executeCommand: CommandExecutor

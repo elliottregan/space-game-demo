@@ -3,14 +3,18 @@
 
 import type { GameState } from "../../core/GameState";
 import { ok, err, type Result, type CanDoResult } from "../types/common";
-import type { PoliticsSnapshot, Decision, DecisionResult } from "../types";
+import type { PoliticsSnapshot, Decision, DecisionResult, Queryable } from "../types";
 
 type CommandExecutor = <T>(fn: () => Result<T>) => Result<T>;
 
 /**
  * Facade for politics-related queries and commands.
+ *
+ * Implements: Queryable<PoliticsSnapshot>
+ *
+ * Note: Uses getDecisionById() instead of getById() due to domain semantics.
  */
-export class PoliticsFacade {
+export class PoliticsFacade implements Queryable<PoliticsSnapshot> {
   constructor(
     private gameState: GameState,
     private executeCommand: CommandExecutor

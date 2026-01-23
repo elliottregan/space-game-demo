@@ -19,6 +19,17 @@ export {
   type StateChangeListener,
 } from "./common";
 
+// Common interfaces for facade patterns
+export type {
+  Queryable,
+  EntityLookup,
+  ActionChecker,
+  CommandExecutor,
+  CheckedAction,
+  QueryOnlyFacade,
+  CommandFacade,
+} from "./interfaces";
+
 // Resource types
 export type { ResourceSnapshot, Resources, ResourceDelta } from "./resources";
 

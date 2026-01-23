@@ -9,6 +9,8 @@ import type {
   BuildingDefinition,
   BuildingMode,
   ResourceDelta,
+  Queryable,
+  EntityLookup,
 } from "../types";
 
 type CommandExecutor = <T>(fn: () => Result<T>) => Result<T>;
@@ -16,8 +18,14 @@ type AffordabilityChecker = (cost: ResourceDelta) => CanDoResult;
 
 /**
  * Facade for building-related queries and commands.
+ *
+ * Implements:
+ * - Queryable<BuildingSnapshot> - for snapshot()
+ * - EntityLookup<Building> - for getById()
  */
-export class BuildingsFacade {
+export class BuildingsFacade
+  implements Queryable<BuildingSnapshot>, EntityLookup<Building>
+{
   constructor(
     private gameState: GameState,
     private executeCommand: CommandExecutor,

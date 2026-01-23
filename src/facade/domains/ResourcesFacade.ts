@@ -3,13 +3,15 @@
 
 import type { GameState } from "../../core/GameState";
 import { RESOURCE_KEYS, type ResourceDelta } from "../../core/models/Resources";
-import type { ResourceSnapshot, CanDoResult } from "../types";
+import type { ResourceSnapshot, CanDoResult, Queryable } from "../types";
 
 /**
  * Facade for resource-related queries.
  * Resources don't have commands - they're modified through other domains.
+ *
+ * Implements: Queryable<ResourceSnapshot>
  */
-export class ResourcesFacade {
+export class ResourcesFacade implements Queryable<ResourceSnapshot> {
   constructor(private gameState: GameState) {}
 
   /**

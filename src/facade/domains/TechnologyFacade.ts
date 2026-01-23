@@ -3,15 +3,27 @@
 
 import type { GameState } from "../../core/GameState";
 import { ok, err, type Result, type CanDoResult } from "../types/common";
-import type { TechnologySnapshot, Technology, ResourceDelta } from "../types";
+import type {
+  TechnologySnapshot,
+  Technology,
+  ResourceDelta,
+  Queryable,
+  EntityLookup,
+} from "../types";
 
 type CommandExecutor = <T>(fn: () => Result<T>) => Result<T>;
 type AffordabilityChecker = (cost: ResourceDelta) => CanDoResult;
 
 /**
  * Facade for technology-related queries and commands.
+ *
+ * Implements:
+ * - Queryable<TechnologySnapshot> - for snapshot()
+ * - EntityLookup<Technology> - for getById()
  */
-export class TechnologyFacade {
+export class TechnologyFacade
+  implements Queryable<TechnologySnapshot>, EntityLookup<Technology>
+{
   constructor(
     private gameState: GameState,
     private executeCommand: CommandExecutor,
