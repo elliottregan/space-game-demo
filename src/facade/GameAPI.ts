@@ -224,7 +224,7 @@ export class GameAPI {
    */
   get politics(): PoliticsFacade {
     if (!this._politics) {
-      this._politics = new PoliticsFacade(this.gameState, this.executeCommand);
+      this._politics = new PoliticsFacade(this.gameState);
     }
     return this._politics;
   }
