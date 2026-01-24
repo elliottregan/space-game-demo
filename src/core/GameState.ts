@@ -4,7 +4,6 @@ import { TechnologyTree } from "./systems/TechnologyTree";
 import { BuildingManager } from "./systems/BuildingManager";
 import { ColonyManager } from "./systems/ColonyManager";
 import { WorkforceManager } from "./systems/WorkforceManager";
-import { PoliticsEngine } from "./systems/PoliticsEngine";
 import { EventManager } from "./systems/EventManager";
 import { VictoryManager } from "./systems/VictoryManager";
 import { OperationsManager } from "./systems/OperationsManager";
@@ -14,7 +13,6 @@ import { STARTING_RESOURCES, STARTING_POPULATION } from "./balance/EconomyBaseli
 import { NPCS, INITIAL_RELATIONSHIPS, PROJECTS } from "./data/npcs";
 import { TECHNOLOGIES } from "./data/technologies";
 import { BUILDINGS } from "./data/buildings";
-import { FACTIONS, DECISIONS } from "./data/factions";
 import { RANDOM_EVENTS } from "./data/events";
 
 export class GameState {
@@ -25,7 +23,6 @@ export class GameState {
   buildings: BuildingManager;
   colony: ColonyManager;
   workforce: WorkforceManager;
-  politics: PoliticsEngine;
   events: EventManager;
   victory: VictoryManager;
   operations: OperationsManager;
@@ -39,7 +36,6 @@ export class GameState {
     this.buildings = new BuildingManager(BUILDINGS);
     this.colony = new ColonyManager(STARTING_POPULATION);
     this.workforce = new WorkforceManager();
-    this.politics = new PoliticsEngine(FACTIONS, DECISIONS);
     this.events = new EventManager(RANDOM_EVENTS);
     this.victory = new VictoryManager();
     this.operations = new OperationsManager();
@@ -76,22 +72,19 @@ export class GameState {
     // 5. Technology tick (research progress)
     events.push(...this.technology.tick());
 
-    // 6. Politics tick (support decay)
-    events.push(...this.politics.tick());
-
-    // 6.5. NPC Influence tick
+    // 6. NPC Influence tick
     events.push(...this.npcInfluence.tick(this.currentSol));
 
-    // 6.6. Operations tick
+    // 7. Operations tick
     events.push(...this.operations.tick(this.currentSol, this.resources, this.colony));
 
-    // 6.7. Deposit extraction tick
+    // 8. Deposit extraction tick
     events.push(...this.processDepositExtraction());
 
-    // 7. Random events tick
+    // 9. Random events tick
     events.push(...this.events.tick(this.currentSol));
 
-    // 8. Victory check
+    // 10. Victory check
     events.push(...this.victory.tick(this.technology, this.colony, this.resources));
 
     // Log events
@@ -208,7 +201,6 @@ export class GameState {
       technology: this.technology.toJSON(),
       buildings: this.buildings.toJSON(),
       colony: this.colony.toJSON(),
-      politics: this.politics.toJSON(),
       events: this.events.toJSON(),
       victory: this.victory.toJSON(),
       operations: this.operations.toJSON(),
@@ -224,7 +216,6 @@ export class GameState {
     state.technology = TechnologyTree.fromJSON(data.technology, TECHNOLOGIES);
     state.buildings = BuildingManager.fromJSON(data.buildings, BUILDINGS);
     state.colony = ColonyManager.fromJSON(data.colony);
-    state.politics = PoliticsEngine.fromJSON(data.politics, DECISIONS);
     state.events = EventManager.fromJSON(data.events, RANDOM_EVENTS);
     state.victory = VictoryManager.fromJSON(data.victory);
 
