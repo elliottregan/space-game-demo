@@ -24,6 +24,7 @@ import {
   LOBBY_BASE_COST,
   PASS_THRESHOLD,
   POLITICAL_PRESSURE_START_SOL,
+  PROJECT_PASS_SUPPORT_BOOST,
   PROJECT_VOTE_DELAY,
   SUCCESS_TRANSMISSION_BOOST,
   TRANSMISSION_FACTORS,
@@ -545,6 +546,18 @@ export class NPCInfluenceManager {
 
         // Boost transmission factors for this project type
         this.modifyTransmissionFactors(project.type, SUCCESS_TRANSMISSION_BOOST);
+
+        // Clear any demand for this project's faction
+        const projectFaction = project.type;
+        this.activeDemands = this.activeDemands.filter(d => d.factionId !== projectFaction);
+
+        // Boost support for all NPCs in this faction
+        for (const npc of this.npcs) {
+          if (npc.faction === projectFaction) {
+            const current = this.npcSupport.get(npc.id) ?? 0;
+            this.npcSupport.set(npc.id, Math.min(1, current + PROJECT_PASS_SUPPORT_BOOST));
+          }
+        }
       } else {
         events.push({
           type: "PROJECT_FAILED",

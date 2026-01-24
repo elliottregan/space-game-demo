@@ -483,6 +483,58 @@ describe('NPCInfluenceManager', () => {
     });
   });
 
+  describe('demand resolution', () => {
+    it('should clear demand and boost support when faction project passes', () => {
+      const resources = new ResourceManager({
+        food: 100, oxygen: 100, water: 100, power: 100, materials: 1000,
+      });
+
+      // Set support above threshold for mars_independence and corporate_interests
+      // mars_independence: maria_santos, james_liu, aisha_patel, marcus_reed
+      manager.adjustNPCSupport('maria_santos', 0.6);
+      manager.adjustNPCSupport('james_liu', 0.6);
+      manager.adjustNPCSupport('aisha_patel', 0.6);
+      manager.adjustNPCSupport('marcus_reed', 0.6);
+      // corporate_interests: elena_volkov, david_morrison, sarah_chen
+      manager.adjustNPCSupport('elena_volkov', 0.6);
+      manager.adjustNPCSupport('david_morrison', 0.6);
+      manager.adjustNPCSupport('sarah_chen', 0.6);
+
+      // Create demand for earth_loyalists (below threshold of 0.5)
+      manager.adjustNPCSupport('chen_wei', 0.4);
+      manager.adjustNPCSupport('nova_silva', 0.4);
+      manager.adjustNPCSupport('alex_okonkwo', 0.4);
+      manager.tick(150);
+
+      expect(manager.getActiveDemands().length).toBe(1);
+      expect(manager.getActiveDemands()[0].factionId).toBe('earth_loyalists');
+
+      // Propose an earth_loyalists project
+      manager.proposeProject('earth_memorial', resources);
+
+      // Lobby everyone to pass (need support above PASS_THRESHOLD which is 0.4)
+      for (const npc of manager.getNPCs()) {
+        manager.lobbyNPC(npc.id, 0.9, resources);
+      }
+
+      // Record support before project resolves
+      const supportBefore = manager.getFactionSupport().earth_loyalists;
+
+      // Run until project resolves (PROJECT_VOTE_DELAY is 10)
+      for (let i = 0; i < 15; i++) {
+        manager.tick(160 + i);
+      }
+
+      // Demand should be cleared
+      const earthDemands = manager.getActiveDemands().filter(d => d.factionId === 'earth_loyalists');
+      expect(earthDemands.length).toBe(0);
+
+      // Support should be boosted (PROJECT_PASS_SUPPORT_BOOST is 0.3)
+      const supportAfter = manager.getFactionSupport().earth_loyalists;
+      expect(supportAfter).toBeGreaterThan(supportBefore);
+    });
+  });
+
   describe('demand deadlines', () => {
     it('should decrement demand deadline each tick', () => {
       manager.adjustNPCSupport('chen_wei', 0.4);
