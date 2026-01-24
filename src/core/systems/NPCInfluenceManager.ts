@@ -15,9 +15,11 @@ import {
   COUNCIL_CREATION_COST,
   COUNCIL_RELATIONSHIP_BOOST,
   DRIFT_RATE,
+  FACTION_SUPPORT_DECAY_RATE,
   FAILURE_TRANSMISSION_PENALTY,
   LOBBY_BASE_COST,
   PASS_THRESHOLD,
+  POLITICAL_PRESSURE_START_SOL,
   PROJECT_VOTE_DELAY,
   SUCCESS_TRANSMISSION_BOOST,
   TRANSMISSION_FACTORS,
@@ -216,6 +218,11 @@ export class NPCInfluenceManager {
     return result;
   }
 
+  adjustNPCSupport(npcId: string, amount: number): void {
+    const current = this.npcSupport.get(npcId) ?? 0;
+    this.npcSupport.set(npcId, Math.max(-1, Math.min(1, current + amount)));
+  }
+
   // ============ Project Proposal ============
 
   /**
@@ -407,8 +414,17 @@ export class NPCInfluenceManager {
   /**
    * Process one game tick. Propagates influence and resolves projects.
    */
-  tick(): GameEvent[] {
+  tick(currentSol: number = 0): GameEvent[] {
     const events: GameEvent[] = [];
+
+    // Apply support decay if past political pressure start
+    if (currentSol >= POLITICAL_PRESSURE_START_SOL) {
+      for (const npc of this.npcs) {
+        const current = this.npcSupport.get(npc.id) ?? 0;
+        const decayed = current - FACTION_SUPPORT_DECAY_RATE;
+        this.npcSupport.set(npc.id, Math.max(-1, decayed));
+      }
+    }
 
     if (!this.activeProject) {
       return events;

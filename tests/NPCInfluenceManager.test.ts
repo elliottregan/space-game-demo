@@ -406,4 +406,24 @@ describe('NPCInfluenceManager', () => {
       expect(support.corporate_interests).toBe(0);
     });
   });
+
+  describe('support decay', () => {
+    it('should decay faction support over time when no project active', () => {
+      // Set initial support above 0
+      manager.adjustNPCSupport('chen_wei', 0.5);
+      manager.adjustNPCSupport('nova_silva', 0.5);
+      manager.adjustNPCSupport('alex_okonkwo', 0.5);
+
+      const initialSupport = manager.getFactionSupport().earth_loyalists;
+      expect(initialSupport).toBe(0.5);
+
+      // Run 10 ticks with currentSol > POLITICAL_PRESSURE_START_SOL
+      for (let i = 0; i < 10; i++) {
+        manager.tick(150 + i); // Pass currentSol
+      }
+
+      const finalSupport = manager.getFactionSupport().earth_loyalists;
+      expect(finalSupport).toBeLessThan(initialSupport);
+    });
+  });
 });
