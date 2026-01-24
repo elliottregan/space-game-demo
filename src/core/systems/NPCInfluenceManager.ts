@@ -121,6 +121,7 @@ export class NPCInfluenceManager {
   private relationshipMatrix: number[][];
   private councils: Council[] = [];
   private activeProject: ActiveProject | null = null;
+  private npcSupport: Map<string, number> = new Map();
 
   /** Mutable transmission factors (modified by project outcomes) */
   private transmissionFactors: Record<ProjectType, Record<NPCFaction, Record<NPCFaction, number>>>;
@@ -139,6 +140,11 @@ export class NPCInfluenceManager {
 
     // Deep copy transmission factors so we can modify them
     this.transmissionFactors = JSON.parse(JSON.stringify(TRANSMISSION_FACTORS));
+
+    // Initialize support for each NPC to 0
+    for (const npc of this.npcs) {
+      this.npcSupport.set(npc.id, 0);
+    }
   }
 
   private buildRelationshipMatrix(relationships: Record<string, number>): number[][] {
@@ -186,6 +192,28 @@ export class NPCInfluenceManager {
 
   getCouncils(): readonly Council[] {
     return this.councils;
+  }
+
+  getFactionSupport(): Record<NPCFaction, number> {
+    const result: Record<NPCFaction, number> = {
+      earth_loyalists: 0,
+      mars_independence: 0,
+      corporate_interests: 0,
+    };
+
+    const factions: NPCFaction[] = ['earth_loyalists', 'mars_independence', 'corporate_interests'];
+    for (const faction of factions) {
+      const factionNpcs = this.npcs.filter(n => n.faction === faction);
+      if (factionNpcs.length === 0) continue;
+
+      const totalSupport = factionNpcs.reduce(
+        (sum, npc) => sum + (this.npcSupport.get(npc.id) ?? 0),
+        0
+      );
+      result[faction] = totalSupport / factionNpcs.length;
+    }
+
+    return result;
   }
 
   // ============ Project Proposal ============

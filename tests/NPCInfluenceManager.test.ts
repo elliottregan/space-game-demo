@@ -391,4 +391,19 @@ describe('NPCInfluenceManager', () => {
       expect(failedEvent!.projectId).toBe('generation_ship');
     });
   });
+
+  describe('faction support', () => {
+    it('should calculate average support per faction', () => {
+      const support = manager.getFactionSupport();
+
+      expect(support.earth_loyalists).toBeDefined();
+      expect(support.mars_independence).toBeDefined();
+      expect(support.corporate_interests).toBeDefined();
+
+      // Initial support should be 0 (neutral)
+      expect(support.earth_loyalists).toBe(0);
+      expect(support.mars_independence).toBe(0);
+      expect(support.corporate_interests).toBe(0);
+    });
+  });
 });
