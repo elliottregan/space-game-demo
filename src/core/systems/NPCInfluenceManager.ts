@@ -593,6 +593,8 @@ export class NPCInfluenceManager {
           }
         : null,
       transmissionFactors: this.transmissionFactors,
+      npcSupport: Object.fromEntries(this.npcSupport),
+      activeDemands: this.activeDemands,
     };
   }
 
@@ -616,6 +618,15 @@ export class NPCInfluenceManager {
         ),
         solsRemaining: data.activeProject.solsRemaining,
       };
+    }
+
+    // Restore new state
+    if (data.npcSupport) {
+      manager.npcSupport = new Map(Object.entries(data.npcSupport).map(([k, v]) => [k, Number(v)]));
+    }
+
+    if (data.activeDemands) {
+      manager.activeDemands = data.activeDemands;
     }
 
     return manager;
