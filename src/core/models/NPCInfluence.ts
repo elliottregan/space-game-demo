@@ -43,3 +43,17 @@ export interface Council {
   /** Relationship boost applied between members */
   relationshipBoost: number;
 }
+
+/**
+ * Represents a demand from a faction to propose one of their projects.
+ */
+export interface FactionDemand {
+  /** Which faction is making the demand */
+  factionId: NPCFaction;
+  /** Sol when the demand was issued */
+  demandedAt: number;
+  /** Sols remaining until demand expires (accelerated decay begins) */
+  deadline: number;
+  /** Project IDs that would satisfy this demand */
+  projectIds: string[];
+}
