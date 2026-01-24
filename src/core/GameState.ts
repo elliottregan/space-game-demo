@@ -80,7 +80,7 @@ export class GameState {
     events.push(...this.politics.tick());
 
     // 6.5. NPC Influence tick
-    events.push(...this.npcInfluence.tick());
+    events.push(...this.npcInfluence.tick(this.currentSol));
 
     // 6.6. Operations tick
     events.push(...this.operations.tick(this.currentSol, this.resources, this.colony));
