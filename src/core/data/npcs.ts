@@ -3,56 +3,26 @@
 import type { NPC, Project } from "../models/NPCInfluence";
 
 export const NPCS: NPC[] = [
-  // Futurists (3)
-  { id: "chen_wei", name: "Dr. Chen Wei", faction: "futurist", influence: 1.5 },
-  { id: "nova_silva", name: "Nova Silva", faction: "futurist", influence: 1.0 },
-  { id: "alex_okonkwo", name: "Alex Okonkwo", faction: "futurist", influence: 1.2 },
+  // Earth Loyalists (3) - formerly futurist
+  { id: "chen_wei", name: "Dr. Chen Wei", faction: "earth_loyalists", influence: 1.5 },
+  { id: "nova_silva", name: "Nova Silva", faction: "earth_loyalists", influence: 1.0 },
+  { id: "alex_okonkwo", name: "Alex Okonkwo", faction: "earth_loyalists", influence: 1.2 },
 
-  // Progressives (4)
-  {
-    id: "maria_santos",
-    name: "Maria Santos",
-    faction: "progressive",
-    influence: 1.3,
-  },
-  { id: "james_liu", name: "James Liu", faction: "progressive", influence: 1.0 },
-  {
-    id: "aisha_patel",
-    name: "Aisha Patel",
-    faction: "progressive",
-    influence: 1.1,
-  },
-  {
-    id: "marcus_reed",
-    name: "Marcus Reed",
-    faction: "progressive",
-    influence: 0.9,
-  },
+  // Mars Independence (4) - formerly progressive
+  { id: "maria_santos", name: "Maria Santos", faction: "mars_independence", influence: 1.3 },
+  { id: "james_liu", name: "James Liu", faction: "mars_independence", influence: 1.0 },
+  { id: "aisha_patel", name: "Aisha Patel", faction: "mars_independence", influence: 1.1 },
+  { id: "marcus_reed", name: "Marcus Reed", faction: "mars_independence", influence: 0.9 },
 
-  // Traditionalists (3)
-  {
-    id: "elena_volkov",
-    name: "Elena Volkov",
-    faction: "traditionalist",
-    influence: 1.4,
-  },
-  {
-    id: "david_morrison",
-    name: "David Morrison",
-    faction: "traditionalist",
-    influence: 1.0,
-  },
-  {
-    id: "sarah_chen",
-    name: "Sarah Chen",
-    faction: "traditionalist",
-    influence: 1.1,
-  },
+  // Corporate Interests (3) - formerly traditionalist
+  { id: "elena_volkov", name: "Elena Volkov", faction: "corporate_interests", influence: 1.4 },
+  { id: "david_morrison", name: "David Morrison", faction: "corporate_interests", influence: 1.0 },
+  { id: "sarah_chen", name: "Sarah Chen", faction: "corporate_interests", influence: 1.1 },
 ];
 
 /** Initial relationship weights (asymmetric). Key format: "fromId:toId" -> weight */
 export const INITIAL_RELATIONSHIPS: Record<string, number> = {
-  // Futurist internal connections (strong)
+  // Earth Loyalists internal connections (strong)
   "chen_wei:nova_silva": 0.7,
   "nova_silva:chen_wei": 0.6,
   "chen_wei:alex_okonkwo": 0.5,
@@ -60,7 +30,7 @@ export const INITIAL_RELATIONSHIPS: Record<string, number> = {
   "nova_silva:alex_okonkwo": 0.4,
   "alex_okonkwo:nova_silva": 0.5,
 
-  // Progressive internal connections (moderate)
+  // Mars Independence internal connections (moderate)
   "maria_santos:james_liu": 0.6,
   "james_liu:maria_santos": 0.5,
   "maria_santos:aisha_patel": 0.5,
@@ -70,7 +40,7 @@ export const INITIAL_RELATIONSHIPS: Record<string, number> = {
   "aisha_patel:marcus_reed": 0.3,
   "marcus_reed:aisha_patel": 0.3,
 
-  // Traditionalist internal connections (strong)
+  // Corporate Interests internal connections (strong)
   "elena_volkov:david_morrison": 0.7,
   "david_morrison:elena_volkov": 0.6,
   "elena_volkov:sarah_chen": 0.5,
