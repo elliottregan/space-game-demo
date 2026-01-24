@@ -60,30 +60,37 @@ export const INITIAL_RELATIONSHIPS: Record<string, number> = {
 };
 
 export const PROJECTS: Project[] = [
-  // Futurist projects
+  // Earth Loyalists projects
   {
     id: "generation_ship",
     name: "Build Generation Ship",
     description: "Begin construction of an interstellar colony ship.",
-    type: "futurist",
+    type: "earth_loyalists",
     proposalCost: { materials: 100 },
     effects: { unlockBuilding: "shipyard" },
   },
   {
-    id: "ai_governance",
-    name: "AI-Assisted Governance",
-    description: "Implement AI systems to help with colony decision-making.",
-    type: "futurist",
-    proposalCost: { materials: 50, power: 50 },
-    effects: { unlockTech: "advanced_ai" },
+    id: "earth_memorial",
+    name: "Earth Memorial",
+    description: "Build a memorial to honor our home planet.",
+    type: "earth_loyalists",
+    proposalCost: { materials: 40 },
+  },
+  {
+    id: "heritage_archive",
+    name: "Heritage Archive",
+    description: "Preserve Earth cultures and traditions.",
+    type: "earth_loyalists",
+    proposalCost: { materials: 50 },
+    effects: { unlockBuilding: "archive" },
   },
 
-  // Progressive projects
+  // Mars Independence projects
   {
     id: "universal_housing",
     name: "Universal Housing Initiative",
     description: "Guarantee housing for all colonists.",
-    type: "progressive",
+    type: "mars_independence",
     proposalCost: { materials: 80 },
     effects: { unlockBuilding: "housing_complex" },
   },
@@ -91,25 +98,33 @@ export const PROJECTS: Project[] = [
     id: "healthcare_expansion",
     name: "Healthcare Expansion",
     description: "Expand medical facilities and access.",
-    type: "progressive",
+    type: "mars_independence",
     proposalCost: { materials: 60, water: 30 },
     effects: { unlockBuilding: "medical_center" },
   },
 
-  // Traditionalist projects
+  // Corporate Interests projects
   {
-    id: "earth_memorial",
-    name: "Earth Memorial",
-    description: "Build a memorial to honor our home planet.",
-    type: "traditionalist",
-    proposalCost: { materials: 40 },
+    id: "ai_governance",
+    name: "AI-Assisted Governance",
+    description: "Implement AI systems to help with colony decision-making.",
+    type: "corporate_interests",
+    proposalCost: { materials: 50, power: 50 },
+    effects: { unlockTech: "advanced_ai" },
   },
   {
-    id: "heritage_archive",
-    name: "Heritage Archive",
-    description: "Preserve Earth cultures and traditions.",
-    type: "traditionalist",
-    proposalCost: { materials: 50 },
-    effects: { unlockBuilding: "archive" },
+    id: "mining_concession",
+    name: "Mining Concession",
+    description: "Grant exclusive extraction rights to corporate partners.",
+    type: "corporate_interests",
+    proposalCost: { materials: 60 },
+    effects: { unlockBuilding: "efficient_mine" },
+  },
+  {
+    id: "labor_efficiency",
+    name: "Labor Efficiency Program",
+    description: "Controversial productivity initiative that increases output.",
+    type: "corporate_interests",
+    proposalCost: { materials: 40 },
   },
 ];

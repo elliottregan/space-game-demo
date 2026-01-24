@@ -25,6 +25,19 @@ describe('NPCInfluenceManager', () => {
     });
   });
 
+  describe('project assignments', () => {
+    it('should have projects for each faction', () => {
+      const projects = manager.getProjects();
+      const earthProjects = projects.filter(p => p.type === 'earth_loyalists');
+      const marsProjects = projects.filter(p => p.type === 'mars_independence');
+      const corpProjects = projects.filter(p => p.type === 'corporate_interests');
+
+      expect(earthProjects.length).toBeGreaterThanOrEqual(2);
+      expect(marsProjects.length).toBeGreaterThanOrEqual(2);
+      expect(corpProjects.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
   describe('initialization', () => {
     it('should store all NPCs', () => {
       const npcs = manager.getNPCs();
@@ -33,7 +46,7 @@ describe('NPCInfluenceManager', () => {
 
     it('should store all projects', () => {
       const projects = manager.getProjects();
-      expect(projects.length).toBe(6);
+      expect(projects.length).toBe(8);
     });
 
     it('should build relationship matrix from initial data', () => {
