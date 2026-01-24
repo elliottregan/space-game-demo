@@ -482,4 +482,47 @@ describe('NPCInfluenceManager', () => {
       expect(earthDemands.length).toBe(1);
     });
   });
+
+  describe('demand deadlines', () => {
+    it('should decrement demand deadline each tick', () => {
+      manager.adjustNPCSupport('chen_wei', 0.4);
+      manager.adjustNPCSupport('nova_silva', 0.4);
+      manager.adjustNPCSupport('alex_okonkwo', 0.4);
+
+      manager.tick(150);
+      const initialDeadline = manager.getActiveDemands()[0].deadline;
+
+      manager.tick(151);
+      const newDeadline = manager.getActiveDemands()[0].deadline;
+
+      expect(newDeadline).toBe(initialDeadline - 1);
+    });
+
+    it('should apply accelerated decay when demand deadline expires', () => {
+      manager.adjustNPCSupport('chen_wei', 0.6);
+      manager.adjustNPCSupport('nova_silva', 0.6);
+      manager.adjustNPCSupport('alex_okonkwo', 0.6);
+
+      // Force a demand with low support
+      manager.adjustNPCSupport('chen_wei', -0.3);
+      manager.adjustNPCSupport('nova_silva', -0.3);
+      manager.adjustNPCSupport('alex_okonkwo', -0.3);
+
+      manager.tick(150); // Generate demand
+
+      // Expire the deadline (60 sols + a bit more)
+      for (let i = 0; i < 65; i++) {
+        manager.tick(151 + i);
+      }
+
+      // Demand should still exist but with deadline <= 0
+      const demand = manager.getActiveDemands().find(d => d.factionId === 'earth_loyalists');
+      expect(demand).toBeDefined();
+      expect(demand!.deadline).toBeLessThanOrEqual(0);
+
+      // Support should have decayed faster (3x rate after deadline)
+      const support = manager.getFactionSupport().earth_loyalists;
+      expect(support).toBeLessThan(0); // Should be significantly negative
+    });
+  });
 });

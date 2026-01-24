@@ -20,6 +20,7 @@ import {
   DRIFT_RATE,
   FACTION_SUPPORT_DECAY_RATE,
   FAILURE_TRANSMISSION_PENALTY,
+  IGNORED_DEMAND_DECAY_MULTIPLIER,
   LOBBY_BASE_COST,
   PASS_THRESHOLD,
   POLITICAL_PRESSURE_START_SOL,
@@ -476,9 +477,22 @@ export class NPCInfluenceManager {
 
     // Apply support decay if past political pressure start
     if (currentSol >= POLITICAL_PRESSURE_START_SOL) {
+      // Decrement demand deadlines first
+      for (const demand of this.activeDemands) {
+        demand.deadline--;
+      }
+
+      // Calculate decay rate per NPC based on their faction's demand status
       for (const npc of this.npcs) {
         const current = this.npcSupport.get(npc.id) ?? 0;
-        const decayed = current - FACTION_SUPPORT_DECAY_RATE;
+
+        // Check if this NPC's faction has an expired demand
+        const factionDemand = this.activeDemands.find(d => d.factionId === npc.faction);
+        const multiplier = (factionDemand && factionDemand.deadline <= 0)
+          ? IGNORED_DEMAND_DECAY_MULTIPLIER
+          : 1;
+
+        const decayed = current - (FACTION_SUPPORT_DECAY_RATE * multiplier);
         this.npcSupport.set(npc.id, Math.max(-1, decayed));
       }
 
