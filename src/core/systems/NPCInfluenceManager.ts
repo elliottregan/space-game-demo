@@ -10,10 +10,13 @@ import type {
   ProjectType,
   ActiveProject,
   Council,
+  FactionDemand,
 } from "../models/NPCInfluence";
 import {
   COUNCIL_CREATION_COST,
   COUNCIL_RELATIONSHIP_BOOST,
+  DEMAND_DEADLINE,
+  DEMAND_THRESHOLD,
   DRIFT_RATE,
   FACTION_SUPPORT_DECAY_RATE,
   FAILURE_TRANSMISSION_PENALTY,
@@ -124,6 +127,7 @@ export class NPCInfluenceManager {
   private councils: Council[] = [];
   private activeProject: ActiveProject | null = null;
   private npcSupport: Map<string, number> = new Map();
+  private activeDemands: FactionDemand[] = [];
 
   /** Mutable transmission factors (modified by project outcomes) */
   private transmissionFactors: Record<ProjectType, Record<NPCFaction, Record<NPCFaction, number>>>;
@@ -221,6 +225,19 @@ export class NPCInfluenceManager {
   adjustNPCSupport(npcId: string, amount: number): void {
     const current = this.npcSupport.get(npcId) ?? 0;
     this.npcSupport.set(npcId, Math.max(-1, Math.min(1, current + amount)));
+  }
+
+  getActiveDemands(): readonly FactionDemand[] {
+    return this.activeDemands;
+  }
+
+  private getFactionDisplayName(faction: NPCFaction): string {
+    const names: Record<NPCFaction, string> = {
+      earth_loyalists: "Earth Loyalists",
+      mars_independence: "Mars Independence",
+      corporate_interests: "Corporate Interests",
+    };
+    return names[faction];
   }
 
   // ============ Project Proposal ============
@@ -357,6 +374,46 @@ export class NPCInfluenceManager {
     return true;
   }
 
+  // ============ Demand Generation ============
+
+  private checkAndGenerateDemands(currentSol: number): GameEvent[] {
+    const events: GameEvent[] = [];
+    const factionSupport = this.getFactionSupport();
+    const factions: NPCFaction[] = ['earth_loyalists', 'mars_independence', 'corporate_interests'];
+
+    for (const faction of factions) {
+      // Skip if already has active demand
+      if (this.activeDemands.some(d => d.factionId === faction)) {
+        continue;
+      }
+
+      // Check if support below threshold
+      if (factionSupport[faction] < DEMAND_THRESHOLD) {
+        const factionProjects = Array.from(this.projects.values())
+          .filter(p => p.type === faction)
+          .map(p => p.id);
+
+        if (factionProjects.length > 0) {
+          const demand: FactionDemand = {
+            factionId: faction,
+            demandedAt: currentSol,
+            deadline: DEMAND_DEADLINE,
+            projectIds: factionProjects,
+          };
+
+          this.activeDemands.push(demand);
+
+          events.push({
+            type: "FACTION_DEMAND",
+            message: `${this.getFactionDisplayName(faction)} demands you propose one of their projects!`,
+          });
+        }
+      }
+    }
+
+    return events;
+  }
+
   // ============ Tick / Game Loop ============
 
   /**
@@ -424,6 +481,9 @@ export class NPCInfluenceManager {
         const decayed = current - FACTION_SUPPORT_DECAY_RATE;
         this.npcSupport.set(npc.id, Math.max(-1, decayed));
       }
+
+      // Check for new demands
+      events.push(...this.checkAndGenerateDemands(currentSol));
     }
 
     if (!this.activeProject) {

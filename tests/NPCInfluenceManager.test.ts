@@ -426,4 +426,60 @@ describe('NPCInfluenceManager', () => {
       expect(finalSupport).toBeLessThan(initialSupport);
     });
   });
+
+  describe('faction demands', () => {
+    it('should generate demand when faction support drops below threshold', () => {
+      // Start with no demands
+      expect(manager.getActiveDemands()).toEqual([]);
+
+      // Set support above threshold for mars_independence and corporate_interests
+      // mars_independence: maria_santos, james_liu, aisha_patel, marcus_reed
+      manager.adjustNPCSupport('maria_santos', 0.6);
+      manager.adjustNPCSupport('james_liu', 0.6);
+      manager.adjustNPCSupport('aisha_patel', 0.6);
+      manager.adjustNPCSupport('marcus_reed', 0.6);
+      // corporate_interests: elena_volkov, david_morrison, sarah_chen
+      manager.adjustNPCSupport('elena_volkov', 0.6);
+      manager.adjustNPCSupport('david_morrison', 0.6);
+      manager.adjustNPCSupport('sarah_chen', 0.6);
+
+      // Set support below threshold for earth_loyalists (threshold is 0.5)
+      // earth_loyalists: chen_wei, nova_silva, alex_okonkwo
+      manager.adjustNPCSupport('chen_wei', 0.4);
+      manager.adjustNPCSupport('nova_silva', 0.4);
+      manager.adjustNPCSupport('alex_okonkwo', 0.4);
+
+      // Tick to trigger demand check
+      manager.tick(150);
+
+      const demands = manager.getActiveDemands();
+      expect(demands.length).toBe(1);
+      expect(demands[0].factionId).toBe('earth_loyalists');
+      expect(demands[0].projectIds.length).toBeGreaterThan(0);
+    });
+
+    it('should not duplicate demands for same faction', () => {
+      // Set support above threshold for mars_independence and corporate_interests
+      manager.adjustNPCSupport('maria_santos', 0.6);
+      manager.adjustNPCSupport('james_liu', 0.6);
+      manager.adjustNPCSupport('aisha_patel', 0.6);
+      manager.adjustNPCSupport('marcus_reed', 0.6);
+      manager.adjustNPCSupport('elena_volkov', 0.6);
+      manager.adjustNPCSupport('david_morrison', 0.6);
+      manager.adjustNPCSupport('sarah_chen', 0.6);
+
+      // Set support below threshold for earth_loyalists
+      manager.adjustNPCSupport('chen_wei', 0.4);
+      manager.adjustNPCSupport('nova_silva', 0.4);
+      manager.adjustNPCSupport('alex_okonkwo', 0.4);
+
+      manager.tick(150);
+      manager.tick(151);
+      manager.tick(152);
+
+      const demands = manager.getActiveDemands();
+      const earthDemands = demands.filter(d => d.factionId === 'earth_loyalists');
+      expect(earthDemands.length).toBe(1);
+    });
+  });
 });
