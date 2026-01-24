@@ -14,6 +14,17 @@ describe('NPCInfluenceManager', () => {
     manager = new NPCInfluenceManager(NPCS, INITIAL_RELATIONSHIPS, PROJECTS);
   });
 
+  describe('faction types', () => {
+    it('should have NPCs in earth_loyalists, mars_independence, and corporate_interests factions', () => {
+      const npcs = manager.getNPCs();
+      const factions = new Set(npcs.map(n => n.faction));
+      expect(factions.has('earth_loyalists')).toBe(true);
+      expect(factions.has('mars_independence')).toBe(true);
+      expect(factions.has('corporate_interests')).toBe(true);
+      expect(factions.size).toBe(3);
+    });
+  });
+
   describe('initialization', () => {
     it('should store all NPCs', () => {
       const npcs = manager.getNPCs();

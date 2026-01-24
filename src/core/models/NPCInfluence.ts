@@ -1,6 +1,6 @@
 import type { ResourceDelta } from "./Resources";
 
-export type NPCFaction = "traditionalist" | "progressive" | "futurist";
+export type NPCFaction = "earth_loyalists" | "mars_independence" | "corporate_interests";
 
 export interface NPC {
   id: string;
@@ -10,7 +10,7 @@ export interface NPC {
   influence: number;
 }
 
-export type ProjectType = "traditionalist" | "progressive" | "futurist";
+export type ProjectType = "earth_loyalists" | "mars_independence" | "corporate_interests";
 
 export interface Project {
   id: string;
