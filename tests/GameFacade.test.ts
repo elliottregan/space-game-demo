@@ -164,8 +164,8 @@ describe("GameAPI", () => {
     it("should return politics snapshot", () => {
       const politics = api.politics.snapshot();
       expect(politics.factions).toBeDefined();
-      expect(politics.averageSupport).toBeDefined();
-      expect(politics.decisions).toBeDefined();
+      expect(politics.factions.length).toBeGreaterThan(0);
+      expect(politics.demands).toBeDefined();
     });
   });
 

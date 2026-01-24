@@ -72,7 +72,7 @@ export class EventsFacade {
         choiceId,
         this.gameState.resources,
         this.gameState.colony,
-        this.gameState.politics,
+        this.gameState.npcInfluence,
       );
 
       this.addEvents(events);
