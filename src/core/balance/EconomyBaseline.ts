@@ -17,6 +17,6 @@ export const STARTING_RESOURCES: Resources = {
 
 export const STARTING_POPULATION = 10;
 
-export const POPULATION_GROWTH_RATE = 0.005;
+export const POPULATION_GROWTH_RATE = 0.02;
 
 export const MIN_POPULATION_FOR_GROWTH = 20;
