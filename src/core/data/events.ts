@@ -179,6 +179,78 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
       },
     ],
   },
+  // Corporate immigration events - population growth with political tradeoffs
+  {
+    id: "corporate_workforce_initiative",
+    name: "Corporate Workforce Initiative",
+    description:
+      "Helios Corp wants to establish a presence on Mars. They're offering to send 8 skilled workers if you agree to favorable trade terms.",
+    minSol: 50,
+    chance: 0.04,
+    weight: 6,
+    choices: [
+      {
+        id: "accept_terms",
+        text: "Accept their terms (8 workers, corporate influence)",
+        effects: {
+          population: 8,
+          resources: { food: -40 },
+          support: { corporate_interests: 15, mars_independence: -10 },
+        },
+      },
+      {
+        id: "negotiate",
+        text: "Negotiate better terms (fewer workers, materials bonus)",
+        effects: {
+          population: 4,
+          resources: { materials: 60 },
+          support: { corporate_interests: 5 },
+        },
+      },
+      {
+        id: "decline",
+        text: "Decline corporate involvement",
+        effects: {
+          support: { mars_independence: 10, corporate_interests: -5 },
+        },
+      },
+    ],
+  },
+  {
+    id: "independence_volunteers",
+    name: "Mars Independence Volunteers",
+    description:
+      "A group of pro-independence activists from Earth want to join your colony. They bring enthusiasm but limited supplies.",
+    minSol: 80,
+    chance: 0.04,
+    weight: 5,
+    choices: [
+      {
+        id: "welcome_volunteers",
+        text: "Welcome them with open arms",
+        effects: {
+          population: 5,
+          support: { mars_independence: 15, earth_loyalists: -5 },
+        },
+      },
+      {
+        id: "conditional_entry",
+        text: "Accept if they contribute materials",
+        effects: {
+          population: 3,
+          resources: { materials: 40 },
+          support: { mars_independence: 5 },
+        },
+      },
+      {
+        id: "reject",
+        text: "Too politically risky right now",
+        effects: {
+          support: { earth_loyalists: 5, mars_independence: -10 },
+        },
+      },
+    ],
+  },
   {
     id: "equipment_failure",
     name: "Critical Equipment Failure",

@@ -12,23 +12,23 @@ export interface VictoryState {
 
 /**
  * Colony Charter victory requirements.
- * Target: ~500 sols for a faster victory path.
+ * Target: ~500-800 sols for a challenging victory path.
  *
  * Balance rationale:
- * - Population 10: Starting population (modest requirement)
+ * - Population 30: Requires 3x starting population, forcing infrastructure scaling
  * - Morale 60: Achievable once water production is established
- * - 300 sustained sols: Stability window after techs complete
+ * - 200 sustained sols: Stability window after techs complete (reduced from 300)
  * - 3 techs: hydroponics (60) + water_recycling (45) + advanced_materials (75) = 180 sols
  *
- * Expected timeline: ~180 (tech) + ~300 (sustained) = ~480 sols
+ * Expected timeline: ~180 (tech) + growth to 30 pop + ~200 (sustained) = ~500-800 sols
  *
- * Note: The simulation uses HeuristicStrategy which builds water extractors on
- * initial water deposits to maintain positive water flow and morale recovery.
+ * Note: Population growth requires pop >= 20, health > 80, morale > 60 with 0.5% chance/sol.
+ * Immigration events can accelerate growth with political tradeoffs.
  */
 export const COLONY_CHARTER_REQUIREMENTS = {
-  minPopulation: 10,
+  minPopulation: 30,
   minMorale: 60,
-  sustainedSols: 300,
+  sustainedSols: 200,
   requiredTechs: ["hydroponics", "water_recycling", "advanced_materials"],
 };
 
