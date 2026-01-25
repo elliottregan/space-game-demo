@@ -60,8 +60,8 @@ export class GameState {
     // 1. Resources tick (production/consumption)
     events.push(...this.resources.tick());
 
-    // 2. Buildings tick (construction progress)
-    events.push(...this.buildings.tick(this.resources));
+    // 2. Buildings tick (construction progress, maintenance decay)
+    events.push(...this.buildings.tick(this.resources, this.currentSol));
 
     // 3. Workforce tick (training, experience)
     events.push(...this.workforce.tick(this.colony));

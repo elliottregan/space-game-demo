@@ -12,6 +12,14 @@ import {
   REPURPOSE_COST_MULTIPLIER,
   REPURPOSE_TIME_MULTIPLIER,
 } from "../balance/OperationsBalance";
+import {
+  MAINTENANCE_START_SOL,
+  CONDITION_DECAY_INTERVAL,
+  CONDITION_DECAY_AMOUNT,
+  CONDITION_EFFICIENCY_THRESHOLD,
+  CONDITION_EFFICIENCY_PENALTY,
+  MAINTENANCE_COST_MULTIPLIER,
+} from "../balance/BuildingBalance";
 import type { ResourceDelta } from "../models/Resources";
 
 export class BuildingManager {
@@ -26,7 +34,12 @@ export class BuildingManager {
     });
   }
 
-  tick(resources: ResourceManager): GameEvent[] {
+  private currentSol: number = 0;
+
+  tick(resources: ResourceManager, currentSol?: number): GameEvent[] {
+    if (currentSol !== undefined) {
+      this.currentSol = currentSol;
+    }
     const events: GameEvent[] = [];
     const buildingsToDelete: string[] = [];
 
@@ -117,6 +130,53 @@ export class BuildingManager {
           buildingsToDelete.push(building.id);
         }
       }
+
+      // Handle building aging and condition decay
+      if (building.status === "active" && !building.broken) {
+        building.age += 1;
+
+        // Condition decay starts after MAINTENANCE_START_SOL
+        if (this.currentSol >= MAINTENANCE_START_SOL) {
+          // Decay condition every CONDITION_DECAY_INTERVAL sols
+          if (building.age % CONDITION_DECAY_INTERVAL === 0 && building.condition > 0) {
+            const oldCondition = building.condition;
+            building.condition = Math.max(0, building.condition - CONDITION_DECAY_AMOUNT);
+
+            // Check if crossing efficiency threshold - need to update production/consumption
+            if (
+              oldCondition >= CONDITION_EFFICIENCY_THRESHOLD &&
+              building.condition < CONDITION_EFFICIENCY_THRESHOLD
+            ) {
+              // Remove old production/consumption and re-add with penalty
+              const oldProd = this.getEffectiveProductionWithCondition(building.id, oldCondition);
+              const oldCons = this.getEffectiveConsumptionWithCondition(building.id, oldCondition);
+              if (Object.keys(oldProd).length > 0) {
+                resources.removeProduction(oldProd);
+              }
+              if (Object.keys(oldCons).length > 0) {
+                resources.removeConsumption(oldCons);
+              }
+
+              const newProd = this.getEffectiveProduction(building.id);
+              const newCons = this.getEffectiveConsumption(building.id);
+              if (Object.keys(newProd).length > 0) {
+                resources.addProduction(newProd);
+              }
+              if (Object.keys(newCons).length > 0) {
+                resources.addConsumption(newCons);
+              }
+
+              events.push({
+                type: "BUILDING_DEGRADED",
+                buildingId: building.id,
+                buildingName: def.name,
+                severity: "warning",
+                message: `${def.name} condition critical - efficiency reduced!`,
+              });
+            }
+          }
+        }
+      }
     }
 
     // Delete buildings that were recycled (outside of iteration loop)
@@ -158,6 +218,9 @@ export class BuildingManager {
       mode: "normal",
       broken: false,
       repairProgress: 0,
+      condition: 100,
+      age: 0,
+      lastMaintenance: this.currentSol,
     };
 
     this.buildings.set(building.id, building);
@@ -251,6 +314,72 @@ export class BuildingManager {
   isRepairing(buildingId: string): boolean {
     const building = this.buildings.get(buildingId);
     return building?.broken === true && building.repairProgress > 0;
+  }
+
+  getMaintenanceCost(buildingId: string): ResourceDelta | undefined {
+    const building = this.buildings.get(buildingId);
+    if (!building) return undefined;
+    if (building.status !== "active" || building.broken) return undefined;
+
+    const def = this.definitions.get(building.definitionId);
+    if (!def) return undefined;
+
+    const cost: ResourceDelta = {};
+    for (const [key, value] of Object.entries(def.cost)) {
+      if (value) {
+        cost[key as keyof ResourceDelta] = Math.ceil(value * MAINTENANCE_COST_MULTIPLIER);
+      }
+    }
+    return cost;
+  }
+
+  canPerformMaintenance(buildingId: string, resources: ResourceManager): boolean {
+    const cost = this.getMaintenanceCost(buildingId);
+    if (!cost) return false;
+    return resources.canAfford(cost);
+  }
+
+  performMaintenance(buildingId: string, resources: ResourceManager): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+    if (building.status !== "active" || building.broken) return false;
+
+    const cost = this.getMaintenanceCost(buildingId);
+    if (!cost || !resources.canAfford(cost)) return false;
+
+    // Check if condition was below threshold (production/consumption needs update)
+    const wasBelow = building.condition < CONDITION_EFFICIENCY_THRESHOLD;
+
+    resources.deduct(cost);
+
+    // If we were below threshold, remove old production/consumption first
+    if (wasBelow) {
+      const oldProd = this.getEffectiveProduction(buildingId);
+      const oldCons = this.getEffectiveConsumption(buildingId);
+      if (Object.keys(oldProd).length > 0) {
+        resources.removeProduction(oldProd);
+      }
+      if (Object.keys(oldCons).length > 0) {
+        resources.removeConsumption(oldCons);
+      }
+    }
+
+    building.condition = 100;
+    building.lastMaintenance = this.currentSol;
+
+    // If we were below threshold, add new production/consumption with full efficiency
+    if (wasBelow) {
+      const newProd = this.getEffectiveProduction(buildingId);
+      const newCons = this.getEffectiveConsumption(buildingId);
+      if (Object.keys(newProd).length > 0) {
+        resources.addProduction(newProd);
+      }
+      if (Object.keys(newCons).length > 0) {
+        resources.addConsumption(newCons);
+      }
+    }
+
+    return true;
   }
 
   getRecycleValue(buildingId: string): ResourceDelta | undefined {
@@ -436,6 +565,13 @@ export class BuildingManager {
     return this.buildings.get(buildingId)?.mode;
   }
 
+  private getConditionMultiplier(condition: number): number {
+    if (condition < CONDITION_EFFICIENCY_THRESHOLD) {
+      return 1 - CONDITION_EFFICIENCY_PENALTY;
+    }
+    return 1;
+  }
+
   getEffectiveProduction(buildingId: string): ResourceDelta {
     const building = this.buildings.get(buildingId);
     if (!building || building.status !== "active" || building.broken) return {};
@@ -444,10 +580,29 @@ export class BuildingManager {
     if (!def?.production) return {};
 
     const modeMultiplier = BUILDING_MODES[building.mode].production;
+    const conditionMultiplier = this.getConditionMultiplier(building.condition);
     const result: ResourceDelta = {};
 
     for (const [key, value] of Object.entries(def.production)) {
-      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier;
+      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier * conditionMultiplier;
+    }
+
+    return result;
+  }
+
+  getEffectiveProductionWithCondition(buildingId: string, condition: number): ResourceDelta {
+    const building = this.buildings.get(buildingId);
+    if (!building || building.status !== "active" || building.broken) return {};
+
+    const def = this.definitions.get(building.definitionId);
+    if (!def?.production) return {};
+
+    const modeMultiplier = BUILDING_MODES[building.mode].production;
+    const conditionMultiplier = this.getConditionMultiplier(condition);
+    const result: ResourceDelta = {};
+
+    for (const [key, value] of Object.entries(def.production)) {
+      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier * conditionMultiplier;
     }
 
     return result;
@@ -461,10 +616,29 @@ export class BuildingManager {
     if (!def?.consumption) return {};
 
     const modeMultiplier = BUILDING_MODES[building.mode].consumption;
+    const conditionMultiplier = this.getConditionMultiplier(building.condition);
     const result: ResourceDelta = {};
 
     for (const [key, value] of Object.entries(def.consumption)) {
-      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier;
+      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier * conditionMultiplier;
+    }
+
+    return result;
+  }
+
+  getEffectiveConsumptionWithCondition(buildingId: string, condition: number): ResourceDelta {
+    const building = this.buildings.get(buildingId);
+    if (!building || building.status !== "active" || building.broken) return {};
+
+    const def = this.definitions.get(building.definitionId);
+    if (!def?.consumption) return {};
+
+    const modeMultiplier = BUILDING_MODES[building.mode].consumption;
+    const conditionMultiplier = this.getConditionMultiplier(condition);
+    const result: ResourceDelta = {};
+
+    for (const [key, value] of Object.entries(def.consumption)) {
+      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier * conditionMultiplier;
     }
 
     return result;
@@ -569,6 +743,9 @@ export class BuildingManager {
         repairProgress: b.repairProgress ?? 0,
         recyclingProgress: b.recyclingProgress,
         repurposeFromDefId: b.repurposeFromDefId,
+        condition: b.condition ?? 100,
+        age: b.age ?? 0,
+        lastMaintenance: b.lastMaintenance ?? 0,
       };
       manager.buildings.set(building.id, building);
     });
