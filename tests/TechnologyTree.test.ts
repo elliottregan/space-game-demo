@@ -174,5 +174,45 @@ describe('TechnologyTree', () => {
       expect(chain).not.toContain('hydroponics');
       expect(chain).toEqual(['genetics']);
     });
+
+    it('should queue all prerequisites when calling queueResearch on locked tech', () => {
+      // genetics needs hydroponics
+      tree.queueResearch('genetics', resources);
+
+      expect(tree.getResearchQueue()).toEqual(['hydroponics', 'genetics']);
+      expect(tree.getCurrentResearchId()).toBe('hydroponics');
+    });
+
+    it('should merge queues when changing target', () => {
+      // Start with genetics (needs hydroponics)
+      tree.queueResearch('genetics', resources);
+      expect(tree.getResearchQueue()).toEqual(['hydroponics', 'genetics']);
+
+      // Advance hydroponics 10 sols
+      for (let i = 0; i < 10; i++) {
+        tree.tick();
+      }
+      expect(tree.getResearchProgress('hydroponics')).toBe(10);
+
+      // Change to advanced_medicine (needs hydroponics, genetics, advanced_medicine)
+      tree.queueResearch('advanced_medicine', resources);
+
+      // hydroponics still in queue (shared), genetics still needed, advanced_medicine added
+      expect(tree.getResearchQueue()).toEqual(['hydroponics', 'genetics', 'advanced_medicine']);
+      // Progress preserved
+      expect(tree.getResearchProgress('hydroponics')).toBe(10);
+    });
+
+    it('should remove techs not in new chain when changing target', () => {
+      // Start with robotics (needs advanced_materials)
+      tree.queueResearch('robotics', resources);
+      expect(tree.getResearchQueue()).toEqual(['advanced_materials', 'robotics']);
+
+      // Change to genetics (needs hydroponics)
+      tree.queueResearch('genetics', resources);
+
+      // robotics and advanced_materials removed, new chain used
+      expect(tree.getResearchQueue()).toEqual(['hydroponics', 'genetics']);
+    });
   });
 });

@@ -153,6 +153,47 @@ export class TechnologyTree {
   }
 
   /**
+   * Queue a technology and all its prerequisites.
+   * Preserves progress for all techs. Starts researching the first
+   * unresearched tech in the chain.
+   */
+  queueResearch(techId: string, resources: ResourceManager): boolean {
+    const chain = this.getPrerequisiteChain(techId);
+    if (chain.length === 0) return false;
+
+    // Update queue to new chain
+    this.researchQueue = chain;
+
+    // Find first unresearched tech in chain to start
+    const firstTech = chain[0];
+
+    // If we're not already researching the first tech, switch to it
+    if (this.currentResearchId !== firstTech) {
+      // Don't clear progress - it's preserved in the map
+      this.currentResearchId = null;
+
+      // Start the first tech (will deduct resources if needed)
+      const tech = this.technologies.get(firstTech);
+      if (tech) {
+        // Only deduct resources if not already in progress
+        if (!this.researchProgress.has(firstTech)) {
+          if (tech.cost.resources) {
+            if (!resources.canAfford(tech.cost.resources)) {
+              // Can't afford - queue is set but nothing starts yet
+              return true;
+            }
+            resources.deduct(tech.cost.resources);
+          }
+          this.researchProgress.set(firstTech, 0);
+        }
+        this.currentResearchId = firstTech;
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * Returns all unresearched prerequisites in topological order,
    * ending with the target tech.
    */
