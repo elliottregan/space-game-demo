@@ -41,6 +41,7 @@ interface GameUIState {
   health: number;
   morale: number;
   moraleBoost: number;
+  totalOxygenContribution: number;
   colonists: Colonist[];
   skillDefinitions: SkillDefinition[];
   housingAssignments: Record<string, Colonist[]>;
@@ -149,6 +150,7 @@ class GameService {
       health: 100,
       morale: 100,
       moraleBoost: 0,
+      totalOxygenContribution: 0,
       colonists: [],
       skillDefinitions: [],
       housingAssignments: {},
@@ -220,6 +222,7 @@ class GameService {
     this.state.pendingBuildings = [...buildings.pending];
     this.state.buildingDefinitions = [...buildings.definitions];
     this.state.moraleBoost = buildings.moraleBoost;
+    this.state.totalOxygenContribution = buildings.totalOxygenContribution;
 
     // Technology
     const techs = this.facade.technology.snapshot();
