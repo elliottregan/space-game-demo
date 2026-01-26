@@ -186,9 +186,5 @@ function performMaintenance(buildingId: string): void {
   gap: var(--g-space-md);
   max-height: 100%;
   overflow-y: auto;
-  background: var(--g-accent-amber);
-  padding: var(--g-space-md);
-  margin: calc(-1 * var(--g-space-md));
-  margin-top: 0;
 }
 </style>
