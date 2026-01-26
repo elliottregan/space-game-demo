@@ -53,17 +53,29 @@ export class OperationsManager {
   }
 
   /**
-   * Add an initial water site with specified quality.
-   * Used during game initialization to provide starting water deposits.
+   * Calculate reserves and estimated reserves for a deposit.
    */
-  private addInitialWaterSite(quality: "poor" | "moderate" | "rich"): void {
-    const reserveRange = DEPOSIT_RESERVES.water[quality];
+  private calculateReserves(
+    resourceType: "water" | "materials" | "research",
+    quality: "poor" | "moderate" | "rich",
+  ): { reserves: number; estimatedReserves: { min: number; max: number } } {
+    const reserveRange = DEPOSIT_RESERVES[resourceType][quality];
     const reserves =
       reserveRange.min + Math.floor(Math.random() * (reserveRange.max - reserveRange.min));
 
     const uncertainty = ESTIMATE_UNCERTAINTY.initial;
     const estimatedMin = Math.floor(reserves * (1 - uncertainty));
     const estimatedMax = Math.ceil(reserves * (1 + uncertainty));
+
+    return { reserves, estimatedReserves: { min: estimatedMin, max: estimatedMax } };
+  }
+
+  /**
+   * Add an initial water site with specified quality.
+   * Used during game initialization to provide starting water deposits.
+   */
+  private addInitialWaterSite(quality: "poor" | "moderate" | "rich"): void {
+    const { reserves, estimatedReserves } = this.calculateReserves("water", quality);
 
     this.sites.push({
       id: `site_initial_water_${this.nextSiteId++}`,
@@ -73,7 +85,7 @@ export class OperationsManager {
       developed: false,
       developmentProgress: 0,
       reserves,
-      estimatedReserves: { min: estimatedMin, max: estimatedMax },
+      estimatedReserves,
       remainingReserves: reserves,
       linkedBuildingId: null,
     });
@@ -344,16 +356,7 @@ export class OperationsManager {
 
     const resourceType = types[Math.floor(Math.random() * types.length)]!;
     const quality = qualities[Math.floor(Math.random() * qualities.length)]!;
-
-    // Calculate reserves based on quality and resource type
-    const reserveRange = DEPOSIT_RESERVES[resourceType][quality];
-    const reserves =
-      reserveRange.min + Math.floor(Math.random() * (reserveRange.max - reserveRange.min));
-
-    // Calculate estimated reserves with uncertainty
-    const uncertainty = ESTIMATE_UNCERTAINTY.initial;
-    const estimatedMin = Math.floor(reserves * (1 - uncertainty));
-    const estimatedMax = Math.ceil(reserves * (1 + uncertainty));
+    const { reserves, estimatedReserves } = this.calculateReserves(resourceType, quality);
 
     return {
       id: `site_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -363,7 +366,7 @@ export class OperationsManager {
       developed: false,
       developmentProgress: 0,
       reserves,
-      estimatedReserves: { min: estimatedMin, max: estimatedMax },
+      estimatedReserves,
       remainingReserves: reserves,
       linkedBuildingId: null,
     };

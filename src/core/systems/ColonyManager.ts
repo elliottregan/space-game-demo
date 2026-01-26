@@ -7,6 +7,9 @@ import {
   COLONIST_NEEDS,
   POPULATION_GROWTH_RATE,
   MIN_POPULATION_FOR_GROWTH,
+  COLONY_MORALE,
+  COLONY_HEALTH,
+  SHORTAGE_THRESHOLDS,
 } from "../balance/EconomyBaseline";
 import { SKILLS } from "../data/skills";
 import { COLONIST_SKILL_COUNT } from "../balance/WorkforceBalance";
@@ -89,7 +92,11 @@ export class ColonyManager {
     this.updateConsumption(resources);
 
     // Check for population growth
-    if (population >= MIN_POPULATION_FOR_GROWTH && this.health > 80 && this.morale > 60) {
+    if (
+      population >= MIN_POPULATION_FOR_GROWTH &&
+      this.health > COLONY_HEALTH.GROWTH_REQUIREMENT &&
+      this.morale > COLONY_MORALE.GROWTH_REQUIREMENT
+    ) {
       if (Math.random() < POPULATION_GROWTH_RATE) {
         const newColonist = this.addColonist();
         events.push({
@@ -107,8 +114,7 @@ export class ColonyManager {
     const netFlow = resources.getNetFlow();
 
     // Base morale decay - colonists need entertainment/recreation
-    const BASE_MORALE_DECAY = 0.3;
-    this.morale = Math.max(0, this.morale - BASE_MORALE_DECAY);
+    this.morale = Math.max(0, this.morale - COLONY_MORALE.BASE_DECAY);
 
     // Apply operations policy effects (e.g., crunch mode)
     if (policyEffects) {
@@ -117,17 +123,17 @@ export class ColonyManager {
     }
 
     // Resource shortages affect morale and health
-    if (resourceState.food < population * 2) {
-      this.morale = Math.max(0, this.morale - 2);
-      this.health = Math.max(0, this.health - 1);
+    if (resourceState.food < population * SHORTAGE_THRESHOLDS.FOOD_MULTIPLIER) {
+      this.morale = Math.max(0, this.morale - SHORTAGE_THRESHOLDS.FOOD_MORALE_PENALTY);
+      this.health = Math.max(0, this.health - SHORTAGE_THRESHOLDS.FOOD_HEALTH_PENALTY);
     }
-    if (resourceState.oxygen < population * 2) {
-      this.health = Math.max(0, this.health - 3);
+    if (resourceState.oxygen < population * SHORTAGE_THRESHOLDS.OXYGEN_MULTIPLIER) {
+      this.health = Math.max(0, this.health - SHORTAGE_THRESHOLDS.OXYGEN_HEALTH_PENALTY);
     }
 
     // Positive conditions improve morale
     if ((netFlow.food || 0) > 0 && (netFlow.oxygen || 0) > 0 && (netFlow.water || 0) > 0) {
-      let moraleRecovery = 0.5;
+      let moraleRecovery = COLONY_MORALE.BASE_RECOVERY;
 
       // Add morale boost from recreation buildings
       if (buildings) {
@@ -135,11 +141,11 @@ export class ColonyManager {
       }
 
       this.morale = Math.min(100, this.morale + moraleRecovery);
-      this.health = Math.min(100, this.health + 0.2);
+      this.health = Math.min(100, this.health + COLONY_MORALE.HEALTH_RECOVERY);
     }
 
     // Low morale warnings
-    if (this.morale < 30) {
+    if (this.morale < COLONY_MORALE.LOW_WARNING_THRESHOLD) {
       events.push({
         type: "MORALE_LOW",
         morale: this.morale,
@@ -149,7 +155,7 @@ export class ColonyManager {
     }
 
     // Low health warnings
-    if (this.health < 50) {
+    if (this.health < COLONY_HEALTH.LOW_WARNING_THRESHOLD) {
       events.push({
         type: "HEALTH_LOW",
         health: this.health,
@@ -159,7 +165,11 @@ export class ColonyManager {
     }
 
     // Check for death if health is very low
-    if (this.health < 20 && population > 5 && Math.random() < 0.05) {
+    if (
+      this.health < COLONY_HEALTH.DEATH_RISK_THRESHOLD &&
+      population > COLONY_HEALTH.MIN_POPULATION_FOR_DEATH &&
+      Math.random() < COLONY_HEALTH.DEATH_CHANCE
+    ) {
       const colonistArray = Array.from(this.colonists.values());
       const victim = colonistArray[Math.floor(Math.random() * colonistArray.length)];
       if (victim) {
