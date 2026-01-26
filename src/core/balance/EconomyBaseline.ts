@@ -9,7 +9,7 @@ export const COLONIST_NEEDS = {
 
 export const STARTING_RESOURCES: Resources = {
   food: 300,
-  oxygen: 250,
+  oxygen: 400, // More buffer since no oxygen generator
   water: 120,
   power: 500,
   materials: 500,
