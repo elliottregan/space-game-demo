@@ -57,7 +57,7 @@ function developSite(siteId: string): void {
 </script>
 
 <template>
-  <GPanel title="Operations">
+  <GPanel title="Operations" accent="amber">
     <div class="tabs">
       <GButton
         :variant="activeTab === 'policies' ? 'primary' : 'ghost'"
