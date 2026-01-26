@@ -7,10 +7,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `bun install` - Install dependencies
 - `bun run dev` - Start Vite dev server with HMR
 - `bun run build` - Production build
+- `bun run preview` - Preview production build
 - `bun run lint` - Lint with Biome
 - `bun run format` - Format with Biome
+- `bun run check` - Run Biome check (lint + format)
 - `bun test` - Run all tests
 - `bun test tests/ResourceManager.test.ts` - Run single test file
+- `bun run simulate` - Run game simulation
+- `bun run simulate:analyze` - Analyze simulation results
 
 ## Architecture
 
@@ -24,11 +28,24 @@ The game uses a strict separation between game logic and UI:
   - `models/` - Type definitions and interfaces
   - `data/` - Static game data (buildings, technologies, events, factions)
   - `balance/` - Game balance constants
+  - `utils/` - Core utility functions
+  - `events/` - Event system
 
 - **`src/renderer/`** - Vue 3 frontend
   - `services/GameService.ts` - Singleton bridge between core and Vue, exposes reactive `GameUIState`
   - `components/` - Vue SFCs for each game panel
+  - `composables/` - Vue composables for shared logic
   - `directives/` - Custom Vue directives (e.g., `v-resource-glow`)
+  - `ui/` - Reusable UI components
+
+- **`src/facade/`** - Domain-driven API layer
+  - `GameAPI.ts` - Main facade exposing domain-specific APIs
+  - `domains/` - Domain facades (Buildings, Colony, Operations, etc.)
+
+- **`src/simulation/`** - Headless game simulation for testing balance
+  - `SimulationRunner.ts` - Runs automated game sessions
+  - `HeuristicStrategy.ts` - AI decision-making for simulations
+  - `MetricsCollector.ts` - Collects game metrics for analysis
 
 ### Game Loop
 
@@ -54,13 +71,21 @@ Buildings have three resource-related properties:
 - Semantic CSS variables defined in `App.vue` `:root`: `--color-positive`, `--color-negative`, `--color-danger`, `--color-warning`, `--color-info`, `--color-muted`
 - Use `// biome-ignore lint/correctness/noUnusedVariables: used in template` for template-only functions
 
+## Testing
+
+Tests are in the `tests/` directory using Bun's test runner. Test files cover:
+- Core systems (ResourceManager, WorkforceManager, TechnologyTree)
+- Facades (GameFacade, BuildingsFacade, ColonyFacade, OperationsFacade)
+- Game mechanics (building maintenance, recycling, deposits, expeditions)
+- Political systems (policies, NPC influence, pressure)
+
 ## Development Workflow
 
-### Required: Git Worktrees for Feature Work
-Always use the `superpowers:using-git-worktrees` skill when starting feature work. Never develop directly on the main branch.
+### Feature Work
+For significant features, use git worktrees to isolate work from the main branch.
 
-### Required: Create PRs for All Changes
-All work must result in a pull request. Never commit directly to main. Use `/commit-push-pr` or create PRs manually after completing work.
+### Pull Requests
+Larger changes should go through pull requests. Use `/commit-push-pr` or create PRs manually.
 
-### Preferred: Subagent-Driven Development
-When executing implementation plans, use `superpowers:subagent-driven-development` to parallelize independent tasks within the current session rather than spawning separate sessions.
+### Subagent-Driven Development
+When executing implementation plans, use `superpowers:subagent-driven-development` to parallelize independent tasks.
