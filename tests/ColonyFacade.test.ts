@@ -319,4 +319,93 @@ describe("ColonyFacade", () => {
       expect(byRole.map((c) => c.id)).toEqual(colonistsByRole.map((c) => c.id));
     });
   });
+
+  // ==========================================================================
+  // assignToBuilding() tests
+  // ==========================================================================
+  describe("assignToBuilding", () => {
+    it("should assign colonist to building", () => {
+      // Build a farm
+      api.buildings.build("basic_farm");
+
+      // Complete construction
+      for (let i = 0; i < 15; i++) {
+        api.game.advanceSol();
+      }
+
+      const colonist = api.colony.snapshot().colonists[0];
+      const activeBuildings = api.buildings.snapshot().active;
+      const farm = activeBuildings.find((b) => b.definitionId === "basic_farm");
+
+      const result = api.colony.assignToBuilding(colonist.id, farm!.id);
+      expect(result.success).toBe(true);
+    });
+
+    it("should fail if colonist already assigned", () => {
+      // Build two farms
+      api.buildings.build("basic_farm");
+      api.buildings.build("basic_farm");
+
+      for (let i = 0; i < 15; i++) {
+        api.game.advanceSol();
+      }
+
+      const colonist = api.colony.snapshot().colonists[0];
+      const activeBuildings = api.buildings.snapshot().active;
+      const farms = activeBuildings.filter((b) => b.definitionId === "basic_farm");
+
+      api.colony.assignToBuilding(colonist.id, farms[0].id);
+      const result = api.colony.assignToBuilding(colonist.id, farms[1].id);
+
+      expect(result.success).toBe(false);
+    });
+  });
+
+  // ==========================================================================
+  // unassignFromBuilding() tests
+  // ==========================================================================
+  describe("unassignFromBuilding", () => {
+    it("should unassign colonist from building", () => {
+      api.buildings.build("basic_farm");
+      for (let i = 0; i < 15; i++) {
+        api.game.advanceSol();
+      }
+
+      const colonist = api.colony.snapshot().colonists[0];
+      const activeBuildings = api.buildings.snapshot().active;
+      const farm = activeBuildings.find((b) => b.definitionId === "basic_farm");
+
+      api.colony.assignToBuilding(colonist.id, farm!.id);
+      const result = api.colony.unassignFromBuilding(colonist.id);
+
+      expect(result.success).toBe(true);
+    });
+  });
+
+  // ==========================================================================
+  // getWorkplace() tests
+  // ==========================================================================
+  describe("getWorkplace", () => {
+    it("should return building id for assigned colonist", () => {
+      api.buildings.build("basic_farm");
+      for (let i = 0; i < 15; i++) {
+        api.game.advanceSol();
+      }
+
+      const colonist = api.colony.snapshot().colonists[0];
+      const activeBuildings = api.buildings.snapshot().active;
+      const farm = activeBuildings.find((b) => b.definitionId === "basic_farm");
+
+      api.colony.assignToBuilding(colonist.id, farm!.id);
+
+      const workplace = api.colony.getWorkplace(colonist.id);
+      expect(workplace).toBe(farm!.id);
+    });
+
+    it("should return undefined for unassigned colonist", () => {
+      const colonist = api.colony.snapshot().colonists[0];
+      const workplace = api.colony.getWorkplace(colonist.id);
+      expect(workplace).toBeUndefined();
+    });
+  });
 });
