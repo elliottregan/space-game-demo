@@ -51,7 +51,7 @@ const emit = defineEmits<{
   left: 0;
   right: 0;
   bottom: 0;
-  background: oklch(10% 0.02 250 / 0.9);
+  background: rgba(0, 0, 0, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -60,16 +60,17 @@ const emit = defineEmits<{
 
 .decision-modal {
   background: var(--g-color-bg-surface);
-  border-radius: 8px;
   padding: var(--g-space-lg);
   max-width: 400px;
   width: 90%;
-  border: 1px solid var(--g-color-border);
+  border: 2px solid var(--g-accent-slate);
 }
 
 .decision-modal h3 {
   font-family: var(--g-font-mono);
-  color: var(--g-color-warning);
+  color: var(--g-accent-slate);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   margin-bottom: var(--g-space-sm);
 }
 
@@ -79,8 +80,11 @@ const emit = defineEmits<{
 }
 
 .decision-effects h4 {
+  font-family: var(--g-font-mono);
   font-size: var(--g-font-size-sm);
-  color: var(--g-color-info);
+  color: var(--g-accent-slate);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   margin-bottom: var(--g-space-xs);
 }
 
@@ -91,6 +95,7 @@ const emit = defineEmits<{
 }
 
 .decision-effects li {
+  font-family: var(--g-font-mono);
   font-size: var(--g-font-size-sm);
   color: var(--g-color-text);
   padding: var(--g-space-xs) 0;
