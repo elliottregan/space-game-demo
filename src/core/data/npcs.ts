@@ -1,6 +1,6 @@
 // src/core/data/npcs.ts
 
-import { NPCFaction, type NPC, type Project } from "../models/NPCInfluence";
+import { type NPC, NPCFaction, type Project } from "../models/NPCInfluence";
 
 export const NPCS: NPC[] = [
   // Earth Loyalists (3)

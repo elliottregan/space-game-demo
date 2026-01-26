@@ -1,14 +1,14 @@
+import { EVENT_TIMING } from "../balance/EventBalance";
 import type {
-  GameEvent,
-  RandomEventDefinition,
   ActiveEvent,
   EventChoice,
+  GameEvent,
+  RandomEventDefinition,
 } from "../models/GameEvent";
-import type { ResourceManager } from "./ResourceManager";
+import type { NPCFaction } from "../models/NPCInfluence";
 import type { ColonyManager } from "./ColonyManager";
 import type { NPCInfluenceManager } from "./NPCInfluenceManager";
-import type { NPCFaction } from "../models/NPCInfluence";
-import { EVENT_TIMING } from "../balance/EventBalance";
+import type { ResourceManager } from "./ResourceManager";
 
 export class EventManager {
   private eventDefinitions: Map<string, RandomEventDefinition> = new Map();

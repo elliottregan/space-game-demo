@@ -5,16 +5,16 @@ import { GameAPI } from "../facade/GameAPI";
 import { HeuristicStrategy } from "./HeuristicStrategy";
 import { MetricsCollector } from "./MetricsCollector";
 import type {
-  SimulationConfig,
-  RunResult,
   AggregateStats,
-  VictoryType,
-  DefeatReason,
-  ResourceSnapshot,
-  ResourceFlowSnapshot,
   CrisisPoint,
-  CrisisType,
   CrisisSeverity,
+  CrisisType,
+  DefeatReason,
+  ResourceFlowSnapshot,
+  ResourceSnapshot,
+  RunResult,
+  SimulationConfig,
+  VictoryType,
 } from "./types";
 
 /**

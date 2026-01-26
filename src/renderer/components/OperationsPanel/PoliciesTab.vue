@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { GButton } from "../../ui";
 import type { Policies, PolicyType } from "../../../facade";
+import { GButton } from "../../ui";
 
 defineProps<{
   policies: Policies;

@@ -2,8 +2,8 @@
 // Game flow queries and commands facade
 
 import { GameState } from "../../core/GameState";
-import { ok, err, type Result } from "../types/common";
-import type { VictoryState, GameEvent, AdvanceSolsResult } from "../types";
+import type { AdvanceSolsResult, GameEvent, VictoryState } from "../types";
+import { err, ok, type Result } from "../types/common";
 
 type CommandExecutor = <T>(fn: () => Result<T>) => Result<T>;
 type ResetGameState = () => void;

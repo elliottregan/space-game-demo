@@ -1,5 +1,5 @@
 import { select } from "d3-selection";
-import { NPCFaction, type NPC } from "../../../core/models/NPCInfluence";
+import { type NPC, NPCFaction } from "../../../core/models/NPCInfluence";
 import type { PositionedNode } from "../../utils/forceLayout";
 
 export interface GraphNode extends PositionedNode {

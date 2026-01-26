@@ -1,13 +1,13 @@
 <script setup lang="ts">
+import { type Edge, type Node, VueFlow } from "@vue-flow/core";
 import { computed, ref } from "vue";
-import { VueFlow, type Node, type Edge } from "@vue-flow/core";
 import "@vue-flow/core/dist/style.css";
 import "@vue-flow/core/dist/theme-default.css";
-import { gameService } from "../services/GameService";
 import type { Technology } from "../../core/models/Technology";
+import { gameService } from "../services/GameService";
+import { GBadge, GButton } from "../ui";
 import { formatTechCost } from "../utils/formatters";
 import TechNode from "./TechNode.vue";
-import { GButton, GBadge } from "../ui";
 
 const state = gameService.getState();
 

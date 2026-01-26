@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { GButton, GProgress } from "../../ui";
-import type { Building, BuildingDefinition, ResourceDelta } from "../../../facade";
 import { MAINTENANCE_WARNING_THRESHOLD } from "../../../core/balance/BuildingBalance";
+import type { Building, BuildingDefinition, ResourceDelta } from "../../../facade";
+import { GButton, GProgress } from "../../ui";
 
 const props = defineProps<{
   buildings: Building[];

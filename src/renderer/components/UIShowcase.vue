@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { GPanel, GButton, GProgress, ResourceBadge, CountdownTimer } from "../ui";
+import { CountdownTimer, GButton, GPanel, GProgress, ResourceBadge } from "../ui";
 
 const loading = ref(false);
 

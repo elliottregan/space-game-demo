@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { gameService } from "../../services/GameService";
-import { GPanel, GStatsBar } from "../../ui";
 import type { Stat } from "../../ui";
+import { GPanel, GStatsBar } from "../../ui";
 import { getHealthVariant, getMoraleVariant } from "../../utils/displayThresholds";
 
 const state = gameService.getState();
@@ -16,7 +16,12 @@ const colonyStats = computed<Stat[]>(() => {
   ];
 
   if (state.moraleBoost > 0) {
-    stats.push({ label: "Recreation Bonus", value: state.moraleBoost, variant: "positive", prefix: "+" });
+    stats.push({
+      label: "Recreation Bonus",
+      value: state.moraleBoost,
+      variant: "positive",
+      prefix: "+",
+    });
   }
 
   return stats;

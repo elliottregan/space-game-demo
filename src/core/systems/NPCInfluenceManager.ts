@@ -1,18 +1,5 @@
 // src/core/systems/NPCInfluenceManager.ts
 
-import type { GameEvent } from "../models/GameEvent";
-import type { ResourceManager } from "./ResourceManager";
-import type { ResourceDelta } from "../models/Resources";
-import {
-  NPCFaction,
-  ALL_FACTIONS,
-  type NPC,
-  type Project,
-  type ProjectType,
-  type ActiveProject,
-  type Council,
-  type FactionDemand,
-} from "../models/NPCInfluence";
 import {
   COUNCIL_CREATION_COST,
   COUNCIL_RELATIONSHIP_BOOST,
@@ -30,7 +17,20 @@ import {
   SUCCESS_TRANSMISSION_BOOST,
   TRANSMISSION_FACTORS,
 } from "../balance/NPCInfluenceBalance";
+import type { GameEvent } from "../models/GameEvent";
+import {
+  type ActiveProject,
+  ALL_FACTIONS,
+  type Council,
+  type FactionDemand,
+  type NPC,
+  NPCFaction,
+  type Project,
+  type ProjectType,
+} from "../models/NPCInfluence";
+import type { ResourceDelta } from "../models/Resources";
 import { updateSupport } from "../utils/matrix";
+import type { ResourceManager } from "./ResourceManager";
 
 // Re-export matrix utilities for backward compatibility
 export { matrixMultiply, matrixVectorMultiply, updateSupport } from "../utils/matrix";

@@ -2,7 +2,7 @@
 // Politics facade - now wraps NPCInfluenceManager
 
 import type { GameState } from "../../core/GameState";
-import { NPCFaction, ALL_FACTIONS, type FactionDemand } from "../../core/models/NPCInfluence";
+import { ALL_FACTIONS, type FactionDemand, NPCFaction } from "../../core/models/NPCInfluence";
 
 export interface FactionStatus {
   id: NPCFaction;

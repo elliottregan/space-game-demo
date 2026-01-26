@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Colonist, Building, BuildingDefinition, SkillDefinition } from "../../../facade";
+import type { Building, BuildingDefinition, Colonist, SkillDefinition } from "../../../facade";
 import { GPanel } from "../../ui";
 import ColonistRow from "./ColonistRow.vue";
 

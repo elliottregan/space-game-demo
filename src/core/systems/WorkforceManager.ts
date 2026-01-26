@@ -1,16 +1,16 @@
-import type { GameEvent } from "../models/GameEvent";
-import type { Colonist } from "../models/Colonist";
-import { ColonistRole, MasteryLevel } from "../models/Colonist";
-import type { ColonyManager } from "./ColonyManager";
 import {
-  ROLE_AFFINITY,
   EXPERIENCE_GAIN_RATE,
-  MASTERY_THRESHOLDS,
   MASTER_EVENT_CHANCE,
   MASTERY_EFFICIENCY,
+  MASTERY_THRESHOLDS,
   MAX_SKILL_EFFICIENCY_BONUS,
+  ROLE_AFFINITY,
 } from "../balance/WorkforceBalance";
 import { SKILLS } from "../data/skills";
+import type { Colonist } from "../models/Colonist";
+import { ColonistRole, MasteryLevel } from "../models/Colonist";
+import type { GameEvent } from "../models/GameEvent";
+import type { ColonyManager } from "./ColonyManager";
 
 export class WorkforceManager {
   tick(colony: ColonyManager): GameEvent[] {

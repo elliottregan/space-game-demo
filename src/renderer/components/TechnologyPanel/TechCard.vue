@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { GButton } from "../../ui";
 import type { Technology } from "../../../core/models/Technology";
+import { GButton } from "../../ui";
 import { formatTechCost } from "../../utils/formatters";
 
 defineProps<{

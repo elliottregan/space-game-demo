@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { GButton, GProgress, GEmptyState } from "../../ui";
 import type { Technology } from "../../../core/models/Technology";
+import { GButton, GEmptyState, GProgress } from "../../ui";
 
 defineProps<{
   tech: Technology | null;

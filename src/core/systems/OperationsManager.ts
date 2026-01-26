@@ -1,35 +1,36 @@
 // src/core/systems/OperationsManager.ts
-import type { GameEvent } from "../models/GameEvent";
-import type {
-  ColonyPolicies,
-  WorkIntensity,
-  ResourcePriority,
-  ExplorationStance,
-  ActiveExpedition,
-  ProspectingSite,
-  ExpeditionType,
-  ExpeditionResult,
-} from "../models/Operation";
+
 import {
-  POLICY_CHANGE_COOLDOWN_SOLS,
-  WORK_INTENSITY,
-  RESOURCE_PRIORITY,
-  EXPLORATION_STANCE,
-  EXPEDITIONS,
-  MAX_CONCURRENT_EXPEDITIONS,
-  EXPEDITION_EXPERIENCE_BONUS,
-  EXPEDITION_EXPERIENCE_CAP,
-  PROSPECTING_REVEAL_COST,
-  PROSPECTING_QUALITY,
-  MAX_REVEALED_SITES,
-  MAX_DEVELOPED_SITES,
+  DEPLETION_THRESHOLDS,
   DEPOSIT_RESERVES,
   ESTIMATE_UNCERTAINTY,
-  DEPLETION_THRESHOLDS,
+  EXPEDITION_EXPERIENCE_BONUS,
+  EXPEDITION_EXPERIENCE_CAP,
+  EXPEDITIONS,
+  EXPLORATION_STANCE,
   EXTRACTION_RATE_MULTIPLIERS,
+  MAX_CONCURRENT_EXPEDITIONS,
+  MAX_DEVELOPED_SITES,
+  MAX_REVEALED_SITES,
+  POLICY_CHANGE_COOLDOWN_SOLS,
+  PROSPECTING_QUALITY,
+  PROSPECTING_REVEAL_COST,
+  RESOURCE_PRIORITY,
+  WORK_INTENSITY,
 } from "../balance/OperationsBalance";
-import type { ResourceManager } from "./ResourceManager";
+import type { GameEvent } from "../models/GameEvent";
+import type {
+  ActiveExpedition,
+  ColonyPolicies,
+  ExpeditionResult,
+  ExpeditionType,
+  ExplorationStance,
+  ProspectingSite,
+  ResourcePriority,
+  WorkIntensity,
+} from "../models/Operation";
 import type { ColonyManager } from "./ColonyManager";
+import type { ResourceManager } from "./ResourceManager";
 
 export class OperationsManager {
   private policies: ColonyPolicies = {

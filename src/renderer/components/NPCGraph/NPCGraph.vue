@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import type { NPC } from "../../../core/models/NPCInfluence";
 import { computeForceLayout } from "../../utils/forceLayout";
-import { renderGraph, type GraphData, type GraphNode, type GraphLink } from "./renderGraph";
+import { type GraphData, type GraphLink, type GraphNode, renderGraph } from "./renderGraph";
 
 interface Props {
   npcs: NPC[];

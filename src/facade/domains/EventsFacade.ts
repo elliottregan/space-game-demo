@@ -2,8 +2,8 @@
 // Event queries and commands facade
 
 import type { GameState } from "../../core/GameState";
-import { ok, err, type Result } from "../types/common";
 import type { ActiveEventSnapshot, GameEvent } from "../types";
+import { err, ok, type Result } from "../types/common";
 
 type CommandExecutor = <T>(fn: () => Result<T>) => Result<T>;
 

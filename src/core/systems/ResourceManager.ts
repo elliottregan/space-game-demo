@@ -1,5 +1,5 @@
 import type { GameEvent } from "../models/GameEvent";
-import type { Resources, ResourceDelta } from "../models/Resources";
+import type { ResourceDelta, Resources } from "../models/Resources";
 import { RESOURCE_KEYS } from "../models/Resources";
 
 export class ResourceManager {

@@ -1,10 +1,10 @@
 // src/facade/domains/ColonyFacade.ts
 // Colony and colonist queries and commands facade
 
-import type { GameState } from "../../core/GameState";
 import { SKILLS } from "../../core/data/skills";
-import { ok, err, type Result, type CanDoResult } from "../types/common";
-import type { ColonySnapshot, Colonist, ColonistRole, Queryable, EntityLookup } from "../types";
+import type { GameState } from "../../core/GameState";
+import type { Colonist, ColonistRole, ColonySnapshot, EntityLookup, Queryable } from "../types";
+import { type CanDoResult, err, ok, type Result } from "../types/common";
 
 type CommandExecutor = <T>(fn: () => Result<T>) => Result<T>;
 

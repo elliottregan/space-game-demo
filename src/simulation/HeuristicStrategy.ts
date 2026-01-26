@@ -1,8 +1,8 @@
 // src/simulation/HeuristicStrategy.ts
 // Decision-making logic for Monte Carlo playtest simulation
 
-import type { GameAPI } from "../facade/GameAPI";
 import type { EventChoice } from "../core/models/GameEvent";
+import type { GameAPI } from "../facade/GameAPI";
 import type { BlockedDecision, EventOccurrence } from "./types";
 
 /**

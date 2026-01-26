@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { gameService } from "../../services/GameService";
 import {
-  WORK_INTENSITY,
-  RESOURCE_PRIORITY,
   EXPLORATION_STANCE,
+  RESOURCE_PRIORITY,
+  WORK_INTENSITY,
 } from "../../../core/balance/OperationsBalance";
 import type { PolicyType, PolicyValue } from "../../../facade";
+import { gameService } from "../../services/GameService";
 import { GPanel, GTabGroup } from "../../ui";
-import PoliciesTab from "./PoliciesTab.vue";
 import BuildingsTab from "./BuildingsTab.vue";
 import MissionsTab from "./MissionsTab.vue";
+import PoliciesTab from "./PoliciesTab.vue";
 
 // Reactive state for template bindings (auto-updates when API syncs)
 // biome-ignore lint/correctness/noUnusedVariables: used in template

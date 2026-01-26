@@ -2,15 +2,15 @@
 // Operations queries and commands facade
 
 import type { GameState } from "../../core/GameState";
-import { ok, err, type Result, type CanDoResult } from "../types/common";
 import type {
-  OperationsSnapshot,
-  ProspectingSite,
+  ActiveExpedition,
   ExpeditionType,
+  OperationsSnapshot,
   PolicyType,
   PolicyValue,
-  ActiveExpedition,
+  ProspectingSite,
 } from "../types";
+import { type CanDoResult, err, ok, type Result } from "../types/common";
 
 type CommandExecutor = <T>(fn: () => Result<T>) => Result<T>;
 

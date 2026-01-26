@@ -1,7 +1,7 @@
 import { createApp } from "vue";
 import App from "./renderer/App.vue";
+import { resourceHighlightStyles, vResourceGlow } from "./renderer/directives/ResourceHighlight";
 import router from "./renderer/router";
-import { vResourceGlow, resourceHighlightStyles } from "./renderer/directives/ResourceHighlight";
 import "./renderer/ui/tokens/theme.css";
 
 // Inject resource highlight styles

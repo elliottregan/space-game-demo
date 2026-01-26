@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ResourcePanel } from "./ResourcePanel";
-import { ColonyPanel } from "./ColonyPanel";
 import { BuildingPanel } from "./BuildingPanel";
+import { ColonyPanel } from "./ColonyPanel";
+import { ResourcePanel } from "./ResourcePanel";
 </script>
 
 <template>

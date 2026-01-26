@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import TechTreeGraph from "./TechTreeGraph.vue";
 import { GPanel } from "../ui";
+import TechTreeGraph from "./TechTreeGraph.vue";
 </script>
 
 <template>

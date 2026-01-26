@@ -3,18 +3,18 @@
 
 import { GameState } from "../core/GameState";
 import { RESOURCE_KEYS } from "../core/models/Resources";
-import type { Result, CanDoResult, ResourceDelta, GameEvent } from "./types";
 import {
-  ResourcesFacade,
   BuildingsFacade,
-  TechnologyFacade,
   ColonyFacade,
-  PoliticsFacade,
-  OperationsFacade,
-  NPCFacade,
   EventsFacade,
   GameFlowFacade,
+  NPCFacade,
+  OperationsFacade,
+  PoliticsFacade,
+  ResourcesFacade,
+  TechnologyFacade,
 } from "./domains";
+import type { CanDoResult, GameEvent, ResourceDelta, Result } from "./types";
 
 /**
  * State change listener callback type.

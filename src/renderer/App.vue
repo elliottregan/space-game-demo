@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { gameService } from "./services/GameService";
-import GameHeader from "./components/GameHeader.vue";
-import TabNav from "./components/TabNav.vue";
 import EventLogSidebar from "./components/EventLogSidebar.vue";
 import EventModal from "./components/EventModal.vue";
+import GameHeader from "./components/GameHeader.vue";
 import GameOverModal from "./components/GameOverModal.vue";
+import TabNav from "./components/TabNav.vue";
+import { gameService } from "./services/GameService";
 
 const state = gameService.getState();
 

@@ -1,5 +1,5 @@
-import type { ResourceDelta } from "./Resources";
 import type { ColonistRole } from "./Colonist";
+import type { ResourceDelta } from "./Resources";
 
 export type BuildingStatus = "pending" | "active" | "disabled" | "idle" | "recycling";
 

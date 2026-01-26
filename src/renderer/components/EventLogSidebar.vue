@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { gameService } from "../services/GameService";
-import { GPanel, GEmptyState } from "../ui";
+import { GEmptyState, GPanel } from "../ui";
 
 const state = gameService.getState();
 

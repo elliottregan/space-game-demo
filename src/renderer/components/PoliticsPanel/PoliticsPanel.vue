@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { gameService } from "../../services/GameService";
-import { getSupportColor } from "../../utils/formatters";
 import { GPanel } from "../../ui";
+import { getSupportColor } from "../../utils/formatters";
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const state = gameService.getState();

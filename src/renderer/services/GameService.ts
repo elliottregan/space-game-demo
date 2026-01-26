@@ -1,31 +1,31 @@
 import { reactive, readonly } from "vue";
+import type { Council, NPC, Project } from "../../core/models/NPCInfluence";
 import {
-  GameAPI,
-  type Resources,
-  type ResourceDelta,
+  type ActiveEvent,
+  type ActiveExpedition,
   type Building,
   type BuildingDefinition,
-  type Technology,
-  type TechResearch,
+  type BuildingMode,
   type Colonist,
   type ColonistRole,
-  type SkillDefinition,
-  type FactionStatus,
-  type FactionDemand,
-  type RandomEventDefinition,
-  type EventChoice,
-  type ActiveEvent,
-  type VictoryState,
   type ColonyPolicies,
-  type ActiveExpedition,
-  type ProspectingSite,
+  type EventChoice,
+  type ExpeditionType,
+  type FactionDemand,
+  type FactionStatus,
+  GameAPI,
   type GameEvent,
-  type BuildingMode,
   type PolicyType,
   type PolicyValue,
-  type ExpeditionType,
+  type ProspectingSite,
+  type RandomEventDefinition,
+  type ResourceDelta,
+  type Resources,
+  type SkillDefinition,
+  type Technology,
+  type TechResearch,
+  type VictoryState,
 } from "../../facade";
-import type { NPC, Project, Council } from "../../core/models/NPCInfluence";
 
 /**
  * Reactive UI state interface.

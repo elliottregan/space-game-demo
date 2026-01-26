@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Building, BuildingDefinition, Colonist, SkillDefinition } from "../../../facade";
-import { GPanel, GEmptyState } from "../../ui";
+import { GEmptyState, GPanel } from "../../ui";
 import HabitatEntry from "./HabitatEntry.vue";
 
 defineProps<{

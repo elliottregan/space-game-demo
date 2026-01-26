@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { gameService } from "../../services/GameService";
 import type { Technology } from "../../../core/models/Technology";
-import { highlightResources, clearHighlights } from "../../directives/ResourceHighlight";
-import { calculateHighlightInfo } from "../../utils/formatters";
+import { clearHighlights, highlightResources } from "../../directives/ResourceHighlight";
+import { gameService } from "../../services/GameService";
 import { GPanel } from "../../ui";
+import { calculateHighlightInfo } from "../../utils/formatters";
 import TechTreeGraph from "../TechTreeGraph.vue";
 import CurrentResearch from "./CurrentResearch.vue";
 import TechCard from "./TechCard.vue";

@@ -1,14 +1,14 @@
 import {
-  forceSimulation,
-  forceLink,
-  forceManyBody,
   forceCenter,
   forceCollide,
+  forceLink,
+  forceManyBody,
+  forceSimulation,
   type Simulation,
-  type SimulationNodeDatum,
   type SimulationLinkDatum,
+  type SimulationNodeDatum,
 } from "d3-force";
-import { NPCFaction, type NPC } from "../../core/models/NPCInfluence";
+import { type NPC, NPCFaction } from "../../core/models/NPCInfluence";
 
 export interface LayoutInput {
   npcs: NPC[];
@@ -110,7 +110,9 @@ export function computeForceLayout(input: LayoutInput): PositionedNode[] {
       if (npcI.faction === npcJ.faction) {
         // Check if link already exists
         const exists = links.some(
-          (l) => (l.source === nodeI && l.target === nodeJ) || (l.source === nodeJ && l.target === nodeI),
+          (l) =>
+            (l.source === nodeI && l.target === nodeJ) ||
+            (l.source === nodeJ && l.target === nodeI),
         );
         if (!exists) {
           links.push({

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { MASTERY_DISPLAY_NAMES, ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist";
 import type { Building, BuildingDefinition, Colonist, SkillDefinition } from "../../../facade";
-import { ROLE_DISPLAY_NAMES, MASTERY_DISPLAY_NAMES } from "../../../core/models/Colonist";
 import { GEntityHeader } from "../../ui";
 import ColonistSkillBadge from "../ColonyPanel/ColonistSkillBadge.vue";
 

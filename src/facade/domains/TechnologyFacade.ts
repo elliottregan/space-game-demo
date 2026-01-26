@@ -2,14 +2,14 @@
 // Technology queries and commands facade
 
 import type { GameState } from "../../core/GameState";
-import { ok, err, type Result, type CanDoResult } from "../types/common";
 import type {
-  TechnologySnapshot,
-  Technology,
-  ResourceDelta,
-  Queryable,
   EntityLookup,
+  Queryable,
+  ResourceDelta,
+  Technology,
+  TechnologySnapshot,
 } from "../types";
+import { type CanDoResult, err, ok, type Result } from "../types/common";
 
 type CommandExecutor = <T>(fn: () => Result<T>) => Result<T>;
 type AffordabilityChecker = (cost: ResourceDelta) => CanDoResult;

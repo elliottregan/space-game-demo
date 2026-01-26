@@ -1,7 +1,7 @@
 // src/facade/types/resources.ts
 // Resource-related types for the facade
 
-import type { Resources, ResourceDelta } from "../../core/models/Resources";
+import type { ResourceDelta, Resources } from "../../core/models/Resources";
 
 /**
  * Immutable snapshot of resource state.

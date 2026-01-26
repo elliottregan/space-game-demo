@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { gameService } from "../../services/GameService";
 import type { BuildingDefinition } from "../../../facade";
-import { highlightResources, clearHighlights } from "../../directives/ResourceHighlight";
+import { clearHighlights, highlightResources } from "../../directives/ResourceHighlight";
+import { gameService } from "../../services/GameService";
+import { GCardGrid, GPanel } from "../../ui";
 import { calculateHighlightInfo } from "../../utils/formatters";
-import { GPanel, GCardGrid } from "../../ui";
-import CategoryTabs from "./CategoryTabs.vue";
 import BuildingCard from "./BuildingCard.vue";
-import ConstructionQueue from "./ConstructionQueue.vue";
 import BuildingMaintenance from "./BuildingMaintenance.vue";
+import CategoryTabs from "./CategoryTabs.vue";
+import ConstructionQueue from "./ConstructionQueue.vue";
 
 // Reactive state for template bindings (auto-updates when API syncs)
 const state = gameService.getState();

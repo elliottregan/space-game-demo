@@ -2,13 +2,13 @@
 // Operations-related types for the facade
 
 import type {
-  ColonyPolicies,
   ActiveExpedition,
-  ProspectingSite,
+  ColonyPolicies,
   ExpeditionType,
-  WorkIntensity,
-  ResourcePriority,
   ExplorationStance,
+  ProspectingSite,
+  ResourcePriority,
+  WorkIntensity,
 } from "../../core/models/Operation";
 
 /**

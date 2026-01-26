@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { gameService } from "../../services/GameService";
 import { ColonistRole } from "../../../core/models/Colonist";
+import { gameService } from "../../services/GameService";
+import type { Stat } from "../../ui";
+import { GPanel, GStatsBar } from "../../ui";
 import {
   getHealthVariant,
   getMoraleVariant,
   getOxygenVariant,
 } from "../../utils/displayThresholds";
-import { GPanel, GStatsBar } from "../../ui";
-import type { Stat } from "../../ui";
 import WorkforceGrid from "./WorkforceGrid.vue";
 
 // Reactive state for template bindings (auto-updates when API syncs)
@@ -23,7 +23,12 @@ const colonyStats = computed<Stat[]>(() => {
   ];
 
   if (state.moraleBoost > 0) {
-    stats.push({ label: "Recreation Bonus", value: state.moraleBoost, variant: "positive", prefix: "+" });
+    stats.push({
+      label: "Recreation Bonus",
+      value: state.moraleBoost,
+      variant: "positive",
+      prefix: "+",
+    });
   }
 
   return stats;

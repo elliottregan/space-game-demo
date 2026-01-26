@@ -1,18 +1,18 @@
-import type { GameEvent } from "../models/GameEvent";
-import type { Colonist } from "../models/Colonist";
-import { ColonistRole, MasteryLevel } from "../models/Colonist";
-import type { ResourceManager } from "./ResourceManager";
-import type { BuildingManager } from "./BuildingManager";
 import {
   COLONIST_NEEDS,
-  POPULATION_GROWTH_RATE,
-  MIN_POPULATION_FOR_GROWTH,
-  COLONY_MORALE,
   COLONY_HEALTH,
+  COLONY_MORALE,
+  MIN_POPULATION_FOR_GROWTH,
+  POPULATION_GROWTH_RATE,
   SHORTAGE_THRESHOLDS,
 } from "../balance/EconomyBaseline";
-import { SKILLS } from "../data/skills";
 import { COLONIST_SKILL_COUNT } from "../balance/WorkforceBalance";
+import { SKILLS } from "../data/skills";
+import type { Colonist } from "../models/Colonist";
+import { ColonistRole, MasteryLevel } from "../models/Colonist";
+import type { GameEvent } from "../models/GameEvent";
+import type { BuildingManager } from "./BuildingManager";
+import type { ResourceManager } from "./ResourceManager";
 
 const FIRST_NAMES = [
   "Alex",

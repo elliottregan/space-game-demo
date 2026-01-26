@@ -1,19 +1,18 @@
-import type { GameEvent } from "./models/GameEvent";
-import { ResourceManager } from "./systems/ResourceManager";
-import { TechnologyTree } from "./systems/TechnologyTree";
-import { BuildingManager } from "./systems/BuildingManager";
-import { ColonyManager } from "./systems/ColonyManager";
-import { WorkforceManager } from "./systems/WorkforceManager";
-import { EventManager } from "./systems/EventManager";
-import { VictoryManager } from "./systems/VictoryManager";
-import { OperationsManager } from "./systems/OperationsManager";
-import { NPCInfluenceManager } from "./systems/NPCInfluenceManager";
-
-import { STARTING_RESOURCES, STARTING_POPULATION } from "./balance/EconomyBaseline";
-import { NPCS, INITIAL_RELATIONSHIPS, PROJECTS } from "./data/npcs";
-import { TECHNOLOGIES } from "./data/technologies";
+import { STARTING_POPULATION, STARTING_RESOURCES } from "./balance/EconomyBaseline";
 import { BUILDINGS } from "./data/buildings";
 import { RANDOM_EVENTS } from "./data/events";
+import { INITIAL_RELATIONSHIPS, NPCS, PROJECTS } from "./data/npcs";
+import { TECHNOLOGIES } from "./data/technologies";
+import type { GameEvent } from "./models/GameEvent";
+import { BuildingManager } from "./systems/BuildingManager";
+import { ColonyManager } from "./systems/ColonyManager";
+import { EventManager } from "./systems/EventManager";
+import { NPCInfluenceManager } from "./systems/NPCInfluenceManager";
+import { OperationsManager } from "./systems/OperationsManager";
+import { ResourceManager } from "./systems/ResourceManager";
+import { TechnologyTree } from "./systems/TechnologyTree";
+import { VictoryManager } from "./systems/VictoryManager";
+import { WorkforceManager } from "./systems/WorkforceManager";
 
 export class GameState {
   currentSol: number = 0;

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Decision } from "../../../core/models/Politics";
-import { highlightResources, clearHighlights } from "../../directives/ResourceHighlight";
+import { clearHighlights, highlightResources } from "../../directives/ResourceHighlight";
 import { GActionCard, GSection } from "../../ui";
 
 defineProps<{

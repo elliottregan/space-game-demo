@@ -1,7 +1,7 @@
 import type { GameEvent } from "../models/GameEvent";
-import type { TechnologyTree } from "./TechnologyTree";
 import type { ColonyManager } from "./ColonyManager";
 import type { ResourceManager } from "./ResourceManager";
+import type { TechnologyTree } from "./TechnologyTree";
 
 export type GameStatus = "playing" | "victory" | "defeat";
 

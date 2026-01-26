@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { GProgress, GBadge } from "../../ui";
-import type { NPC, ActiveProject, Project } from "../../../core/models/types";
 import { NPCFaction } from "../../../core/models/NPCInfluence";
+import type { ActiveProject, NPC, Project } from "../../../core/models/types";
+import { GBadge, GProgress } from "../../ui";
 import NPCListItem from "./NPCListItem.vue";
 
 defineProps<{

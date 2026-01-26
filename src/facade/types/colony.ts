@@ -1,8 +1,8 @@
 // src/facade/types/colony.ts
 // Colony and colonist types for the facade
 
-import type { Colonist, ColonistRole } from "../../core/models/Colonist";
 import type { SkillDefinition } from "../../core/data/skills";
+import type { Colonist, ColonistRole } from "../../core/models/Colonist";
 
 /**
  * Immutable snapshot of colony state.

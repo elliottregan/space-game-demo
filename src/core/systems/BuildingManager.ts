@@ -1,27 +1,27 @@
-import type { GameEvent } from "../models/GameEvent";
-import type { Building, BuildingDefinition } from "../models/Building";
-import type { ResourceManager } from "./ResourceManager";
-import type { TechnologyTree } from "./TechnologyTree";
 import {
-  BUILDING_MODES,
-  REPAIR_COST_MULTIPLIER,
-  REPAIR_DURATION_SOLS,
-  RECYCLING_RECOVERY_RATES,
-  RECYCLING_TIME_MULTIPLIER,
-  RUSH_RECYCLING_PENALTY,
-  REPURPOSE_COST_MULTIPLIER,
-  REPURPOSE_TIME_MULTIPLIER,
-} from "../balance/OperationsBalance";
-import {
-  MAINTENANCE_START_SOL,
-  CONDITION_DECAY_INTERVAL,
   CONDITION_DECAY_AMOUNT,
-  CONDITION_EFFICIENCY_THRESHOLD,
+  CONDITION_DECAY_INTERVAL,
   CONDITION_EFFICIENCY_PENALTY,
+  CONDITION_EFFICIENCY_THRESHOLD,
   MAINTENANCE_COST_MULTIPLIER,
+  MAINTENANCE_START_SOL,
   OXYGEN_DEFICIT_EFFICIENCY_PENALTY,
 } from "../balance/BuildingBalance";
+import {
+  BUILDING_MODES,
+  RECYCLING_RECOVERY_RATES,
+  RECYCLING_TIME_MULTIPLIER,
+  REPAIR_COST_MULTIPLIER,
+  REPAIR_DURATION_SOLS,
+  REPURPOSE_COST_MULTIPLIER,
+  REPURPOSE_TIME_MULTIPLIER,
+  RUSH_RECYCLING_PENALTY,
+} from "../balance/OperationsBalance";
+import type { Building, BuildingDefinition } from "../models/Building";
+import type { GameEvent } from "../models/GameEvent";
 import type { ResourceDelta } from "../models/Resources";
+import type { ResourceManager } from "./ResourceManager";
+import type { TechnologyTree } from "./TechnologyTree";
 
 export class BuildingManager {
   private definitions: Map<string, BuildingDefinition> = new Map();

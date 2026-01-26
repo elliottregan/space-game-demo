@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import type { NPC } from "../../../core/models/types";
 import { GButton, GSelect } from "../../ui";
 import type { SelectOption } from "../../ui/primitives/GSelect.vue";
-import type { NPC } from "../../../core/models/types";
 
 defineProps<{
   npc: NPC | undefined;

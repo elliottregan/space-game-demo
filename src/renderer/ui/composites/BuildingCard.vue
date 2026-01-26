@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import type { PlacedBuilding } from "@/core/models/Building";
 import GPanel from "../primitives/GPanel.vue";
 import GProgress from "../primitives/GProgress.vue";
 import ResourceBadge from "./ResourceBadge.vue";
-import type { PlacedBuilding } from "@/core/models/Building";
 
 const props = defineProps<{
   building: PlacedBuilding;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { computed, ref } from "vue";
 import { gameService } from "../../services/GameService";
-import { GPanel, GButton, GBadge, GInput } from "../../ui";
+import { GBadge, GButton, GInput, GPanel } from "../../ui";
 
 const state = gameService.getState();
 const api = gameService.api;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Building, BuildingDefinition, Colonist, SkillDefinition } from "../../../facade";
-import { GEntityHeader, GCardGrid } from "../../ui";
+import { GCardGrid, GEntityHeader } from "../../ui";
 import ColonistRow from "./ColonistRow.vue";
 
 const props = defineProps<{
@@ -13,7 +13,6 @@ const props = defineProps<{
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const capacity = computed(() => props.definition?.capacity || 0);
-
 </script>
 
 <template>

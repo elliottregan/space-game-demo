@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { PoliticsPanel } from "./PoliticsPanel";
-import { NPCInfluencePanel } from "./NPCInfluencePanel";
-import { CouncilPanel } from "./CouncilPanel";
-import { OperationsPanel } from "./OperationsPanel";
-import { NPCGraph, NPCDetailPanel } from "./NPCGraph";
-import { GPanel } from "../ui";
-import { gameService } from "../services/GameService";
+import { computed, ref } from "vue";
 import type { NPC } from "../../core/models/NPCInfluence";
+import { gameService } from "../services/GameService";
+import { GPanel } from "../ui";
+import { CouncilPanel } from "./CouncilPanel";
+import { NPCDetailPanel, NPCGraph } from "./NPCGraph";
+import { NPCInfluencePanel } from "./NPCInfluencePanel";
+import { OperationsPanel } from "./OperationsPanel";
+import { PoliticsPanel } from "./PoliticsPanel";
 
 const state = gameService.getState();
 

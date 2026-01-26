@@ -1,7 +1,7 @@
 // src/simulation/MetricsCollector.ts
 // Tracks and aggregates simulation data for Monte Carlo playtest analysis
 
-import type { RunResult, AggregateStats } from "./types";
+import type { AggregateStats, RunResult } from "./types";
 
 /** Display names for defeat reasons. */
 const DEFEAT_REASON_NAMES: Record<string, string> = {

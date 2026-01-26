@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { GButton, GEmptyState, GSection } from "../../ui";
 import type { Expedition, ProspectingSite } from "../../../facade";
+import { GButton, GEmptyState, GSection } from "../../ui";
 
 const props = defineProps<{
   activeExpeditions: Expedition[];

@@ -1,7 +1,7 @@
 // src/facade/types/npc.ts
 // NPC influence types for the facade
 
-import type { NPC, Project, Council } from "../../core/models/NPCInfluence";
+import type { Council, NPC, Project } from "../../core/models/NPCInfluence";
 
 /**
  * Immutable snapshot of NPC influence state.

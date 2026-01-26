@@ -3,7 +3,7 @@
 
 import type { GameState } from "../../core/GameState";
 import { RESOURCE_KEYS, type ResourceDelta } from "../../core/models/Resources";
-import type { ResourceSnapshot, CanDoResult, Queryable } from "../types";
+import type { CanDoResult, Queryable, ResourceSnapshot } from "../types";
 
 /**
  * Facade for resource-related queries.

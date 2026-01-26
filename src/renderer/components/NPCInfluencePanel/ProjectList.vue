@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { GBadge, GActionCard } from "../../ui";
-import type { Project } from "../../../core/models/types";
 import { NPCFaction } from "../../../core/models/NPCInfluence";
+import type { Project } from "../../../core/models/types";
+import { GActionCard, GBadge } from "../../ui";
 
 defineProps<{
   projects: Project[];

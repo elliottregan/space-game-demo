@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { Colonist, SkillDefinition } from "../../../facade";
-import { ROLE_DISPLAY_NAMES, MASTERY_DISPLAY_NAMES } from "../../../core/models/Colonist";
-import ColonistSkillBadge from "./ColonistSkillBadge.vue";
 import { computed } from "vue";
+import { MASTERY_DISPLAY_NAMES, ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist";
+import type { Colonist, SkillDefinition } from "../../../facade";
+import ColonistSkillBadge from "./ColonistSkillBadge.vue";
 
 const props = defineProps<{
   colonist: Colonist;

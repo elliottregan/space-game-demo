@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { GProgress, GSection } from "../../ui";
 import type { PendingBuilding } from "../../../facade";
+import { GProgress, GSection } from "../../ui";
 
 const props = defineProps<{
   pendingBuildings: PendingBuilding[];

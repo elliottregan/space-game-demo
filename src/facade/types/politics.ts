@@ -1,5 +1,5 @@
 // src/facade/types/politics.ts
-import type { NPCFaction, FactionDemand } from "../../core/models/NPCInfluence";
+import type { FactionDemand, NPCFaction } from "../../core/models/NPCInfluence";
 
 export interface FactionStatus {
   id: NPCFaction;

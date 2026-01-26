@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { gameService } from "../../services/GameService";
-import ColonyStatsBar from "./ColonyStatsBar.vue";
 import BuildingSection from "./BuildingSection.vue";
+import ColonyStatsBar from "./ColonyStatsBar.vue";
 import HousingSection from "./HousingSection.vue";
 import UnhousedSection from "./UnhousedSection.vue";
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { GButton, GBadge, GInput } from "../../ui";
-import type { NPC, Council } from "../../../core/models/types";
+import type { Council, NPC } from "../../../core/models/types";
+import { GBadge, GButton, GInput } from "../../ui";
 
 defineProps<{
   councils: Council[];

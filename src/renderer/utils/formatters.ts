@@ -1,8 +1,8 @@
 // src/renderer/utils/formatters.ts
 // Shared formatting utilities for displaying game data
 
-import type { Technology } from "../../core/models/Technology";
 import type { ResourceDelta } from "../../core/models/Resources";
+import type { Technology } from "../../core/models/Technology";
 import {
   FACTION_SUPPORT_NORMALIZED_POSITIVE,
   FACTION_SUPPORT_NORMALIZED_WARNING,

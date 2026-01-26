@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { GActionCard } from "../../ui";
 import type { BuildingDefinition } from "../../../facade";
+import { GActionCard } from "../../ui";
 
 defineProps<{
   definition: BuildingDefinition;
