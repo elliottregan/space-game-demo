@@ -540,7 +540,9 @@ export class BuildingManager {
     const result: ResourceDelta = {};
 
     for (const [key, value] of Object.entries(def.production)) {
-      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier * conditionMultiplier * oxygenMultiplier;
+      if (value)
+        result[key as keyof ResourceDelta] =
+          value * modeMultiplier * conditionMultiplier * oxygenMultiplier;
     }
 
     return result;
@@ -560,7 +562,9 @@ export class BuildingManager {
     const result: ResourceDelta = {};
 
     for (const [key, value] of Object.entries(def.consumption)) {
-      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier * conditionMultiplier * oxygenMultiplier;
+      if (value)
+        result[key as keyof ResourceDelta] =
+          value * modeMultiplier * conditionMultiplier * oxygenMultiplier;
     }
 
     return result;

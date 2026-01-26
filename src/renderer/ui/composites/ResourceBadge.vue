@@ -14,11 +14,11 @@ const props = withDefaults(
 );
 
 const resourceConfig = {
-  food: { label: "FOOD", color: "#827717" },      // olive
-  oxygen: { label: "O2", color: "#00838F" },       // cyan
-  water: { label: "H2O", color: "#1565C0" },       // blue
-  power: { label: "PWR", color: "#F57C00" },       // amber
-  materials: { label: "MAT", color: "#455A64" },   // slate
+  food: { label: "FOOD", color: "#827717" }, // olive
+  oxygen: { label: "O2", color: "#00838F" }, // cyan
+  water: { label: "H2O", color: "#1565C0" }, // blue
+  power: { label: "PWR", color: "#F57C00" }, // amber
+  materials: { label: "MAT", color: "#455A64" }, // slate
 };
 
 const config = computed(() => resourceConfig[props.resource]);

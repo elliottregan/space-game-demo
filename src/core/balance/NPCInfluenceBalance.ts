@@ -17,19 +17,55 @@ export const TRANSMISSION_FACTORS: Record<
   Record<NPCFaction, Record<NPCFaction, number>>
 > = {
   [NPCFaction.EarthLoyalists]: {
-    [NPCFaction.EarthLoyalists]: { [NPCFaction.EarthLoyalists]: 1.0, [NPCFaction.MarsIndependence]: 0.6, [NPCFaction.CorporateInterests]: 0.2 },
-    [NPCFaction.MarsIndependence]: { [NPCFaction.EarthLoyalists]: 0.7, [NPCFaction.MarsIndependence]: 1.0, [NPCFaction.CorporateInterests]: 0.4 },
-    [NPCFaction.CorporateInterests]: { [NPCFaction.EarthLoyalists]: 0.3, [NPCFaction.MarsIndependence]: 0.5, [NPCFaction.CorporateInterests]: 1.0 },
+    [NPCFaction.EarthLoyalists]: {
+      [NPCFaction.EarthLoyalists]: 1.0,
+      [NPCFaction.MarsIndependence]: 0.6,
+      [NPCFaction.CorporateInterests]: 0.2,
+    },
+    [NPCFaction.MarsIndependence]: {
+      [NPCFaction.EarthLoyalists]: 0.7,
+      [NPCFaction.MarsIndependence]: 1.0,
+      [NPCFaction.CorporateInterests]: 0.4,
+    },
+    [NPCFaction.CorporateInterests]: {
+      [NPCFaction.EarthLoyalists]: 0.3,
+      [NPCFaction.MarsIndependence]: 0.5,
+      [NPCFaction.CorporateInterests]: 1.0,
+    },
   },
   [NPCFaction.MarsIndependence]: {
-    [NPCFaction.EarthLoyalists]: { [NPCFaction.EarthLoyalists]: 1.0, [NPCFaction.MarsIndependence]: 0.5, [NPCFaction.CorporateInterests]: 0.3 },
-    [NPCFaction.MarsIndependence]: { [NPCFaction.EarthLoyalists]: 0.6, [NPCFaction.MarsIndependence]: 1.0, [NPCFaction.CorporateInterests]: 0.6 },
-    [NPCFaction.CorporateInterests]: { [NPCFaction.EarthLoyalists]: 0.3, [NPCFaction.MarsIndependence]: 0.5, [NPCFaction.CorporateInterests]: 1.0 },
+    [NPCFaction.EarthLoyalists]: {
+      [NPCFaction.EarthLoyalists]: 1.0,
+      [NPCFaction.MarsIndependence]: 0.5,
+      [NPCFaction.CorporateInterests]: 0.3,
+    },
+    [NPCFaction.MarsIndependence]: {
+      [NPCFaction.EarthLoyalists]: 0.6,
+      [NPCFaction.MarsIndependence]: 1.0,
+      [NPCFaction.CorporateInterests]: 0.6,
+    },
+    [NPCFaction.CorporateInterests]: {
+      [NPCFaction.EarthLoyalists]: 0.3,
+      [NPCFaction.MarsIndependence]: 0.5,
+      [NPCFaction.CorporateInterests]: 1.0,
+    },
   },
   [NPCFaction.CorporateInterests]: {
-    [NPCFaction.EarthLoyalists]: { [NPCFaction.EarthLoyalists]: 1.0, [NPCFaction.MarsIndependence]: 0.4, [NPCFaction.CorporateInterests]: 0.2 },
-    [NPCFaction.MarsIndependence]: { [NPCFaction.EarthLoyalists]: 0.5, [NPCFaction.MarsIndependence]: 1.0, [NPCFaction.CorporateInterests]: 0.6 },
-    [NPCFaction.CorporateInterests]: { [NPCFaction.EarthLoyalists]: 0.3, [NPCFaction.MarsIndependence]: 0.7, [NPCFaction.CorporateInterests]: 1.0 },
+    [NPCFaction.EarthLoyalists]: {
+      [NPCFaction.EarthLoyalists]: 1.0,
+      [NPCFaction.MarsIndependence]: 0.4,
+      [NPCFaction.CorporateInterests]: 0.2,
+    },
+    [NPCFaction.MarsIndependence]: {
+      [NPCFaction.EarthLoyalists]: 0.5,
+      [NPCFaction.MarsIndependence]: 1.0,
+      [NPCFaction.CorporateInterests]: 0.6,
+    },
+    [NPCFaction.CorporateInterests]: {
+      [NPCFaction.EarthLoyalists]: 0.3,
+      [NPCFaction.MarsIndependence]: 0.7,
+      [NPCFaction.CorporateInterests]: 1.0,
+    },
   },
 } as const;
 

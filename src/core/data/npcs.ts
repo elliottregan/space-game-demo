@@ -9,14 +9,29 @@ export const NPCS: NPC[] = [
   { id: "alex_okonkwo", name: "Alex Okonkwo", faction: NPCFaction.EarthLoyalists, influence: 1.2 },
 
   // Mars Independence (4)
-  { id: "maria_santos", name: "Maria Santos", faction: NPCFaction.MarsIndependence, influence: 1.3 },
+  {
+    id: "maria_santos",
+    name: "Maria Santos",
+    faction: NPCFaction.MarsIndependence,
+    influence: 1.3,
+  },
   { id: "james_liu", name: "James Liu", faction: NPCFaction.MarsIndependence, influence: 1.0 },
   { id: "aisha_patel", name: "Aisha Patel", faction: NPCFaction.MarsIndependence, influence: 1.1 },
   { id: "marcus_reed", name: "Marcus Reed", faction: NPCFaction.MarsIndependence, influence: 0.9 },
 
   // Corporate Interests (3)
-  { id: "elena_volkov", name: "Elena Volkov", faction: NPCFaction.CorporateInterests, influence: 1.4 },
-  { id: "david_morrison", name: "David Morrison", faction: NPCFaction.CorporateInterests, influence: 1.0 },
+  {
+    id: "elena_volkov",
+    name: "Elena Volkov",
+    faction: NPCFaction.CorporateInterests,
+    influence: 1.4,
+  },
+  {
+    id: "david_morrison",
+    name: "David Morrison",
+    faction: NPCFaction.CorporateInterests,
+    influence: 1.0,
+  },
   { id: "sarah_chen", name: "Sarah Chen", faction: NPCFaction.CorporateInterests, influence: 1.1 },
 ];
 

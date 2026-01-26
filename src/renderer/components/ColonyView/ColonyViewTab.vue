@@ -10,7 +10,7 @@ const state = gameService.getState();
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const activeBuildings = computed(() =>
-  state.buildings.filter((b) => b.status === "active" || b.status === "pending")
+  state.buildings.filter((b) => b.status === "active" || b.status === "pending"),
 );
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template

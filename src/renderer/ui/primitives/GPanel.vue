@@ -7,7 +7,7 @@ withDefaults(
   }>(),
   {
     accent: "slate",
-  }
+  },
 );
 </script>
 

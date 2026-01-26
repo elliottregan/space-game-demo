@@ -15,7 +15,7 @@ export const FACTION_SUPPORT_NORMALIZED_WARNING = 0;
 
 /** Oxygen contribution thresholds */
 export const OXYGEN_POSITIVE_THRESHOLD = 3; // Green: comfortable surplus
-export const OXYGEN_WARNING_THRESHOLD = 0;  // Yellow: marginal (0-2), Red: deficit (<0)
+export const OXYGEN_WARNING_THRESHOLD = 0; // Yellow: marginal (0-2), Red: deficit (<0)
 
 export type StatusVariant = "positive" | "warning" | "negative";
 

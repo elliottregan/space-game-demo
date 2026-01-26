@@ -3,30 +3,30 @@
   /* Inspired by 2001: A Space Odyssey interfaces */
 
   /* Base palette - light backgrounds */
-  --g-color-bg-base: #FFFFFF;
-  --g-color-bg-surface: #F5F5F5;
-  --g-color-bg-elevated: #FAFAFA;
+  --g-color-bg-base: #ffffff;
+  --g-color-bg-surface: #f5f5f5;
+  --g-color-bg-elevated: #fafafa;
 
   /* Text colors - dark on light */
-  --g-color-text: #1A1A1A;
+  --g-color-text: #1a1a1a;
   --g-color-text-muted: #666666;
 
   /* Borders */
-  --g-color-border: #E0E0E0;
-  --g-color-border-focus: #BDBDBD;
+  --g-color-border: #e0e0e0;
+  --g-color-border-focus: #bdbdbd;
 
   /* Section accent colors (solid blocks for headers) */
-  --g-accent-red: #D32F2F;
-  --g-accent-cyan: #00838F;
+  --g-accent-red: #d32f2f;
+  --g-accent-cyan: #00838f;
   --g-accent-olive: #827717;
-  --g-accent-amber: #F57C00;
-  --g-accent-slate: #455A64;
+  --g-accent-amber: #f57c00;
+  --g-accent-slate: #455a64;
 
   /* Semantic colors */
-  --g-color-positive: #2E7D32;
-  --g-color-negative: #C62828;
-  --g-color-warning: #EF6C00;
-  --g-color-info: #00838F;
+  --g-color-positive: #2e7d32;
+  --g-color-negative: #c62828;
+  --g-color-warning: #ef6c00;
+  --g-color-info: #00838f;
 
   /* Section-specific accent mappings */
   --g-section-resources: var(--g-accent-red);
