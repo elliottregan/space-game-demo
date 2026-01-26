@@ -8,6 +8,7 @@ export type {
   BuildingMode,
   BuildingSnapshot,
   BuildingStatus,
+  PlacedBuilding,
 } from "./buildings";
 // Common types (includes ok/err helper functions)
 export {
