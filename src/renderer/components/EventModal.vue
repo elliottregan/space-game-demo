@@ -78,7 +78,7 @@ function formatEffects(effects: Record<string, unknown>): string[] {
   left: 0;
   right: 0;
   bottom: 0;
-  background: oklch(10% 0.02 250 / 0.95);
+  background: rgba(0, 0, 0, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -86,13 +86,11 @@ function formatEffects(effects: Record<string, unknown>): string[] {
 }
 
 .event-modal {
-  background: var(--g-color-bg-surface);
-  border-radius: 8px;
+  background: var(--g-color-bg-base);
+  border: 2px solid var(--g-accent-slate);
   padding: var(--g-space-xl);
   max-width: 500px;
   width: 90%;
-  border: 2px solid var(--g-color-negative);
-  box-shadow: 0 0 50px oklch(60% 0.2 25 / 0.3);
   text-align: center;
 }
 
@@ -106,9 +104,12 @@ function formatEffects(effects: Record<string, unknown>): string[] {
   color: var(--g-color-negative);
   margin-bottom: var(--g-space-md);
   font-size: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .event-description {
+  font-family: var(--g-font-mono);
   color: var(--g-color-text);
   margin-bottom: var(--g-space-lg);
   line-height: 1.6;
@@ -121,9 +122,8 @@ function formatEffects(effects: Record<string, unknown>): string[] {
 }
 
 .choice-card {
-  background: var(--g-color-bg-elevated);
+  background: var(--g-color-bg-surface);
   border: 1px solid var(--g-color-border);
-  border-radius: 4px;
   padding: var(--g-space-md);
   cursor: pointer;
   transition: all var(--g-transition-fast);
@@ -131,8 +131,8 @@ function formatEffects(effects: Record<string, unknown>): string[] {
 }
 
 .choice-card:hover {
-  background: oklch(30% 0.02 250);
-  border-color: var(--g-color-warning);
+  background: var(--g-color-bg-surface);
+  border-color: var(--g-accent-slate);
   transform: translateX(4px);
 }
 
@@ -150,19 +150,20 @@ function formatEffects(effects: Record<string, unknown>): string[] {
 }
 
 .effect-tag {
+  font-family: var(--g-font-mono);
   font-size: var(--g-font-size-xs);
   padding: var(--g-space-xs) var(--g-space-sm);
-  border-radius: 4px;
-  background: var(--g-color-bg-surface);
+  background: var(--g-color-bg-base);
+  border: 1px solid var(--g-color-border);
 }
 
 .effect-tag.positive {
   color: var(--g-color-positive);
-  background: oklch(70% 0.17 145 / 0.1);
+  background: rgba(34, 197, 94, 0.1);
 }
 
 .effect-tag.negative {
   color: var(--g-color-negative);
-  background: oklch(60% 0.2 25 / 0.1);
+  background: rgba(239, 68, 68, 0.1);
 }
 </style>

@@ -24,7 +24,6 @@ withDefaults(
   font-family: var(--g-font-mono);
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  border-radius: 2px;
   white-space: nowrap;
 }
 
@@ -41,32 +40,34 @@ withDefaults(
 
 /* Variants */
 .g-badge--default {
-  background: var(--g-color-bg-elevated);
+  background: var(--g-color-bg-surface);
   color: var(--g-color-text);
+  border: 1px solid var(--g-color-border);
 }
 
 .g-badge--info {
-  background: oklch(65% 0.15 250 / 0.2);
-  color: var(--g-color-info);
+  background: var(--g-color-info);
+  color: white;
 }
 
 .g-badge--positive {
-  background: oklch(70% 0.17 145 / 0.2);
-  color: var(--g-color-positive);
+  background: var(--g-color-positive);
+  color: white;
 }
 
 .g-badge--negative {
-  background: oklch(60% 0.2 25 / 0.2);
-  color: var(--g-color-negative);
+  background: var(--g-color-negative);
+  color: white;
 }
 
 .g-badge--warning {
-  background: oklch(75% 0.15 70 / 0.2);
-  color: var(--g-color-warning);
+  background: var(--g-color-warning);
+  color: white;
 }
 
 .g-badge--muted {
-  background: oklch(50% 0.02 250 / 0.2);
+  background: var(--g-color-bg-surface);
   color: var(--g-color-text-muted);
+  border: 1px solid var(--g-color-border);
 }
 </style>

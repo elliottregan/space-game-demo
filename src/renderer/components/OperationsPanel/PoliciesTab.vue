@@ -83,7 +83,7 @@ const emit = defineEmits<{
   font-size: var(--g-font-size-xs);
   color: var(--g-color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
   margin-bottom: var(--g-space-xs);
 }
 
@@ -100,8 +100,7 @@ const emit = defineEmits<{
 .cooldown-notice {
   margin-top: var(--g-space-md);
   padding: var(--g-space-sm);
-  background: oklch(75% 0.15 70 / 0.1);
-  border-radius: 4px;
+  background: rgba(245, 124, 0, 0.1);
   color: var(--g-color-warning);
   font-size: var(--g-font-size-sm);
   text-align: center;

@@ -57,26 +57,25 @@ const emit = defineEmits<{
 
 <style scoped>
 .tech-card {
-  background: var(--g-color-bg-elevated);
-  border-radius: 4px;
+  background: var(--g-color-bg-surface);
   padding: var(--g-space-sm);
   border: 1px solid var(--g-color-border);
 }
 
 .tech-card.available {
-  border-color: oklch(65% 0.15 250 / 0.3);
+  border-color: rgba(0, 131, 143, 0.3);
 }
 
 .tech-card.available:hover {
-  border-color: var(--g-color-info);
+  border-color: var(--g-accent-cyan);
   box-shadow: var(--g-glow-subtle);
 }
 
 .tech-card.completed {
   display: inline-block;
   padding: var(--g-space-xs) var(--g-space-sm);
-  background: oklch(70% 0.17 145 / 0.1);
-  border-color: oklch(70% 0.17 145 / 0.3);
+  background: rgba(76, 175, 80, 0.1);
+  border-color: rgba(76, 175, 80, 0.3);
 }
 
 .tech-card.locked {
@@ -103,7 +102,7 @@ const emit = defineEmits<{
 
 .tech-cost {
   font-size: var(--g-font-size-xs);
-  color: oklch(70% 0.15 280);
+  color: var(--g-accent-cyan);
   margin-bottom: var(--g-space-xs);
 }
 

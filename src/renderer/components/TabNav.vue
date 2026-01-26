@@ -22,31 +22,38 @@ import { RouterLink } from "vue-router";
 <style scoped>
 .tab-nav {
   display: flex;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-  margin-bottom: 1rem;
+  gap: 0;
+  background: var(--g-color-bg-base);
+  border: 1px solid var(--g-color-border);
+  margin-bottom: var(--g-space-md);
 }
 
 .tab-link {
-  padding: 0.75rem 1.5rem;
-  color: #888;
+  padding: var(--g-space-sm) var(--g-space-lg);
+  color: var(--g-color-text-muted);
   text-decoration: none;
+  font-family: var(--g-font-mono);
   font-weight: 500;
-  border-radius: 6px;
-  transition: color 0.2s, background 0.2s;
+  font-size: var(--g-font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   border-bottom: 3px solid transparent;
+  transition: color var(--g-transition-fast), background var(--g-transition-fast);
 }
 
 .tab-link:hover {
-  color: #e8e8e8;
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--g-color-text);
+  background: var(--g-color-bg-surface);
 }
 
 .tab-link.active {
-  color: #e8e8e8;
-  border-bottom-color: #e94560;
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--g-color-text);
+  border-bottom-color: var(--g-accent-red);
+  background: var(--g-color-bg-surface);
+}
+
+/* Add subtle dividers between tabs */
+.tab-link + .tab-link {
+  border-left: 1px solid var(--g-color-border);
 }
 </style>

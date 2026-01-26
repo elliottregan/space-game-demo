@@ -50,26 +50,24 @@ defineEmits<{
 
 .g-select {
   font-family: var(--g-font-mono);
-  background: var(--g-color-bg);
+  background: var(--g-color-bg-base);
   color: var(--g-color-text);
   border: 1px solid var(--g-color-border);
   cursor: pointer;
   appearance: none;
   padding-right: calc(var(--g-space-md) + 1em);
-  transition:
-    border-color var(--g-transition-fast),
-    box-shadow var(--g-transition-fast);
+  transition: border-color var(--g-transition-fast);
 }
 
 .g-select:focus {
   outline: none;
   border-color: var(--g-color-border-focus);
-  box-shadow: var(--g-glow-subtle);
 }
 
 .g-select:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  background: var(--g-color-bg-surface);
 }
 
 .g-select__arrow {

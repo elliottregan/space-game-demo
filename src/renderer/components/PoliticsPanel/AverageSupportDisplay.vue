@@ -26,13 +26,16 @@ function getSupportVariant(support: number): "positive" | "warning" | "negative"
   justify-content: space-between;
   align-items: center;
   padding: var(--g-space-sm);
-  background: var(--g-color-bg-elevated);
-  border-radius: 4px;
+  background: var(--g-color-bg-surface);
+  border: 1px solid var(--g-color-border);
   margin-bottom: var(--g-space-md);
 }
 
 .average-support .label {
+  font-family: var(--g-font-mono);
   color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .average-support .value {

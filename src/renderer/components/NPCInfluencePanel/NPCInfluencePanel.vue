@@ -102,7 +102,7 @@ function toggleCouncilMember(npcId: string) {
 </script>
 
 <template>
-  <GPanel title="Council Politics">
+  <GPanel title="Council Politics" accent="slate">
     <!-- Active Project Status -->
     <ActiveProposal
       v-if="state.npcInfluence.activeProject"

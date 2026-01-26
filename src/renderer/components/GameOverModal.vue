@@ -53,7 +53,7 @@ function newGame(): void {
   left: 0;
   right: 0;
   bottom: 0;
-  background: oklch(10% 0.02 250 / 0.98);
+  background: rgba(0, 0, 0, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -61,23 +61,20 @@ function newGame(): void {
 }
 
 .game-over-modal {
-  background: var(--g-color-bg-surface);
-  border-radius: 8px;
+  background: var(--g-color-bg-base);
+  border: 2px solid var(--g-accent-slate);
   padding: var(--g-space-xl);
   max-width: 450px;
   width: 90%;
   text-align: center;
-  border: 3px solid;
 }
 
 .game-over-modal.victory {
   border-color: var(--g-color-positive);
-  box-shadow: 0 0 80px oklch(70% 0.17 145 / 0.4);
 }
 
 .game-over-modal.defeat {
   border-color: var(--g-color-negative);
-  box-shadow: 0 0 80px oklch(60% 0.2 25 / 0.4);
 }
 
 .icon {
@@ -89,6 +86,8 @@ h1 {
   font-family: var(--g-font-mono);
   font-size: 2.5rem;
   margin-bottom: var(--g-space-md);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .victory h1 {
@@ -100,6 +99,7 @@ h1 {
 }
 
 .reason {
+  font-family: var(--g-font-mono);
   color: var(--g-color-text);
   font-size: 1.1rem;
   margin-bottom: var(--g-space-xl);
@@ -114,17 +114,18 @@ h1 {
 }
 
 .stat {
-  background: var(--g-color-bg-elevated);
-  border-radius: 4px;
+  background: var(--g-color-bg-surface);
+  border: 1px solid var(--g-color-border);
   padding: var(--g-space-md);
 }
 
 .stat-label {
   display: block;
+  font-family: var(--g-font-mono);
   font-size: var(--g-font-size-xs);
   color: var(--g-color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
   margin-bottom: var(--g-space-xs);
 }
 

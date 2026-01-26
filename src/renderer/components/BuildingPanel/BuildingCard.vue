@@ -108,16 +108,14 @@ function formatConsumption(def: BuildingDefinition): string {
 
 <style scoped>
 .building-card {
-  background: var(--g-color-bg-elevated);
-  border-radius: 4px;
+  background: var(--g-color-bg-surface);
   padding: var(--g-space-md);
   border: 1px solid var(--g-color-border);
-  transition: all var(--g-transition-fast);
+  transition: border-color var(--g-transition-fast);
 }
 
 .building-card:hover:not(.locked):not(.disabled) {
   border-color: var(--g-color-border-focus);
-  box-shadow: var(--g-glow-subtle);
 }
 
 .building-card.locked {
@@ -137,8 +135,11 @@ function formatConsumption(def: BuildingDefinition): string {
 
 .building-name {
   font-family: var(--g-font-mono);
-  font-weight: bold;
-  color: var(--g-color-warning);
+  font-weight: 600;
+  color: var(--g-accent-amber);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: var(--g-font-size-sm);
 }
 
 .building-count {
@@ -160,8 +161,7 @@ function formatConsumption(def: BuildingDefinition): string {
   font-size: var(--g-font-size-xs);
   color: var(--g-color-negative);
   padding: var(--g-space-xs);
-  background: oklch(60% 0.2 25 / 0.1);
-  border-radius: 4px;
+  background: rgba(198, 40, 40, 0.1);
 }
 
 .building-stats {
@@ -200,7 +200,7 @@ function formatConsumption(def: BuildingDefinition): string {
 }
 
 .stat.cost {
-  color: oklch(70% 0.15 280);
+  color: var(--g-accent-slate);
 }
 
 .stat.time {

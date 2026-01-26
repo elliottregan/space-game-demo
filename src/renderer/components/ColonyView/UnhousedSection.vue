@@ -30,17 +30,17 @@ defineProps<{
 
 <style scoped>
 .warning-message {
-  padding: 0.5rem;
-  background: var(--bg-danger);
-  border-radius: 4px;
-  margin-bottom: 0.75rem;
+  padding: var(--g-space-sm);
+  background: rgba(198, 40, 40, 0.2);
+  margin-bottom: var(--g-space-md);
   font-size: var(--g-font-size-sm);
-  color: var(--color-warning);
+  font-family: var(--g-font-mono);
+  color: var(--g-color-warning);
 }
 
 .unhoused-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--g-space-md);
 }
 </style>

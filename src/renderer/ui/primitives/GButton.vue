@@ -34,17 +34,16 @@ withDefaults(
   gap: var(--g-space-xs);
   font-family: var(--g-font-mono);
   font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   border: 1px solid transparent;
   cursor: pointer;
-  transition:
-    background var(--g-transition-fast),
-    border-color var(--g-transition-fast),
-    box-shadow var(--g-transition-fast);
+  transition: filter var(--g-transition-fast), border-color var(--g-transition-fast);
 }
 
 .g-button:focus-visible {
-  outline: none;
-  box-shadow: var(--g-glow-focus);
+  outline: 2px solid var(--g-color-border-focus);
+  outline-offset: 2px;
 }
 
 .g-button:disabled {
@@ -56,8 +55,6 @@ withDefaults(
 .g-button--sm {
   padding: var(--g-space-xs) var(--g-space-sm);
   font-size: var(--g-font-size-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .g-button--md {
@@ -67,36 +64,34 @@ withDefaults(
 
 /* Variants */
 .g-button--primary {
-  background: var(--g-color-info);
-  color: oklch(10% 0.02 250);
-  border-color: var(--g-color-info);
+  background: var(--g-accent-red);
+  color: white;
+  border-color: var(--g-accent-red);
 }
 
 .g-button--primary:hover:not(:disabled) {
-  background: oklch(70% 0.15 250);
-  box-shadow: var(--g-glow-subtle);
+  filter: brightness(0.9);
 }
 
 .g-button--secondary {
-  background: transparent;
+  background: var(--g-color-bg-base);
   color: var(--g-color-text);
   border-color: var(--g-color-border);
 }
 
 .g-button--secondary:hover:not(:disabled) {
   border-color: var(--g-color-border-focus);
-  box-shadow: var(--g-glow-subtle);
+  background: var(--g-color-bg-surface);
 }
 
 .g-button--danger {
-  background: transparent;
-  color: var(--g-color-negative);
+  background: var(--g-color-negative);
+  color: white;
   border-color: var(--g-color-negative);
 }
 
 .g-button--danger:hover:not(:disabled) {
-  background: oklch(60% 0.2 25 / 0.15);
-  box-shadow: 0 0 8px oklch(60% 0.2 25 / 0.3);
+  filter: brightness(0.9);
 }
 
 .g-button--ghost {
@@ -107,7 +102,7 @@ withDefaults(
 
 .g-button--ghost:hover:not(:disabled) {
   color: var(--g-color-text);
-  background: var(--g-color-bg-elevated);
+  background: var(--g-color-bg-surface);
 }
 
 /* Loading state */
@@ -120,9 +115,8 @@ withDefaults(
   position: absolute;
   width: 1em;
   height: 1em;
-  border: 2px solid var(--g-color-text-muted);
-  border-top-color: var(--g-color-info);
-  border-radius: 50%;
+  border: 2px solid var(--g-color-border);
+  border-top-color: var(--g-color-text);
   animation: g-spin 0.6s linear infinite;
 }
 

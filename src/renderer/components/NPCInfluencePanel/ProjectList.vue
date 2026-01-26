@@ -77,7 +77,7 @@ function getFactionVariant(faction: NPCFaction): "info" | "positive" | "warning"
   font-size: var(--g-font-size-sm);
   color: var(--g-color-text);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 .project-list {

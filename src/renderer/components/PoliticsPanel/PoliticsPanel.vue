@@ -11,7 +11,7 @@ function formatSupport(support: number): string {
 </script>
 
 <template>
-  <GPanel title="Politics">
+  <GPanel title="Politics" accent="slate">
     <div class="factions">
       <div
         v-for="faction in state.politics.factions"
@@ -59,8 +59,7 @@ function formatSupport(support: number): string {
 
 .faction-card {
   padding: 0.75rem;
-  background: var(--color-surface);
-  border-radius: 4px;
+  background: var(--g-color-bg-surface);
 }
 
 .faction-header {
@@ -70,13 +69,15 @@ function formatSupport(support: number): string {
 }
 
 .faction-name {
+  font-family: var(--g-font-mono);
   font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .support-bar {
   height: 8px;
-  background: var(--color-muted);
-  border-radius: 4px;
+  background: var(--g-color-text-muted);
   overflow: hidden;
 }
 
@@ -88,15 +89,16 @@ function formatSupport(support: number): string {
 .demand-warning {
   margin-top: 0.5rem;
   padding: 0.25rem 0.5rem;
-  background: var(--color-warning);
-  color: var(--color-background);
-  border-radius: 4px;
+  background: var(--g-color-warning);
+  color: var(--g-color-bg);
+  font-family: var(--g-font-mono);
   font-size: 0.875rem;
 }
 
 .hint {
   margin-top: 1rem;
-  color: var(--color-muted);
+  color: var(--g-color-text-muted);
+  font-family: var(--g-font-mono);
   font-size: 0.875rem;
 }
 </style>

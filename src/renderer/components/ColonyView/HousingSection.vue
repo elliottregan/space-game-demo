@@ -33,13 +33,14 @@ defineProps<{
 .housing-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--g-space-md);
 }
 
 .no-housing {
-  padding: 1rem;
+  padding: var(--g-space-md);
   text-align: center;
-  color: var(--color-warning);
+  color: var(--g-color-warning);
   font-style: italic;
+  font-family: var(--g-font-mono);
 }
 </style>

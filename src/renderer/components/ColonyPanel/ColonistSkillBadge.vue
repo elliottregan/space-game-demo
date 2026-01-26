@@ -21,16 +21,16 @@ defineProps<{
 .skill-badge {
   display: inline-block;
   padding: 2px 6px;
-  border-radius: 3px;
   font-size: var(--g-font-size-xs);
-  background: var(--g-color-bg-elevated);
+  font-family: var(--g-font-mono);
+  background: var(--g-color-bg-surface);
   color: var(--g-color-text-muted);
   border: 1px solid var(--g-color-border);
 }
 
 .skill-badge.active {
-  background: color-mix(in srgb, var(--color-positive) 20%, transparent);
-  color: var(--color-positive);
-  border-color: var(--color-positive);
+  background: rgba(67, 160, 71, 0.15);
+  color: var(--g-color-positive);
+  border-color: var(--g-color-positive);
 }
 </style>

@@ -108,7 +108,9 @@ function formatMaintenanceCost(cost: ResourceDelta | undefined): string {
 
 .maintenance-section h3 {
   font-size: var(--g-font-size-sm);
-  color: var(--g-color-warning);
+  color: var(--g-accent-amber);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   margin-bottom: var(--g-space-sm);
 }
 
@@ -124,8 +126,8 @@ function formatMaintenanceCost(cost: ResourceDelta | undefined): string {
   align-items: center;
   gap: var(--g-space-md);
   padding: var(--g-space-sm);
-  background: var(--g-color-bg-elevated);
-  border-radius: 4px;
+  background: var(--g-color-bg-surface);
+  border: 1px solid var(--g-color-border);
   border-left: 3px solid var(--g-color-warning);
 }
 
@@ -154,7 +156,6 @@ function formatMaintenanceCost(cost: ResourceDelta | undefined): string {
   font-size: var(--g-font-size-xs);
   color: var(--g-color-negative);
   padding: var(--g-space-xs);
-  background: oklch(60% 0.2 25 / 0.1);
-  border-radius: 4px;
+  background: rgba(198, 40, 40, 0.1);
 }
 </style>

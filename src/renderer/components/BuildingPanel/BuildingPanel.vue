@@ -139,7 +139,7 @@ function performMaintenance(buildingId: string): void {
 </script>
 
 <template>
-  <GPanel title="Buildings">
+  <GPanel title="Buildings" accent="amber">
     <CategoryTabs
       :selected-category="selectedCategory"
       :active-count="activeBuildings.length"

@@ -54,7 +54,9 @@ function getRemainingBuildTime(building: PendingBuilding): number {
 
 .construction-queue h3 {
   font-size: var(--g-font-size-sm);
-  color: var(--g-color-warning);
+  color: var(--g-accent-amber);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   margin-bottom: var(--g-space-sm);
 }
 
@@ -63,8 +65,8 @@ function getRemainingBuildTime(building: PendingBuilding): number {
   align-items: center;
   gap: var(--g-space-sm);
   padding: var(--g-space-sm);
-  background: var(--g-color-bg-elevated);
-  border-radius: 4px;
+  background: var(--g-color-bg-surface);
+  border: 1px solid var(--g-color-border);
   margin-bottom: var(--g-space-xs);
 }
 

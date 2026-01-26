@@ -40,7 +40,10 @@ defineProps<{
 
 .stat-label {
   font-size: var(--g-font-size-sm);
+  font-family: var(--g-font-mono);
   color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   min-width: 80px;
 }
 
