@@ -11,6 +11,7 @@ export interface TechnologySnapshot {
   readonly available: readonly Readonly<Technology>[];
   readonly researched: readonly Readonly<Technology>[];
   readonly currentResearch: Readonly<TechResearch> | null;
+  readonly researchQueue: readonly string[];
 }
 
 // Re-export core types
