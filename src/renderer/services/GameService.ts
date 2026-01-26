@@ -218,10 +218,16 @@ class GameService {
     this.state.housingAssignments = { ...colony.housingAssignments };
     this.state.unhoused = [...colony.unhoused];
 
-    // Buildings
+    // Buildings - deep copy to ensure assignedWorkers arrays trigger reactivity
     const buildings = this.facade.buildings.snapshot();
-    this.state.buildings = [...buildings.active];
-    this.state.pendingBuildings = [...buildings.pending];
+    this.state.buildings = buildings.active.map((b) => ({
+      ...b,
+      assignedWorkers: [...b.assignedWorkers],
+    }));
+    this.state.pendingBuildings = buildings.pending.map((b) => ({
+      ...b,
+      assignedWorkers: [...b.assignedWorkers],
+    }));
     this.state.buildingDefinitions = [...buildings.definitions];
     this.state.moraleBoost = buildings.moraleBoost;
     this.state.totalOxygenContribution = buildings.totalOxygenContribution;

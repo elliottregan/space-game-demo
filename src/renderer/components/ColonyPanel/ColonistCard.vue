@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { MASTERY_DISPLAY_NAMES, ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist";
-import type { Colonist, SkillDefinition, Building, BuildingDefinition } from "../../../facade";
+import type { Building, BuildingDefinition, Colonist, SkillDefinition } from "../../../facade";
 import { gameService } from "../../services/GameService";
 import ColonistSkillBadge from "./ColonistSkillBadge.vue";
 
@@ -24,8 +24,14 @@ function isSkillActive(skill: SkillDefinition): boolean {
   return skill.affinity.includes(props.colonist.role);
 }
 
+// Compute workplace from reactive state instead of calling facade directly
 const workplace = computed(() => {
-  return gameService.api.colony.getWorkplace(props.colonist.id);
+  for (const building of state.buildings) {
+    if (building.assignedWorkers.includes(props.colonist.id)) {
+      return building.id;
+    }
+  }
+  return undefined;
 });
 
 interface WorkplaceOption {
@@ -37,6 +43,7 @@ interface WorkplaceOption {
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const availableWorkplaces = computed((): WorkplaceOption[] => {
   const result: WorkplaceOption[] = [];
+  const currentWorkplace = workplace.value;
 
   for (const building of state.buildings) {
     const definition = state.buildingDefinitions.find((d) => d.id === building.definitionId);
@@ -46,7 +53,7 @@ const availableWorkplaces = computed((): WorkplaceOption[] => {
 
     const currentWorkers = building.assignedWorkers.length;
     // Include if has space OR if it's the current workplace
-    if (currentWorkers < definition.workerSlots || building.id === workplace.value) {
+    if (currentWorkers < definition.workerSlots || building.id === currentWorkplace) {
       result.push({
         building,
         definition,
@@ -64,8 +71,7 @@ function assignToBuilding(colonistId: string, buildingId: string) {
     gameService.api.colony.unassignFromBuilding(colonistId);
   } else {
     // Unassign first if already assigned
-    const currentWorkplace = gameService.api.colony.getWorkplace(colonistId);
-    if (currentWorkplace) {
+    if (workplace.value) {
       gameService.api.colony.unassignFromBuilding(colonistId);
     }
     gameService.api.colony.assignToBuilding(colonistId, buildingId);
