@@ -3,28 +3,27 @@ import {
   CONDITION_DECAY_INTERVAL,
   CONDITION_EFFICIENCY_PENALTY,
   CONDITION_EFFICIENCY_THRESHOLD,
-  MAINTENANCE_COST_MULTIPLIER,
   MAINTENANCE_START_SOL,
   OXYGEN_DEFICIT_EFFICIENCY_PENALTY,
 } from "../balance/BuildingBalance";
-import {
-  BUILDING_MODES,
-  RECYCLING_RECOVERY_RATES,
-  RECYCLING_TIME_MULTIPLIER,
-  REPAIR_COST_MULTIPLIER,
-  REPAIR_DURATION_SOLS,
-  REPURPOSE_COST_MULTIPLIER,
-  REPURPOSE_TIME_MULTIPLIER,
-  RUSH_RECYCLING_PENALTY,
-} from "../balance/OperationsBalance";
+import { BUILDING_MODES, REPAIR_DURATION_SOLS } from "../balance/OperationsBalance";
 import type { Building, BuildingDefinition } from "../models/Building";
 import type { ColonistRole } from "../models/Colonist";
+import type { GameEvent } from "../models/GameEvent";
+import type { ResourceDelta } from "../models/Resources";
+import {
+  applyRushRecyclingPenalty,
+  calculateMaintenanceCost,
+  calculateRecycleTime,
+  calculateRecycleValue,
+  calculateRepairCost,
+  calculateRepurposeCost,
+  calculateRepurposeTime,
+} from "../utils/buildingCosts";
 import {
   calculateAverageWorkerEfficiency,
   calculateStaffingEfficiency,
 } from "../utils/workerEfficiency";
-import type { GameEvent } from "../models/GameEvent";
-import type { ResourceDelta } from "../models/Resources";
 import type { ColonyManager } from "./ColonyManager";
 import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
@@ -285,11 +284,7 @@ export class BuildingManager {
     const def = this.definitions.get(building.definitionId);
     if (!def) return undefined;
 
-    const cost: ResourceDelta = {};
-    for (const [key, value] of Object.entries(def.cost)) {
-      if (value) cost[key as keyof ResourceDelta] = Math.ceil(value * REPAIR_COST_MULTIPLIER);
-    }
-    return cost;
+    return calculateRepairCost(def);
   }
 
   startRepair(buildingId: string, resources: ResourceManager): boolean {
@@ -317,13 +312,7 @@ export class BuildingManager {
     const def = this.definitions.get(building.definitionId);
     if (!def) return undefined;
 
-    const cost: ResourceDelta = {};
-    for (const [key, value] of Object.entries(def.cost)) {
-      if (value) {
-        cost[key as keyof ResourceDelta] = Math.ceil(value * MAINTENANCE_COST_MULTIPLIER);
-      }
-    }
-    return cost;
+    return calculateMaintenanceCost(def);
   }
 
   canPerformMaintenance(buildingId: string, resources: ResourceManager): boolean {
@@ -368,21 +357,7 @@ export class BuildingManager {
     const def = this.definitions.get(building.definitionId);
     if (!def) return undefined;
 
-    let rate: number = RECYCLING_RECOVERY_RATES.standard;
-
-    if (building.broken) {
-      rate = RECYCLING_RECOVERY_RATES.damaged;
-    } else if (building.status === "idle") {
-      rate = RECYCLING_RECOVERY_RATES.depleted;
-    } else if (building.status === "active" && building.depositId) {
-      rate = RECYCLING_RECOVERY_RATES.active;
-    }
-
-    const result: ResourceDelta = {};
-    for (const [key, value] of Object.entries(def.cost)) {
-      if (value) result[key as keyof ResourceDelta] = Math.floor(value * rate);
-    }
-    return result;
+    return calculateRecycleValue(building, def);
   }
 
   getRecycleTime(buildingId: string): number {
@@ -392,7 +367,7 @@ export class BuildingManager {
     const def = this.definitions.get(building.definitionId);
     if (!def) return 0;
 
-    return Math.ceil(def.constructionTime * RECYCLING_TIME_MULTIPLIER);
+    return calculateRecycleTime(def);
   }
 
   startRecycling(buildingId: string, resources: ResourceManager): boolean {
@@ -423,15 +398,7 @@ export class BuildingManager {
     // Immediate completion with penalty
     const recycleValue = this.getRecycleValue(buildingId);
     if (recycleValue) {
-      const penalizedValue: ResourceDelta = {};
-      for (const [key, value] of Object.entries(recycleValue)) {
-        if (value) {
-          penalizedValue[key as keyof ResourceDelta] = Math.floor(
-            value * (1 - RUSH_RECYCLING_PENALTY),
-          );
-        }
-      }
-      resources.add(penalizedValue);
+      resources.add(applyRushRecyclingPenalty(recycleValue));
     }
 
     this.buildings.delete(buildingId);
@@ -470,17 +437,14 @@ export class BuildingManager {
     const targetDef = this.definitions.get(targetDefId);
     if (!targetDef) return undefined;
 
-    const cost: ResourceDelta = {};
-    for (const [key, value] of Object.entries(targetDef.cost)) {
-      if (value) cost[key as keyof ResourceDelta] = Math.ceil(value * REPURPOSE_COST_MULTIPLIER);
-    }
-    return cost;
+    return calculateRepurposeCost(targetDef);
   }
 
   getRepurposeTime(targetDefId: string): number {
     const targetDef = this.definitions.get(targetDefId);
     if (!targetDef) return 0;
-    return Math.ceil(targetDef.constructionTime * REPURPOSE_TIME_MULTIPLIER);
+
+    return calculateRepurposeTime(targetDef);
   }
 
   startRepurposing(
