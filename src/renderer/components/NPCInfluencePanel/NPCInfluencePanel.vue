@@ -6,7 +6,6 @@ import type { SelectOption } from "../../ui/primitives/GSelect.vue";
 import ActiveProposal from "./ActiveProposal.vue";
 import LobbyControls from "./LobbyControls.vue";
 import ProjectList from "./ProjectList.vue";
-import CouncilSection from "./CouncilSection.vue";
 
 // Reactive state for template bindings (auto-updates when API syncs)
 const state = gameService.getState();
@@ -16,8 +15,6 @@ const api = gameService.api;
 
 const selectedNPCForLobby = ref<string | null>(null);
 const lobbyAmount = ref(0.3);
-const councilName = ref("");
-const selectedCouncilMembers = ref<string[]>([]);
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const lobbyOptions: SelectOption[] = [
@@ -40,15 +37,6 @@ const canLobby = computed(() => {
 });
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-const canCreateCouncil = computed(() => {
-  return (
-    selectedCouncilMembers.value.length >= 2 &&
-    councilName.value.trim() !== "" &&
-    state.resources.materials >= 50
-  );
-});
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
 const selectedNPC = computed(() => {
   return state.npcInfluence.npcs.find((n) => n.id === selectedNPCForLobby.value);
 });
@@ -67,27 +55,6 @@ function lobbyNPC(): void {
   const result = api.npc.lobbyNPC(selectedNPCForLobby.value, lobbyAmount.value);
   if (!result.success) {
     console.warn(`Lobbying failed: ${result.error.type}`, result.error);
-  }
-}
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function createCouncil(): void {
-  if (!councilName.value || selectedCouncilMembers.value.length < 2) return;
-  const result = api.npc.createCouncil(councilName.value, selectedCouncilMembers.value);
-  if (!result.success) {
-    console.warn(`Council creation failed: ${result.error.type}`, result.error);
-  }
-  councilName.value = "";
-  selectedCouncilMembers.value = [];
-}
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function toggleCouncilMember(npcId: string) {
-  const idx = selectedCouncilMembers.value.indexOf(npcId);
-  if (idx === -1) {
-    selectedCouncilMembers.value.push(npcId);
-  } else {
-    selectedCouncilMembers.value.splice(idx, 1);
   }
 }
 </script>
@@ -121,18 +88,6 @@ function toggleCouncilMember(npcId: string) {
       v-if="!state.npcInfluence.activeProject"
       :projects="state.npcInfluence.projects"
       @propose="proposeProject"
-    />
-
-    <!-- Councils -->
-    <CouncilSection
-      :councils="state.npcInfluence.councils"
-      :npcs="state.npcInfluence.npcs"
-      :council-name="councilName"
-      :selected-members="selectedCouncilMembers"
-      :can-create="canCreateCouncil"
-      @update:council-name="councilName = $event"
-      @toggle-member="toggleCouncilMember"
-      @create="createCouncil"
     />
   </GPanel>
 </template>

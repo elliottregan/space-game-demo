@@ -2,6 +2,7 @@
 import { ref, computed } from "vue";
 import { PoliticsPanel } from "./PoliticsPanel";
 import { NPCInfluencePanel } from "./NPCInfluencePanel";
+import { CouncilPanel } from "./CouncilPanel";
 import { OperationsPanel } from "./OperationsPanel";
 import { NPCGraph, NPCDetailPanel } from "./NPCGraph";
 import { GPanel } from "../ui";
@@ -91,6 +92,9 @@ const selectedSupportLevel = computed(() => {
         <NPCInfluencePanel />
       </div>
       <div class="politics-col">
+        <CouncilPanel />
+      </div>
+      <div class="politics-col">
         <OperationsPanel />
       </div>
     </div>
@@ -133,7 +137,7 @@ const selectedSupportLevel = computed(() => {
 
 .politics-bottom {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
 }
 
@@ -143,9 +147,9 @@ const selectedSupportLevel = computed(() => {
   gap: 1rem;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
   .politics-bottom {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
