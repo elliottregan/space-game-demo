@@ -14,11 +14,11 @@ const props = withDefaults(
 );
 
 const resourceConfig = {
-  food: { icon: "🌾", hue: 145 },
-  oxygen: { icon: "💨", hue: 220 },
-  water: { icon: "💧", hue: 210 },
-  power: { icon: "⚡", hue: 70 },
-  materials: { icon: "🔧", hue: 280 },
+  food: { label: "FOOD", color: "#827717" },      // olive
+  oxygen: { label: "O2", color: "#00838F" },       // cyan
+  water: { label: "H2O", color: "#1565C0" },       // blue
+  power: { label: "PWR", color: "#F57C00" },       // amber
+  materials: { label: "MAT", color: "#455A64" },   // slate
 };
 
 const config = computed(() => resourceConfig[props.resource]);
@@ -36,68 +36,68 @@ const formattedRate = computed(() => {
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const rateClass = computed(() => {
   if (props.rate === undefined) return "";
-  if (props.rate > 0) return "g-resource-badge__rate--positive";
-  if (props.rate < 0) return "g-resource-badge__rate--negative";
+  if (props.rate > 0) return "rate--positive";
+  if (props.rate < 0) return "rate--negative";
   return "";
 });
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-const accentColor = computed(() => `oklch(65% 0.15 ${config.value.hue})`);
 </script>
 
 <template>
-  <div class="g-resource-badge" :class="`g-resource-badge--${size}`">
-    <span class="g-resource-badge__icon">{{ config.icon }}</span>
-    <span class="g-resource-badge__amount" :style="{ color: accentColor }">
+  <div class="resource-badge" :class="`resource-badge--${size}`">
+    <span class="resource-badge__label" :style="{ background: config.color }">
+      {{ config.label }}
+    </span>
+    <span class="resource-badge__amount">
       {{ formattedAmount }}
     </span>
-    <span v-if="formattedRate" class="g-resource-badge__rate" :class="rateClass">
+    <span v-if="formattedRate" class="resource-badge__rate" :class="rateClass">
       {{ formattedRate }}
     </span>
   </div>
 </template>
 
 <style scoped>
-.g-resource-badge {
+.resource-badge {
   display: inline-flex;
   align-items: center;
-  gap: var(--g-space-xs);
   font-family: var(--g-font-mono);
+  background: var(--g-color-bg-base);
+  border: 1px solid var(--g-color-border);
 }
 
-.g-resource-badge--sm {
+.resource-badge--sm {
   font-size: var(--g-font-size-sm);
 }
 
-.g-resource-badge--sm .g-resource-badge__icon {
-  font-size: 1rem;
-}
-
-.g-resource-badge--md {
+.resource-badge--md {
   font-size: var(--g-font-size-md);
 }
 
-.g-resource-badge--md .g-resource-badge__icon {
-  font-size: 1.25rem;
-}
-
-.g-resource-badge__amount {
+.resource-badge__label {
+  padding: var(--g-space-xs) var(--g-space-sm);
+  color: white;
   font-weight: 600;
-}
-
-.g-resource-badge__rate {
   font-size: 0.85em;
-  padding: 1px var(--g-space-xs);
-  border-radius: 2px;
+  letter-spacing: 0.05em;
 }
 
-.g-resource-badge__rate--positive {
+.resource-badge__amount {
+  padding: var(--g-space-xs) var(--g-space-sm);
+  font-weight: 600;
+  color: var(--g-color-text);
+}
+
+.resource-badge__rate {
+  padding: var(--g-space-xs) var(--g-space-sm);
+  font-size: 0.85em;
+  border-left: 1px solid var(--g-color-border);
+}
+
+.rate--positive {
   color: var(--g-color-positive);
-  background: oklch(70% 0.17 145 / 0.15);
 }
 
-.g-resource-badge__rate--negative {
+.rate--negative {
   color: var(--g-color-negative);
-  background: oklch(60% 0.2 25 / 0.15);
 }
 </style>
