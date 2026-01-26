@@ -172,7 +172,16 @@ export class TechnologyTree {
   }
 
   getCurrentResearch(): TechResearch | null {
-    return this.currentResearch ? { ...this.currentResearch } : null;
+    if (!this.currentResearchId) return null;
+
+    const tech = this.technologies.get(this.currentResearchId);
+    if (!tech) return null;
+
+    return {
+      techId: this.currentResearchId,
+      progress: this.researchProgress.get(this.currentResearchId) ?? 0,
+      requiredSols: tech.cost.sols,
+    };
   }
 
   getResearchedCount(): number {

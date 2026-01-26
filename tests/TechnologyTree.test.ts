@@ -258,5 +258,19 @@ describe('TechnologyTree', () => {
       expect(tree.getResearchQueue()).toEqual(['asteroid_mining']);
       expect(tree.getCurrentResearchId()).toBeNull();
     });
+
+    it('should return TechResearch object from getCurrentResearch for compatibility', () => {
+      tree.startResearch('hydroponics', resources);
+
+      for (let i = 0; i < 10; i++) {
+        tree.tick();
+      }
+
+      const research = tree.getCurrentResearch();
+      expect(research).not.toBeNull();
+      expect(research?.techId).toBe('hydroponics');
+      expect(research?.progress).toBe(10);
+      expect(research?.requiredSols).toBe(60);
+    });
   });
 });
