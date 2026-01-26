@@ -25,7 +25,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     description: "Extracts oxygen from Martian atmosphere",
     cost: { materials: 40, power: 20 },
     constructionTime: 8,
-    production: { oxygen: 5 },
+    production: { oxygen: 12 },
     consumption: { power: 3 },
   },
   {
@@ -53,7 +53,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     description: "Simple hydroponic food production",
     cost: { materials: 45 },
     constructionTime: 12,
-    production: { food: 8 },
+    production: { food: 10 },
     consumption: { water: 3, power: 2 },
     workerSlots: 2,
     workerRole: ColonistRole.FARMING,

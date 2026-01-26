@@ -20,7 +20,7 @@ describe('GameState', () => {
   it('should have starting resources', () => {
     const resources = gameState.resources.getResources();
     expect(resources.food).toBe(300);
-    expect(resources.oxygen).toBe(180);
+    expect(resources.oxygen).toBe(250);
     expect(resources.water).toBe(120);
     expect(resources.power).toBe(500);
     expect(resources.materials).toBe(500);
