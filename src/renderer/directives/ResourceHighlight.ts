@@ -111,8 +111,9 @@ export const vResourceGlow: Directive<HTMLElement, string> = {
           el.classList.add("resource-pulse");
         }
       } else {
-        el.style.outline = "";
-        el.style.outlineOffset = "";
+        // Fade out by setting transparent outline (allows transition)
+        el.style.outline = "3px solid transparent";
+        el.style.outlineOffset = "2px";
         el.classList.remove("resource-highlighted", "resource-insufficient", "resource-pulse");
       }
     };
