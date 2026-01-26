@@ -35,6 +35,8 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
       morale: this.gameState.colony.getMorale(),
       colonists: Object.freeze([...this.gameState.colony.getColonists()]),
       skillDefinitions: Object.freeze([...SKILLS]),
+      housingAssignments: Object.freeze(this.gameState.colony.getHousingAssignments()),
+      unhoused: Object.freeze([...this.gameState.colony.getUnhousedColonists()]),
     };
   }
 

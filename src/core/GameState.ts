@@ -69,6 +69,9 @@ export class GameState {
     };
     events.push(...this.colony.tick(this.resources, this.buildings, policyEffects));
 
+    // Assign housing after colony tick
+    this.colony.assignHousing(this.buildings);
+
     // 5. Technology tick (research progress)
     events.push(...this.technology.tick());
 

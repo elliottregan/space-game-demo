@@ -17,6 +17,7 @@ export interface BuildingDefinition {
   requiresDeposit?: boolean; // true for mining buildings
   repurposeTargets?: string[]; // building IDs this can convert to
   moraleBoost?: number; // Passive morale boost when active
+  capacity?: number; // Housing capacity for habitats
 }
 
 export interface Building {

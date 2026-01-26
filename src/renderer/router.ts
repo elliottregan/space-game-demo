@@ -13,6 +13,11 @@ const router = createRouter({
       component: () => import("./components/MainTab.vue"),
     },
     {
+      path: "/colony",
+      name: "colony",
+      component: () => import("./components/ColonyView/ColonyViewTab.vue"),
+    },
+    {
       path: "/politics",
       name: "politics",
       component: () => import("./components/PoliticsTab.vue"),
