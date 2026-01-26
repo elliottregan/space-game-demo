@@ -51,8 +51,9 @@ export class HeuristicStrategy {
     const waterConsumption = resources.consumption.water ?? 0;
 
     // Early game: Build oxygen generator first if we don't have one
-    const hasOxygenGenerator = buildings.active.some(b => b.definitionId === "oxygen_generator") ||
-                               buildings.pending.some(b => b.definitionId === "oxygen_generator");
+    const hasOxygenGenerator =
+      buildings.active.some((b) => b.definitionId === "oxygen_generator") ||
+      buildings.pending.some((b) => b.definitionId === "oxygen_generator");
     if (!hasOxygenGenerator) {
       const canBuildOxygenGen = this.api.buildings.canBuild("oxygen_generator");
       if (canBuildOxygenGen.allowed) {
@@ -66,8 +67,36 @@ export class HeuristicStrategy {
       return true;
     }
 
-    // IF food < 50 AND can build "basic_farm" -> build farm
-    if (currentFood < 50) {
+    // Prioritize whichever resource is more critical
+    const foodFlow = foodProduction - foodConsumption;
+    const oxygenFlow = oxygenProduction - oxygenConsumption;
+
+    // Critical shortage: address the worse situation first
+    if (currentFood < 50 || currentOxygen < 80) {
+      // Handle food if it's more critical (lower stock or worse flow)
+      const foodCritical = currentFood < 50 || foodFlow < 0;
+      const oxygenCritical = currentOxygen < 80 || oxygenFlow < 0;
+
+      if (foodCritical && (!oxygenCritical || currentFood < currentOxygen)) {
+        const canBuildFarm = this.api.buildings.canBuild("basic_farm");
+        if (canBuildFarm.allowed) {
+          this.api.buildings.build("basic_farm");
+          return true;
+        }
+      }
+
+      if (oxygenCritical) {
+        const canBuildOxygenGen = this.api.buildings.canBuild("oxygen_generator");
+        if (canBuildOxygenGen.allowed) {
+          this.api.buildings.build("oxygen_generator");
+          return true;
+        }
+      }
+    }
+
+    // Maintain positive flow with buffer for both resources
+    // Food needs buffer of 2 (population growth)
+    if (foodFlow < 2) {
       const canBuildFarm = this.api.buildings.canBuild("basic_farm");
       if (canBuildFarm.allowed) {
         this.api.buildings.build("basic_farm");
@@ -75,26 +104,8 @@ export class HeuristicStrategy {
       }
     }
 
-    // IF oxygen < 50 AND can build "oxygen_generator" -> build oxygen generator
-    if (currentOxygen < 50) {
-      const canBuildOxygenGen = this.api.buildings.canBuild("oxygen_generator");
-      if (canBuildOxygenGen.allowed) {
-        this.api.buildings.build("oxygen_generator");
-        return true;
-      }
-    }
-
-    // IF food production <= consumption -> build farm
-    if (foodProduction <= foodConsumption) {
-      const canBuildFarm = this.api.buildings.canBuild("basic_farm");
-      if (canBuildFarm.allowed) {
-        this.api.buildings.build("basic_farm");
-        return true;
-      }
-    }
-
-    // IF oxygen production <= consumption -> build oxygen generator
-    if (oxygenProduction <= oxygenConsumption) {
+    // Oxygen needs buffer of 3 (population growth + habitats consume oxygen)
+    if (oxygenFlow < 3) {
       const canBuildOxygenGen = this.api.buildings.canBuild("oxygen_generator");
       if (canBuildOxygenGen.allowed) {
         this.api.buildings.build("oxygen_generator");
@@ -112,7 +123,7 @@ export class HeuristicStrategy {
   private handleWaterProduction(
     waterProduction: number,
     waterConsumption: number,
-    currentWater: number
+    currentWater: number,
   ): boolean {
     // Check if we need water production
     const waterFlow = waterProduction - waterConsumption;
@@ -124,17 +135,20 @@ export class HeuristicStrategy {
     const buildings = this.api.buildings.snapshot();
 
     // Check if we already have a water extractor building or pending
-    const hasWaterExtractor = buildings.active.some(b => b.definitionId === "water_extractor") ||
-                              buildings.pending.some(b => b.definitionId === "water_extractor");
+    const hasWaterExtractor =
+      buildings.active.some((b) => b.definitionId === "water_extractor") ||
+      buildings.pending.some((b) => b.definitionId === "water_extractor");
     if (hasWaterExtractor && waterFlow >= 0) {
       return false; // Already have one and not in crisis
     }
 
     // Find water sites in various states
-    const waterSites = operations.sites.filter(s => s.resourceType === "water");
-    const unrevealedWaterSites = waterSites.filter(s => !s.revealed);
-    const revealedUndevelopedWaterSites = waterSites.filter(s => s.revealed && !s.developed);
-    const developedAvailableWaterSites = waterSites.filter(s => s.developed && !s.linkedBuildingId);
+    const waterSites = operations.sites.filter((s) => s.resourceType === "water");
+    const unrevealedWaterSites = waterSites.filter((s) => !s.revealed);
+    const revealedUndevelopedWaterSites = waterSites.filter((s) => s.revealed && !s.developed);
+    const developedAvailableWaterSites = waterSites.filter(
+      (s) => s.developed && !s.linkedBuildingId,
+    );
 
     // Priority 1: Build water extractor on available developed deposit
     if (developedAvailableWaterSites.length > 0) {
@@ -143,9 +157,9 @@ export class HeuristicStrategy {
         const result = this.api.buildings.build("water_extractor");
         if (result.ok) {
           // Link the new building to the deposit
-          const newBuilding = buildings.pending.find(b =>
-            b.definitionId === "water_extractor" && !b.depositId
-          ) ?? result.value;
+          const newBuilding =
+            buildings.pending.find((b) => b.definitionId === "water_extractor" && !b.depositId) ??
+            result.value;
           const deposit = developedAvailableWaterSites[0];
           if (newBuilding && deposit) {
             this.api.buildings.linkToDeposit(newBuilding.id, deposit.id);
@@ -213,9 +227,7 @@ export class HeuristicStrategy {
   /**
    * Select the best event choice based on heuristics.
    */
-  private selectBestEventChoice(
-    choices: readonly Readonly<EventChoice>[]
-  ): Readonly<EventChoice> {
+  private selectBestEventChoice(choices: readonly Readonly<EventChoice>[]): Readonly<EventChoice> {
     // Score each choice and find the best one
     // Use reduce to avoid non-null assertions
     return choices.reduce((best, current) => {
@@ -325,9 +337,37 @@ export class HeuristicStrategy {
    */
   private handleGrowth(): boolean {
     const colony = this.api.colony.snapshot();
+    const resources = this.api.resources.snapshot();
 
     // IF population < 100 AND morale > 60 AND can build habitat -> build habitat
     if (colony.population < 100 && colony.morale > 60) {
+      // Before building habitat, ensure we have oxygen AND food headroom
+      // Habitats consume oxygen, and more population consumes more food
+      const oxygenProduction = resources.production.oxygen ?? 0;
+      const oxygenConsumption = resources.consumption.oxygen ?? 0;
+      const foodProduction = resources.production.food ?? 0;
+      const foodConsumption = resources.consumption.food ?? 0;
+      const oxygenSurplus = oxygenProduction - oxygenConsumption;
+      const foodSurplus = foodProduction - foodConsumption;
+
+      // Need at least 3 oxygen surplus before building habitat (habitat uses 1 oxygen + colonist growth)
+      if (oxygenSurplus < 3) {
+        const canBuildOxygenGen = this.api.buildings.canBuild("oxygen_generator");
+        if (canBuildOxygenGen.allowed) {
+          this.api.buildings.build("oxygen_generator");
+          return true;
+        }
+      }
+
+      // Also ensure food surplus before growing
+      if (foodSurplus < 2) {
+        const canBuildFarm = this.api.buildings.canBuild("basic_farm");
+        if (canBuildFarm.allowed) {
+          this.api.buildings.build("basic_farm");
+          return true;
+        }
+      }
+
       const canBuildHabitat = this.api.buildings.canBuild("habitat");
       if (canBuildHabitat.allowed) {
         this.api.buildings.build("habitat");
