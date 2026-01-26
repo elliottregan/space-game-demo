@@ -20,6 +20,7 @@ import {
   calculateRepurposeCost,
   calculateRepurposeTime,
 } from "../utils/buildingCosts";
+import { applyMultiplier, combineMultipliers } from "../utils/resourceFlow";
 import {
   calculateAverageWorkerEfficiency,
   calculateStaffingEfficiency,
@@ -488,17 +489,29 @@ export class BuildingManager {
   }
 
   private getConditionMultiplier(condition: number): number {
-    if (condition < CONDITION_EFFICIENCY_THRESHOLD) {
-      return 1 - CONDITION_EFFICIENCY_PENALTY;
-    }
-    return 1;
+    return condition < CONDITION_EFFICIENCY_THRESHOLD ? 1 - CONDITION_EFFICIENCY_PENALTY : 1;
   }
 
   private getOxygenDeficitMultiplier(): number {
-    if (this.getTotalOxygenContribution() < 0) {
-      return 1 - OXYGEN_DEFICIT_EFFICIENCY_PENALTY;
-    }
-    return 1;
+    return this.getTotalOxygenContribution() < 0 ? 1 - OXYGEN_DEFICIT_EFFICIENCY_PENALTY : 1;
+  }
+
+  /**
+   * Calculate the combined efficiency multiplier for a building.
+   * Factors: condition, oxygen, staffing, worker efficiency.
+   */
+  private getBuildingEfficiencyMultiplier(buildingId: string, overrideCondition?: number): number {
+    const building = this.buildings.get(buildingId);
+    if (!building) return 0;
+
+    const condition = overrideCondition ?? building.condition;
+
+    return combineMultipliers(
+      this.getConditionMultiplier(condition),
+      this.getOxygenDeficitMultiplier(),
+      this.getStaffingEfficiency(buildingId),
+      this.getWorkerEfficiency(buildingId),
+    );
   }
 
   getEffectiveProduction(buildingId: string, overrideCondition?: number): ResourceDelta {
@@ -509,25 +522,9 @@ export class BuildingManager {
     if (!def?.production) return {};
 
     const modeMultiplier = BUILDING_MODES[building.mode].production;
-    const condition = overrideCondition ?? building.condition;
-    const conditionMultiplier = this.getConditionMultiplier(condition);
-    const oxygenMultiplier = this.getOxygenDeficitMultiplier();
-    const staffingMultiplier = this.getStaffingEfficiency(buildingId);
-    const workerMultiplier = this.getWorkerEfficiency(buildingId);
-    const result: ResourceDelta = {};
+    const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(buildingId, overrideCondition);
 
-    for (const [key, value] of Object.entries(def.production)) {
-      if (value)
-        result[key as keyof ResourceDelta] =
-          value *
-          modeMultiplier *
-          conditionMultiplier *
-          oxygenMultiplier *
-          staffingMultiplier *
-          workerMultiplier;
-    }
-
-    return result;
+    return applyMultiplier(def.production, modeMultiplier * efficiencyMultiplier);
   }
 
   getEffectiveConsumption(buildingId: string, overrideCondition?: number): ResourceDelta {
@@ -538,25 +535,9 @@ export class BuildingManager {
     if (!def?.consumption) return {};
 
     const modeMultiplier = BUILDING_MODES[building.mode].consumption;
-    const condition = overrideCondition ?? building.condition;
-    const conditionMultiplier = this.getConditionMultiplier(condition);
-    const oxygenMultiplier = this.getOxygenDeficitMultiplier();
-    const staffingMultiplier = this.getStaffingEfficiency(buildingId);
-    const workerMultiplier = this.getWorkerEfficiency(buildingId);
-    const result: ResourceDelta = {};
+    const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(buildingId, overrideCondition);
 
-    for (const [key, value] of Object.entries(def.consumption)) {
-      if (value)
-        result[key as keyof ResourceDelta] =
-          value *
-          modeMultiplier *
-          conditionMultiplier *
-          oxygenMultiplier *
-          staffingMultiplier *
-          workerMultiplier;
-    }
-
-    return result;
+    return applyMultiplier(def.consumption, modeMultiplier * efficiencyMultiplier);
   }
 
   /**
