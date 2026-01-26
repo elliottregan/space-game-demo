@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import { gameService } from "../../services/GameService";
 import { ColonistRole } from "../../../core/models/Colonist";
-import { getHealthVariant, getMoraleVariant } from "../../../core/balance/DisplayThresholds";
+import { getHealthVariant, getMoraleVariant } from "../../utils/displayThresholds";
 import { GPanel } from "../../ui";
 import StatRow from "./StatRow.vue";
 import WorkforceGrid from "./WorkforceGrid.vue";

@@ -1,5 +1,5 @@
-// src/core/balance/DisplayThresholds.ts
-// Display thresholds for status indicators and variants
+// src/renderer/utils/displayThresholds.ts
+// Display thresholds for UI status indicators and variants
 
 /** Colony health thresholds */
 export const HEALTH_POSITIVE_THRESHOLD = 80;
@@ -8,10 +8,6 @@ export const HEALTH_WARNING_THRESHOLD = 50;
 /** Colony morale thresholds */
 export const MORALE_POSITIVE_THRESHOLD = 70;
 export const MORALE_WARNING_THRESHOLD = 40;
-
-/** Faction support thresholds (percentage 0-100) */
-export const FACTION_SUPPORT_POSITIVE_THRESHOLD = 60;
-export const FACTION_SUPPORT_WARNING_THRESHOLD = 40;
 
 /** Faction support thresholds (normalized -1 to 1 scale) */
 export const FACTION_SUPPORT_NORMALIZED_POSITIVE = 0.5;
@@ -38,11 +34,6 @@ export function getHealthVariant(health: number): StatusVariant {
 /** Get morale status variant */
 export function getMoraleVariant(morale: number): StatusVariant {
   return getStatusVariant(morale, MORALE_POSITIVE_THRESHOLD, MORALE_WARNING_THRESHOLD);
-}
-
-/** Get faction support variant (percentage scale) */
-export function getFactionSupportVariant(support: number): StatusVariant {
-  return getStatusVariant(support, FACTION_SUPPORT_POSITIVE_THRESHOLD, FACTION_SUPPORT_WARNING_THRESHOLD);
 }
 
 /** Get faction support variant (normalized -1 to 1 scale) */

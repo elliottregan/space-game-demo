@@ -6,7 +6,7 @@ import type { ResourceDelta } from "../../core/models/Resources";
 import {
   FACTION_SUPPORT_NORMALIZED_POSITIVE,
   FACTION_SUPPORT_NORMALIZED_WARNING,
-} from "../../core/balance/DisplayThresholds";
+} from "./displayThresholds";
 
 /**
  * Format technology cost for display
