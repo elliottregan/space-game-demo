@@ -34,6 +34,7 @@ export class GameState {
     this.technology = new TechnologyTree(TECHNOLOGIES);
     this.buildings = new BuildingManager(BUILDINGS);
     this.colony = new ColonyManager(STARTING_POPULATION);
+    this.buildings.setColonyManager(this.colony);
     this.workforce = new WorkforceManager();
     this.events = new EventManager(RANDOM_EVENTS);
     this.victory = new VictoryManager();
@@ -218,6 +219,7 @@ export class GameState {
     state.technology = TechnologyTree.fromJSON(data.technology, TECHNOLOGIES);
     state.buildings = BuildingManager.fromJSON(data.buildings, BUILDINGS);
     state.colony = ColonyManager.fromJSON(data.colony);
+    state.buildings.setColonyManager(state.colony);
     state.events = EventManager.fromJSON(data.events, RANDOM_EVENTS);
     state.victory = VictoryManager.fromJSON(data.victory);
 
