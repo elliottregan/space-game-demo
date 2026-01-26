@@ -20,3 +20,5 @@ export { default as GActionCard } from "./composites/GActionCard.vue";
 export { default as GProgressItem } from "./composites/GProgressItem.vue";
 export { default as GEntityHeader } from "./composites/GEntityHeader.vue";
 export type { EntityStatus } from "./composites/GEntityHeader.vue";
+export { default as GStatsBar } from "./composites/GStatsBar.vue";
+export type { Stat } from "./composites/GStatsBar.vue";

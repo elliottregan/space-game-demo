@@ -4,9 +4,11 @@ withDefaults(
     title?: string;
     accent?: "red" | "cyan" | "olive" | "amber" | "slate";
     glow?: boolean;
+    thick?: boolean;
   }>(),
   {
     accent: "slate",
+    thick: false,
   },
 );
 </script>
@@ -14,7 +16,7 @@ withDefaults(
 <template>
   <div
     class="g-panel"
-    :class="[`g-panel--accent-${accent}`, { 'g-panel--glow': glow }]"
+    :class="[`g-panel--accent-${accent}`, { 'g-panel--glow': glow, 'g-panel--thick': thick }]"
     :style="{ '--panel-accent': `var(--g-accent-${accent})` }"
   >
     <header v-if="$slots.header || $slots['header-actions'] || title" class="g-panel__header">
@@ -43,6 +45,18 @@ withDefaults(
 
 .g-panel--glow {
   box-shadow: 0 0 0 2px var(--panel-accent);
+}
+
+.g-panel--thick {
+  border-width: var(--g-border-width-thick);
+}
+
+.g-panel--thick .g-panel__header {
+  border-bottom-width: var(--g-border-width-thick);
+}
+
+.g-panel--thick .g-panel__footer {
+  border-top-width: var(--g-border-width-thick);
 }
 
 .g-panel__header {
