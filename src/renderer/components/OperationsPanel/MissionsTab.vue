@@ -73,6 +73,8 @@ const developedSites = computed(() => props.prospectingSites.filter((s) => s.dev
 .missions-section h3 {
   font-size: var(--g-font-size-sm);
   color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   margin-bottom: var(--g-space-xs);
 }
 
@@ -87,8 +89,7 @@ const developedSites = computed(() => props.prospectingSites.filter((s) => s.dev
   justify-content: space-between;
   align-items: center;
   padding: var(--g-space-sm);
-  background: var(--g-color-bg-elevated);
-  border-radius: 4px;
+  background: var(--g-color-bg-surface);
   margin-bottom: var(--g-space-xs);
 }
 
@@ -103,7 +104,7 @@ const developedSites = computed(() => props.prospectingSites.filter((s) => s.dev
 }
 
 .site-item.developed {
-  background: oklch(70% 0.17 145 / 0.1);
+  background: rgba(76, 175, 80, 0.1);
   border-left: 3px solid var(--g-color-positive);
 }
 </style>

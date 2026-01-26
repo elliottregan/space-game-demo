@@ -1,24 +1,48 @@
 :root {
-  /* Color palette - cool blues/cyans with warm accents */
-  --g-color-bg-base: oklch(10% 0.02 250);
-  --g-color-bg-surface: oklch(15% 0.02 250);
-  --g-color-bg-elevated: oklch(20% 0.03 250);
+  /* === ODYSSEY THEME === */
+  /* Inspired by 2001: A Space Odyssey interfaces */
 
-  --g-color-border: oklch(30% 0.03 250);
-  --g-color-border-focus: oklch(65% 0.15 250);
+  /* Base palette - light backgrounds */
+  --g-color-bg-base: #FFFFFF;
+  --g-color-bg-surface: #F5F5F5;
+  --g-color-bg-elevated: #FAFAFA;
 
-  --g-color-text: oklch(90% 0.01 250);
-  --g-color-text-muted: oklch(55% 0.02 250);
+  /* Text colors - dark on light */
+  --g-color-text: #1A1A1A;
+  --g-color-text-muted: #666666;
+
+  /* Borders */
+  --g-color-border: #E0E0E0;
+  --g-color-border-focus: #BDBDBD;
+
+  /* Section accent colors (solid blocks for headers) */
+  --g-accent-red: #D32F2F;
+  --g-accent-cyan: #00838F;
+  --g-accent-olive: #827717;
+  --g-accent-amber: #F57C00;
+  --g-accent-slate: #455A64;
 
   /* Semantic colors */
-  --g-color-positive: oklch(70% 0.17 145);
-  --g-color-negative: oklch(60% 0.2 25);
-  --g-color-warning: oklch(75% 0.15 70);
-  --g-color-info: oklch(65% 0.15 250);
+  --g-color-positive: #2E7D32;
+  --g-color-negative: #C62828;
+  --g-color-warning: #EF6C00;
+  --g-color-info: #00838F;
 
-  /* Effects - sci-fi glow */
-  --g-glow-subtle: 0 0 8px oklch(65% 0.15 250 / 0.2);
-  --g-glow-focus: 0 0 12px oklch(65% 0.15 250 / 0.4);
+  /* Section-specific accent mappings */
+  --g-section-resources: var(--g-accent-red);
+  --g-section-buildings: var(--g-accent-amber);
+  --g-section-technology: var(--g-accent-cyan);
+  --g-section-colony: var(--g-accent-olive);
+  --g-section-politics: var(--g-accent-slate);
+  --g-section-operations: var(--g-accent-amber);
+  --g-section-events: var(--g-accent-slate);
+
+  /* Current section accent (set by panels) */
+  --g-current-accent: var(--g-accent-slate);
+
+  /* Effects - removed glow for clean look */
+  --g-glow-subtle: none;
+  --g-glow-focus: 0 0 0 2px var(--g-color-border-focus);
 
   /* Spacing scale (4px base) */
   --g-space-xs: 4px;
@@ -28,11 +52,13 @@
   --g-space-xl: 32px;
 
   /* Typography */
-  --g-font-mono: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
+  --g-font-mono: "JetBrains Mono", "Fira Code", "SF Mono", "Consolas", monospace;
   --g-font-size-xs: 0.625rem;
   --g-font-size-sm: 0.75rem;
   --g-font-size-md: 0.875rem;
   --g-font-size-lg: 1rem;
+  --g-font-size-xl: 1.25rem;
+  --g-font-size-2xl: 1.5rem;
 
   /* Transitions */
   --g-transition-fast: 150ms ease;

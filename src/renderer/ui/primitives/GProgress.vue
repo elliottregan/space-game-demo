@@ -44,9 +44,26 @@ const displayLabel = computed(() => {
 
 .g-progress__track {
   flex: 1;
-  height: 4px;
-  background: var(--g-color-bg-elevated);
+  height: 8px;
+  background: var(--g-color-bg-surface);
+  border: 1px solid var(--g-color-border);
   overflow: hidden;
+  position: relative;
+}
+
+/* Grid lines inside track */
+.g-progress__track::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 9.5%,
+    var(--g-color-border) 9.5%,
+    var(--g-color-border) 10%
+  );
+  pointer-events: none;
 }
 
 .g-progress__fill {
@@ -65,21 +82,17 @@ const displayLabel = computed(() => {
 /* Variants */
 .g-progress--default .g-progress__fill {
   background: var(--g-color-info);
-  box-shadow: inset 0 0 4px oklch(65% 0.15 250 / 0.5);
 }
 
 .g-progress--positive .g-progress__fill {
   background: var(--g-color-positive);
-  box-shadow: inset 0 0 4px oklch(70% 0.17 145 / 0.5);
 }
 
 .g-progress--negative .g-progress__fill {
   background: var(--g-color-negative);
-  box-shadow: inset 0 0 4px oklch(60% 0.2 25 / 0.5);
 }
 
 .g-progress--warning .g-progress__fill {
   background: var(--g-color-warning);
-  box-shadow: inset 0 0 4px oklch(75% 0.15 70 / 0.5);
 }
 </style>

@@ -74,7 +74,7 @@ const emit = defineEmits<{
   font-size: var(--g-font-size-sm);
   color: var(--g-color-text);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 .subsection-title {
@@ -83,7 +83,7 @@ const emit = defineEmits<{
   font-size: var(--g-font-size-xs);
   color: var(--g-color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 .council-list {
@@ -98,9 +98,8 @@ const emit = defineEmits<{
   align-items: center;
   gap: var(--g-space-sm);
   padding: var(--g-space-sm);
-  background: var(--g-color-bg);
+  background: var(--g-color-bg-surface);
   border: 1px solid var(--g-color-border);
-  border-radius: 4px;
   cursor: default;
 }
 
@@ -120,9 +119,8 @@ const emit = defineEmits<{
   padding: var(--g-space-xs) var(--g-space-sm);
   font-family: var(--g-font-mono);
   font-size: var(--g-font-size-xs);
-  background: var(--g-color-bg);
+  background: var(--g-color-bg-surface);
   border: 1px solid var(--g-color-border);
-  border-radius: 4px;
   cursor: pointer;
   transition: border-color var(--g-transition-fast), background var(--g-transition-fast);
 }
@@ -132,9 +130,9 @@ const emit = defineEmits<{
 }
 
 .council-member-option.selected {
-  border-color: var(--g-color-positive);
-  background: oklch(70% 0.17 145 / 0.15);
-  color: var(--g-color-positive);
+  border-color: var(--g-accent-slate);
+  background: rgba(69, 90, 100, 0.1);
+  color: var(--g-accent-slate);
 }
 
 .empty-state {

@@ -88,7 +88,7 @@ function onTechLeave(): void {
 </script>
 
 <template>
-  <GPanel title="Research">
+  <GPanel title="Research" accent="cyan">
     <template #header-actions>
       <div class="view-toggle">
         <button
@@ -173,7 +173,6 @@ function onTechLeave(): void {
   display: flex;
   gap: 2px;
   background: var(--g-color-bg);
-  border-radius: 4px;
   padding: 2px;
 }
 
@@ -182,7 +181,6 @@ function onTechLeave(): void {
   border: none;
   color: var(--g-color-text-muted);
   padding: 4px 8px;
-  border-radius: 3px;
   cursor: pointer;
   font-size: 12px;
   line-height: 1;
@@ -191,11 +189,11 @@ function onTechLeave(): void {
 
 .toggle-btn:hover {
   color: var(--g-color-text);
-  background: var(--g-color-bg-elevated);
+  background: var(--g-color-bg-surface);
 }
 
 .toggle-btn.active {
-  background: var(--g-color-info);
+  background: var(--g-accent-cyan);
   color: var(--g-color-bg);
 }
 

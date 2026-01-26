@@ -59,23 +59,26 @@ function newGame() {
   flex-wrap: wrap;
   gap: var(--g-space-sm);
   padding: var(--g-space-md);
-  background: var(--g-color-bg-surface);
+  background: var(--g-color-bg-base);
   border: 1px solid var(--g-color-border);
-  border-radius: 4px;
   margin-bottom: var(--g-space-md);
 }
 
 .game-header h1 {
   font-family: var(--g-font-mono);
-  color: var(--g-color-negative);
-  font-size: 1.8rem;
+  color: var(--g-accent-red);
+  font-size: var(--g-font-size-xl);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .sol-display {
   font-family: var(--g-font-mono);
-  font-size: 1.5rem;
-  color: var(--g-color-warning);
-  font-weight: bold;
+  font-size: var(--g-font-size-2xl);
+  color: var(--g-color-text);
+  font-weight: 700;
+  letter-spacing: 0.05em;
 }
 
 .header-actions {
@@ -89,11 +92,11 @@ function newGame() {
   }
 
   .game-header h1 {
-    font-size: 1.2rem;
+    font-size: var(--g-font-size-lg);
   }
 
   .sol-display {
-    font-size: 1.1rem;
+    font-size: var(--g-font-size-xl);
   }
 
   .header-actions {
@@ -109,11 +112,11 @@ function newGame() {
   .game-header h1 {
     width: 100%;
     text-align: center;
-    font-size: 1.1rem;
+    font-size: var(--g-font-size-md);
   }
 
   .sol-display {
-    font-size: 1rem;
+    font-size: var(--g-font-size-lg);
   }
 
   .header-actions {

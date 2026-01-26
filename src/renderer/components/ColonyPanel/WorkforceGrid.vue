@@ -50,7 +50,10 @@ const roleIcons: Record<ColonistRole, string> = {
 
 .workforce-section h3 {
   font-size: var(--g-font-size-sm);
+  font-family: var(--g-font-mono);
   color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   margin-bottom: var(--g-space-sm);
 }
 
@@ -65,8 +68,8 @@ const roleIcons: Record<ColonistRole, string> = {
   align-items: center;
   gap: var(--g-space-xs);
   padding: var(--g-space-sm);
-  background: var(--g-color-bg-elevated);
-  border-radius: 4px;
+  background: var(--g-color-bg-surface);
+  border: 1px solid var(--g-color-border);
   font-size: var(--g-font-size-sm);
 }
 

@@ -147,31 +147,33 @@ function formatResourceDelta(delta: Record<string, number> | undefined): string 
 
 <style scoped>
 .building-entry {
-  padding: 0.75rem;
-  background: var(--g-color-bg-elevated);
-  border-radius: 6px;
+  padding: var(--g-space-md);
+  background: var(--g-color-bg-surface);
   border: 1px solid var(--g-color-border);
+  font-family: var(--g-font-mono);
 }
 
 .building-entry.broken {
-  border-color: var(--color-danger);
+  border-color: var(--g-color-negative);
 }
 
 .building-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--g-space-sm);
 }
 
 .building-title {
   display: flex;
   align-items: baseline;
-  gap: 0.5rem;
+  gap: var(--g-space-sm);
 }
 
 .building-name {
   font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .building-id {
@@ -182,7 +184,7 @@ function formatResourceDelta(delta: Record<string, number> | undefined): string 
 .building-status {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--g-space-sm);
 }
 
 .condition {
@@ -192,49 +194,51 @@ function formatResourceDelta(delta: Record<string, number> | undefined): string 
 
 .building-stats {
   display: flex;
-  gap: 1rem;
+  gap: var(--g-space-md);
   font-size: var(--g-font-size-sm);
   color: var(--g-color-text-muted);
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--g-space-sm);
   flex-wrap: wrap;
 }
 
 .production {
-  color: var(--color-positive);
+  color: var(--g-color-positive);
 }
 
 .consumption {
-  color: var(--color-negative);
+  color: var(--g-color-negative);
 }
 
 .construction-progress {
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--g-space-sm);
 }
 
 .workers-section {
   border-top: 1px solid var(--g-color-border);
-  padding-top: 0.5rem;
-  margin-top: 0.5rem;
+  padding-top: var(--g-space-sm);
+  margin-top: var(--g-space-sm);
 }
 
 .workers-header {
   font-size: var(--g-font-size-sm);
   color: var(--g-color-text-muted);
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--g-space-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .workers-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--g-space-sm);
 }
 
 .worker-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.25rem 0;
-  padding-left: 0.5rem;
+  gap: var(--g-space-md);
+  padding: var(--g-space-xs) 0;
+  padding-left: var(--g-space-sm);
   border-left: 2px solid var(--g-color-border);
 }
 

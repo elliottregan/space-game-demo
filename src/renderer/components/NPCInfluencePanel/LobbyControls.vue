@@ -55,14 +55,13 @@ function handleLobbyAmountChange(value: string | number) {
   font-size: var(--g-font-size-xs);
   color: var(--g-color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 .lobby-controls {
   margin-top: var(--g-space-md);
   padding: var(--g-space-sm);
-  background: var(--g-color-bg);
-  border-radius: 4px;
+  background: var(--g-color-bg-surface);
 }
 
 .lobby-row {

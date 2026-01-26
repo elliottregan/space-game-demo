@@ -1,12 +1,22 @@
 <script setup lang="ts">
-defineProps<{
-  title?: string;
-  glow?: boolean;
-}>();
+withDefaults(
+  defineProps<{
+    title?: string;
+    accent?: "red" | "cyan" | "olive" | "amber" | "slate";
+    glow?: boolean;
+  }>(),
+  {
+    accent: "slate",
+  }
+);
 </script>
 
 <template>
-  <div class="g-panel" :class="{ 'g-panel--glow': glow }">
+  <div
+    class="g-panel"
+    :class="[`g-panel--accent-${accent}`, { 'g-panel--glow': glow }]"
+    :style="{ '--panel-accent': `var(--g-accent-${accent})` }"
+  >
     <header v-if="$slots.header || $slots['header-actions'] || title" class="g-panel__header">
       <span class="g-panel__title">
         <slot name="header">{{ title }}</slot>
@@ -26,14 +36,13 @@ defineProps<{
 
 <style scoped>
 .g-panel {
-  background: var(--g-color-bg-surface);
+  background: var(--g-color-bg-base);
   border: 1px solid var(--g-color-border);
-  transition: box-shadow var(--g-transition-normal);
+  --panel-accent: var(--g-accent-slate);
 }
 
 .g-panel--glow {
-  box-shadow: var(--g-glow-subtle);
-  border-color: var(--g-color-border-focus);
+  box-shadow: 0 0 0 2px var(--panel-accent);
 }
 
 .g-panel__header {
@@ -41,13 +50,13 @@ defineProps<{
   justify-content: space-between;
   align-items: center;
   padding: var(--g-space-sm) var(--g-space-md);
-  background: var(--g-color-bg-elevated);
-  border-bottom: 1px solid var(--g-color-border);
+  background: var(--panel-accent);
+  color: white;
   font-family: var(--g-font-mono);
   font-size: var(--g-font-size-sm);
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--g-color-text);
+  letter-spacing: 0.1em;
 }
 
 .g-panel__title {
@@ -60,6 +69,18 @@ defineProps<{
   gap: var(--g-space-sm);
 }
 
+/* Header action buttons should be white/transparent on colored bg */
+.g-panel__header-actions :deep(.g-button) {
+  background: transparent;
+  color: white;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.g-panel__header-actions :deep(.g-button:hover:not(:disabled)) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: white;
+}
+
 .g-panel__body {
   padding: var(--g-space-md);
 }
@@ -67,6 +88,6 @@ defineProps<{
 .g-panel__footer {
   padding: var(--g-space-sm) var(--g-space-md);
   border-top: 1px solid var(--g-color-border);
-  background: var(--g-color-bg-elevated);
+  background: var(--g-color-bg-surface);
 }
 </style>

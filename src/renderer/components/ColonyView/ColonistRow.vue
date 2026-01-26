@@ -78,21 +78,21 @@ function isSkillActive(skill: SkillDefinition): boolean {
 
 <style scoped>
 .colonist-row {
-  padding: 0.5rem;
-  padding-left: 0.75rem;
+  padding: var(--g-space-sm);
+  padding-left: var(--g-space-md);
   border-left: 2px solid var(--g-color-border);
-  background: var(--g-color-bg);
-  border-radius: 0 4px 4px 0;
+  background: var(--g-color-bg-base);
+  font-family: var(--g-font-mono);
 }
 
 .colonist-main {
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--g-space-xs);
 }
 
 .colonist-name {
   font-weight: bold;
   display: block;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--g-space-xs);
 }
 
 .colonist-details {
@@ -101,11 +101,11 @@ function isSkillActive(skill: SkillDefinition): boolean {
 }
 
 .colonist-role {
-  margin-right: 0.5rem;
+  margin-right: var(--g-space-sm);
 }
 
 .workplace {
-  color: var(--color-info);
+  color: var(--g-color-info);
 }
 
 .unassigned {
@@ -117,12 +117,14 @@ function isSkillActive(skill: SkillDefinition): boolean {
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
-  margin-top: 0.25rem;
+  margin-top: var(--g-space-xs);
 }
 
 .skills-label {
   font-size: var(--g-font-size-xs);
   color: var(--g-color-text-muted);
   margin-right: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 </style>

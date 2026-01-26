@@ -63,8 +63,11 @@ function onDecisionLeave(): void {
 
 <style scoped>
 .decisions-section h3 {
+  font-family: var(--g-font-mono);
   font-size: var(--g-font-size-sm);
-  color: var(--g-color-text-muted);
+  color: var(--g-accent-slate);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   margin-bottom: var(--g-space-sm);
   padding-bottom: var(--g-space-xs);
   border-bottom: 1px solid var(--g-color-border);
@@ -72,10 +75,10 @@ function onDecisionLeave(): void {
 
 .decision-result {
   padding: var(--g-space-sm);
-  background: oklch(65% 0.15 250 / 0.1);
-  border: 1px solid var(--g-color-info);
-  border-radius: 4px;
+  background: var(--g-color-bg-surface);
+  border: 1px solid var(--g-accent-slate);
   margin-bottom: var(--g-space-sm);
+  font-family: var(--g-font-mono);
   font-size: var(--g-font-size-sm);
 }
 

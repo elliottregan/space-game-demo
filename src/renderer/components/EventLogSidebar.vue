@@ -40,7 +40,7 @@ function getIcon(type: string): string {
 
 <template>
   <aside class="event-log-sidebar">
-    <GPanel title="Event Log">
+    <GPanel title="Event Log" accent="slate">
       <div class="event-list">
         <div
           v-for="(event, index) in displayedEvents"
@@ -89,9 +89,8 @@ function getIcon(type: string): string {
   align-items: flex-start;
   gap: var(--g-space-xs);
   padding: var(--g-space-xs);
-  border-radius: 4px;
   font-size: var(--g-font-size-xs);
-  background: var(--g-color-bg-elevated);
+  background: var(--g-color-bg-surface);
   border-left: 3px solid;
 }
 
@@ -101,12 +100,12 @@ function getIcon(type: string): string {
 
 .event-item.warning {
   border-color: var(--g-color-warning);
-  background: oklch(75% 0.15 70 / 0.1);
+  background: rgba(239, 108, 0, 0.08);
 }
 
 .event-item.critical {
   border-color: var(--g-color-negative);
-  background: oklch(60% 0.2 25 / 0.1);
+  background: rgba(198, 40, 40, 0.08);
 }
 
 .event-icon {

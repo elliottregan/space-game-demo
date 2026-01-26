@@ -30,7 +30,7 @@ const workforceStats = computed(() => {
 </script>
 
 <template>
-  <GPanel title="Colony Status">
+  <GPanel title="Colony Status" accent="olive">
     <StatRow label="Population" :value="state.population" variant="info" />
     <StatRow
       label="Health"
@@ -90,9 +90,8 @@ const workforceStats = computed(() => {
 .oxygen-warning {
   font-size: 0.8em;
   color: var(--g-color-negative);
-  background: oklch(60% 0.2 25 / 0.15);
+  background: rgba(198, 40, 40, 0.1);
   padding: var(--g-space-xs) var(--g-space-sm);
-  border-radius: 4px;
   margin-bottom: 0.5em;
 }
 
@@ -104,7 +103,10 @@ const workforceStats = computed(() => {
 
 .colonist-list h3 {
   font-size: var(--g-font-size-sm);
+  font-family: var(--g-font-mono);
   color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   margin-bottom: var(--g-space-sm);
 }
 
