@@ -286,7 +286,7 @@ class GameService {
   tick(): GameEvent[] {
     const result = this.facade.game.advanceSol();
     if (result.success) {
-      this.state.recentEvents = result.data;
+      this.state.recentEvents.push(...result.data);
       return result.data;
     }
     return [];
@@ -295,7 +295,7 @@ class GameService {
   advanceTurn(sols: number = 10): GameEvent[] {
     const result = this.facade.game.advanceSols(sols);
     if (result.success) {
-      this.state.recentEvents = result.data.events;
+      this.state.recentEvents.push(...result.data.events);
       return result.data.events;
     }
     return [];
