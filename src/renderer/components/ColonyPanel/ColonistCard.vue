@@ -59,15 +59,16 @@ const availableWorkplaces = computed((): WorkplaceOption[] => {
 });
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function assignToBuilding(buildingId: string) {
+function assignToBuilding(colonistId: string, buildingId: string) {
   if (buildingId === "") {
-    gameService.api.colony.unassignFromBuilding(props.colonist.id);
+    gameService.api.colony.unassignFromBuilding(colonistId);
   } else {
     // Unassign first if already assigned
-    if (workplace.value) {
-      gameService.api.colony.unassignFromBuilding(props.colonist.id);
+    const currentWorkplace = gameService.api.colony.getWorkplace(colonistId);
+    if (currentWorkplace) {
+      gameService.api.colony.unassignFromBuilding(colonistId);
     }
-    gameService.api.colony.assignToBuilding(props.colonist.id, buildingId);
+    gameService.api.colony.assignToBuilding(colonistId, buildingId);
   }
 }
 
@@ -97,7 +98,7 @@ function roleMatches(definition: BuildingDefinition): boolean {
       <select
         class="workplace-select"
         :value="workplace ?? ''"
-        @change="assignToBuilding(($event.target as HTMLSelectElement).value)"
+        @change="assignToBuilding(colonist.id, ($event.target as HTMLSelectElement).value)"
       >
         <option value="">Unassigned (Labor Pool)</option>
         <option

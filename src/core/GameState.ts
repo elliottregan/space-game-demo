@@ -139,10 +139,7 @@ export class GameState {
     }
 
     const unassignedCount = colonists.filter((c) => !assignedIds.has(c.id)).length;
-    const bonus = Math.min(
-      unassignedCount * LABOR_POOL_BONUS_PER_COLONIST,
-      LABOR_POOL_BONUS_CAP
-    );
+    const bonus = Math.min(unassignedCount * LABOR_POOL_BONUS_PER_COLONIST, LABOR_POOL_BONUS_CAP);
 
     this.buildings.setConstructionSpeedBonus(bonus);
   }
