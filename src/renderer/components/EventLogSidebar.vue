@@ -40,7 +40,7 @@ function getIcon(type: string): string {
 
 <template>
   <aside class="event-log-sidebar">
-    <GPanel title="Event Log" accent="slate">
+    <GPanel title="Event Log" accent="blue">
       <div class="event-list">
         <div
           v-for="(event, index) in displayedEvents"
