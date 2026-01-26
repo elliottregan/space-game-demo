@@ -83,19 +83,18 @@ body {
 
 /* Legacy panel class - for components not yet migrated */
 .panel {
-  background: var(--g-color-bg-surface);
-  padding: var(--g-space-md);
-  border: 1px solid var(--g-color-border);
+  background: var(--g-color-bg-base);
+  border-radius: 8px;
+  padding: 1rem;
+  border: var(--g-border-width) solid var(--g-current-accent, var(--g-color-border));
 }
 
 .panel h2 {
-  font-size: var(--g-font-size-lg);
-  margin-bottom: var(--g-space-md);
-  color: var(--g-color-text);
-  border-bottom: 1px solid var(--g-color-border);
-  padding-bottom: var(--g-space-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  font-size: var(--g-font-size-xl);
+  margin-bottom: 1rem;
+  color: #ffd460;
+  border-bottom: var(--g-border-width) solid var(--g-current-accent, var(--g-color-border));
+  padding-bottom: 0.5rem;
 }
 
 .btn {
