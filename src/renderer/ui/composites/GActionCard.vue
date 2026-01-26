@@ -48,26 +48,19 @@ defineEmits<{
   display: flex;
   flex-direction: column;
   gap: var(--g-space-xs);
-  background: var(--g-color-bg);
-  border: 1px solid var(--g-color-border);
-  border-radius: 4px;
-  padding: var(--g-space-sm);
+  padding: var(--g-space-md);
+  border-top: var(--g-border-width) solid var(--g-color-border-strong);
+  border-bottom: var(--g-border-width) solid var(--g-color-border-strong);
   cursor: pointer;
-  transition:
-    border-color var(--g-transition-fast),
-    background var(--g-transition-fast),
-    box-shadow var(--g-transition-fast);
+  transition: background var(--g-transition-fast);
 }
 
 .g-action-card:hover:not(.disabled) {
-  background: var(--g-color-bg-elevated);
-  border-color: var(--g-color-border-focus);
-  box-shadow: var(--g-glow-subtle);
+  background: var(--g-color-bg-surface);
 }
 
 .g-action-card.selected {
-  border-color: var(--g-color-info);
-  background: oklch(65% 0.15 250 / 0.1);
+  background: var(--g-color-bg-surface);
 }
 
 .g-action-card.disabled {
@@ -84,8 +77,10 @@ defineEmits<{
 
 .g-action-card__title {
   font-family: var(--g-font-mono);
-  font-weight: 600;
-  color: var(--g-color-warning);
+  font-size: var(--g-font-size-md);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .g-action-card__tag {
@@ -102,6 +97,6 @@ defineEmits<{
 .g-action-card__cost {
   font-family: var(--g-font-mono);
   font-size: var(--g-font-size-xs);
-  color: oklch(70% 0.15 280);
+  color: var(--g-color-text-muted);
 }
 </style>

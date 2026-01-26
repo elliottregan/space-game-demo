@@ -68,7 +68,7 @@ function getFactionVariant(faction: NPCFaction): "info" | "positive" | "warning"
 .section {
   margin-bottom: var(--g-space-lg);
   padding-bottom: var(--g-space-md);
-  border-bottom: 1px solid var(--g-color-border);
+  border-bottom: var(--g-border-width) solid var(--g-color-border-strong);
 }
 
 .section-title {
