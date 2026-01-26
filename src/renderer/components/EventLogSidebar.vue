@@ -7,7 +7,7 @@ const state = gameService.getState();
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const displayedEvents = computed(() => {
-  return state.recentEvents.slice(-15).reverse();
+  return [...state.recentEvents].reverse();
 });
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -51,7 +51,7 @@ function getIcon(type: string): string {
           <span class="event-icon">{{ getIcon(event.type) }}</span>
           <span class="event-message">{{ event.message || event.type }}</span>
         </div>
-        <GEmptyState v-if="displayedEvents.length === 0" message="No recent events" />
+        <GEmptyState v-if="displayedEvents.length === 0" message="No events" />
       </div>
     </GPanel>
   </aside>
