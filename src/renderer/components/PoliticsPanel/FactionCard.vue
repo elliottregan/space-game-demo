@@ -1,30 +1,24 @@
 <script setup lang="ts">
 import type { Faction } from "../../../core/models/Politics";
+import { getFactionSupportVariant } from "../../../core/balance/DisplayThresholds";
 import { GProgress } from "../../ui";
 
 defineProps<{
   faction: Faction;
 }>();
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function getSupportVariant(support: number): "positive" | "warning" | "negative" {
-  if (support >= 60) return "positive";
-  if (support >= 40) return "warning";
-  return "negative";
-}
 </script>
 
 <template>
   <div class="faction-card">
     <div class="faction-header">
       <span class="faction-name">{{ faction.name }}</span>
-      <span class="faction-support" :class="`support-${getSupportVariant(faction.support)}`">
+      <span class="faction-support" :class="`support-${getFactionSupportVariant(faction.support)}`">
         {{ Math.floor(faction.support) }}%
       </span>
     </div>
     <GProgress
       :percent="faction.support"
-      :variant="getSupportVariant(faction.support)"
+      :variant="getFactionSupportVariant(faction.support)"
     />
     <div class="faction-desc">{{ faction.description }}</div>
   </div>

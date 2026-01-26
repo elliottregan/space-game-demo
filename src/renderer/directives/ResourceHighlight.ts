@@ -1,4 +1,4 @@
-import { reactive, type Directive, type DirectiveBinding } from "vue";
+import { reactive, watchEffect, type Directive, type DirectiveBinding, type WatchStopHandle } from "vue";
 
 /**
  * Resource highlight state - tracks which resources should glow
@@ -100,25 +100,17 @@ export const vResourceGlow: Directive<HTMLElement, string> = {
       }
     };
 
-    // Store the update function for cleanup
-    (el as HTMLElement & { _resourceGlowUpdate?: () => void })._resourceGlowUpdate = updateGlow;
+    // Use Vue's watchEffect to reactively update when highlightState changes
+    const stopWatch = watchEffect(updateGlow);
 
-    // Watch for changes using requestAnimationFrame polling
-    // (simpler than setting up a full reactive watcher)
-    let frameId: number;
-    const poll = () => {
-      updateGlow();
-      frameId = requestAnimationFrame(poll);
-    };
-    frameId = requestAnimationFrame(poll);
-
-    (el as HTMLElement & { _resourceGlowFrame?: number })._resourceGlowFrame = frameId;
+    // Store the stop handle for cleanup
+    (el as HTMLElement & { _resourceGlowStop?: WatchStopHandle })._resourceGlowStop = stopWatch;
   },
 
   unmounted(el: HTMLElement) {
-    const frameId = (el as HTMLElement & { _resourceGlowFrame?: number })._resourceGlowFrame;
-    if (frameId) {
-      cancelAnimationFrame(frameId);
+    const stopWatch = (el as HTMLElement & { _resourceGlowStop?: WatchStopHandle })._resourceGlowStop;
+    if (stopWatch) {
+      stopWatch();
     }
   },
 };

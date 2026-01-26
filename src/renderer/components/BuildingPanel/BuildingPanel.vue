@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { gameService } from "../../services/GameService";
 import type { BuildingDefinition } from "../../../facade";
 import { highlightResources, clearHighlights } from "../../directives/ResourceHighlight";
+import { calculateHighlightInfo } from "../../utils/formatters";
 import { GPanel } from "../../ui";
 import CategoryTabs from "./CategoryTabs.vue";
 import BuildingCard from "./BuildingCard.vue";
@@ -98,26 +99,9 @@ function getRequiredTechName(def: BuildingDefinition): string {
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function onBuildingHover(def: BuildingDefinition): void {
-  const allResources = new Set<string>();
-  const deltas: Record<string, number> = {};
-
-  for (const [key, value] of Object.entries(def.cost)) {
-    if (value > 0) {
-      allResources.add(key);
-      deltas[key] = -value;
-    }
-  }
-
-  const requiredResources = Array.from(allResources);
-  const currentResources = api.resources.snapshot().current;
-
-  const insufficientResources = Object.keys(def.cost).filter((key) => {
-    const required = (def.cost as Record<string, number>)[key] || 0;
-    const available = (currentResources as Record<string, number>)[key] || 0;
-    return available < required;
-  });
-
-  highlightResources(requiredResources, insufficientResources, deltas);
+  const currentResources = api.resources.snapshot().current as Record<string, number>;
+  const info = calculateHighlightInfo(def.cost, currentResources);
+  highlightResources(info.requiredResources, info.insufficientResources, info.deltas);
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template

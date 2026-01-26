@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { gameService } from "../../services/GameService";
 import { ColonistRole } from "../../../core/models/Colonist";
+import { getHealthVariant, getMoraleVariant } from "../../../core/balance/DisplayThresholds";
 import { GPanel } from "../../ui";
 import StatRow from "./StatRow.vue";
 import WorkforceGrid from "./WorkforceGrid.vue";
@@ -26,20 +27,6 @@ const workforceStats = computed(() => {
 
   return stats;
 });
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function getHealthVariant(health: number): "positive" | "warning" | "negative" {
-  if (health >= 80) return "positive";
-  if (health >= 50) return "warning";
-  return "negative";
-}
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function getMoraleVariant(morale: number): "positive" | "warning" | "negative" {
-  if (morale >= 70) return "positive";
-  if (morale >= 40) return "warning";
-  return "negative";
-}
 </script>
 
 <template>

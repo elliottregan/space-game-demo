@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { GButton } from "../../ui";
 import type { Technology } from "../../../core/models/Technology";
+import { formatTechCost } from "../../utils/formatters";
 
 defineProps<{
   tech: Technology;
@@ -17,17 +18,6 @@ const emit = defineEmits<{
   hover: [];
   leave: [];
 }>();
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function formatCost(tech: Technology): string {
-  const parts = [`${tech.cost.sols} sols`];
-  if (tech.cost.resources) {
-    for (const [key, value] of Object.entries(tech.cost.resources)) {
-      if (value) parts.push(`${value} ${key}`);
-    }
-  }
-  return parts.join(", ");
-}
 </script>
 
 <template>
@@ -43,7 +33,7 @@ function formatCost(tech: Technology): string {
       <div class="tech-desc">{{ tech.description }}</div>
 
       <template v-if="variant === 'available'">
-        <div class="tech-cost">{{ formatCost(tech) }}</div>
+        <div class="tech-cost">{{ formatTechCost(tech) }}</div>
         <div v-if="tech.unlocks.length > 0" class="tech-unlocks">
           Unlocks: {{ tech.unlocks.join(', ') }}
         </div>

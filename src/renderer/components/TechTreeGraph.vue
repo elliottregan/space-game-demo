@@ -5,6 +5,7 @@ import "@vue-flow/core/dist/style.css";
 import "@vue-flow/core/dist/theme-default.css";
 import { gameService } from "../services/GameService";
 import type { Technology } from "../../core/models/Technology";
+import { formatTechCost } from "../utils/formatters";
 import TechNode from "./TechNode.vue";
 import { GButton, GBadge } from "../ui";
 
@@ -121,16 +122,6 @@ function cancelResearch() {
   selectedTech.value = null;
 }
 
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function formatCost(tech: Technology): string {
-  const parts = [`${tech.cost.sols} sols`];
-  if (tech.cost.resources) {
-    for (const [key, value] of Object.entries(tech.cost.resources)) {
-      if (value) parts.push(`${value} ${key}`);
-    }
-  }
-  return parts.join(", ");
-}
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function canResearch(techId: string): boolean {
@@ -165,7 +156,7 @@ function canResearch(techId: string): boolean {
       <div class="tech-meta">
         <div class="meta-row">
           <span class="label">Cost:</span>
-          <span class="value">{{ formatCost(selectedTech) }}</span>
+          <span class="value">{{ formatTechCost(selectedTech) }}</span>
         </div>
         <div v-if="selectedTech.unlocks.length > 0" class="meta-row">
           <span class="label">Unlocks:</span>
