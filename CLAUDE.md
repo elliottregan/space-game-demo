@@ -53,3 +53,14 @@ Buildings have three resource-related properties:
 - When updating `reactive()` object properties, modify in-place (delete then assign) rather than replacing the entire nested object for reliable reactivity
 - Semantic CSS variables defined in `App.vue` `:root`: `--color-positive`, `--color-negative`, `--color-danger`, `--color-warning`, `--color-info`, `--color-muted`
 - Use `// biome-ignore lint/correctness/noUnusedVariables: used in template` for template-only functions
+
+## Development Workflow
+
+### Required: Git Worktrees for Feature Work
+Always use the `superpowers:using-git-worktrees` skill when starting feature work. Never develop directly on the main branch.
+
+### Required: Create PRs for All Changes
+All work must result in a pull request. Never commit directly to main. Use `/commit-push-pr` or create PRs manually after completing work.
+
+### Preferred: Subagent-Driven Development
+When executing implementation plans, use `superpowers:subagent-driven-development` to parallelize independent tasks within the current session rather than spawning separate sessions.
