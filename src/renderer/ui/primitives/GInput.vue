@@ -34,12 +34,10 @@ defineEmits<{
 <style scoped>
 .g-input {
   font-family: var(--g-font-mono);
-  background: var(--g-color-bg);
+  background: var(--g-color-bg-base);
   color: var(--g-color-text);
   border: 1px solid var(--g-color-border);
-  transition:
-    border-color var(--g-transition-fast),
-    box-shadow var(--g-transition-fast);
+  transition: border-color var(--g-transition-fast);
   width: 100%;
   box-sizing: border-box;
 }
@@ -51,12 +49,12 @@ defineEmits<{
 .g-input:focus {
   outline: none;
   border-color: var(--g-color-border-focus);
-  box-shadow: var(--g-glow-subtle);
 }
 
 .g-input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  background: var(--g-color-bg-surface);
 }
 
 /* Sizes */
