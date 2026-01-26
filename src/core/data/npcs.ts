@@ -1,23 +1,23 @@
 // src/core/data/npcs.ts
 
-import type { NPC, Project } from "../models/NPCInfluence";
+import { NPCFaction, type NPC, type Project } from "../models/NPCInfluence";
 
 export const NPCS: NPC[] = [
-  // Earth Loyalists (3) - formerly futurist
-  { id: "chen_wei", name: "Dr. Chen Wei", faction: "earth_loyalists", influence: 1.5 },
-  { id: "nova_silva", name: "Nova Silva", faction: "earth_loyalists", influence: 1.0 },
-  { id: "alex_okonkwo", name: "Alex Okonkwo", faction: "earth_loyalists", influence: 1.2 },
+  // Earth Loyalists (3)
+  { id: "chen_wei", name: "Dr. Chen Wei", faction: NPCFaction.EarthLoyalists, influence: 1.5 },
+  { id: "nova_silva", name: "Nova Silva", faction: NPCFaction.EarthLoyalists, influence: 1.0 },
+  { id: "alex_okonkwo", name: "Alex Okonkwo", faction: NPCFaction.EarthLoyalists, influence: 1.2 },
 
-  // Mars Independence (4) - formerly progressive
-  { id: "maria_santos", name: "Maria Santos", faction: "mars_independence", influence: 1.3 },
-  { id: "james_liu", name: "James Liu", faction: "mars_independence", influence: 1.0 },
-  { id: "aisha_patel", name: "Aisha Patel", faction: "mars_independence", influence: 1.1 },
-  { id: "marcus_reed", name: "Marcus Reed", faction: "mars_independence", influence: 0.9 },
+  // Mars Independence (4)
+  { id: "maria_santos", name: "Maria Santos", faction: NPCFaction.MarsIndependence, influence: 1.3 },
+  { id: "james_liu", name: "James Liu", faction: NPCFaction.MarsIndependence, influence: 1.0 },
+  { id: "aisha_patel", name: "Aisha Patel", faction: NPCFaction.MarsIndependence, influence: 1.1 },
+  { id: "marcus_reed", name: "Marcus Reed", faction: NPCFaction.MarsIndependence, influence: 0.9 },
 
-  // Corporate Interests (3) - formerly traditionalist
-  { id: "elena_volkov", name: "Elena Volkov", faction: "corporate_interests", influence: 1.4 },
-  { id: "david_morrison", name: "David Morrison", faction: "corporate_interests", influence: 1.0 },
-  { id: "sarah_chen", name: "Sarah Chen", faction: "corporate_interests", influence: 1.1 },
+  // Corporate Interests (3)
+  { id: "elena_volkov", name: "Elena Volkov", faction: NPCFaction.CorporateInterests, influence: 1.4 },
+  { id: "david_morrison", name: "David Morrison", faction: NPCFaction.CorporateInterests, influence: 1.0 },
+  { id: "sarah_chen", name: "Sarah Chen", faction: NPCFaction.CorporateInterests, influence: 1.1 },
 ];
 
 /** Initial relationship weights (asymmetric). Key format: "fromId:toId" -> weight */
@@ -65,7 +65,7 @@ export const PROJECTS: Project[] = [
     id: "generation_ship",
     name: "Build Generation Ship",
     description: "Begin construction of an interstellar colony ship.",
-    type: "earth_loyalists",
+    type: NPCFaction.EarthLoyalists,
     proposalCost: { materials: 100 },
     effects: { unlockBuilding: "shipyard" },
   },
@@ -73,14 +73,14 @@ export const PROJECTS: Project[] = [
     id: "earth_memorial",
     name: "Earth Memorial",
     description: "Build a memorial to honor our home planet.",
-    type: "earth_loyalists",
+    type: NPCFaction.EarthLoyalists,
     proposalCost: { materials: 40 },
   },
   {
     id: "heritage_archive",
     name: "Heritage Archive",
     description: "Preserve Earth cultures and traditions.",
-    type: "earth_loyalists",
+    type: NPCFaction.EarthLoyalists,
     proposalCost: { materials: 50 },
     effects: { unlockBuilding: "archive" },
   },
@@ -90,7 +90,7 @@ export const PROJECTS: Project[] = [
     id: "universal_housing",
     name: "Universal Housing Initiative",
     description: "Guarantee housing for all colonists.",
-    type: "mars_independence",
+    type: NPCFaction.MarsIndependence,
     proposalCost: { materials: 80 },
     effects: { unlockBuilding: "housing_complex" },
   },
@@ -98,7 +98,7 @@ export const PROJECTS: Project[] = [
     id: "healthcare_expansion",
     name: "Healthcare Expansion",
     description: "Expand medical facilities and access.",
-    type: "mars_independence",
+    type: NPCFaction.MarsIndependence,
     proposalCost: { materials: 60, water: 30 },
     effects: { unlockBuilding: "medical_center" },
   },
@@ -108,7 +108,7 @@ export const PROJECTS: Project[] = [
     id: "ai_governance",
     name: "AI-Assisted Governance",
     description: "Implement AI systems to help with colony decision-making.",
-    type: "corporate_interests",
+    type: NPCFaction.CorporateInterests,
     proposalCost: { materials: 50, power: 50 },
     effects: { unlockTech: "advanced_ai" },
   },
@@ -116,7 +116,7 @@ export const PROJECTS: Project[] = [
     id: "mining_concession",
     name: "Mining Concession",
     description: "Grant exclusive extraction rights to corporate partners.",
-    type: "corporate_interests",
+    type: NPCFaction.CorporateInterests,
     proposalCost: { materials: 60 },
     effects: { unlockBuilding: "efficient_mine" },
   },
@@ -124,7 +124,7 @@ export const PROJECTS: Project[] = [
     id: "labor_efficiency",
     name: "Labor Efficiency Program",
     description: "Controversial productivity initiative that increases output.",
-    type: "corporate_interests",
+    type: NPCFaction.CorporateInterests,
     proposalCost: { materials: 40 },
   },
 ];

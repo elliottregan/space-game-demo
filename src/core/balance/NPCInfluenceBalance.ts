@@ -1,6 +1,6 @@
 // src/core/balance/NPCInfluenceBalance.ts
 
-import type { NPCFaction, ProjectType } from "../models/NPCInfluence";
+import { NPCFaction, type ProjectType } from "../models/NPCInfluence";
 
 /** Drift rate - how quickly NPCs respond to network influence (0.1-0.5) */
 export const DRIFT_RATE = 0.2;
@@ -16,20 +16,20 @@ export const TRANSMISSION_FACTORS: Record<
   ProjectType,
   Record<NPCFaction, Record<NPCFaction, number>>
 > = {
-  earth_loyalists: {
-    earth_loyalists: { earth_loyalists: 1.0, mars_independence: 0.6, corporate_interests: 0.2 },
-    mars_independence: { earth_loyalists: 0.7, mars_independence: 1.0, corporate_interests: 0.4 },
-    corporate_interests: { earth_loyalists: 0.3, mars_independence: 0.5, corporate_interests: 1.0 },
+  [NPCFaction.EarthLoyalists]: {
+    [NPCFaction.EarthLoyalists]: { [NPCFaction.EarthLoyalists]: 1.0, [NPCFaction.MarsIndependence]: 0.6, [NPCFaction.CorporateInterests]: 0.2 },
+    [NPCFaction.MarsIndependence]: { [NPCFaction.EarthLoyalists]: 0.7, [NPCFaction.MarsIndependence]: 1.0, [NPCFaction.CorporateInterests]: 0.4 },
+    [NPCFaction.CorporateInterests]: { [NPCFaction.EarthLoyalists]: 0.3, [NPCFaction.MarsIndependence]: 0.5, [NPCFaction.CorporateInterests]: 1.0 },
   },
-  mars_independence: {
-    earth_loyalists: { earth_loyalists: 1.0, mars_independence: 0.5, corporate_interests: 0.3 },
-    mars_independence: { earth_loyalists: 0.6, mars_independence: 1.0, corporate_interests: 0.6 },
-    corporate_interests: { earth_loyalists: 0.3, mars_independence: 0.5, corporate_interests: 1.0 },
+  [NPCFaction.MarsIndependence]: {
+    [NPCFaction.EarthLoyalists]: { [NPCFaction.EarthLoyalists]: 1.0, [NPCFaction.MarsIndependence]: 0.5, [NPCFaction.CorporateInterests]: 0.3 },
+    [NPCFaction.MarsIndependence]: { [NPCFaction.EarthLoyalists]: 0.6, [NPCFaction.MarsIndependence]: 1.0, [NPCFaction.CorporateInterests]: 0.6 },
+    [NPCFaction.CorporateInterests]: { [NPCFaction.EarthLoyalists]: 0.3, [NPCFaction.MarsIndependence]: 0.5, [NPCFaction.CorporateInterests]: 1.0 },
   },
-  corporate_interests: {
-    earth_loyalists: { earth_loyalists: 1.0, mars_independence: 0.4, corporate_interests: 0.2 },
-    mars_independence: { earth_loyalists: 0.5, mars_independence: 1.0, corporate_interests: 0.6 },
-    corporate_interests: { earth_loyalists: 0.3, mars_independence: 0.7, corporate_interests: 1.0 },
+  [NPCFaction.CorporateInterests]: {
+    [NPCFaction.EarthLoyalists]: { [NPCFaction.EarthLoyalists]: 1.0, [NPCFaction.MarsIndependence]: 0.4, [NPCFaction.CorporateInterests]: 0.2 },
+    [NPCFaction.MarsIndependence]: { [NPCFaction.EarthLoyalists]: 0.5, [NPCFaction.MarsIndependence]: 1.0, [NPCFaction.CorporateInterests]: 0.6 },
+    [NPCFaction.CorporateInterests]: { [NPCFaction.EarthLoyalists]: 0.3, [NPCFaction.MarsIndependence]: 0.7, [NPCFaction.CorporateInterests]: 1.0 },
   },
 } as const;
 

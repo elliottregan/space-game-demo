@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'bun:test';
 import { GameState } from '../src/core/GameState';
+import { NPCFaction } from '../src/core/models/NPCInfluence';
 
 /**
  * Helper to ensure the colony has enough resources to survive indefinitely.
@@ -52,7 +53,7 @@ describe('Political Pressure Integration', () => {
     }
 
     // Lower support for earth_loyalists to trigger a demand
-    const earthNpcs = game.npcInfluence.getNPCs().filter(n => n.faction === 'earth_loyalists');
+    const earthNpcs = game.npcInfluence.getNPCs().filter(n => n.faction === NPCFaction.EarthLoyalists);
     for (const npc of earthNpcs) {
       game.npcInfluence.adjustNPCSupport(npc.id, -0.6);
     }
@@ -61,7 +62,7 @@ describe('Political Pressure Integration', () => {
     game.tick();
 
     const demandsBefore = game.npcInfluence.getActiveDemands()
-      .filter(d => d.factionId === 'earth_loyalists');
+      .filter(d => d.factionId === NPCFaction.EarthLoyalists);
     expect(demandsBefore.length).toBe(1);
 
     const firstDemand = demandsBefore[0];

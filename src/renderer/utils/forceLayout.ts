@@ -8,7 +8,7 @@ import {
   type SimulationNodeDatum,
   type SimulationLinkDatum,
 } from "d3-force";
-import type { NPC, NPCFaction } from "../../core/models/NPCInfluence";
+import { NPCFaction, type NPC } from "../../core/models/NPCInfluence";
 
 export interface LayoutInput {
   npcs: NPC[];
@@ -44,9 +44,9 @@ function getInitialPosition(
   height: number,
 ): { x: number; y: number } {
   const factionOffsets: Record<NPCFaction, { x: number; y: number }> = {
-    futurist: { x: 0.5, y: 0.2 },
-    progressive: { x: 0.25, y: 0.7 },
-    traditionalist: { x: 0.75, y: 0.7 },
+    [NPCFaction.EarthLoyalists]: { x: 0.5, y: 0.2 },
+    [NPCFaction.MarsIndependence]: { x: 0.25, y: 0.7 },
+    [NPCFaction.CorporateInterests]: { x: 0.75, y: 0.7 },
   };
   const offset = factionOffsets[faction];
   // Add small deterministic offset per NPC to avoid exact overlap

@@ -1,6 +1,21 @@
 import type { ResourceDelta } from "./Resources";
 
-export type NPCFaction = "earth_loyalists" | "mars_independence" | "corporate_interests";
+/**
+ * Political factions in the Mars colony.
+ * Using a string enum for type safety while maintaining string serialization.
+ */
+export enum NPCFaction {
+  EarthLoyalists = "earth_loyalists",
+  MarsIndependence = "mars_independence",
+  CorporateInterests = "corporate_interests",
+}
+
+/** All faction values as an array for iteration */
+export const ALL_FACTIONS: readonly NPCFaction[] = [
+  NPCFaction.EarthLoyalists,
+  NPCFaction.MarsIndependence,
+  NPCFaction.CorporateInterests,
+] as const;
 
 export interface NPC {
   id: string;
@@ -10,7 +25,8 @@ export interface NPC {
   influence: number;
 }
 
-export type ProjectType = "earth_loyalists" | "mars_independence" | "corporate_interests";
+/** Project types align with factions */
+export type ProjectType = NPCFaction;
 
 export interface Project {
   id: string;

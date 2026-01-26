@@ -163,15 +163,15 @@ function formatPercent(value: number): string {
   text-transform: capitalize;
 }
 
-.value.faction.futurist {
+.value.faction.earth_loyalists {
   color: #60a5fa;
 }
 
-.value.faction.progressive {
+.value.faction.mars_independence {
   color: #4ade80;
 }
 
-.value.faction.traditionalist {
+.value.faction.corporate_interests {
   color: #fbbf24;
 }
 
