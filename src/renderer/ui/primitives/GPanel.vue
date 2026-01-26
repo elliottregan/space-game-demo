@@ -39,7 +39,7 @@ withDefaults(
 <style scoped>
 .g-panel {
   background: var(--g-color-bg-surface);
-  border: var(--g-border-width) solid var(--g-color-border-strong);
+  border: var(--g-border-width) solid var(--panel-accent);
   transition: box-shadow var(--g-transition-normal);
 }
 
@@ -64,8 +64,8 @@ withDefaults(
   justify-content: space-between;
   align-items: center;
   padding: var(--g-space-sm) var(--g-space-md);
-  background: var(--g-color-border-strong);
-  border-bottom: var(--g-border-width) solid var(--g-color-border-strong);
+  background: var(--panel-accent);
+  border-bottom: var(--g-border-width) solid var(--panel-accent);
   font-family: var(--g-font-mono);
   font-size: var(--g-font-size-lg);
   text-transform: uppercase;
