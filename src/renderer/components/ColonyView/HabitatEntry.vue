@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import type { Building, BuildingDefinition, Colonist, SkillDefinition } from "../../../facade";
 import { GCardGrid, GEntityHeader } from "../../ui";
-import ColonistRow from "./ColonistRow.vue";
+import ColonistCard from "../ColonyPanel/ColonistCard.vue";
 
 const props = defineProps<{
   building: Building;
@@ -36,12 +36,11 @@ const capacity = computed(() => props.definition?.capacity || 0);
     </div>
 
     <GCardGrid v-if="building.status === 'active' && residents.length > 0" class="residents-list">
-      <ColonistRow
+      <ColonistCard
         v-for="colonist in residents"
         :key="colonist.id"
         :colonist="colonist"
         :skill-definitions="skillDefinitions"
-        show-workplace
       />
     </GCardGrid>
 

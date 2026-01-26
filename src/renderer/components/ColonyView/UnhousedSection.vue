@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Building, BuildingDefinition, Colonist, SkillDefinition } from "../../../facade";
 import { GPanel } from "../../ui";
-import ColonistRow from "./ColonistRow.vue";
+import ColonistCard from "../ColonyPanel/ColonistCard.vue";
 
 defineProps<{
   colonists: Colonist[];
@@ -17,12 +17,11 @@ defineProps<{
       These colonists have no housing assignment. Build more habitats!
     </div>
     <div class="unhoused-list">
-      <ColonistRow
+      <ColonistCard
         v-for="colonist in colonists"
         :key="colonist.id"
         :colonist="colonist"
         :skill-definitions="skillDefinitions"
-        show-workplace
       />
     </div>
   </GPanel>
