@@ -39,7 +39,7 @@ withDefaults(
 <style scoped>
 .g-panel {
   background: var(--g-color-bg-surface);
-  border: var(--g-border-width) solid var(--panel-accent, var(--g-color-border));
+  border: var(--g-border-width) solid var(--g-color-border-strong);
   transition: box-shadow var(--g-transition-normal);
 }
 
@@ -64,17 +64,19 @@ withDefaults(
   justify-content: space-between;
   align-items: center;
   padding: var(--g-space-sm) var(--g-space-md);
-  background: var(--g-color-bg-elevated);
-  border-bottom: var(--g-border-width) solid var(--panel-accent, var(--g-color-border));
+  background: var(--g-color-border-strong);
+  border-bottom: var(--g-border-width) solid var(--g-color-border-strong);
   font-family: var(--g-font-mono);
   font-size: var(--g-font-size-lg);
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  color: white;
 }
 
 .g-panel__title {
   flex: 1;
   font-weight: bold;
+  color: white;
 }
 
 .g-panel__header-actions {
