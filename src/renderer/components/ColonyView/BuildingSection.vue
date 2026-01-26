@@ -31,6 +31,6 @@ defineProps<{
 .building-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--g-space-md);
 }
 </style>

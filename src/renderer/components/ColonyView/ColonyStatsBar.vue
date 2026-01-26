@@ -42,21 +42,24 @@ const state = gameService.getState();
 <style scoped>
 .stats-bar {
   display: flex;
-  gap: 2rem;
+  gap: var(--g-space-xl);
   align-items: center;
   flex-wrap: wrap;
+  font-family: var(--g-font-mono);
 }
 
 .stat {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--g-space-xs);
   min-width: 100px;
 }
 
 .label {
   font-size: var(--g-font-size-xs);
   color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .value {
@@ -65,6 +68,6 @@ const state = gameService.getState();
 }
 
 .value.positive {
-  color: var(--color-positive);
+  color: var(--g-color-positive);
 }
 </style>

@@ -78,31 +78,33 @@ const statusLabel = computed(() => {
 
 <style scoped>
 .habitat-entry {
-  padding: 0.75rem;
-  background: var(--g-color-bg-elevated);
-  border-radius: 6px;
+  padding: var(--g-space-md);
+  background: var(--g-color-bg-surface);
   border: 1px solid var(--g-color-border);
+  font-family: var(--g-font-mono);
 }
 
 .habitat-entry.broken {
-  border-color: var(--color-danger);
+  border-color: var(--g-color-negative);
 }
 
 .habitat-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--g-space-sm);
 }
 
 .habitat-title {
   display: flex;
   align-items: baseline;
-  gap: 0.5rem;
+  gap: var(--g-space-sm);
 }
 
 .habitat-name {
   font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .habitat-id {
@@ -113,7 +115,7 @@ const statusLabel = computed(() => {
 .habitat-status {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--g-space-sm);
 }
 
 .condition {
@@ -122,26 +124,28 @@ const statusLabel = computed(() => {
 }
 
 .construction-progress {
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--g-space-sm);
 }
 
 .residents-header {
   font-size: var(--g-font-size-sm);
   color: var(--g-color-text-muted);
-  margin-bottom: 0.5rem;
-  padding-top: 0.5rem;
+  margin-bottom: var(--g-space-sm);
+  padding-top: var(--g-space-sm);
   border-top: 1px solid var(--g-color-border);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .residents-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--g-space-md);
 }
 
 .no-residents {
   font-style: italic;
   color: var(--g-color-text-muted);
-  padding: 0.5rem 0;
+  padding: var(--g-space-sm) 0;
 }
 </style>

@@ -105,6 +105,6 @@ const buildingsByCategory = computed(() => {
 .colony-view {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--g-space-md);
 }
 </style>
