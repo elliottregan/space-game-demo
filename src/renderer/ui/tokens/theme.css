@@ -2,10 +2,10 @@
   /* === ODYSSEY THEME === */
   /* Light mode (default) - converted to OKLCH */
 
-  /* Base palette - light backgrounds */
-  --g-color-bg-base: oklch(100% 0 0);
-  --g-color-bg-surface: oklch(96% 0 0);
-  --g-color-bg-elevated: oklch(98% 0 0);
+  /* Base palette - light backgrounds (warm cream/manila) */
+  --g-color-bg-base: oklch(96% 0.02 90);
+  --g-color-bg-surface: oklch(94% 0.02 90);
+  --g-color-bg-elevated: oklch(98% 0.015 90);
 
   /* Text colors - dark on light */
   --g-color-text: oklch(15% 0 0);
