@@ -393,27 +393,9 @@ export class NPCInfluenceManager {
   tick(currentSol: number = 0): GameEvent[] {
     const events: GameEvent[] = [];
 
-    // Apply support decay if past political pressure start
     if (currentSol >= POLITICAL_PRESSURE_START_SOL) {
-      // Decrement demand deadlines first
-      for (const demand of this.activeDemands) {
-        demand.deadline--;
-      }
-
-      // Calculate decay rate per NPC based on their faction's demand status
-      for (const npc of this.npcs) {
-        const current = this.npcSupport.get(npc.id) ?? 0;
-
-        // Check if this NPC's faction has an expired demand
-        const factionDemand = this.activeDemands.find((d) => d.factionId === npc.faction);
-        const multiplier =
-          factionDemand && factionDemand.deadline <= 0 ? IGNORED_DEMAND_DECAY_MULTIPLIER : 1;
-
-        const decayed = current - FACTION_SUPPORT_DECAY_RATE * multiplier;
-        this.npcSupport.set(npc.id, Math.max(-1, decayed));
-      }
-
-      // Check for new demands
+      this.decrementDemandDeadlines();
+      this.applySupportDecay();
       events.push(...this.checkAndGenerateDemands(currentSol));
     }
 
@@ -426,76 +408,103 @@ export class NPCInfluenceManager {
       return events;
     }
 
-    // Build current support vector
+    this.propagateProjectSupport(project);
+    this.activeProject.solsRemaining--;
+
+    if (this.activeProject.solsRemaining <= 0) {
+      events.push(...this.resolveProject(project));
+    }
+
+    return events;
+  }
+
+  private decrementDemandDeadlines(): void {
+    for (const demand of this.activeDemands) {
+      demand.deadline--;
+    }
+  }
+
+  private applySupportDecay(): void {
+    for (const npc of this.npcs) {
+      const current = this.npcSupport.get(npc.id) ?? 0;
+      const factionDemand = this.activeDemands.find((d) => d.factionId === npc.faction);
+      const multiplier =
+        factionDemand && factionDemand.deadline <= 0 ? IGNORED_DEMAND_DECAY_MULTIPLIER : 1;
+
+      const decayed = current - FACTION_SUPPORT_DECAY_RATE * multiplier;
+      this.npcSupport.set(npc.id, Math.max(-1, decayed));
+    }
+  }
+
+  private propagateProjectSupport(project: Project): void {
+    if (!this.activeProject) return;
+
     const currentSupport: number[] = this.npcs.map(
       (npc) => this.activeProject?.supportLevels.get(npc.id) || 0,
     );
 
-    // Build transmission matrix for this project type
     const T = this.buildTransmissionMatrix(project.type);
-
-    // Update support levels
     const newSupport = updateSupport(currentSupport, this.relationshipMatrix, T, DRIFT_RATE);
 
-    // Store updated support
     for (let i = 0; i < this.npcs.length; i++) {
       const npc = this.npcs[i];
       if (npc) {
         this.activeProject.supportLevels.set(npc.id, newSupport[i] ?? 0);
       }
     }
+  }
 
-    // Decrement sols remaining
-    this.activeProject.solsRemaining--;
+  private resolveProject(project: Project): GameEvent[] {
+    const events: GameEvent[] = [];
+    const averageSupport = this.getAverageSupport();
+    const passed = averageSupport >= PASS_THRESHOLD;
 
-    // Check for resolution
-    if (this.activeProject.solsRemaining <= 0) {
-      const averageSupport = this.getAverageSupport();
-      const passed = averageSupport >= PASS_THRESHOLD;
-
-      if (passed) {
-        events.push({
-          type: "PROJECT_PASSED",
-          severity: "info",
-          projectId: project.id,
-          projectName: project.name,
-          averageSupport,
-          message: `Project "${project.name}" passed with ${(averageSupport * 100).toFixed(0)}% average support`,
-        });
-
-        // Boost transmission factors for this project type
-        this.modifyTransmissionFactors(project.type, SUCCESS_TRANSMISSION_BOOST);
-
-        // Clear any demand for this project's faction
-        const projectFaction = project.type;
-        this.activeDemands = this.activeDemands.filter((d) => d.factionId !== projectFaction);
-
-        // Boost support for all NPCs in this faction
-        for (const npc of this.npcs) {
-          if (npc.faction === projectFaction) {
-            const current = this.npcSupport.get(npc.id) ?? 0;
-            this.npcSupport.set(npc.id, Math.min(1, current + PROJECT_PASS_SUPPORT_BOOST));
-          }
-        }
-      } else {
-        events.push({
-          type: "PROJECT_FAILED",
-          severity: "warning",
-          projectId: project.id,
-          projectName: project.name,
-          averageSupport,
-          message: `Project "${project.name}" failed with only ${(averageSupport * 100).toFixed(0)}% average support`,
-        });
-
-        // Penalize transmission factors for this project type
-        this.modifyTransmissionFactors(project.type, FAILURE_TRANSMISSION_PENALTY);
-      }
-
-      // Clear active project
-      this.activeProject = null;
+    if (passed) {
+      events.push(this.createProjectPassedEvent(project, averageSupport));
+      this.applyProjectPassEffects(project);
+    } else {
+      events.push(this.createProjectFailedEvent(project, averageSupport));
+      this.modifyTransmissionFactors(project.type, FAILURE_TRANSMISSION_PENALTY);
     }
 
+    this.activeProject = null;
     return events;
+  }
+
+  private createProjectPassedEvent(project: Project, averageSupport: number): GameEvent {
+    return {
+      type: "PROJECT_PASSED",
+      severity: "info",
+      projectId: project.id,
+      projectName: project.name,
+      averageSupport,
+      message: `Project "${project.name}" passed with ${(averageSupport * 100).toFixed(0)}% average support`,
+    };
+  }
+
+  private createProjectFailedEvent(project: Project, averageSupport: number): GameEvent {
+    return {
+      type: "PROJECT_FAILED",
+      severity: "warning",
+      projectId: project.id,
+      projectName: project.name,
+      averageSupport,
+      message: `Project "${project.name}" failed with only ${(averageSupport * 100).toFixed(0)}% average support`,
+    };
+  }
+
+  private applyProjectPassEffects(project: Project): void {
+    const projectFaction = project.type;
+
+    this.modifyTransmissionFactors(projectFaction, SUCCESS_TRANSMISSION_BOOST);
+    this.activeDemands = this.activeDemands.filter((d) => d.factionId !== projectFaction);
+
+    for (const npc of this.npcs) {
+      if (npc.faction === projectFaction) {
+        const current = this.npcSupport.get(npc.id) ?? 0;
+        this.npcSupport.set(npc.id, Math.min(1, current + PROJECT_PASS_SUPPORT_BOOST));
+      }
+    }
   }
 
   // ============ Serialization ============
