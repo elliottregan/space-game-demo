@@ -41,7 +41,29 @@ export class TechnologyFacade implements Queryable<TechnologySnapshot>, EntityLo
       available: Object.freeze([...this.gameState.technology.getAvailableTechs()]),
       researched: Object.freeze([...this.gameState.technology.getResearchedTechs()]),
       currentResearch: this.gameState.technology.getCurrentResearch(),
+      researchQueue: Object.freeze([...this.gameState.technology.getResearchQueue()]),
     };
+  }
+
+  /**
+   * Get the current research queue.
+   */
+  getResearchQueue(): readonly string[] {
+    return Object.freeze([...this.gameState.technology.getResearchQueue()]);
+  }
+
+  /**
+   * Get progress for a specific technology.
+   */
+  getResearchProgress(techId: string): number {
+    return this.gameState.technology.getResearchProgress(techId);
+  }
+
+  /**
+   * Get prerequisite chain for a technology.
+   */
+  getPrerequisiteChain(techId: string): readonly string[] {
+    return Object.freeze([...this.gameState.technology.getPrerequisiteChain(techId)]);
   }
 
   /**
@@ -145,6 +167,35 @@ export class TechnologyFacade implements Queryable<TechnologySnapshot>, EntityLo
         });
       }
 
+      this.gameState.technology.cancelResearch();
+      return ok(undefined);
+    });
+  }
+
+  /**
+   * Queue a technology and all its prerequisites.
+   */
+  queueResearch(techId: string): Result<void> {
+    return this.executeCommand(() => {
+      const success = this.gameState.technology.queueResearch(techId, this.gameState.resources);
+
+      if (!success) {
+        return err({
+          type: "INVALID_TARGET",
+          target: techId,
+          reason: "Cannot queue research",
+        });
+      }
+
+      return ok(undefined);
+    });
+  }
+
+  /**
+   * Clear the research queue (preserves progress).
+   */
+  clearQueue(): Result<void> {
+    return this.executeCommand(() => {
       this.gameState.technology.cancelResearch();
       return ok(undefined);
     });

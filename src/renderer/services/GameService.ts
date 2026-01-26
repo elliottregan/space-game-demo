@@ -53,6 +53,7 @@ interface GameUIState {
   availableTechs: Technology[];
   researchedTechs: Technology[];
   currentResearch: TechResearch | null;
+  researchQueue: string[];
   politics: {
     factions: FactionStatus[];
     demands: FactionDemand[];
@@ -162,6 +163,7 @@ class GameService {
       availableTechs: [],
       researchedTechs: [],
       currentResearch: null,
+      researchQueue: [],
       politics: {
         factions: [],
         demands: [],
@@ -230,6 +232,7 @@ class GameService {
     this.state.availableTechs = [...techs.available];
     this.state.researchedTechs = [...techs.researched];
     this.state.currentResearch = techs.currentResearch ? { ...techs.currentResearch } : null;
+    this.state.researchQueue = [...techs.researchQueue];
 
     // Politics
     const politicsSnapshot = this.facade.politics.snapshot();

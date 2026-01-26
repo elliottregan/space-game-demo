@@ -78,4 +78,215 @@ describe('TechnologyTree', () => {
 
     expect(tree.canResearch('robotics')).toBe(true);
   });
+
+  describe('Research Queue', () => {
+    it('should track progress per tech in a map', () => {
+      tree.startResearch('hydroponics', resources);
+
+      // Advance 10 sols
+      for (let i = 0; i < 10; i++) {
+        tree.tick();
+      }
+
+      expect(tree.getResearchProgress('hydroponics')).toBe(10);
+    });
+
+    it('should increment progress in the map during tick', () => {
+      tree.startResearch('hydroponics', resources);
+      tree.tick();
+      tree.tick();
+
+      expect(tree.getResearchProgress('hydroponics')).toBe(2);
+      expect(tree.getCurrentResearchId()).toBe('hydroponics');
+    });
+
+    it('should set currentResearchId and add to queue on startResearch', () => {
+      tree.startResearch('hydroponics', resources);
+
+      expect(tree.getCurrentResearchId()).toBe('hydroponics');
+      expect(tree.getResearchQueue()).toEqual(['hydroponics']);
+    });
+
+    it('should resume progress if tech was partially researched before', () => {
+      tree.startResearch('hydroponics', resources);
+
+      // Advance 10 sols
+      for (let i = 0; i < 10; i++) {
+        tree.tick();
+      }
+
+      // Cancel (simulate changing target)
+      tree.cancelResearch();
+      expect(tree.getResearchProgress('hydroponics')).toBe(10);
+
+      // Start again - should resume
+      tree.startResearch('hydroponics', resources);
+      expect(tree.getResearchProgress('hydroponics')).toBe(10);
+    });
+
+    it('should preserve progress when cancelling research', () => {
+      tree.startResearch('hydroponics', resources);
+
+      for (let i = 0; i < 20; i++) {
+        tree.tick();
+      }
+
+      tree.cancelResearch();
+
+      expect(tree.getCurrentResearchId()).toBeNull();
+      expect(tree.getResearchProgress('hydroponics')).toBe(20);
+      expect(tree.getResearchQueue()).toEqual([]);
+    });
+
+    it('should return prerequisite chain in topological order', () => {
+      // generation_ship needs: fusion_drive, cryosleep, closed_ecosystem
+      // fusion_drive needs: nuclear_fission, advanced_materials
+      // cryosleep needs: advanced_medicine
+      // advanced_medicine needs: genetics
+      // genetics needs: hydroponics
+      // closed_ecosystem needs: hydroponics, water_recycling, genetics
+      // nuclear_fission needs: advanced_materials
+
+      const chain = tree.getPrerequisiteChain('generation_ship');
+
+      // Should include all unresearched prerequisites + target
+      expect(chain).toContain('generation_ship');
+      expect(chain).toContain('fusion_drive');
+      expect(chain).toContain('hydroponics');
+
+      // Prerequisites must come before dependents
+      expect(chain.indexOf('hydroponics')).toBeLessThan(chain.indexOf('genetics'));
+      expect(chain.indexOf('genetics')).toBeLessThan(chain.indexOf('advanced_medicine'));
+      expect(chain.indexOf('advanced_materials')).toBeLessThan(chain.indexOf('fusion_drive'));
+      expect(chain.indexOf('fusion_drive')).toBeLessThan(chain.indexOf('generation_ship'));
+    });
+
+    it('should exclude already researched techs from chain', () => {
+      // Research hydroponics first
+      tree.startResearch('hydroponics', resources);
+      const tech = tree.getTech('hydroponics')!;
+      for (let i = 0; i < tech.cost.sols; i++) {
+        tree.tick();
+      }
+
+      const chain = tree.getPrerequisiteChain('genetics');
+
+      expect(chain).not.toContain('hydroponics');
+      expect(chain).toEqual(['genetics']);
+    });
+
+    it('should queue all prerequisites when calling queueResearch on locked tech', () => {
+      // genetics needs hydroponics
+      tree.queueResearch('genetics', resources);
+
+      expect(tree.getResearchQueue()).toEqual(['hydroponics', 'genetics']);
+      expect(tree.getCurrentResearchId()).toBe('hydroponics');
+    });
+
+    it('should merge queues when changing target', () => {
+      // Start with genetics (needs hydroponics)
+      tree.queueResearch('genetics', resources);
+      expect(tree.getResearchQueue()).toEqual(['hydroponics', 'genetics']);
+
+      // Advance hydroponics 10 sols
+      for (let i = 0; i < 10; i++) {
+        tree.tick();
+      }
+      expect(tree.getResearchProgress('hydroponics')).toBe(10);
+
+      // Change to advanced_medicine (needs hydroponics, genetics, advanced_medicine)
+      tree.queueResearch('advanced_medicine', resources);
+
+      // hydroponics still in queue (shared), genetics still needed, advanced_medicine added
+      expect(tree.getResearchQueue()).toEqual(['hydroponics', 'genetics', 'advanced_medicine']);
+      // Progress preserved
+      expect(tree.getResearchProgress('hydroponics')).toBe(10);
+    });
+
+    it('should remove techs not in new chain when changing target', () => {
+      // Start with robotics (needs advanced_materials)
+      tree.queueResearch('robotics', resources);
+      expect(tree.getResearchQueue()).toEqual(['advanced_materials', 'robotics']);
+
+      // Change to genetics (needs hydroponics)
+      tree.queueResearch('genetics', resources);
+
+      // robotics and advanced_materials removed, new chain used
+      expect(tree.getResearchQueue()).toEqual(['hydroponics', 'genetics']);
+    });
+
+    it('should auto-start next tech in queue when current completes', () => {
+      tree.queueResearch('genetics', resources);
+      expect(tree.getResearchQueue()).toEqual(['hydroponics', 'genetics']);
+
+      // Complete hydroponics (60 sols)
+      const hydroTech = tree.getTech('hydroponics')!;
+      for (let i = 0; i < hydroTech.cost.sols; i++) {
+        tree.tick(resources);
+      }
+
+      expect(tree.isResearched('hydroponics')).toBe(true);
+      expect(tree.getCurrentResearchId()).toBe('genetics');
+      expect(tree.getResearchQueue()).toEqual(['genetics']);
+    });
+
+    it('should pause queue if resources insufficient for next tech', () => {
+      // asteroid_mining costs 200 materials
+      // Set up: research advanced_materials and robotics first
+      tree.queueResearch('robotics', resources);
+
+      // Complete advanced_materials
+      const amTech = tree.getTech('advanced_materials')!;
+      for (let i = 0; i < amTech.cost.sols; i++) {
+        tree.tick(resources);
+      }
+
+      // Complete robotics
+      const robTech = tree.getTech('robotics')!;
+      for (let i = 0; i < robTech.cost.sols; i++) {
+        tree.tick(resources);
+      }
+
+      // Now queue asteroid_mining with insufficient resources
+      const poorResources = new ResourceManager({
+        food: 100, oxygen: 100, water: 100, power: 100, materials: 50
+      });
+
+      tree.queueResearch('asteroid_mining', poorResources);
+
+      // Queue is set but nothing is researching (waiting for resources)
+      expect(tree.getResearchQueue()).toEqual(['asteroid_mining']);
+      expect(tree.getCurrentResearchId()).toBeNull();
+    });
+
+    it('should return TechResearch object from getCurrentResearch for compatibility', () => {
+      tree.startResearch('hydroponics', resources);
+
+      for (let i = 0; i < 10; i++) {
+        tree.tick();
+      }
+
+      const research = tree.getCurrentResearch();
+      expect(research).not.toBeNull();
+      expect(research?.techId).toBe('hydroponics');
+      expect(research?.progress).toBe(10);
+      expect(research?.requiredSols).toBe(60);
+    });
+
+    it('should serialize and restore queue and progress', () => {
+      tree.queueResearch('genetics', resources);
+
+      // Advance 15 sols
+      for (let i = 0; i < 15; i++) {
+        tree.tick();
+      }
+
+      const json = tree.toJSON();
+      const restored = TechnologyTree.fromJSON(json, TECHNOLOGIES);
+
+      expect(restored.getCurrentResearchId()).toBe('hydroponics');
+      expect(restored.getResearchProgress('hydroponics')).toBe(15);
+      expect(restored.getResearchQueue()).toEqual(['hydroponics', 'genetics']);
+    });
+  });
 });
