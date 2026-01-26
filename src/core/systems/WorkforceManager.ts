@@ -10,6 +10,7 @@ import { SKILLS } from "../data/skills";
 import type { Colonist } from "../models/Colonist";
 import { ColonistRole, MasteryLevel } from "../models/Colonist";
 import type { GameEvent } from "../models/GameEvent";
+import type { BuildingManager } from "./BuildingManager";
 import type { ColonyManager } from "./ColonyManager";
 
 export class WorkforceManager {
@@ -169,5 +170,18 @@ export class WorkforceManager {
     skillBonus = Math.min(skillBonus, MAX_SKILL_EFFICIENCY_BONUS);
 
     return masteryEfficiency + skillBonus;
+  }
+
+  /**
+   * Find the building where a colonist is assigned to work.
+   * Returns undefined if colonist is not assigned to any building.
+   */
+  getColonistWorkplace(colonistId: string, buildings: BuildingManager): string | undefined {
+    for (const building of buildings.getBuildings()) {
+      if (building.assignedWorkers.includes(colonistId)) {
+        return building.id;
+      }
+    }
+    return undefined;
   }
 }
