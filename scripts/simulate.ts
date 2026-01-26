@@ -123,7 +123,8 @@ function main(): void {
   // Run simulation
   const startTime = Date.now();
   const runner = new SimulationRunner(config);
-  const stats = runner.run();
+  // Use runWithDetails to capture individual runs for JSON export
+  const { stats, runs } = runner.runWithDetails();
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
 
   console.log("");
@@ -182,6 +183,7 @@ function main(): void {
   if (args.output) {
     const outputData = {
       stats,
+      runs, // Include individual run data with enhanced tracking
       config: {
         runs: args.runs,
         seed: args.seed,
