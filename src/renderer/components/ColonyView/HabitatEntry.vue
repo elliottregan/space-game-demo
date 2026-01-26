@@ -58,13 +58,9 @@ const capacity = computed(() => props.definition?.capacity || 0);
 <style scoped>
 .habitat-entry {
   padding: var(--g-space-md);
-  background: var(--g-color-bg-surface);
-  border: 1px solid var(--g-color-border);
   font-family: var(--g-font-mono);
-}
-
-.habitat-entry.broken {
-  border-color: var(--g-color-negative);
+  border-top: var(--g-border-width) solid var(--g-color-border-strong);
+  border-bottom: var(--g-border-width) solid var(--g-color-border-strong);
 }
 
 .residents-header {
@@ -72,7 +68,7 @@ const capacity = computed(() => props.definition?.capacity || 0);
   color: var(--g-color-text-muted);
   margin-bottom: var(--g-space-sm);
   padding-top: var(--g-space-sm);
-  border-top: 1px solid var(--g-color-border);
+  border-top: var(--g-border-width) solid var(--g-color-border-strong);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
