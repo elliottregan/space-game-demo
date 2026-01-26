@@ -17,7 +17,7 @@
   --g-color-border-focus: oklch(75% 0 0);
 
   /* Section accent colors */
-  --g-accent-red: oklch(52% 0.22 25);
+  --g-accent-red: oklch(48% 0.24 25);
   --g-accent-cyan: oklch(52% 0.10 200);
   --g-accent-olive: oklch(52% 0.12 105);
   --g-accent-amber: oklch(62% 0.18 55);
@@ -25,7 +25,7 @@
 
   /* Semantic colors */
   --g-color-positive: oklch(48% 0.15 145);
-  --g-color-negative: oklch(48% 0.22 25);
+  --g-color-negative: oklch(45% 0.24 25);
   --g-color-warning: oklch(58% 0.18 55);
   --g-color-info: oklch(52% 0.10 200);
 
@@ -90,7 +90,7 @@
     --g-color-border-focus: oklch(40% 0 0);
 
     /* Brightened accents for dark mode */
-    --g-accent-red: oklch(65% 0.22 25);
+    --g-accent-red: oklch(58% 0.24 25);
     --g-accent-cyan: oklch(70% 0.12 200);
     --g-accent-olive: oklch(68% 0.12 105);
     --g-accent-amber: oklch(72% 0.16 65);
@@ -98,7 +98,7 @@
 
     /* Brightened semantic colors */
     --g-color-positive: oklch(68% 0.17 145);
-    --g-color-negative: oklch(65% 0.22 25);
+    --g-color-negative: oklch(55% 0.24 25);
     --g-color-warning: oklch(75% 0.18 60);
     --g-color-info: oklch(70% 0.12 200);
 
