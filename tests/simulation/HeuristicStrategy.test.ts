@@ -53,7 +53,7 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
         return successResult({ id: "b1", definitionId: defId, status: "pending" as const, mode: "normal" as const, progress: 0 });
       }),
       snapshot: mock(() => overrides.buildingsSnapshot ?? {
-        active: [{ id: "b0", definitionId: "oxygen_generator", status: "active" as const, mode: "normal" as const, progress: 100 }],
+        active: [{ id: "b0", definitionId: "hydroponic_garden", status: "active" as const, mode: "normal" as const, progress: 100 }],
         pending: [],
         definitions: [],
         moraleBoost: 0,
@@ -190,7 +190,7 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).toContain("oxygen_generator");
+      expect(buildCalls).toContain("hydroponic_garden");
     });
 
     it("builds farm when food production <= consumption", () => {
@@ -226,7 +226,7 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).toContain("oxygen_generator");
+      expect(buildCalls).toContain("hydroponic_garden");
     });
 
     it("does not build if cannot afford", () => {

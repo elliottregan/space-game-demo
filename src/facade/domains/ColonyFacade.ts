@@ -172,6 +172,10 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
         });
       }
 
+      // Get current production before assignment
+      const oldProd = this.gameState.buildings.getEffectiveProduction(buildingId);
+      const oldCons = this.gameState.buildings.getEffectiveConsumption(buildingId);
+
       const success = this.gameState.buildings.assignWorker(buildingId, colonistId);
       if (!success) {
         return err({
@@ -180,6 +184,24 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
           expected: "assignable",
           reason: "Building full, colonist already assigned, or building not active",
         });
+      }
+
+      // Recalculate production after assignment (staffing changed)
+      const newProd = this.gameState.buildings.getEffectiveProduction(buildingId);
+      const newCons = this.gameState.buildings.getEffectiveConsumption(buildingId);
+
+      // Update resource flows: remove old, add new
+      if (Object.keys(oldProd).length > 0) {
+        this.gameState.resources.removeProduction(oldProd);
+      }
+      if (Object.keys(oldCons).length > 0) {
+        this.gameState.resources.removeConsumption(oldCons);
+      }
+      if (Object.keys(newProd).length > 0) {
+        this.gameState.resources.addProduction(newProd);
+      }
+      if (Object.keys(newCons).length > 0) {
+        this.gameState.resources.addConsumption(newCons);
       }
 
       return ok(undefined);
@@ -205,7 +227,30 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
         });
       }
 
+      // Get current production before unassignment
+      const oldProd = this.gameState.buildings.getEffectiveProduction(workplace);
+      const oldCons = this.gameState.buildings.getEffectiveConsumption(workplace);
+
       this.gameState.buildings.removeWorker(workplace, colonistId);
+
+      // Recalculate production after unassignment (staffing changed)
+      const newProd = this.gameState.buildings.getEffectiveProduction(workplace);
+      const newCons = this.gameState.buildings.getEffectiveConsumption(workplace);
+
+      // Update resource flows: remove old, add new
+      if (Object.keys(oldProd).length > 0) {
+        this.gameState.resources.removeProduction(oldProd);
+      }
+      if (Object.keys(oldCons).length > 0) {
+        this.gameState.resources.removeConsumption(oldCons);
+      }
+      if (Object.keys(newProd).length > 0) {
+        this.gameState.resources.addProduction(newProd);
+      }
+      if (Object.keys(newCons).length > 0) {
+        this.gameState.resources.addConsumption(newCons);
+      }
+
       return ok(undefined);
     });
   }
