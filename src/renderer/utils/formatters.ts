@@ -3,6 +3,10 @@
 
 import type { Technology } from "../../core/models/Technology";
 import type { ResourceDelta } from "../../core/models/Resources";
+import {
+  FACTION_SUPPORT_NORMALIZED_POSITIVE,
+  FACTION_SUPPORT_NORMALIZED_WARNING,
+} from "../../core/balance/DisplayThresholds";
 
 /**
  * Format technology cost for display
@@ -19,31 +23,12 @@ export function formatTechCost(tech: Technology): string {
 }
 
 /**
- * Format a resource delta for display
- * Returns array of formatted strings with +/- prefixes
+ * Get CSS color variable for normalized faction support (-1 to 1 scale)
  */
-export function formatResourceDelta(delta: ResourceDelta): string[] {
-  const parts: string[] = [];
-  for (const [key, value] of Object.entries(delta)) {
-    if (value && value !== 0) {
-      const prefix = value > 0 ? "+" : "";
-      parts.push(`${prefix}${value} ${key}`);
-    }
-  }
-  return parts;
-}
-
-/**
- * Format a resource cost (always positive values)
- */
-export function formatResourceCost(delta: ResourceDelta): string[] {
-  const parts: string[] = [];
-  for (const [key, value] of Object.entries(delta)) {
-    if (value && value !== 0) {
-      parts.push(`${Math.abs(value)} ${key}`);
-    }
-  }
-  return parts;
+export function getSupportColor(support: number): string {
+  if (support >= FACTION_SUPPORT_NORMALIZED_POSITIVE) return 'var(--color-positive)';
+  if (support >= FACTION_SUPPORT_NORMALIZED_WARNING) return 'var(--color-warning)';
+  return 'var(--color-danger)';
 }
 
 export interface HighlightInfo {

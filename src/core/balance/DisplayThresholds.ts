@@ -49,10 +49,3 @@ export function getFactionSupportVariant(support: number): StatusVariant {
 export function getFactionSupportNormalizedVariant(support: number): StatusVariant {
   return getStatusVariant(support, FACTION_SUPPORT_NORMALIZED_POSITIVE, FACTION_SUPPORT_NORMALIZED_WARNING);
 }
-
-/** Get CSS color variable for normalized support */
-export function getSupportColor(support: number): string {
-  if (support >= FACTION_SUPPORT_NORMALIZED_POSITIVE) return 'var(--color-positive)';
-  if (support >= FACTION_SUPPORT_NORMALIZED_WARNING) return 'var(--color-warning)';
-  return 'var(--color-danger)';
-}

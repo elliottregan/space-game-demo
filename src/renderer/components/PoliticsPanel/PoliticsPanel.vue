@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { gameService } from "../../services/GameService";
-import { getSupportColor } from "../../../core/balance/DisplayThresholds";
+import { getSupportColor } from "../../utils/formatters";
 import { GPanel } from "../../ui";
 
 const state = gameService.getState();
