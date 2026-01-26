@@ -34,7 +34,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
     description:
       "Earth has approved a family reunification program. Relatives of your colonists are eager to join them on Mars.",
     minSol: 30,
-    chance: 0.10,
+    chance: 0.1,
     weight: 8,
     choices: [
       {

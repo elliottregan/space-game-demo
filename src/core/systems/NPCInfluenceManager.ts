@@ -122,14 +122,14 @@ export class NPCInfluenceManager {
       corporate_interests: 0,
     };
 
-    const factions: NPCFaction[] = ['earth_loyalists', 'mars_independence', 'corporate_interests'];
+    const factions: NPCFaction[] = ["earth_loyalists", "mars_independence", "corporate_interests"];
     for (const faction of factions) {
-      const factionNpcs = this.npcs.filter(n => n.faction === faction);
+      const factionNpcs = this.npcs.filter((n) => n.faction === faction);
       if (factionNpcs.length === 0) continue;
 
       const totalSupport = factionNpcs.reduce(
         (sum, npc) => sum + (this.npcSupport.get(npc.id) ?? 0),
-        0
+        0,
       );
       result[faction] = totalSupport / factionNpcs.length;
     }
@@ -294,19 +294,19 @@ export class NPCInfluenceManager {
   private checkAndGenerateDemands(currentSol: number): GameEvent[] {
     const events: GameEvent[] = [];
     const factionSupport = this.getFactionSupport();
-    const factions: NPCFaction[] = ['earth_loyalists', 'mars_independence', 'corporate_interests'];
+    const factions: NPCFaction[] = ["earth_loyalists", "mars_independence", "corporate_interests"];
 
     for (const faction of factions) {
       // Skip if already has active demand
-      if (this.activeDemands.some(d => d.factionId === faction)) {
+      if (this.activeDemands.some((d) => d.factionId === faction)) {
         continue;
       }
 
       // Check if support below threshold
       if (factionSupport[faction] < DEMAND_THRESHOLD) {
         const factionProjects = Array.from(this.projects.values())
-          .filter(p => p.type === faction)
-          .map(p => p.id);
+          .filter((p) => p.type === faction)
+          .map((p) => p.id);
 
         if (factionProjects.length > 0) {
           const demand: FactionDemand = {
@@ -401,12 +401,11 @@ export class NPCInfluenceManager {
         const current = this.npcSupport.get(npc.id) ?? 0;
 
         // Check if this NPC's faction has an expired demand
-        const factionDemand = this.activeDemands.find(d => d.factionId === npc.faction);
-        const multiplier = (factionDemand && factionDemand.deadline <= 0)
-          ? IGNORED_DEMAND_DECAY_MULTIPLIER
-          : 1;
+        const factionDemand = this.activeDemands.find((d) => d.factionId === npc.faction);
+        const multiplier =
+          factionDemand && factionDemand.deadline <= 0 ? IGNORED_DEMAND_DECAY_MULTIPLIER : 1;
 
-        const decayed = current - (FACTION_SUPPORT_DECAY_RATE * multiplier);
+        const decayed = current - FACTION_SUPPORT_DECAY_RATE * multiplier;
         this.npcSupport.set(npc.id, Math.max(-1, decayed));
       }
 
@@ -462,7 +461,7 @@ export class NPCInfluenceManager {
 
         // Clear any demand for this project's faction
         const projectFaction = project.type;
-        this.activeDemands = this.activeDemands.filter(d => d.factionId !== projectFaction);
+        this.activeDemands = this.activeDemands.filter((d) => d.factionId !== projectFaction);
 
         // Boost support for all NPCs in this faction
         for (const npc of this.npcs) {

@@ -1,4 +1,10 @@
-import { reactive, watchEffect, type Directive, type DirectiveBinding, type WatchStopHandle } from "vue";
+import {
+  reactive,
+  watchEffect,
+  type Directive,
+  type DirectiveBinding,
+  type WatchStopHandle,
+} from "vue";
 
 /**
  * Resource highlight state - tracks which resources should glow
@@ -108,7 +114,8 @@ export const vResourceGlow: Directive<HTMLElement, string> = {
   },
 
   unmounted(el: HTMLElement) {
-    const stopWatch = (el as HTMLElement & { _resourceGlowStop?: WatchStopHandle })._resourceGlowStop;
+    const stopWatch = (el as HTMLElement & { _resourceGlowStop?: WatchStopHandle })
+      ._resourceGlowStop;
     if (stopWatch) {
       stopWatch();
     }

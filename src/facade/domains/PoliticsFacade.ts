@@ -30,12 +30,12 @@ export class PoliticsFacade {
     };
 
     const factions: FactionStatus[] = (
-      ['earth_loyalists', 'mars_independence', 'corporate_interests'] as NPCFaction[]
-    ).map(id => ({
+      ["earth_loyalists", "mars_independence", "corporate_interests"] as NPCFaction[]
+    ).map((id) => ({
       id,
       name: factionNames[id],
       support: factionSupport[id],
-      activeDemand: demands.find(d => d.factionId === id) ?? null,
+      activeDemand: demands.find((d) => d.factionId === id) ?? null,
     }));
 
     return {

@@ -42,14 +42,24 @@ export const SKILLS: SkillDefinition[] = [
     id: "quick_learner",
     name: "Quick Learner",
     description: "Picks up new skills faster",
-    affinity: [ColonistRole.RESEARCH, ColonistRole.ENGINEERING, ColonistRole.CIVIL_SCIENCE, ColonistRole.FARMING],
+    affinity: [
+      ColonistRole.RESEARCH,
+      ColonistRole.ENGINEERING,
+      ColonistRole.CIVIL_SCIENCE,
+      ColonistRole.FARMING,
+    ],
     efficiencyBonus: 0.05,
   },
   {
     id: "night_owl",
     name: "Night Owl",
     description: "Productive during off-hours",
-    affinity: [ColonistRole.RESEARCH, ColonistRole.ENGINEERING, ColonistRole.CIVIL_SCIENCE, ColonistRole.FARMING],
+    affinity: [
+      ColonistRole.RESEARCH,
+      ColonistRole.ENGINEERING,
+      ColonistRole.CIVIL_SCIENCE,
+      ColonistRole.FARMING,
+    ],
     efficiencyBonus: 0.05,
   },
   {
