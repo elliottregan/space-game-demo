@@ -38,9 +38,17 @@ withDefaults(
 
 <style scoped>
 .g-panel {
+  --panel-cut-size: 16px;
   background: var(--g-color-bg-surface);
   border: var(--g-border-width) solid var(--panel-accent);
   transition: box-shadow var(--g-transition-normal);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--panel-cut-size)) 0,
+    100% var(--panel-cut-size),
+    100% 100%,
+    0 100%
+  );
 }
 
 .g-panel--glow {
