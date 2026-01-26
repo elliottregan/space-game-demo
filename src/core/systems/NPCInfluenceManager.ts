@@ -77,13 +77,15 @@ export class NPCInfluenceManager {
 
     for (const [key, weight] of Object.entries(relationships)) {
       const [fromId, toId] = key.split(":");
-      const fromIdx = this.npcIndex.get(fromId!);
-      const toIdx = this.npcIndex.get(toId!);
+      if (!fromId || !toId) continue;
+      const fromIdx = this.npcIndex.get(fromId);
+      const toIdx = this.npcIndex.get(toId);
 
       if (fromIdx !== undefined && toIdx !== undefined) {
         // W[i][j] = influence from j to i
         // So if "fromId:toId" means fromId influences toId, we set W[toIdx][fromIdx]
-        matrix[toIdx]![fromIdx] = weight;
+        const row = matrix[toIdx] as number[];
+        row[fromIdx] = weight;
       }
     }
 
@@ -204,7 +206,8 @@ export class NPCInfluenceManager {
     const npcIdx = this.npcIndex.get(npcId);
     if (npcIdx === undefined) return Infinity;
 
-    const npc = this.npcs[npcIdx]!;
+    const npc = this.npcs[npcIdx];
+    if (!npc) return Infinity;
     // Cost scales with NPC influence and boost amount
     return Math.ceil(LOBBY_BASE_COST * npc.influence * (supportBoost / 0.1));
   }
@@ -269,10 +272,8 @@ export class NPCInfluenceManager {
           if (idx1 === undefined || idx2 === undefined) continue;
 
           // W[i][j] = influence from j to i
-          this.relationshipMatrix[idx1]![idx2] = Math.min(
-            1.0,
-            this.relationshipMatrix[idx1]![idx2]! + COUNCIL_RELATIONSHIP_BOOST,
-          );
+          const row = this.relationshipMatrix[idx1] as number[];
+          row[idx2] = Math.min(1.0, row[idx2] + COUNCIL_RELATIONSHIP_BOOST);
         }
       }
     }
@@ -343,10 +344,13 @@ export class NPCInfluenceManager {
     const factors = this.transmissionFactors[projectType];
 
     for (let i = 0; i < N; i++) {
+      const targetNpc = this.npcs[i];
+      const rowT = T[i] as number[];
+      if (!targetNpc) continue;
       for (let j = 0; j < N; j++) {
-        const targetFaction = this.npcs[i]!.faction;
-        const sourceFaction = this.npcs[j]!.faction;
-        T[i]![j] = factors[targetFaction][sourceFaction];
+        const sourceNpc = this.npcs[j];
+        if (!sourceNpc) continue;
+        rowT[j] = factors[targetNpc.faction][sourceNpc.faction];
       }
     }
 
@@ -434,7 +438,10 @@ export class NPCInfluenceManager {
 
     // Store updated support
     for (let i = 0; i < this.npcs.length; i++) {
-      this.activeProject.supportLevels.set(this.npcs[i]!.id, newSupport[i]!);
+      const npc = this.npcs[i];
+      if (npc) {
+        this.activeProject.supportLevels.set(npc.id, newSupport[i] ?? 0);
+      }
     }
 
     // Decrement sols remaining

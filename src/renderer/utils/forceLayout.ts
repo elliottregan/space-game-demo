@@ -82,12 +82,16 @@ export function computeForceLayout(input: LayoutInput): PositionedNode[] {
   // Create links from relationship matrix
   const links: SimLink[] = [];
   for (let i = 0; i < npcs.length; i++) {
+    const nodeI = nodes[i];
+    if (!nodeI) continue;
     for (let j = i + 1; j < npcs.length; j++) {
+      const nodeJ = nodes[j];
+      if (!nodeJ) continue;
       const weight = (relationshipMatrix[i]?.[j] ?? 0) + (relationshipMatrix[j]?.[i] ?? 0);
       if (weight > 0.1) {
         links.push({
-          source: nodes[i]!,
-          target: nodes[j]!,
+          source: nodeI,
+          target: nodeJ,
           weight: weight / 2,
         });
       }
@@ -96,18 +100,22 @@ export function computeForceLayout(input: LayoutInput): PositionedNode[] {
 
   // Add implicit same-faction links for clustering
   for (let i = 0; i < npcs.length; i++) {
+    const npcI = npcs[i];
+    const nodeI = nodes[i];
+    if (!npcI || !nodeI) continue;
     for (let j = i + 1; j < npcs.length; j++) {
-      if (npcs[i]!.faction === npcs[j]!.faction) {
+      const npcJ = npcs[j];
+      const nodeJ = nodes[j];
+      if (!npcJ || !nodeJ) continue;
+      if (npcI.faction === npcJ.faction) {
         // Check if link already exists
         const exists = links.some(
-          (l) =>
-            (l.source === nodes[i]! && l.target === nodes[j]!) ||
-            (l.source === nodes[j]! && l.target === nodes[i]!),
+          (l) => (l.source === nodeI && l.target === nodeJ) || (l.source === nodeJ && l.target === nodeI),
         );
         if (!exists) {
           links.push({
-            source: nodes[i]!,
-            target: nodes[j]!,
+            source: nodeI,
+            target: nodeJ,
             weight: 0.5, // Implicit faction attraction
           });
         }

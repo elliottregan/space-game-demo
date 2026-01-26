@@ -21,6 +21,7 @@ const resourceConfig = {
   materials: { label: "MAT", color: "#455A64" }, // slate
 };
 
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 const config = computed(() => resourceConfig[props.resource]);
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template

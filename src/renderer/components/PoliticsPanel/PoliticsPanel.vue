@@ -3,8 +3,10 @@ import { gameService } from "../../services/GameService";
 import { getSupportColor } from "../../utils/formatters";
 import { GPanel } from "../../ui";
 
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 const state = gameService.getState();
 
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 function formatSupport(support: number): string {
   return `${(support * 100).toFixed(0)}%`;
 }

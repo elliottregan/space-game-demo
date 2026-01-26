@@ -3,6 +3,7 @@ import { gameService } from "../../services/GameService";
 import { GPanel, GProgress } from "../../ui";
 import { getHealthVariant, getMoraleVariant } from "../../utils/displayThresholds";
 
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 const state = gameService.getState();
 </script>
 

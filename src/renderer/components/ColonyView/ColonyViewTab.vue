@@ -8,7 +8,6 @@ import UnhousedSection from "./UnhousedSection.vue";
 
 const state = gameService.getState();
 
-// biome-ignore lint/correctness/noUnusedVariables: used in template
 const activeBuildings = computed(() =>
   state.buildings.filter((b) => b.status === "active" || b.status === "pending"),
 );
