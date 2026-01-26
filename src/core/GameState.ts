@@ -70,7 +70,7 @@ export class GameState {
     events.push(...this.colony.tick(this.resources, this.buildings, policyEffects));
 
     // 5. Technology tick (research progress)
-    events.push(...this.technology.tick());
+    events.push(...this.technology.tick(this.resources));
 
     // 6. NPC Influence tick
     events.push(...this.npcInfluence.tick(this.currentSol));
