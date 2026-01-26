@@ -31,9 +31,8 @@ defineEmits<{
 
 <style scoped>
 .current-research {
-  background: oklch(65% 0.15 250 / 0.1);
-  border: 1px solid var(--g-color-info);
-  border-radius: 4px;
+  background: rgba(0, 131, 143, 0.1);
+  border: 1px solid var(--g-accent-cyan);
   padding: var(--g-space-md);
   margin-bottom: var(--g-space-md);
 }
@@ -48,7 +47,7 @@ defineEmits<{
 .research-name {
   font-family: var(--g-font-mono);
   font-weight: bold;
-  color: var(--g-color-info);
+  color: var(--g-accent-cyan);
 }
 
 .no-research {
@@ -56,8 +55,7 @@ defineEmits<{
   font-style: italic;
   padding: var(--g-space-md);
   text-align: center;
-  background: var(--g-color-bg-elevated);
-  border-radius: 4px;
+  background: var(--g-color-bg-surface);
   margin-bottom: var(--g-space-md);
 }
 </style>

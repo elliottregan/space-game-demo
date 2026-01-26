@@ -25,6 +25,8 @@ defineProps<{
   margin-bottom: var(--g-space-xs);
   padding-bottom: var(--g-space-xs);
   border-bottom: 1px solid var(--g-color-border);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .tech-list {
