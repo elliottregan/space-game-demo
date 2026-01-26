@@ -126,6 +126,41 @@ function cancelResearch() {
 function canResearch(techId: string): boolean {
   return gameService.canResearch(techId) && !state.currentResearch;
 }
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+const queueWithProgress = computed(() => {
+  return state.researchQueue.map((techId, index) => {
+    const tech = state.technologies.find(t => t.id === techId);
+    if (!tech) return null;
+
+    const progress = gameService.api.technology.getResearchProgress(techId);
+    const isActive = index === 0 && state.currentResearch?.techId === techId;
+
+    return {
+      tech,
+      progress,
+      percentage: (progress / tech.cost.sols) * 100,
+      isActive,
+    };
+  }).filter(Boolean);
+});
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function queueAllPrerequisites() {
+  if (selectedTech.value) {
+    gameService.api.technology.queueResearch(selectedTech.value.id);
+  }
+}
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function clearQueue() {
+  gameService.api.technology.clearQueue();
+}
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function isInQueue(techId: string): boolean {
+  return state.researchQueue.includes(techId);
+}
 </script>
 
 <template>
@@ -181,6 +216,14 @@ function canResearch(techId: string): boolean {
           Start Research
         </GButton>
         <GButton
+          v-else-if="getTechStatus(selectedTech) === 'locked' && !isInQueue(selectedTech.id)"
+          variant="primary"
+          class="full-width"
+          @click="queueAllPrerequisites"
+        >
+          Queue All Prerequisites
+        </GButton>
+        <GButton
           v-else-if="state.currentResearch?.techId === selectedTech.id"
           variant="danger"
           class="full-width"
@@ -188,6 +231,13 @@ function canResearch(techId: string): boolean {
         >
           Cancel Research
         </GButton>
+        <GBadge
+          v-else-if="isInQueue(selectedTech.id)"
+          variant="info"
+          class="status-badge-centered"
+        >
+          In Queue
+        </GBadge>
         <GBadge
           v-else-if="state.researchedTechs.some((t) => t.id === selectedTech.id)"
           variant="positive"
@@ -198,6 +248,35 @@ function canResearch(techId: string): boolean {
         <GBadge v-else variant="muted" class="status-badge-centered">
           Locked
         </GBadge>
+      </div>
+
+      <div v-if="queueWithProgress.length > 0" class="queue-section">
+        <h4>Research Queue</h4>
+        <div class="queue-list">
+          <div
+            v-for="(item, index) in queueWithProgress"
+            :key="item.tech.id"
+            class="queue-item"
+            :class="{ active: item.isActive }"
+          >
+            <span class="queue-index">{{ index + 1 }}.</span>
+            <span class="queue-name">{{ item.tech.name }}</span>
+            <div class="queue-progress-bar">
+              <div
+                class="queue-progress-fill"
+                :style="{ width: `${item.percentage}%` }"
+              />
+            </div>
+          </div>
+        </div>
+        <GButton
+          variant="ghost"
+          size="sm"
+          class="full-width"
+          @click="clearQueue"
+        >
+          Clear Queue
+        </GButton>
       </div>
 
       <div v-if="state.currentResearch?.techId === selectedTech.id" class="progress-section">
@@ -351,5 +430,65 @@ function canResearch(techId: string): boolean {
   font-size: var(--g-font-size-xs);
   color: var(--g-color-text-muted);
   text-align: center;
+}
+
+.queue-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-sm);
+  padding-top: var(--g-space-sm);
+  border-top: 1px solid var(--g-color-border);
+}
+
+.queue-section h4 {
+  margin: 0;
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-text-muted);
+}
+
+.queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-xs);
+}
+
+.queue-item {
+  display: grid;
+  grid-template-columns: 24px 1fr 60px;
+  align-items: center;
+  gap: var(--g-space-xs);
+  font-size: var(--g-font-size-xs);
+  padding: var(--g-space-xs);
+  border-radius: 4px;
+  background: var(--g-color-bg);
+}
+
+.queue-item.active {
+  background: oklch(40% 0.1 250 / 0.3);
+}
+
+.queue-index {
+  color: var(--g-color-text-muted);
+  text-align: right;
+}
+
+.queue-name {
+  color: var(--g-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queue-progress-bar {
+  height: 4px;
+  background: var(--g-color-bg-elevated);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.queue-progress-fill {
+  height: 100%;
+  background: var(--g-color-info);
+  transition: width 0.3s ease;
 }
 </style>
