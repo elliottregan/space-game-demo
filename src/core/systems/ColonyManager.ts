@@ -173,7 +173,7 @@ export class ColonyManager {
       const colonistArray = Array.from(this.colonists.values());
       const victim = colonistArray[Math.floor(Math.random() * colonistArray.length)];
       if (victim) {
-        this.removeColonist(victim.id);
+        this.removeColonist(victim.id, buildings);
         events.push({
           type: "COLONIST_DIED",
           colonistId: victim.id,
@@ -223,7 +223,22 @@ export class ColonyManager {
     return colonist;
   }
 
-  removeColonist(id: string): boolean {
+  removeColonist(id: string, buildings?: BuildingManager): boolean {
+    const colonist = this.colonists.get(id);
+    if (!colonist) return false;
+
+    // Remove from any building assignments
+    if (buildings) {
+      for (const building of buildings.getBuildings()) {
+        buildings.removeWorker(building.id, id);
+      }
+    }
+
+    // Clear housing assignment
+    if (colonist.housingId) {
+      colonist.housingId = undefined;
+    }
+
     return this.colonists.delete(id);
   }
 

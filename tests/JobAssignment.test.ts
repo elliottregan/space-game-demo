@@ -263,6 +263,33 @@ describe("Job Assignment", () => {
     });
   });
 
+  describe("colonist death", () => {
+    it("removes colonist from building assignment on death", () => {
+      const farm = gameState.buildings.startBuilding(
+        "basic_farm",
+        gameState.resources,
+        gameState.technology
+      );
+      for (let i = 0; i < 15; i++) {
+        gameState.buildings.tick(gameState.resources);
+      }
+
+      const colonist = gameState.colony.getColonists()[0];
+      gameState.buildings.assignWorker(farm!.id, colonist.id);
+
+      // Verify assignment
+      const building = gameState.buildings.getBuilding(farm!.id);
+      expect(building?.assignedWorkers).toContain(colonist.id);
+
+      // Kill the colonist (simulate via removeColonist if available, or direct manipulation)
+      gameState.colony.removeColonist(colonist.id, gameState.buildings);
+
+      // Verify unassigned
+      const updatedBuilding = gameState.buildings.getBuilding(farm!.id);
+      expect(updatedBuilding?.assignedWorkers).not.toContain(colonist.id);
+    });
+  });
+
   describe("labor pool bonus", () => {
     it("unassigned colonists boost construction speed", () => {
       // Count unassigned colonists
