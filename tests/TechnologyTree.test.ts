@@ -137,5 +137,42 @@ describe('TechnologyTree', () => {
       expect(tree.getResearchProgress('hydroponics')).toBe(20);
       expect(tree.getResearchQueue()).toEqual([]);
     });
+
+    it('should return prerequisite chain in topological order', () => {
+      // generation_ship needs: fusion_drive, cryosleep, closed_ecosystem
+      // fusion_drive needs: nuclear_fission, advanced_materials
+      // cryosleep needs: advanced_medicine
+      // advanced_medicine needs: genetics
+      // genetics needs: hydroponics
+      // closed_ecosystem needs: hydroponics, water_recycling, genetics
+      // nuclear_fission needs: advanced_materials
+
+      const chain = tree.getPrerequisiteChain('generation_ship');
+
+      // Should include all unresearched prerequisites + target
+      expect(chain).toContain('generation_ship');
+      expect(chain).toContain('fusion_drive');
+      expect(chain).toContain('hydroponics');
+
+      // Prerequisites must come before dependents
+      expect(chain.indexOf('hydroponics')).toBeLessThan(chain.indexOf('genetics'));
+      expect(chain.indexOf('genetics')).toBeLessThan(chain.indexOf('advanced_medicine'));
+      expect(chain.indexOf('advanced_materials')).toBeLessThan(chain.indexOf('fusion_drive'));
+      expect(chain.indexOf('fusion_drive')).toBeLessThan(chain.indexOf('generation_ship'));
+    });
+
+    it('should exclude already researched techs from chain', () => {
+      // Research hydroponics first
+      tree.startResearch('hydroponics', resources);
+      const tech = tree.getTech('hydroponics')!;
+      for (let i = 0; i < tech.cost.sols; i++) {
+        tree.tick();
+      }
+
+      const chain = tree.getPrerequisiteChain('genetics');
+
+      expect(chain).not.toContain('hydroponics');
+      expect(chain).toEqual(['genetics']);
+    });
   });
 });

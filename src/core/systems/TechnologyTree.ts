@@ -152,6 +152,39 @@ export class TechnologyTree {
     this.researchSpeedBonus = bonus;
   }
 
+  /**
+   * Returns all unresearched prerequisites in topological order,
+   * ending with the target tech.
+   */
+  getPrerequisiteChain(techId: string): string[] {
+    const tech = this.technologies.get(techId);
+    if (!tech) return [];
+    if (this.researched.has(techId)) return [];
+
+    const visited = new Set<string>();
+    const result: string[] = [];
+
+    const visit = (id: string) => {
+      if (visited.has(id)) return;
+      if (this.researched.has(id)) return;
+
+      visited.add(id);
+
+      const t = this.technologies.get(id);
+      if (!t) return;
+
+      // Visit prerequisites first (topological sort)
+      for (const prereq of t.prerequisites) {
+        visit(prereq);
+      }
+
+      result.push(id);
+    };
+
+    visit(techId);
+    return result;
+  }
+
   toJSON() {
     return {
       researched: Array.from(this.researched),
