@@ -3,14 +3,15 @@
 import type { GameEvent } from "../models/GameEvent";
 import type { ResourceManager } from "./ResourceManager";
 import type { ResourceDelta } from "../models/Resources";
-import type {
-  NPC,
+import {
   NPCFaction,
-  Project,
-  ProjectType,
-  ActiveProject,
-  Council,
-  FactionDemand,
+  ALL_FACTIONS,
+  type NPC,
+  type Project,
+  type ProjectType,
+  type ActiveProject,
+  type Council,
+  type FactionDemand,
 } from "../models/NPCInfluence";
 import {
   COUNCIL_CREATION_COST,
@@ -117,13 +118,12 @@ export class NPCInfluenceManager {
 
   getFactionSupport(): Record<NPCFaction, number> {
     const result: Record<NPCFaction, number> = {
-      earth_loyalists: 0,
-      mars_independence: 0,
-      corporate_interests: 0,
+      [NPCFaction.EarthLoyalists]: 0,
+      [NPCFaction.MarsIndependence]: 0,
+      [NPCFaction.CorporateInterests]: 0,
     };
 
-    const factions: NPCFaction[] = ["earth_loyalists", "mars_independence", "corporate_interests"];
-    for (const faction of factions) {
+    for (const faction of ALL_FACTIONS) {
       const factionNpcs = this.npcs.filter((n) => n.faction === faction);
       if (factionNpcs.length === 0) continue;
 
@@ -148,9 +148,9 @@ export class NPCInfluenceManager {
 
   private getFactionDisplayName(faction: NPCFaction): string {
     const names: Record<NPCFaction, string> = {
-      earth_loyalists: "Earth Loyalists",
-      mars_independence: "Mars Independence",
-      corporate_interests: "Corporate Interests",
+      [NPCFaction.EarthLoyalists]: "Earth Loyalists",
+      [NPCFaction.MarsIndependence]: "Mars Independence",
+      [NPCFaction.CorporateInterests]: "Corporate Interests",
     };
     return names[faction];
   }
@@ -294,9 +294,8 @@ export class NPCInfluenceManager {
   private checkAndGenerateDemands(currentSol: number): GameEvent[] {
     const events: GameEvent[] = [];
     const factionSupport = this.getFactionSupport();
-    const factions: NPCFaction[] = ["earth_loyalists", "mars_independence", "corporate_interests"];
 
-    for (const faction of factions) {
+    for (const faction of ALL_FACTIONS) {
       // Skip if already has active demand
       if (this.activeDemands.some((d) => d.factionId === faction)) {
         continue;

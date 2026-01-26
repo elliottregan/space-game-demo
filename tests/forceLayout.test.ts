@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import { computeForceLayout, type LayoutInput } from "../src/renderer/utils/forceLayout";
-import type { NPC } from "../src/core/models/NPCInfluence";
+import { NPCFaction, type NPC } from "../src/core/models/NPCInfluence";
 
 describe("computeForceLayout", () => {
-  const createNPC = (id: string, faction: "futurist" | "progressive" | "traditionalist"): NPC => ({
+  const createNPC = (id: string, faction: NPCFaction): NPC => ({
     id,
     name: `NPC ${id}`,
     faction,
@@ -25,12 +25,12 @@ describe("computeForceLayout", () => {
 
   it("should return positions for all NPCs", () => {
     const mockNPCs: NPC[] = [
-      { id: "f1", name: "Futurist 1", faction: "futurist", influence: 1.0 },
-      { id: "f2", name: "Futurist 2", faction: "futurist", influence: 1.0 },
-      { id: "p1", name: "Progressive 1", faction: "progressive", influence: 1.0 },
-      { id: "p2", name: "Progressive 2", faction: "progressive", influence: 1.0 },
-      { id: "t1", name: "Traditionalist 1", faction: "traditionalist", influence: 1.0 },
-      { id: "t2", name: "Traditionalist 2", faction: "traditionalist", influence: 1.0 },
+      { id: "f1", name: "Earth 1", faction: NPCFaction.EarthLoyalists, influence: 1.0 },
+      { id: "f2", name: "Earth 2", faction: NPCFaction.EarthLoyalists, influence: 1.0 },
+      { id: "p1", name: "Mars 1", faction: NPCFaction.MarsIndependence, influence: 1.0 },
+      { id: "p2", name: "Mars 2", faction: NPCFaction.MarsIndependence, influence: 1.0 },
+      { id: "t1", name: "Corp 1", faction: NPCFaction.CorporateInterests, influence: 1.0 },
+      { id: "t2", name: "Corp 2", faction: NPCFaction.CorporateInterests, influence: 1.0 },
     ];
 
     const mockMatrix = [
@@ -60,12 +60,12 @@ describe("computeForceLayout", () => {
 
   it("should cluster same-faction NPCs closer together", () => {
     const mockNPCs: NPC[] = [
-      { id: "f1", name: "Futurist 1", faction: "futurist", influence: 1.0 },
-      { id: "f2", name: "Futurist 2", faction: "futurist", influence: 1.0 },
-      { id: "p1", name: "Progressive 1", faction: "progressive", influence: 1.0 },
-      { id: "p2", name: "Progressive 2", faction: "progressive", influence: 1.0 },
-      { id: "t1", name: "Traditionalist 1", faction: "traditionalist", influence: 1.0 },
-      { id: "t2", name: "Traditionalist 2", faction: "traditionalist", influence: 1.0 },
+      { id: "f1", name: "Earth 1", faction: NPCFaction.EarthLoyalists, influence: 1.0 },
+      { id: "f2", name: "Earth 2", faction: NPCFaction.EarthLoyalists, influence: 1.0 },
+      { id: "p1", name: "Mars 1", faction: NPCFaction.MarsIndependence, influence: 1.0 },
+      { id: "p2", name: "Mars 2", faction: NPCFaction.MarsIndependence, influence: 1.0 },
+      { id: "t1", name: "Corp 1", faction: NPCFaction.CorporateInterests, influence: 1.0 },
+      { id: "t2", name: "Corp 2", faction: NPCFaction.CorporateInterests, influence: 1.0 },
     ];
 
     // Relationship matrix where same-faction NPCs have strong connections
@@ -122,8 +122,8 @@ describe("computeForceLayout", () => {
   it("positions NPCs from same faction near each other", () => {
     const input: LayoutInput = {
       npcs: [
-        createNPC("npc1", "progressive"),
-        createNPC("npc2", "progressive"),
+        createNPC("npc1", NPCFaction.MarsIndependence),
+        createNPC("npc2", NPCFaction.MarsIndependence),
       ],
       relationshipMatrix: [
         [0, 0.5],
@@ -147,8 +147,8 @@ describe("computeForceLayout", () => {
   it("pulls strongly connected cross-faction NPCs closer together", () => {
     const input: LayoutInput = {
       npcs: [
-        createNPC("futurist1", "futurist"),
-        createNPC("trad1", "traditionalist"),
+        createNPC("earth1", NPCFaction.EarthLoyalists),
+        createNPC("corp1", NPCFaction.CorporateInterests),
       ],
       relationshipMatrix: [
         [0, 0.9], // Strong connection
@@ -159,11 +159,11 @@ describe("computeForceLayout", () => {
     };
 
     const result = computeForceLayout(input);
-    const futurist = result.find((p) => p.id === "futurist1")!;
-    const trad = result.find((p) => p.id === "trad1")!;
+    const earth = result.find((p) => p.id === "earth1")!;
+    const corp = result.find((p) => p.id === "corp1")!;
 
     // Calculate distance between them
-    const distance = Math.sqrt((futurist.x - trad.x) ** 2 + (futurist.y - trad.y) ** 2);
+    const distance = Math.sqrt((earth.x - corp.x) ** 2 + (earth.y - corp.y) ** 2);
 
     // Strong relationship should pull them closer than faction anchors would suggest
     expect(distance).toBeLessThan(250);
@@ -172,9 +172,9 @@ describe("computeForceLayout", () => {
   it("returns deterministic positions for same input", () => {
     const input: LayoutInput = {
       npcs: [
-        createNPC("npc1", "futurist"),
-        createNPC("npc2", "progressive"),
-        createNPC("npc3", "traditionalist"),
+        createNPC("npc1", NPCFaction.EarthLoyalists),
+        createNPC("npc2", NPCFaction.MarsIndependence),
+        createNPC("npc3", NPCFaction.CorporateInterests),
       ],
       relationshipMatrix: [
         [0, 0.3, 0.2],

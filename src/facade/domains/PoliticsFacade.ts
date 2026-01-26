@@ -2,7 +2,7 @@
 // Politics facade - now wraps NPCInfluenceManager
 
 import type { GameState } from "../../core/GameState";
-import type { NPCFaction, FactionDemand } from "../../core/models/NPCInfluence";
+import { NPCFaction, ALL_FACTIONS, type FactionDemand } from "../../core/models/NPCInfluence";
 
 export interface FactionStatus {
   id: NPCFaction;
@@ -16,6 +16,12 @@ export interface PoliticsSnapshot {
   demands: readonly FactionDemand[];
 }
 
+const FACTION_NAMES: Record<NPCFaction, string> = {
+  [NPCFaction.EarthLoyalists]: "Earth Loyalists",
+  [NPCFaction.MarsIndependence]: "Mars Independence",
+  [NPCFaction.CorporateInterests]: "Corporate Interests",
+};
+
 export class PoliticsFacade {
   constructor(private gameState: GameState) {}
 
@@ -23,17 +29,9 @@ export class PoliticsFacade {
     const factionSupport = this.gameState.npcInfluence.getFactionSupport();
     const demands = this.gameState.npcInfluence.getActiveDemands();
 
-    const factionNames: Record<NPCFaction, string> = {
-      earth_loyalists: "Earth Loyalists",
-      mars_independence: "Mars Independence",
-      corporate_interests: "Corporate Interests",
-    };
-
-    const factions: FactionStatus[] = (
-      ["earth_loyalists", "mars_independence", "corporate_interests"] as NPCFaction[]
-    ).map((id) => ({
+    const factions: FactionStatus[] = ALL_FACTIONS.map((id) => ({
       id,
-      name: factionNames[id],
+      name: FACTION_NAMES[id],
       support: factionSupport[id],
       activeDemand: demands.find((d) => d.factionId === id) ?? null,
     }));

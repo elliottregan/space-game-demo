@@ -5,6 +5,7 @@ import { NPCInfluenceManager } from '../src/core/systems/NPCInfluenceManager';
 import { ResourceManager } from '../src/core/systems/ResourceManager';
 import { NPCS, INITIAL_RELATIONSHIPS, PROJECTS } from '../src/core/data/npcs';
 import { LOBBY_BASE_COST, COUNCIL_CREATION_COST, COUNCIL_RELATIONSHIP_BOOST } from '../src/core/balance/NPCInfluenceBalance';
+import { NPCFaction } from '../src/core/models/NPCInfluence';
 import type { GameEvent } from '../src/core/models/GameEvent';
 
 describe('NPCInfluenceManager', () => {
@@ -15,12 +16,12 @@ describe('NPCInfluenceManager', () => {
   });
 
   describe('faction types', () => {
-    it('should have NPCs in earth_loyalists, mars_independence, and corporate_interests factions', () => {
+    it('should have NPCs in all three factions', () => {
       const npcs = manager.getNPCs();
       const factions = new Set(npcs.map(n => n.faction));
-      expect(factions.has('earth_loyalists')).toBe(true);
-      expect(factions.has('mars_independence')).toBe(true);
-      expect(factions.has('corporate_interests')).toBe(true);
+      expect(factions.has(NPCFaction.EarthLoyalists)).toBe(true);
+      expect(factions.has(NPCFaction.MarsIndependence)).toBe(true);
+      expect(factions.has(NPCFaction.CorporateInterests)).toBe(true);
       expect(factions.size).toBe(3);
     });
   });
@@ -28,9 +29,9 @@ describe('NPCInfluenceManager', () => {
   describe('project assignments', () => {
     it('should have projects for each faction', () => {
       const projects = manager.getProjects();
-      const earthProjects = projects.filter(p => p.type === 'earth_loyalists');
-      const marsProjects = projects.filter(p => p.type === 'mars_independence');
-      const corpProjects = projects.filter(p => p.type === 'corporate_interests');
+      const earthProjects = projects.filter(p => p.type === NPCFaction.EarthLoyalists);
+      const marsProjects = projects.filter(p => p.type === NPCFaction.MarsIndependence);
+      const corpProjects = projects.filter(p => p.type === NPCFaction.CorporateInterests);
 
       expect(earthProjects.length).toBeGreaterThanOrEqual(2);
       expect(marsProjects.length).toBeGreaterThanOrEqual(2);
@@ -454,7 +455,7 @@ describe('NPCInfluenceManager', () => {
 
       const demands = manager.getActiveDemands();
       expect(demands.length).toBe(1);
-      expect(demands[0].factionId).toBe('earth_loyalists');
+      expect(demands[0].factionId).toBe(NPCFaction.EarthLoyalists);
       expect(demands[0].projectIds.length).toBeGreaterThan(0);
     });
 
@@ -478,7 +479,7 @@ describe('NPCInfluenceManager', () => {
       manager.tick(152);
 
       const demands = manager.getActiveDemands();
-      const earthDemands = demands.filter(d => d.factionId === 'earth_loyalists');
+      const earthDemands = demands.filter(d => d.factionId === NPCFaction.EarthLoyalists);
       expect(earthDemands.length).toBe(1);
     });
   });
@@ -507,7 +508,7 @@ describe('NPCInfluenceManager', () => {
       manager.tick(150);
 
       expect(manager.getActiveDemands().length).toBe(1);
-      expect(manager.getActiveDemands()[0].factionId).toBe('earth_loyalists');
+      expect(manager.getActiveDemands()[0].factionId).toBe(NPCFaction.EarthLoyalists);
 
       // Propose an earth_loyalists project
       manager.proposeProject('earth_memorial', resources);
@@ -526,7 +527,7 @@ describe('NPCInfluenceManager', () => {
       }
 
       // Demand should be cleared
-      const earthDemands = manager.getActiveDemands().filter(d => d.factionId === 'earth_loyalists');
+      const earthDemands = manager.getActiveDemands().filter(d => d.factionId === NPCFaction.EarthLoyalists);
       expect(earthDemands.length).toBe(0);
 
       // Support should be boosted (PROJECT_PASS_SUPPORT_BOOST is 0.3)
@@ -568,7 +569,7 @@ describe('NPCInfluenceManager', () => {
       }
 
       // Demand should still exist but with deadline <= 0
-      const demand = manager.getActiveDemands().find(d => d.factionId === 'earth_loyalists');
+      const demand = manager.getActiveDemands().find(d => d.factionId === NPCFaction.EarthLoyalists);
       expect(demand).toBeDefined();
       expect(demand!.deadline).toBeLessThanOrEqual(0);
 

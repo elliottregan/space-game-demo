@@ -1,5 +1,5 @@
 import { select } from "d3-selection";
-import type { NPC, NPCFaction } from "../../../core/models/NPCInfluence";
+import { NPCFaction, type NPC } from "../../../core/models/NPCInfluence";
 import type { PositionedNode } from "../../utils/forceLayout";
 
 export interface GraphNode extends PositionedNode {
@@ -28,9 +28,9 @@ export interface RenderOptions {
 }
 
 const FACTION_COLORS: Record<NPCFaction, string> = {
-  futurist: "#60a5fa",
-  progressive: "#4ade80",
-  traditionalist: "#fbbf24",
+  [NPCFaction.EarthLoyalists]: "#60a5fa",
+  [NPCFaction.MarsIndependence]: "#4ade80",
+  [NPCFaction.CorporateInterests]: "#fbbf24",
 };
 
 const NODE_RADIUS = 20;

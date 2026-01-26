@@ -51,6 +51,10 @@
   --g-space-lg: 24px;
   --g-space-xl: 32px;
 
+  /* Border widths */
+  --g-border-width: 2px;
+  --g-border-width-thick: 3px;
+
   /* Typography */
   --g-font-mono: "JetBrains Mono", "Fira Code", "SF Mono", "Consolas", monospace;
   --g-font-size-xs: 0.625rem;

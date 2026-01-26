@@ -133,16 +133,16 @@ watch(dimensions, render);
     <!-- Faction Legend -->
     <div class="legend">
       <div class="legend-item">
-        <span class="legend-dot futurist" />
-        <span>Futurist</span>
+        <span class="legend-dot earth_loyalists" />
+        <span>Earth Loyalists</span>
       </div>
       <div class="legend-item">
-        <span class="legend-dot progressive" />
-        <span>Progressive</span>
+        <span class="legend-dot mars_independence" />
+        <span>Mars Independence</span>
       </div>
       <div class="legend-item">
-        <span class="legend-dot traditionalist" />
-        <span>Traditionalist</span>
+        <span class="legend-dot corporate_interests" />
+        <span>Corporate Interests</span>
       </div>
     </div>
   </div>
@@ -196,15 +196,15 @@ watch(dimensions, render);
   border-radius: 50%;
 }
 
-.legend-dot.futurist {
+.legend-dot.earth_loyalists {
   background: #60a5fa;
 }
 
-.legend-dot.progressive {
+.legend-dot.mars_independence {
   background: #4ade80;
 }
 
-.legend-dot.traditionalist {
+.legend-dot.corporate_interests {
   background: #fbbf24;
 }
 </style>

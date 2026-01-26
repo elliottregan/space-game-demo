@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { GProgress, GBadge } from "../../ui";
 import type { NPC, ActiveProject, Project } from "../../../core/models/types";
+import { NPCFaction } from "../../../core/models/NPCInfluence";
 import NPCListItem from "./NPCListItem.vue";
 
 defineProps<{
@@ -29,16 +30,14 @@ function formatSupport(support: number): string {
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function getFactionVariant(faction: string): "info" | "positive" | "warning" | "muted" {
+function getFactionVariant(faction: NPCFaction): "info" | "positive" | "warning" | "muted" {
   switch (faction) {
-    case "futurist":
+    case NPCFaction.EarthLoyalists:
       return "info";
-    case "progressive":
+    case NPCFaction.MarsIndependence:
       return "positive";
-    case "traditionalist":
+    case NPCFaction.CorporateInterests:
       return "warning";
-    default:
-      return "muted";
   }
 }
 </script>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { GButton, GBadge, GActionCard } from "../../ui";
 import type { Project } from "../../../core/models/types";
+import { NPCFaction } from "../../../core/models/NPCInfluence";
 
 defineProps<{
   projects: Project[];
@@ -25,16 +26,14 @@ function formatProjectCost(cost: Record<string, number>): string {
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function getFactionVariant(faction: string): "info" | "positive" | "warning" | "muted" {
+function getFactionVariant(faction: NPCFaction): "info" | "positive" | "warning" | "muted" {
   switch (faction) {
-    case "futurist":
+    case NPCFaction.EarthLoyalists:
       return "info";
-    case "progressive":
+    case NPCFaction.MarsIndependence:
       return "positive";
-    case "traditionalist":
+    case NPCFaction.CorporateInterests:
       return "warning";
-    default:
-      return "muted";
   }
 }
 </script>
