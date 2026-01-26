@@ -39,10 +39,16 @@ const CRISIS_THRESHOLDS = {
 } as const;
 
 /**
- * SimulationRunner orchestrates Monte Carlo simulation runs.
- * It creates fresh game instances, runs them to completion using
- * HeuristicStrategy, and aggregates results via MetricsCollector.
+ * Convert a Map to a Record object.
  */
+function mapToRecord<V>(map: Map<string, V>): Record<string, V> {
+  const record: Record<string, V> = {};
+  for (const [key, value] of map) {
+    record[key] = value;
+  }
+  return record;
+}
+
 /**
  * Result of running simulations including both aggregate stats and individual runs.
  */
@@ -78,12 +84,13 @@ export class SimulationRunner {
 
       // Verbose progress logging
       if (this.config.verbose) {
-        const progress = ((i + 1) / this.config.runs * 100).toFixed(0);
-        const outcomeStr = result.outcome === "victory"
-          ? `Victory (${result.victoryType})`
-          : `Defeat (${result.defeatReason})`;
+        const progress = (((i + 1) / this.config.runs) * 100).toFixed(0);
+        const outcomeStr =
+          result.outcome === "victory"
+            ? `Victory (${result.victoryType})`
+            : `Defeat (${result.defeatReason})`;
         console.log(
-          `[${progress}%] Run ${i + 1}/${this.config.runs}: ${outcomeStr} at sol ${result.finalSol}`
+          `[${progress}%] Run ${i + 1}/${this.config.runs}: ${outcomeStr} at sol ${result.finalSol}`,
         );
       }
     }
@@ -208,7 +215,8 @@ export class SimulationRunner {
           netOxygen: (resources.production.oxygen ?? 0) - (resources.consumption.oxygen ?? 0),
           netWater: (resources.production.water ?? 0) - (resources.consumption.water ?? 0),
           netPower: (resources.production.power ?? 0) - (resources.consumption.power ?? 0),
-          netMaterials: (resources.production.materials ?? 0) - (resources.consumption.materials ?? 0),
+          netMaterials:
+            (resources.production.materials ?? 0) - (resources.consumption.materials ?? 0),
         });
       }
 
@@ -292,7 +300,7 @@ export class SimulationRunner {
         resourcesAtDeath,
         blockedDecisions,
         eventsOccurred,
-      }
+      },
     );
   }
 
@@ -303,12 +311,12 @@ export class SimulationRunner {
     sol: number,
     resources: { food: number; oxygen: number; water: number },
     morale: number,
-    crisisTimeline: CrisisPoint[]
+    crisisTimeline: CrisisPoint[],
   ): void {
     const checkResource = (
       type: CrisisType,
       value: number,
-      thresholds: { warning: number; critical: number }
+      thresholds: { warning: number; critical: number },
     ) => {
       let severity: CrisisSeverity | null = null;
       let threshold = 0;
@@ -360,40 +368,24 @@ export class SimulationRunner {
       resourcesAtDeath?: ResourceSnapshot;
       blockedDecisions: import("./types").BlockedDecision[];
       eventsOccurred: import("./types").EventOccurrence[];
-    }
+    },
   ): RunResult {
     const outcome = victoryState.status === "victory" ? "victory" : "defeat";
 
     // Map victory/defeat reason to typed values
-    let victoryType: VictoryType | undefined;
-    let defeatReason: DefeatReason | undefined;
+    const victoryType =
+      outcome === "victory" ? this.mapVictoryType(victoryState.reason) : undefined;
+    const defeatReason =
+      outcome === "defeat" ? this.mapDefeatReason(victoryState.reason) : undefined;
 
-    if (outcome === "victory") {
-      victoryType = this.mapVictoryType(victoryState.reason);
-    } else {
-      defeatReason = this.mapDefeatReason(victoryState.reason);
-    }
-
-    // Convert buildings map to record
-    const buildingsRecord: Record<string, number> = {};
-    for (const [defId, count] of buildingsBuilt) {
-      buildingsRecord[defId] = count;
-    }
-
-    // Convert enhanced tracking maps to records
-    const buildingFirstBuiltSolRecord: Record<string, number> = {};
-    if (enhanced?.buildingFirstBuiltSol) {
-      for (const [defId, sol] of enhanced.buildingFirstBuiltSol) {
-        buildingFirstBuiltSolRecord[defId] = sol;
-      }
-    }
-
-    const techCompletedSolRecord: Record<string, number> = {};
-    if (enhanced?.techCompletedSol) {
-      for (const [techId, sol] of enhanced.techCompletedSol) {
-        techCompletedSolRecord[techId] = sol;
-      }
-    }
+    // Convert maps to records
+    const buildingsRecord = mapToRecord(buildingsBuilt);
+    const buildingFirstBuiltSolRecord = enhanced?.buildingFirstBuiltSol
+      ? mapToRecord(enhanced.buildingFirstBuiltSol)
+      : {};
+    const techCompletedSolRecord = enhanced?.techCompletedSol
+      ? mapToRecord(enhanced.techCompletedSol)
+      : {};
 
     return {
       seed,
@@ -408,20 +400,16 @@ export class SimulationRunner {
       resourceTimeline: enhanced?.resourceTimeline,
       flowTimeline: enhanced?.flowTimeline,
       crisisTimeline: enhanced?.crisisTimeline,
-      buildingFirstBuiltSol: Object.keys(buildingFirstBuiltSolRecord).length > 0
-        ? buildingFirstBuiltSolRecord
-        : undefined,
-      techCompletedSol: Object.keys(techCompletedSolRecord).length > 0
-        ? techCompletedSolRecord
-        : undefined,
+      buildingFirstBuiltSol:
+        Object.keys(buildingFirstBuiltSolRecord).length > 0
+          ? buildingFirstBuiltSolRecord
+          : undefined,
+      techCompletedSol:
+        Object.keys(techCompletedSolRecord).length > 0 ? techCompletedSolRecord : undefined,
       defeatSol: enhanced?.defeatSol,
       resourcesAtDeath: enhanced?.resourcesAtDeath,
-      blockedDecisions: enhanced?.blockedDecisions?.length
-        ? enhanced.blockedDecisions
-        : undefined,
-      eventsOccurred: enhanced?.eventsOccurred?.length
-        ? enhanced.eventsOccurred
-        : undefined,
+      blockedDecisions: enhanced?.blockedDecisions?.length ? enhanced.blockedDecisions : undefined,
+      eventsOccurred: enhanced?.eventsOccurred?.length ? enhanced.eventsOccurred : undefined,
     };
   }
 
@@ -431,22 +419,14 @@ export class SimulationRunner {
   private mapVictoryType(reason?: string): VictoryType {
     if (!reason) return "population";
 
-    // Check for colony charter victory
-    if (reason.toLowerCase().includes("colony charter")) {
-      return "colony_charter";
-    }
+    const lowerReason = reason.toLowerCase();
 
-    // Check for generation ship victory
-    if (reason.toLowerCase().includes("generation ship")) {
-      return "generation_ship";
-    }
-
-    // Check for population victory
-    if (reason.toLowerCase().includes("100 population") || reason.toLowerCase().includes("thriving")) {
+    if (lowerReason.includes("colony charter")) return "colony_charter";
+    if (lowerReason.includes("generation ship")) return "generation_ship";
+    if (lowerReason.includes("100 population") || lowerReason.includes("thriving")) {
       return "population";
     }
 
-    // Default to population
     return "population";
   }
 
@@ -458,22 +438,12 @@ export class SimulationRunner {
 
     const lowerReason = reason.toLowerCase();
 
-    // Check for starvation
-    if (lowerReason.includes("food") || lowerReason.includes("starv")) {
-      return "starvation";
-    }
-
-    // Check for suffocation
-    if (lowerReason.includes("oxygen") || lowerReason.includes("suffocat")) {
-      return "suffocation";
-    }
-
-    // Check for population collapse
+    if (lowerReason.includes("food") || lowerReason.includes("starv")) return "starvation";
+    if (lowerReason.includes("oxygen") || lowerReason.includes("suffocat")) return "suffocation";
     if (lowerReason.includes("population") || lowerReason.includes("below 5")) {
       return "population_collapse";
     }
 
-    // Default to population collapse
     return "population_collapse";
   }
 }
