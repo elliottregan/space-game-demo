@@ -60,7 +60,7 @@ function getDelta(key: string): number {
 </script>
 
 <template>
-  <GPanel title="Resources">
+  <GPanel title="Resources" accent="red">
     <div class="resource-list">
       <div
         v-for="resource in resources"
@@ -97,8 +97,8 @@ function getDelta(key: string): number {
   align-items: center;
   gap: var(--g-space-sm);
   padding: var(--g-space-sm);
-  background: var(--g-color-bg-elevated);
-  border-radius: 4px;
+  background: var(--g-color-bg-surface);
+  border: 1px solid var(--g-color-border);
 }
 
 .projected-value {
@@ -121,8 +121,7 @@ function getDelta(key: string): number {
 .projected-value.projected-danger {
   color: var(--g-color-negative);
   font-weight: bold;
-  background: oklch(60% 0.2 25 / 0.15);
+  background: rgba(198, 40, 40, 0.1);
   padding: 0 var(--g-space-xs);
-  border-radius: 2px;
 }
 </style>
