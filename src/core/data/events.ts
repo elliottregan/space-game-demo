@@ -1,6 +1,60 @@
 import type { RandomEventDefinition } from "../models/GameEvent";
 
 export const RANDOM_EVENTS: RandomEventDefinition[] = [
+  // Early immigration events to help colony reach growth threshold
+  {
+    id: "first_wave_settlers",
+    name: "First Wave Settlers",
+    description:
+      "A group of eager settlers who've been training for years are ready to join your colony. They've heard about your progress and want to be part of Mars history.",
+    minSol: 15,
+    chance: 0.12,
+    weight: 10,
+    choices: [
+      {
+        id: "welcome_settlers",
+        text: "Welcome them all (8 settlers)",
+        effects: {
+          population: 8,
+          resources: { food: -40 },
+        },
+      },
+      {
+        id: "select_skilled",
+        text: "Accept only skilled workers (5 settlers)",
+        effects: {
+          population: 5,
+        },
+      },
+    ],
+  },
+  {
+    id: "family_reunification",
+    name: "Family Reunification Program",
+    description:
+      "Earth has approved a family reunification program. Relatives of your colonists are eager to join them on Mars.",
+    minSol: 30,
+    chance: 0.10,
+    weight: 8,
+    choices: [
+      {
+        id: "approve_all",
+        text: "Approve all applications (5 colonists)",
+        effects: {
+          population: 5,
+          resources: { food: -25 },
+        },
+      },
+      {
+        id: "limited_approval",
+        text: "Limited approval (3 colonists, they bring supplies)",
+        effects: {
+          population: 3,
+          resources: { materials: 30 },
+        },
+      },
+    ],
+  },
   {
     id: "dust_storm",
     name: "Dust Storm Warning",
@@ -152,8 +206,8 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
     id: "new_colonists",
     name: "New Colonists Arrive",
     description: "A transport ship with new colonists is requesting permission to land.",
-    minSol: 70,
-    chance: 0.05,
+    minSol: 40,
+    chance: 0.06,
     choices: [
       {
         id: "welcome_all",
