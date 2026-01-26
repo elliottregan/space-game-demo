@@ -269,7 +269,9 @@ export class TechnologyTree {
   toJSON() {
     return {
       researched: Array.from(this.researched),
-      currentResearch: this.currentResearch,
+      researchProgress: Object.fromEntries(this.researchProgress),
+      currentResearchId: this.currentResearchId,
+      researchQueue: this.researchQueue,
       researchSpeedBonus: this.researchSpeedBonus,
     };
   }
@@ -277,15 +279,33 @@ export class TechnologyTree {
   static fromJSON(
     data: {
       researched: string[];
-      currentResearch: TechResearch | null;
+      researchProgress?: Record<string, number>;
+      currentResearchId?: string | null;
+      researchQueue?: string[];
+      // Legacy field
+      currentResearch?: TechResearch | null;
       researchSpeedBonus: number;
     },
     techs: Technology[],
   ): TechnologyTree {
     const tree = new TechnologyTree(techs);
     tree.researched = new Set(data.researched);
-    tree.currentResearch = data.currentResearch;
     tree.researchSpeedBonus = data.researchSpeedBonus || 0;
+
+    // Handle new format
+    if (data.researchProgress) {
+      tree.researchProgress = new Map(Object.entries(data.researchProgress));
+    }
+    tree.currentResearchId = data.currentResearchId ?? null;
+    tree.researchQueue = data.researchQueue ?? [];
+
+    // Legacy migration: convert old currentResearch to new format
+    if (!data.researchProgress && data.currentResearch) {
+      tree.currentResearchId = data.currentResearch.techId;
+      tree.researchProgress.set(data.currentResearch.techId, data.currentResearch.progress);
+      tree.researchQueue = [data.currentResearch.techId];
+    }
+
     return tree;
   }
 }

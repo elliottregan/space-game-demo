@@ -272,5 +272,21 @@ describe('TechnologyTree', () => {
       expect(research?.progress).toBe(10);
       expect(research?.requiredSols).toBe(60);
     });
+
+    it('should serialize and restore queue and progress', () => {
+      tree.queueResearch('genetics', resources);
+
+      // Advance 15 sols
+      for (let i = 0; i < 15; i++) {
+        tree.tick();
+      }
+
+      const json = tree.toJSON();
+      const restored = TechnologyTree.fromJSON(json, TECHNOLOGIES);
+
+      expect(restored.getCurrentResearchId()).toBe('hydroponics');
+      expect(restored.getResearchProgress('hydroponics')).toBe(15);
+      expect(restored.getResearchQueue()).toEqual(['hydroponics', 'genetics']);
+    });
   });
 });
