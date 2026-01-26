@@ -104,7 +104,7 @@ function getFactionVariant(faction: string): "info" | "positive" | "warning" | "
   font-size: var(--g-font-size-sm);
   color: var(--g-color-text);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 .subsection-title {
@@ -113,7 +113,7 @@ function getFactionVariant(faction: string): "info" | "positive" | "warning" | "
   font-size: var(--g-font-size-xs);
   color: var(--g-color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 .project-status {
