@@ -27,7 +27,7 @@ export class TechnologyTree {
     return [...this.researchQueue];
   }
 
-  tick(): GameEvent[] {
+  tick(resources?: ResourceManager): GameEvent[] {
     const events: GameEvent[] = [];
 
     if (this.currentResearchId) {
@@ -61,10 +61,41 @@ export class TechnologyTree {
 
         this.currentResearchId = null;
         this.currentResearch = null; // Backward compatibility
+
+        // Auto-start next in queue
+        this.tryStartNextInQueue(resources);
       }
+    } else if (this.researchQueue.length > 0) {
+      // Nothing researching but queue exists - try to start
+      this.tryStartNextInQueue(resources);
     }
 
     return events;
+  }
+
+  private tryStartNextInQueue(resources?: ResourceManager): void {
+    if (this.researchQueue.length === 0) return;
+    if (this.currentResearchId) return;
+
+    const nextTechId = this.researchQueue[0];
+    const tech = this.technologies.get(nextTechId);
+    if (!tech) return;
+
+    // Check if we can afford it
+    if (tech.cost.resources && resources) {
+      if (!resources.canAfford(tech.cost.resources)) {
+        // Can't afford - stay paused
+        return;
+      }
+      resources.deduct(tech.cost.resources);
+    }
+
+    // Initialize progress if needed
+    if (!this.researchProgress.has(nextTechId)) {
+      this.researchProgress.set(nextTechId, 0);
+    }
+
+    this.currentResearchId = nextTechId;
   }
 
   canResearch(techId: string): boolean {

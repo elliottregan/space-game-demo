@@ -214,5 +214,49 @@ describe('TechnologyTree', () => {
       // robotics and advanced_materials removed, new chain used
       expect(tree.getResearchQueue()).toEqual(['hydroponics', 'genetics']);
     });
+
+    it('should auto-start next tech in queue when current completes', () => {
+      tree.queueResearch('genetics', resources);
+      expect(tree.getResearchQueue()).toEqual(['hydroponics', 'genetics']);
+
+      // Complete hydroponics (60 sols)
+      const hydroTech = tree.getTech('hydroponics')!;
+      for (let i = 0; i < hydroTech.cost.sols; i++) {
+        tree.tick(resources);
+      }
+
+      expect(tree.isResearched('hydroponics')).toBe(true);
+      expect(tree.getCurrentResearchId()).toBe('genetics');
+      expect(tree.getResearchQueue()).toEqual(['genetics']);
+    });
+
+    it('should pause queue if resources insufficient for next tech', () => {
+      // asteroid_mining costs 200 materials
+      // Set up: research advanced_materials and robotics first
+      tree.queueResearch('robotics', resources);
+
+      // Complete advanced_materials
+      const amTech = tree.getTech('advanced_materials')!;
+      for (let i = 0; i < amTech.cost.sols; i++) {
+        tree.tick(resources);
+      }
+
+      // Complete robotics
+      const robTech = tree.getTech('robotics')!;
+      for (let i = 0; i < robTech.cost.sols; i++) {
+        tree.tick(resources);
+      }
+
+      // Now queue asteroid_mining with insufficient resources
+      const poorResources = new ResourceManager({
+        food: 100, oxygen: 100, water: 100, power: 100, materials: 50
+      });
+
+      tree.queueResearch('asteroid_mining', poorResources);
+
+      // Queue is set but nothing is researching (waiting for resources)
+      expect(tree.getResearchQueue()).toEqual(['asteroid_mining']);
+      expect(tree.getCurrentResearchId()).toBeNull();
+    });
   });
 });
