@@ -1,0 +1,46 @@
+{
+  "SessionStart": [
+    {
+      "matcher": "*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "/workspace/.claude-sessions/hooks/session-start.sh"
+        }
+      ]
+    }
+  ],
+  "Notification": [
+    {
+      "matcher": "*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "/workspace/.claude-sessions/hooks/notification.sh"
+        }
+      ]
+    }
+  ],
+  "PostToolUse": [
+    {
+      "matcher": "TaskCreate|TaskUpdate",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "/workspace/.claude-sessions/hooks/capture-tasks.sh"
+        }
+      ]
+    }
+  ],
+  "Stop": [
+    {
+      "matcher": "*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "/workspace/.claude-sessions/hooks/session-stop.sh"
+        }
+      ]
+    }
+  ]
+}
