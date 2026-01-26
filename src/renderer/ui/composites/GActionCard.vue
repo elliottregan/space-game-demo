@@ -49,8 +49,9 @@ defineEmits<{
   flex-direction: column;
   gap: var(--g-space-xs);
   padding: var(--g-space-md);
+  margin: var(--g-space-xs) 0;
   border-top: var(--g-border-width) solid var(--g-color-border-strong);
-  border-bottom: var(--g-border-width) solid var(--g-color-border-strong);
+  border-bottom: var(--g-border-width-thin) solid var(--g-color-border-strong);
   cursor: pointer;
   transition: background var(--g-transition-fast);
 }

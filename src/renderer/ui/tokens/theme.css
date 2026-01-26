@@ -53,6 +53,7 @@
   --g-space-xl: 32px;
 
   /* Border widths */
+  --g-border-width-thin: 1px;
   --g-border-width: 2px;
   --g-border-width-thick: 3px;
 
