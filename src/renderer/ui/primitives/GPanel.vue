@@ -74,6 +74,7 @@ withDefaults(
 
 .g-panel__title {
   flex: 1;
+  font-weight: bold;
 }
 
 .g-panel__header-actions {
