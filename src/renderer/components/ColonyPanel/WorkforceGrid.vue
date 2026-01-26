@@ -45,7 +45,7 @@ const roleIcons: Record<ColonistRole, string> = {
 .workforce-section {
   margin-top: var(--g-space-md);
   padding-top: var(--g-space-md);
-  border-top: 1px solid var(--g-color-border);
+  border-top: var(--g-border-width) solid var(--g-color-border-strong);
 }
 
 .workforce-section h3 {
@@ -68,8 +68,6 @@ const roleIcons: Record<ColonistRole, string> = {
   align-items: center;
   gap: var(--g-space-xs);
   padding: var(--g-space-sm);
-  background: var(--g-color-bg-surface);
-  border: 1px solid var(--g-color-border);
   font-size: var(--g-font-size-sm);
 }
 

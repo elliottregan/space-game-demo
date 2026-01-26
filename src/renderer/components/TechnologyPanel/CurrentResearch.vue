@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { GButton, GProgress } from "../../ui";
+import { GButton, GProgress, GEmptyState } from "../../ui";
 import type { Technology } from "../../../core/models/Technology";
 
 defineProps<{
@@ -24,9 +24,7 @@ defineEmits<{
       {{ Math.floor(currentProgress) }} / {{ requiredSols }} sols
     </GProgress>
   </div>
-  <div v-else class="no-research">
-    No active research
-  </div>
+  <GEmptyState v-else message="No active research" variant="boxed" />
 </template>
 
 <style scoped>
@@ -48,14 +46,4 @@ defineEmits<{
   font-family: var(--g-font-mono);
   font-weight: bold;
   color: var(--g-accent-cyan);
-}
-
-.no-research {
-  color: var(--g-color-text-muted);
-  font-style: italic;
-  padding: var(--g-space-md);
-  text-align: center;
-  background: var(--g-color-bg-surface);
-  margin-bottom: var(--g-space-md);
-}
-</style>
+}</style>

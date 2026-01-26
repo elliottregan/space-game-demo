@@ -3,6 +3,7 @@ import { computed } from "vue";
 import type { Colonist, SkillDefinition } from "../../../facade";
 import { ROLE_DISPLAY_NAMES, MASTERY_DISPLAY_NAMES } from "../../../core/models/Colonist";
 import { gameService } from "../../services/GameService";
+import { GActionCard } from "../../ui";
 import ColonistSkillBadge from "../ColonyPanel/ColonistSkillBadge.vue";
 
 const props = defineProps<{
@@ -45,24 +46,24 @@ function isSkillActive(skill: SkillDefinition): boolean {
 </script>
 
 <template>
-  <div class="colonist-row">
-    <div class="colonist-main">
-      <span class="colonist-name">{{ colonist.name }}</span>
-      <div class="colonist-details">
-        <span class="colonist-role">
-          {{ ROLE_DISPLAY_NAMES[colonist.role] }}
-          ({{ MASTERY_DISPLAY_NAMES[colonist.masteryLevel] }})
-        </span>
-        <span v-if="showWorkplace && workplace" class="workplace">
-          → Works at: {{ workplace.name }}
-        </span>
-        <span
-          v-else-if="showWorkplace && colonist.role === 'unassigned'"
-          class="unassigned"
-        >
-          Unassigned
-        </span>
-      </div>
+  <GActionCard :title="colonist.name" class="colonist-row">
+    <template #tag>
+      <span class="colonist-role">
+        {{ ROLE_DISPLAY_NAMES[colonist.role] }}
+        ({{ MASTERY_DISPLAY_NAMES[colonist.masteryLevel] }})
+      </span>
+    </template>
+
+    <div class="colonist-details">
+      <span v-if="showWorkplace && workplace" class="workplace">
+        Works at: {{ workplace.name }}
+      </span>
+      <span
+        v-else-if="showWorkplace && colonist.role === 'unassigned'"
+        class="unassigned"
+      >
+        Unassigned
+      </span>
     </div>
     <div class="colonist-skills">
       <span class="skills-label">Skills:</span>
@@ -73,35 +74,19 @@ function isSkillActive(skill: SkillDefinition): boolean {
         :is-active="isSkillActive(skill)"
       />
     </div>
-  </div>
+  </GActionCard>
 </template>
 
 <style scoped>
-.colonist-row {
-  padding: var(--g-space-sm);
-  padding-left: var(--g-space-md);
-  border-left: 2px solid var(--g-color-border);
-  background: var(--g-color-bg-base);
+.colonist-role {
   font-family: var(--g-font-mono);
-}
-
-.colonist-main {
-  margin-bottom: var(--g-space-xs);
-}
-
-.colonist-name {
-  font-weight: bold;
-  display: block;
-  margin-bottom: var(--g-space-xs);
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-text-muted);
 }
 
 .colonist-details {
   font-size: var(--g-font-size-sm);
   color: var(--g-color-text-muted);
-}
-
-.colonist-role {
-  margin-right: var(--g-space-sm);
 }
 
 .workplace {
@@ -117,7 +102,6 @@ function isSkillActive(skill: SkillDefinition): boolean {
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
-  margin-top: var(--g-space-xs);
 }
 
 .skills-label {

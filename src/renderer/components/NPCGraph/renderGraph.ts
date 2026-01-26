@@ -27,11 +27,15 @@ export interface RenderOptions {
   onNodeClick: (npcId: string | null) => void;
 }
 
+// Using theme colors from tokens/theme.css
 const FACTION_COLORS: Record<NPCFaction, string> = {
-  [NPCFaction.EarthLoyalists]: "#60a5fa",
-  [NPCFaction.MarsIndependence]: "#4ade80",
-  [NPCFaction.CorporateInterests]: "#fbbf24",
+  [NPCFaction.EarthLoyalists]: "#00838f", // --g-color-info (cyan)
+  [NPCFaction.MarsIndependence]: "#2e7d32", // --g-color-positive (green)
+  [NPCFaction.CorporateInterests]: "#ef6c00", // --g-color-warning (amber)
 };
+
+const EDGE_COLOR = "#1a1a1a"; // --g-color-border-strong
+const TEXT_COLOR = "#1a1a1a"; // --g-color-text
 
 const NODE_RADIUS = 20;
 
@@ -69,8 +73,8 @@ export function renderGraph(
     if (!source || !target) continue;
 
     const strokeColor = link.inSameCouncil
-      ? "rgba(134, 239, 172, 0.5)"
-      : "rgba(255, 255, 255, 0.3)";
+      ? "rgba(46, 125, 50, 0.6)" // --g-color-positive with opacity
+      : `${EDGE_COLOR}33`; // --g-color-border-strong with 20% opacity
     const strokeWidth = Math.max(1, link.weight * 4);
 
     edgesGroup
@@ -119,7 +123,7 @@ export function renderGraph(
         .insert("circle", "circle")
         .attr("r", NODE_RADIUS + 4)
         .attr("fill", "none")
-        .attr("stroke", "rgba(134, 239, 172, 0.4)")
+        .attr("stroke", "rgba(46, 125, 50, 0.4)") // --g-color-positive with opacity
         .attr("stroke-width", 2);
     }
 
@@ -146,7 +150,7 @@ export function renderGraph(
       .append("text")
       .attr("y", NODE_RADIUS + 14)
       .attr("text-anchor", "middle")
-      .attr("fill", "rgba(255, 255, 255, 0.7)")
+      .attr("fill", TEXT_COLOR)
       .attr("font-size", "10px")
       .attr("font-family", "monospace")
       .text(lastName);

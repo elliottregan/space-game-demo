@@ -56,25 +56,27 @@ function formatSupport(support: number): string {
 .factions {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--g-space-md);
 }
 
 .faction-card {
-  padding: 0.75rem;
-  background: var(--g-color-bg-surface);
+  padding: var(--g-space-md);
+  border-top: var(--g-border-width) solid var(--g-color-border-strong);
+  border-bottom: var(--g-border-width) solid var(--g-color-border-strong);
 }
 
 .faction-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--g-space-sm);
 }
 
 .faction-name {
   font-family: var(--g-font-mono);
-  font-weight: 500;
+  font-size: var(--g-font-size-md);
+  font-weight: bold;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.05em;
 }
 
 .support-bar {
@@ -89,18 +91,18 @@ function formatSupport(support: number): string {
 }
 
 .demand-warning {
-  margin-top: 0.5rem;
-  padding: 0.25rem 0.5rem;
+  margin-top: var(--g-space-sm);
+  padding: var(--g-space-xs) var(--g-space-sm);
   background: var(--g-color-warning);
-  color: var(--g-color-bg);
+  color: var(--g-color-bg-base);
   font-family: var(--g-font-mono);
-  font-size: 0.875rem;
+  font-size: var(--g-font-size-sm);
 }
 
 .hint {
-  margin-top: 1rem;
+  margin-top: var(--g-space-md);
   color: var(--g-color-text-muted);
   font-family: var(--g-font-mono);
-  font-size: 0.875rem;
+  font-size: var(--g-font-size-sm);
 }
 </style>

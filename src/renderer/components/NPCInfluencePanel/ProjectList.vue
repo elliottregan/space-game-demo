@@ -1,18 +1,15 @@
 <script setup lang="ts">
-import { GButton, GBadge, GActionCard } from "../../ui";
+import { GBadge, GActionCard } from "../../ui";
 import type { Project } from "../../../core/models/types";
 import { NPCFaction } from "../../../core/models/NPCInfluence";
 
 defineProps<{
   projects: Project[];
-  selectedProject: string | null;
-  canPropose: boolean;
 }>();
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const emit = defineEmits<{
-  select: [projectId: string];
-  propose: [];
+  propose: [projectId: string];
 }>();
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -48,8 +45,8 @@ function getFactionVariant(faction: NPCFaction): "info" | "positive" | "warning"
         :title="project.name"
         :description="project.description"
         :cost="formatProjectCost(project.proposalCost)"
-        :selected="selectedProject === project.id"
-        @click="emit('select', project.id)"
+        action-label="Propose"
+        @click="emit('propose', project.id)"
       >
         <template #tag>
           <GBadge :variant="getFactionVariant(project.type)">
@@ -58,9 +55,6 @@ function getFactionVariant(faction: NPCFaction): "info" | "positive" | "warning"
         </template>
       </GActionCard>
     </div>
-    <GButton variant="primary" :disabled="!canPropose" @click="emit('propose')">
-      Propose Selected Project
-    </GButton>
   </section>
 </template>
 
@@ -68,7 +62,7 @@ function getFactionVariant(faction: NPCFaction): "info" | "positive" | "warning"
 .section {
   margin-bottom: var(--g-space-lg);
   padding-bottom: var(--g-space-md);
-  border-bottom: 1px solid var(--g-color-border);
+  border-bottom: var(--g-border-width) solid var(--g-color-border-strong);
 }
 
 .section-title {

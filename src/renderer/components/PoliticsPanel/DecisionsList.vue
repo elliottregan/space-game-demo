@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Decision } from "../../../core/models/Politics";
 import { highlightResources, clearHighlights } from "../../directives/ResourceHighlight";
-import { GActionCard } from "../../ui";
+import { GActionCard, GSection } from "../../ui";
 
 defineProps<{
   decisions: Decision[];
@@ -38,9 +38,7 @@ function onDecisionLeave(): void {
 </script>
 
 <template>
-  <div class="decisions-section">
-    <h3>Available Decisions</h3>
-
+  <GSection title="Available Decisions" variant="muted">
     <div v-if="decisionResult" class="decision-result">
       {{ decisionResult }}
     </div>
@@ -58,21 +56,10 @@ function onDecisionLeave(): void {
         @mouseleave="onDecisionLeave"
       />
     </div>
-  </div>
+  </GSection>
 </template>
 
 <style scoped>
-.decisions-section h3 {
-  font-family: var(--g-font-mono);
-  font-size: var(--g-font-size-sm);
-  color: var(--g-accent-slate);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: var(--g-space-sm);
-  padding-bottom: var(--g-space-xs);
-  border-bottom: 1px solid var(--g-color-border);
-}
-
 .decision-result {
   padding: var(--g-space-sm);
   background: var(--g-color-bg-surface);

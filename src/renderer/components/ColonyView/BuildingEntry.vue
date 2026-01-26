@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import type { Building, BuildingDefinition, Colonist, SkillDefinition } from "../../../facade";
 import { ROLE_DISPLAY_NAMES, MASTERY_DISPLAY_NAMES } from "../../../core/models/Colonist";
-import { GBadge, GProgress } from "../../ui";
+import { GEntityHeader } from "../../ui";
 import ColonistSkillBadge from "../ColonyPanel/ColonistSkillBadge.vue";
 
 const props = defineProps<{
@@ -11,43 +11,6 @@ const props = defineProps<{
   colonists: Colonist[];
   skillDefinitions: SkillDefinition[];
 }>();
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-const statusVariant = computed(() => {
-  switch (props.building.status) {
-    case "active":
-      return "success";
-    case "pending":
-      return "warning";
-    case "disabled":
-      return "neutral";
-    case "idle":
-      return "neutral";
-    case "recycling":
-      return "warning";
-    default:
-      return "neutral";
-  }
-});
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-const statusLabel = computed(() => {
-  if (props.building.broken) return "Broken";
-  switch (props.building.status) {
-    case "active":
-      return "Active";
-    case "pending":
-      return "Building";
-    case "disabled":
-      return "Disabled";
-    case "idle":
-      return "Idle";
-    case "recycling":
-      return "Recycling";
-    default:
-      return props.building.status;
-  }
-});
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const assignedWorkers = computed(() => {
@@ -78,20 +41,19 @@ function formatResourceDelta(delta: Record<string, number> | undefined): string 
 
 <template>
   <div class="building-entry" :class="{ broken: building.broken }">
-    <div class="building-header">
-      <div class="building-title">
-        <span class="building-name">{{ definition?.name || building.definitionId }}</span>
-        <span class="building-id">#{{ building.id.split("_").pop() }}</span>
-      </div>
-      <div class="building-status">
-        <GBadge :variant="building.broken ? 'danger' : statusVariant">
-          {{ statusLabel }}
-        </GBadge>
-        <span class="condition" v-if="building.status === 'active'">
-          {{ Math.round(building.condition) }}%
-        </span>
-      </div>
-    </div>
+    <GEntityHeader
+      :name="definition?.name || building.definitionId"
+      :instance-id="building.id.split('_').pop() || ''"
+      :status="building.status"
+      :is-broken="building.broken"
+      :condition="building.condition"
+      :construction-progress="building.constructionProgress"
+      :construction-max="definition?.constructionTime || 10"
+    >
+      <template #progress-label>
+        {{ Math.ceil((definition?.constructionTime || 10) - building.constructionProgress) }} sols
+      </template>
+    </GEntityHeader>
 
     <div class="building-stats" v-if="building.status === 'active'">
       <span v-if="definition?.production" class="production">
@@ -103,15 +65,6 @@ function formatResourceDelta(delta: Record<string, number> | undefined): string 
       <span class="efficiency">
         Efficiency: {{ building.condition >= 50 ? 100 : Math.round(building.condition * 2) }}%
       </span>
-    </div>
-
-    <div class="construction-progress" v-if="building.status === 'pending'">
-      <GProgress
-        :value="building.constructionProgress"
-        :max="definition?.constructionTime || 10"
-        variant="warning"
-        show-label
-      />
     </div>
 
     <div class="workers-section" v-if="workerSlots > 0">
@@ -157,41 +110,6 @@ function formatResourceDelta(delta: Record<string, number> | undefined): string 
   border-color: var(--g-color-negative);
 }
 
-.building-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--g-space-sm);
-}
-
-.building-title {
-  display: flex;
-  align-items: baseline;
-  gap: var(--g-space-sm);
-}
-
-.building-name {
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.building-id {
-  font-size: var(--g-font-size-xs);
-  color: var(--g-color-text-muted);
-}
-
-.building-status {
-  display: flex;
-  align-items: center;
-  gap: var(--g-space-sm);
-}
-
-.condition {
-  font-size: var(--g-font-size-sm);
-  color: var(--g-color-text-muted);
-}
-
 .building-stats {
   display: flex;
   gap: var(--g-space-md);
@@ -207,10 +125,6 @@ function formatResourceDelta(delta: Record<string, number> | undefined): string 
 
 .consumption {
   color: var(--g-color-negative);
-}
-
-.construction-progress {
-  margin-bottom: var(--g-space-sm);
 }
 
 .workers-section {

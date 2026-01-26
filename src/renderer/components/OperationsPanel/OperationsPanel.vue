@@ -7,7 +7,7 @@ import {
   EXPLORATION_STANCE,
 } from "../../../core/balance/OperationsBalance";
 import type { PolicyType, PolicyValue } from "../../../facade";
-import { GPanel, GButton } from "../../ui";
+import { GPanel, GTabGroup } from "../../ui";
 import PoliciesTab from "./PoliciesTab.vue";
 import BuildingsTab from "./BuildingsTab.vue";
 import MissionsTab from "./MissionsTab.vue";
@@ -58,29 +58,11 @@ function developSite(siteId: string): void {
 
 <template>
   <GPanel title="Operations" accent="amber">
-    <div class="tabs">
-      <GButton
-        :variant="activeTab === 'policies' ? 'primary' : 'ghost'"
-        size="sm"
-        @click="activeTab = 'policies'"
-      >
-        Policies
-      </GButton>
-      <GButton
-        :variant="activeTab === 'buildings' ? 'primary' : 'ghost'"
-        size="sm"
-        @click="activeTab = 'buildings'"
-      >
-        Buildings
-      </GButton>
-      <GButton
-        :variant="activeTab === 'missions' ? 'primary' : 'ghost'"
-        size="sm"
-        @click="activeTab = 'missions'"
-      >
-        Missions
-      </GButton>
-    </div>
+    <GTabGroup v-model="activeTab" :tabs="[
+      { id: 'policies', label: 'Policies' },
+      { id: 'buildings', label: 'Buildings' },
+      { id: 'missions', label: 'Missions' }
+    ]" />
 
     <PoliciesTab
       v-if="activeTab === 'policies'"
@@ -102,10 +84,3 @@ function developSite(siteId: string): void {
   </GPanel>
 </template>
 
-<style scoped>
-.tabs {
-  display: flex;
-  gap: var(--g-space-xs);
-  margin-bottom: var(--g-space-md);
-}
-</style>

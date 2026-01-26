@@ -1,31 +1,52 @@
 <script setup lang="ts">
-import { GButton, GBadge, GInput } from "../../ui";
-import type { NPC, Council } from "../../../core/models/types";
+import { ref, computed } from "vue";
+import { gameService } from "../../services/GameService";
+import { GPanel, GButton, GBadge, GInput } from "../../ui";
 
-defineProps<{
-  councils: Council[];
-  npcs: NPC[];
-  councilName: string;
-  selectedMembers: string[];
-  canCreate: boolean;
-}>();
+const state = gameService.getState();
+const api = gameService.api;
+
+const councilName = ref("");
+const selectedMembers = ref<string[]>([]);
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-const emit = defineEmits<{
-  "update:councilName": [name: string];
-  "toggle-member": [npcId: string];
-  create: [];
-}>();
+const canCreateCouncil = computed(() => {
+  return (
+    selectedMembers.value.length >= 2 &&
+    councilName.value.trim() !== "" &&
+    state.resources.materials >= 50
+  );
+});
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function createCouncil(): void {
+  if (!councilName.value || selectedMembers.value.length < 2) return;
+  const result = api.npc.createCouncil(councilName.value, selectedMembers.value);
+  if (!result.success) {
+    console.warn(`Council creation failed: ${result.error.type}`, result.error);
+  }
+  councilName.value = "";
+  selectedMembers.value = [];
+}
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function toggleMember(npcId: string) {
+  const idx = selectedMembers.value.indexOf(npcId);
+  if (idx === -1) {
+    selectedMembers.value.push(npcId);
+  } else {
+    selectedMembers.value.splice(idx, 1);
+  }
+}
 </script>
 
 <template>
-  <section class="section">
-    <h3 class="section-title">Councils</h3>
-    <div v-if="councils.length === 0" class="empty-state">
+  <GPanel title="Councils" accent="slate">
+    <div v-if="state.npcInfluence.councils.length === 0" class="empty-state">
       No councils formed yet.
     </div>
     <div v-else class="council-list">
-      <div v-for="council in councils" :key="council.id" class="council-item">
+      <div v-for="council in state.npcInfluence.councils" :key="council.id" class="council-item">
         <span class="council-name">{{ council.name }}</span>
         <GBadge variant="muted">{{ council.memberIds.length }} members</GBadge>
       </div>
@@ -33,50 +54,28 @@ const emit = defineEmits<{
 
     <h4 class="subsection-title">Form New Council</h4>
     <GInput
-      :model-value="councilName"
+      v-model="councilName"
       placeholder="Council name"
       size="sm"
-      @update:model-value="emit('update:councilName', $event)"
     />
     <div class="council-member-select">
       <div
-        v-for="npc in npcs"
+        v-for="npc in state.npcInfluence.npcs"
         :key="npc.id"
         class="council-member-option"
         :class="{ selected: selectedMembers.includes(npc.id) }"
-        @click="emit('toggle-member', npc.id)"
+        @click="toggleMember(npc.id)"
       >
         {{ npc.name }}
       </div>
     </div>
-    <GButton variant="primary" :disabled="!canCreate" @click="emit('create')">
+    <GButton variant="primary" :disabled="!canCreateCouncil" @click="createCouncil">
       Create Council (50 materials)
     </GButton>
-  </section>
+  </GPanel>
 </template>
 
 <style scoped>
-.section {
-  margin-bottom: var(--g-space-lg);
-  padding-bottom: var(--g-space-md);
-  border-bottom: var(--g-border-width) solid var(--g-color-border-strong);
-}
-
-.section:last-child {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.section-title {
-  margin: 0 0 var(--g-space-sm);
-  font-family: var(--g-font-mono);
-  font-size: var(--g-font-size-sm);
-  color: var(--g-color-text);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
 .subsection-title {
   margin: var(--g-space-md) 0 var(--g-space-sm);
   font-family: var(--g-font-mono);
@@ -100,7 +99,6 @@ const emit = defineEmits<{
   padding: var(--g-space-sm);
   border-top: var(--g-border-width) solid var(--g-color-border-strong);
   border-bottom: var(--g-border-width) solid var(--g-color-border-strong);
-  cursor: default;
 }
 
 .council-name {

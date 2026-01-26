@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Building, BuildingDefinition, Colonist, SkillDefinition } from "../../../facade";
-import { GPanel } from "../../ui";
+import { GPanel, GEmptyState } from "../../ui";
 import HabitatEntry from "./HabitatEntry.vue";
 
 defineProps<{
@@ -22,9 +22,7 @@ defineProps<{
         :residents="housingAssignments[building.id] || []"
         :skill-definitions="skillDefinitions"
       />
-      <div v-if="buildings.length === 0" class="no-housing">
-        No habitats built. Colonists need housing!
-      </div>
+      <GEmptyState v-if="buildings.length === 0" message="No habitats built. Colonists need housing!" />
     </div>
   </GPanel>
 </template>
@@ -34,13 +32,5 @@ defineProps<{
   display: flex;
   flex-direction: column;
   gap: var(--g-space-md);
-}
-
-.no-housing {
-  padding: var(--g-space-md);
-  text-align: center;
-  color: var(--g-color-warning);
-  font-style: italic;
-  font-family: var(--g-font-mono);
 }
 </style>

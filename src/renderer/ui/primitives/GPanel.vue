@@ -4,9 +4,11 @@ withDefaults(
     title?: string;
     accent?: "red" | "cyan" | "olive" | "amber" | "slate";
     glow?: boolean;
+    thick?: boolean;
   }>(),
   {
     accent: "slate",
+    thick: false,
   },
 );
 </script>
@@ -14,7 +16,7 @@ withDefaults(
 <template>
   <div
     class="g-panel"
-    :class="[`g-panel--accent-${accent}`, { 'g-panel--glow': glow }]"
+    :class="[`g-panel--accent-${accent}`, { 'g-panel--glow': glow, 'g-panel--thick': thick }]"
     :style="{ '--panel-accent': `var(--g-accent-${accent})` }"
   >
     <header v-if="$slots.header || $slots['header-actions'] || title" class="g-panel__header">
@@ -37,7 +39,7 @@ withDefaults(
 <style scoped>
 .g-panel {
   background: var(--g-color-bg-surface);
-  border: var(--g-border-width) solid var(--panel-accent, var(--g-color-border));
+  border: var(--g-border-width) solid var(--panel-accent);
   transition: box-shadow var(--g-transition-normal);
 }
 
@@ -45,21 +47,36 @@ withDefaults(
   box-shadow: 0 0 0 2px var(--panel-accent);
 }
 
+.g-panel--thick {
+  border-width: var(--g-border-width-thick);
+}
+
+.g-panel--thick .g-panel__header {
+  border-bottom-width: var(--g-border-width-thick);
+}
+
+.g-panel--thick .g-panel__footer {
+  border-top-width: var(--g-border-width-thick);
+}
+
 .g-panel__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: var(--g-space-sm) var(--g-space-md);
-  background: var(--g-color-bg-elevated);
-  border-bottom: var(--g-border-width) solid var(--panel-accent, var(--g-color-border));
+  background: var(--panel-accent);
+  border-bottom: var(--g-border-width) solid var(--panel-accent);
   font-family: var(--g-font-mono);
   font-size: var(--g-font-size-lg);
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  color: white;
 }
 
 .g-panel__title {
   flex: 1;
+  font-weight: bold;
+  color: white;
 }
 
 .g-panel__header-actions {

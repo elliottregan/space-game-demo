@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { GButton } from "../../ui";
+import { GButton, GEmptyState, GSection } from "../../ui";
 import type { Expedition, ProspectingSite } from "../../../facade";
 
 const props = defineProps<{
@@ -31,22 +31,16 @@ const developedSites = computed(() => props.prospectingSites.filter((s) => s.dev
 
 <template>
   <div class="tab-content">
-    <div class="missions-section">
-      <h3>Active Expeditions ({{ activeExpeditions.length }}/2)</h3>
-      <div v-if="activeExpeditions.length === 0" class="empty-message">
-        No active expeditions
-      </div>
+    <GSection :title="`Active Expeditions (${activeExpeditions.length}/2)`" variant="muted">
+      <GEmptyState v-if="activeExpeditions.length === 0" message="No active expeditions" />
       <div v-for="exp in activeExpeditions" :key="exp.id" class="expedition-item">
         <span class="expedition-name">{{ formatExpeditionName(exp.type) }}</span>
         <span class="expedition-time">{{ exp.solsRemaining }} sols remaining</span>
       </div>
-    </div>
+    </GSection>
 
-    <div class="missions-section">
-      <h3>Prospecting Sites</h3>
-      <div v-if="prospectingSites.length === 0" class="empty-message">
-        Complete Survey expeditions to discover sites
-      </div>
+    <GSection title="Prospecting Sites" variant="muted">
+      <GEmptyState v-if="prospectingSites.length === 0" message="Complete Survey expeditions to discover sites" />
 
       <div v-for="site in unrevealedSites" :key="site.id" class="site-item unrevealed">
         <span>??? (Unrevealed)</span>
@@ -61,29 +55,11 @@ const developedSites = computed(() => props.prospectingSites.filter((s) => s.dev
       <div v-for="site in developedSites" :key="site.id" class="site-item developed">
         <span>{{ site.resourceType }} ({{ site.quality }}) - Active</span>
       </div>
-    </div>
+    </GSection>
   </div>
 </template>
 
 <style scoped>
-.missions-section {
-  margin-bottom: var(--g-space-md);
-}
-
-.missions-section h3 {
-  font-size: var(--g-font-size-sm);
-  color: var(--g-color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: var(--g-space-xs);
-}
-
-.empty-message {
-  color: var(--g-color-text-muted);
-  font-style: italic;
-  font-size: var(--g-font-size-sm);
-}
-
 .expedition-item, .site-item {
   display: flex;
   justify-content: space-between;

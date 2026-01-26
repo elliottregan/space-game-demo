@@ -7,7 +7,7 @@ import {
 } from "vue";
 
 /**
- * Resource highlight state - tracks which resources should glow
+ * Resource highlight state - tracks which resources should be highlighted
  */
 export const highlightState = reactive<{
   active: boolean;
@@ -22,9 +22,20 @@ export const highlightState = reactive<{
 });
 
 /**
+ * Resource accent colors matching ResourceBadge
+ */
+const RESOURCE_COLORS: Record<string, string> = {
+  food: "#827717", // olive
+  oxygen: "#00838F", // cyan
+  water: "#1565C0", // blue
+  power: "#F57C00", // amber
+  materials: "#455A64", // slate
+};
+
+/**
  * Highlight specific resources
  * @param resourceKeys - Array of resource keys to highlight (e.g., ['food', 'power'])
- * @param insufficientKeys - Array of resource keys that are insufficient (will glow red)
+ * @param insufficientKeys - Array of resource keys that are insufficient (will show red)
  * @param deltas - Object mapping resource keys to their one-time change amounts (positive or negative)
  */
 export function highlightResources(
@@ -62,8 +73,8 @@ export function clearHighlights(): void {
  *
  * Usage: <div v-resource-glow="'food'">Food: 100</div>
  *
- * The element will glow when highlightResources(['food']) is called.
- * Uses CSS variable --resource-glow-color for the glow color.
+ * The element will get an outline when highlightResources(['food']) is called.
+ * Uses the resource's accent color for the outline.
  *
  * Modifiers:
  * - v-resource-glow.pulse - Adds a pulsing animation
@@ -73,21 +84,21 @@ export const vResourceGlow: Directive<HTMLElement, string> = {
     const resourceKey = binding.value;
 
     // Add base styles
-    el.style.transition = "box-shadow 0.3s ease, transform 0.2s ease";
+    el.style.transition = "outline 0.2s ease";
+    el.style.outlineOffset = "-2px";
     el.dataset.resourceKey = resourceKey;
 
     // Set up reactive effect to watch highlight state
-    const updateGlow = () => {
+    const updateHighlight = () => {
       const isHighlighted = highlightState.active && highlightState.resources.has(resourceKey);
       const isInsufficient = highlightState.active && highlightState.insufficient.has(resourceKey);
 
       if (isHighlighted) {
-        const glowColor = isInsufficient
-          ? "var(--resource-glow-insufficient, #f87171)"
-          : `var(--resource-glow-color, var(--color-${resourceKey}, #60a5fa))`;
+        const outlineColor = isInsufficient
+          ? "var(--g-color-negative, #c62828)"
+          : RESOURCE_COLORS[resourceKey] || "#455A64";
 
-        el.style.boxShadow = `0 0 8px ${glowColor}, 0 0 16px ${glowColor}`;
-        el.style.transform = "scale(1.02)";
+        el.style.outline = `3px solid ${outlineColor}`;
         el.classList.add("resource-highlighted");
 
         if (isInsufficient) {
@@ -100,14 +111,14 @@ export const vResourceGlow: Directive<HTMLElement, string> = {
           el.classList.add("resource-pulse");
         }
       } else {
-        el.style.boxShadow = "";
-        el.style.transform = "";
+        // Fade out by setting transparent outline (allows transition)
+        el.style.outline = "3px solid transparent";
         el.classList.remove("resource-highlighted", "resource-insufficient", "resource-pulse");
       }
     };
 
     // Use Vue's watchEffect to reactively update when highlightState changes
-    const stopWatch = watchEffect(updateGlow);
+    const stopWatch = watchEffect(updateHighlight);
 
     // Store the stop handle for cleanup
     (el as HTMLElement & { _resourceGlowStop?: WatchStopHandle })._resourceGlowStop = stopWatch;
@@ -135,24 +146,9 @@ export const resourceHighlightStyles = `
     animation: insufficient-shake 0.5s ease-in-out;
   }
 
-  .resource-pulse {
-    animation: resource-pulse 1.5s ease-in-out infinite;
-  }
-
-  @keyframes resource-pulse {
-    0%, 100% {
-      box-shadow: 0 0 8px var(--resource-glow-color, #60a5fa),
-                  0 0 16px var(--resource-glow-color, #60a5fa);
-    }
-    50% {
-      box-shadow: 0 0 12px var(--resource-glow-color, #60a5fa),
-                  0 0 24px var(--resource-glow-color, #60a5fa);
-    }
-  }
-
   @keyframes insufficient-shake {
-    0%, 100% { transform: translateX(0) scale(1.02); }
-    25% { transform: translateX(-2px) scale(1.02); }
-    75% { transform: translateX(2px) scale(1.02); }
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
   }
 `;
