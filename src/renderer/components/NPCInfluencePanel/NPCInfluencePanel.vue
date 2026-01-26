@@ -14,7 +14,6 @@ const state = gameService.getState();
 // Domain API for commands and one-off queries
 const api = gameService.api;
 
-const selectedProject = ref<string | null>(null);
 const selectedNPCForLobby = ref<string | null>(null);
 const lobbyAmount = ref(0.3);
 const councilName = ref("");
@@ -27,12 +26,6 @@ const lobbyOptions: SelectOption[] = [
   { value: 0.3, label: "+30%" },
   { value: 0.5, label: "+50%" },
 ];
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-const canProposeProject = computed(() => {
-  if (!selectedProject.value) return false;
-  return api.npc.canProposeProject(selectedProject.value).allowed;
-});
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const lobbyCost = computed(() => {
@@ -61,13 +54,11 @@ const selectedNPC = computed(() => {
 });
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function proposeProject(): void {
-  if (!selectedProject.value) return;
-  const result = api.npc.proposeProject(selectedProject.value);
+function proposeProject(projectId: string): void {
+  const result = api.npc.proposeProject(projectId);
   if (!result.success) {
     console.warn(`Proposal failed: ${result.error.type}`, result.error);
   }
-  selectedProject.value = null;
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -129,9 +120,6 @@ function toggleCouncilMember(npcId: string) {
     <ProjectList
       v-if="!state.npcInfluence.activeProject"
       :projects="state.npcInfluence.projects"
-      :selected-project="selectedProject"
-      :can-propose="canProposeProject"
-      @select="selectedProject = $event"
       @propose="proposeProject"
     />
 
