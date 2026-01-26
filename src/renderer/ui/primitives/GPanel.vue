@@ -36,9 +36,9 @@ withDefaults(
 
 <style scoped>
 .g-panel {
-  background: var(--g-color-bg-base);
-  border: 1px solid var(--g-color-border);
-  --panel-accent: var(--g-accent-slate);
+  background: var(--g-color-bg-surface);
+  border: var(--g-border-width) solid var(--panel-accent, var(--g-color-border));
+  transition: box-shadow var(--g-transition-normal);
 }
 
 .g-panel--glow {
@@ -50,11 +50,10 @@ withDefaults(
   justify-content: space-between;
   align-items: center;
   padding: var(--g-space-sm) var(--g-space-md);
-  background: var(--panel-accent);
-  color: white;
+  background: var(--g-color-bg-elevated);
+  border-bottom: var(--g-border-width) solid var(--panel-accent, var(--g-color-border));
   font-family: var(--g-font-mono);
-  font-size: var(--g-font-size-sm);
-  font-weight: 600;
+  font-size: var(--g-font-size-lg);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -87,7 +86,7 @@ withDefaults(
 
 .g-panel__footer {
   padding: var(--g-space-sm) var(--g-space-md);
-  border-top: 1px solid var(--g-color-border);
-  background: var(--g-color-bg-surface);
+  border-top: var(--g-border-width) solid var(--panel-accent, var(--g-color-border));
+  background: var(--g-color-bg-base);
 }
 </style>
