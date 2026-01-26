@@ -18,6 +18,7 @@ export interface BuildingDefinition {
   repurposeTargets?: string[]; // building IDs this can convert to
   moraleBoost?: number; // Passive morale boost when active
   capacity?: number; // Housing capacity for habitats
+  oxygenContribution?: number; // Oxygen units contributed per sol when active
 }
 
 export interface Building {
