@@ -155,7 +155,6 @@ watch(dimensions, render);
   height: 100%;
   min-height: 250px;
   background: var(--g-color-bg-base);
-  border: var(--g-border-width) solid var(--g-color-border-strong);
   overflow: hidden;
 }
 
