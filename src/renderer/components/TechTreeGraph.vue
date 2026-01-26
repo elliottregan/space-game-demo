@@ -38,7 +38,7 @@ const nodePositions: Record<string, { x: number; y: number }> = {
   generation_ship: { x: 300, y: 750 },
 };
 
-type TechStatus = "researched" | "in_progress" | "available" | "locked";
+type TechStatus = "researched" | "in_progress" | "queued" | "available" | "locked";
 
 function getTechStatus(tech: Technology): TechStatus {
   if (state.researchedTechs.some((t) => t.id === tech.id)) {
@@ -46,6 +46,9 @@ function getTechStatus(tech: Technology): TechStatus {
   }
   if (state.currentResearch?.techId === tech.id) {
     return "in_progress";
+  }
+  if (state.researchQueue.includes(tech.id)) {
+    return "queued";
   }
   if (state.availableTechs.some((t) => t.id === tech.id)) {
     return "available";

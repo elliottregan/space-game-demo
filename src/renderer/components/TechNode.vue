@@ -5,7 +5,7 @@ import type { Technology } from "../../core/models/Technology";
 interface Props {
   data: {
     tech: Technology;
-    status: "researched" | "in_progress" | "available" | "locked";
+    status: "researched" | "in_progress" | "queued" | "available" | "locked";
     progress: number;
   };
 }
@@ -21,6 +21,7 @@ defineProps<Props>();
       <div class="node-icon">
         <span v-if="data.status === 'researched'">&#10003;</span>
         <span v-else-if="data.status === 'in_progress'" class="spinner">&#9696;</span>
+        <span v-else-if="data.status === 'queued'">&#8987;</span>
         <span v-else-if="data.status === 'available'">&#9733;</span>
         <span v-else>&#128274;</span>
       </div>
@@ -91,6 +92,17 @@ defineProps<Props>();
   border-color: var(--g-color-warning);
 }
 
+.tech-node.queued {
+  border-color: oklch(70% 0.12 280);
+  background: oklch(70% 0.12 280 / 0.1);
+  opacity: 0.9;
+}
+
+.tech-node.queued:hover {
+  box-shadow: 0 0 12px oklch(70% 0.12 280 / 0.5);
+  opacity: 1;
+}
+
 .tech-node.locked {
   opacity: 0.5;
   border-color: var(--g-color-border);
@@ -122,6 +134,10 @@ defineProps<Props>();
 
 .tech-node.available .node-icon {
   color: var(--g-color-warning);
+}
+
+.tech-node.queued .node-icon {
+  color: oklch(70% 0.12 280);
 }
 
 .tech-node.locked .node-icon {
@@ -171,6 +187,10 @@ defineProps<Props>();
   color: var(--g-color-warning);
 }
 
+.tech-node.queued .node-name {
+  color: oklch(70% 0.12 280);
+}
+
 .progress-ring {
   position: absolute;
   top: -4px;
@@ -217,5 +237,9 @@ defineProps<Props>();
 
 .tech-node.available :deep(.vue-flow__handle) {
   background: var(--g-color-warning);
+}
+
+.tech-node.queued :deep(.vue-flow__handle) {
+  background: oklch(70% 0.12 280);
 }
 </style>
