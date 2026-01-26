@@ -86,65 +86,85 @@ export class ColonyManager {
     policyEffects?: { morale: number; health: number },
   ): GameEvent[] {
     const events: GameEvent[] = [];
+
+    this.updateConsumption(resources);
+    this.tryPopulationGrowth(events);
+    this.applyMoraleDecay();
+    this.applyPolicyEffects(policyEffects);
+    this.applyResourceShortageEffects(resources);
+    this.applyPositiveConditionEffects(resources, buildings);
+    this.checkLowMoraleWarning(events);
+    this.checkLowHealthWarning(events);
+    this.checkColonistDeath(buildings, events);
+
+    return events;
+  }
+
+  private tryPopulationGrowth(events: GameEvent[]): void {
     const population = this.colonists.size;
 
-    // Update colonist consumption
-    this.updateConsumption(resources);
-
-    // Check for population growth
-    if (
+    const canGrow =
       population >= MIN_POPULATION_FOR_GROWTH &&
       this.health > COLONY_HEALTH.GROWTH_REQUIREMENT &&
-      this.morale > COLONY_MORALE.GROWTH_REQUIREMENT
-    ) {
-      if (Math.random() < POPULATION_GROWTH_RATE) {
-        const newColonist = this.addColonist();
-        events.push({
-          type: "COLONIST_BORN",
-          colonistId: newColonist.id,
-          colonistName: newColonist.name,
-          severity: "info",
-          message: `A new colonist has joined: ${newColonist.name}!`,
-        });
-      }
+      this.morale > COLONY_MORALE.GROWTH_REQUIREMENT;
+
+    if (canGrow && Math.random() < POPULATION_GROWTH_RATE) {
+      const newColonist = this.addColonist();
+      events.push({
+        type: "COLONIST_BORN",
+        colonistId: newColonist.id,
+        colonistName: newColonist.name,
+        severity: "info",
+        message: `A new colonist has joined: ${newColonist.name}!`,
+      });
     }
+  }
 
-    // Check for morale/health effects
-    const resourceState = resources.getResources();
-    const netFlow = resources.getNetFlow();
-
-    // Base morale decay - colonists need entertainment/recreation
+  private applyMoraleDecay(): void {
     this.morale = Math.max(0, this.morale - COLONY_MORALE.BASE_DECAY);
+  }
 
-    // Apply operations policy effects (e.g., crunch mode)
-    if (policyEffects) {
-      this.morale = Math.max(0, this.morale + policyEffects.morale);
-      this.health = Math.max(0, Math.min(100, this.health + policyEffects.health));
-    }
+  private applyPolicyEffects(policyEffects?: { morale: number; health: number }): void {
+    if (!policyEffects) return;
 
-    // Resource shortages affect morale and health
+    this.morale = Math.max(0, this.morale + policyEffects.morale);
+    this.health = Math.max(0, Math.min(100, this.health + policyEffects.health));
+  }
+
+  private applyResourceShortageEffects(resources: ResourceManager): void {
+    const resourceState = resources.getResources();
+    const population = this.colonists.size;
+
     if (resourceState.food < population * SHORTAGE_THRESHOLDS.FOOD_MULTIPLIER) {
       this.morale = Math.max(0, this.morale - SHORTAGE_THRESHOLDS.FOOD_MORALE_PENALTY);
       this.health = Math.max(0, this.health - SHORTAGE_THRESHOLDS.FOOD_HEALTH_PENALTY);
     }
+
     if (resourceState.oxygen < population * SHORTAGE_THRESHOLDS.OXYGEN_MULTIPLIER) {
       this.health = Math.max(0, this.health - SHORTAGE_THRESHOLDS.OXYGEN_HEALTH_PENALTY);
     }
+  }
 
-    // Positive conditions improve morale
-    if ((netFlow.food || 0) > 0 && (netFlow.oxygen || 0) > 0 && (netFlow.water || 0) > 0) {
-      let moraleRecovery = COLONY_MORALE.BASE_RECOVERY;
+  private applyPositiveConditionEffects(
+    resources: ResourceManager,
+    buildings?: BuildingManager,
+  ): void {
+    const netFlow = resources.getNetFlow();
+    const hasPositiveFlow =
+      (netFlow.food || 0) > 0 && (netFlow.oxygen || 0) > 0 && (netFlow.water || 0) > 0;
 
-      // Add morale boost from recreation buildings
-      if (buildings) {
-        moraleRecovery += buildings.getTotalMoraleBoost() * 0.1;
-      }
+    if (!hasPositiveFlow) return;
 
-      this.morale = Math.min(100, this.morale + moraleRecovery);
-      this.health = Math.min(100, this.health + COLONY_MORALE.HEALTH_RECOVERY);
+    let moraleRecovery = COLONY_MORALE.BASE_RECOVERY;
+    if (buildings) {
+      moraleRecovery += buildings.getTotalMoraleBoost() * 0.1;
     }
 
-    // Low morale warnings
+    this.morale = Math.min(100, this.morale + moraleRecovery);
+    this.health = Math.min(100, this.health + COLONY_MORALE.HEALTH_RECOVERY);
+  }
+
+  private checkLowMoraleWarning(events: GameEvent[]): void {
     if (this.morale < COLONY_MORALE.LOW_WARNING_THRESHOLD) {
       events.push({
         type: "MORALE_LOW",
@@ -153,8 +173,9 @@ export class ColonyManager {
         message: `Colony morale is critically low: ${Math.floor(this.morale)}%`,
       });
     }
+  }
 
-    // Low health warnings
+  private checkLowHealthWarning(events: GameEvent[]): void {
     if (this.health < COLONY_HEALTH.LOW_WARNING_THRESHOLD) {
       events.push({
         type: "HEALTH_LOW",
@@ -163,28 +184,31 @@ export class ColonyManager {
         message: `Colony health is declining: ${Math.floor(this.health)}%`,
       });
     }
+  }
 
-    // Check for death if health is very low
-    if (
+  private checkColonistDeath(buildings: BuildingManager | undefined, events: GameEvent[]): void {
+    const population = this.colonists.size;
+
+    const deathConditionsMet =
       this.health < COLONY_HEALTH.DEATH_RISK_THRESHOLD &&
       population > COLONY_HEALTH.MIN_POPULATION_FOR_DEATH &&
-      Math.random() < COLONY_HEALTH.DEATH_CHANCE
-    ) {
-      const colonistArray = Array.from(this.colonists.values());
-      const victim = colonistArray[Math.floor(Math.random() * colonistArray.length)];
-      if (victim) {
-        this.removeColonist(victim.id, buildings);
-        events.push({
-          type: "COLONIST_DIED",
-          colonistId: victim.id,
-          colonistName: victim.name,
-          severity: "critical",
-          message: `${victim.name} has died due to poor colony conditions.`,
-        });
-      }
-    }
+      Math.random() < COLONY_HEALTH.DEATH_CHANCE;
 
-    return events;
+    if (!deathConditionsMet) return;
+
+    const colonistArray = Array.from(this.colonists.values());
+    const victim = colonistArray[Math.floor(Math.random() * colonistArray.length)];
+
+    if (victim) {
+      this.removeColonist(victim.id, buildings);
+      events.push({
+        type: "COLONIST_DIED",
+        colonistId: victim.id,
+        colonistName: victim.name,
+        severity: "critical",
+        message: `${victim.name} has died due to poor colony conditions.`,
+      });
+    }
   }
 
   private updateConsumption(resources: ResourceManager): void {
