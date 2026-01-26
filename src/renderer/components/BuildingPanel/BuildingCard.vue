@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { GButton, GCard } from "../../ui";
+import { GActionCard } from "../../ui";
 import type { BuildingDefinition } from "../../../facade";
 
 defineProps<{
@@ -49,14 +49,19 @@ function formatConsumption(def: BuildingDefinition): string {
 </script>
 
 <template>
-  <GCard
+  <GActionCard
     :title="definition.name"
+    :description="definition.description"
+    :cost="`Cost: ${formatCost(definition)}`"
+    action-label="Build"
+    :disabled="!canBuild || locked"
     class="building-card"
     :class="{ locked, disabled: !canBuild && !locked }"
+    @click="emit('build')"
     @mouseenter="emit('hover')"
     @mouseleave="emit('leave')"
   >
-    <template #header-actions>
+    <template #tag>
       <span v-if="count > 0" class="building-count">
         x{{ count }}
         <span v-if="pendingCount > 0" class="pending">
@@ -64,8 +69,6 @@ function formatConsumption(def: BuildingDefinition): string {
         </span>
       </span>
     </template>
-
-    <p class="building-desc">{{ definition.description }}</p>
 
     <div v-if="locked" class="locked-notice">
       Requires: {{ requiredTechName }}
@@ -86,24 +89,11 @@ function formatConsumption(def: BuildingDefinition): string {
           {{ definition.oxygenContribution > 0 ? '+' : '' }}{{ definition.oxygenContribution }} O₂
         </span>
       </div>
-      <div class="stat cost">
-        Cost: {{ formatCost(definition) }}
-      </div>
       <div class="stat time">
         Build time: {{ definition.constructionTime }} sols
       </div>
     </div>
-
-    <GButton
-      v-if="!locked"
-      variant="primary"
-      :disabled="!canBuild"
-      :title="buildReason"
-      @click="emit('build')"
-    >
-      Build
-    </GButton>
-  </GCard>
+  </GActionCard>
 </template>
 
 <style scoped>
@@ -125,12 +115,6 @@ function formatConsumption(def: BuildingDefinition): string {
   color: var(--g-color-warning);
 }
 
-.building-desc {
-  font-size: var(--g-font-size-xs);
-  color: var(--g-color-text-muted);
-  margin-bottom: var(--g-space-sm);
-}
-
 .locked-notice {
   font-size: var(--g-font-size-xs);
   color: var(--g-color-negative);
@@ -142,7 +126,6 @@ function formatConsumption(def: BuildingDefinition): string {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin-bottom: var(--g-space-sm);
 }
 
 .stat {
@@ -171,10 +154,6 @@ function formatConsumption(def: BuildingDefinition): string {
 
 .stat.oxygen-contrib .neutral {
   color: var(--g-color-text-muted);
-}
-
-.stat.cost {
-  color: var(--g-accent-slate);
 }
 
 .stat.time {
