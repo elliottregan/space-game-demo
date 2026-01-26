@@ -8,6 +8,63 @@ describe("Distributed Oxygen System", () => {
     gameState = new GameState();
   });
 
+  describe("Oxygen deficit efficiency penalty", () => {
+    it("should apply 50% efficiency penalty when oxygen is negative", () => {
+      gameState.resources.add({ materials: 1000 });
+
+      // Research needed techs
+      gameState.technology.completeResearch("advanced_materials");
+      gameState.technology.completeResearch("robotics");
+
+      // Build factory (-1) without any positive oxygen buildings
+      // Need to build multiple factories to go negative
+      gameState.buildings.startBuilding("automated_factory", gameState.resources, gameState.technology);
+      gameState.buildings.startBuilding("automated_factory", gameState.resources, gameState.technology);
+
+      // Fast-forward construction (30 sols)
+      for (let i = 0; i < 30; i++) {
+        gameState.tick();
+      }
+
+      // Total oxygen contribution should be -2
+      const total = gameState.buildings.getTotalOxygenContribution();
+      expect(total).toBe(-2);
+
+      // Get effective production - should be penalized
+      const factories = gameState.buildings.getActiveBuildings()
+        .filter(b => b.definitionId === "automated_factory");
+
+      const effectiveProd = gameState.buildings.getEffectiveProduction(factories[0].id);
+
+      // Base production is 15 materials, with 50% penalty should be 7.5
+      expect(effectiveProd.materials).toBe(7.5);
+    });
+
+    it("should not apply penalty when oxygen is positive", () => {
+      gameState.resources.add({ materials: 500 });
+
+      // Build habitat (+2) and farm (+2)
+      gameState.buildings.startBuilding("habitat", gameState.resources, gameState.technology);
+      gameState.buildings.startBuilding("basic_farm", gameState.resources, gameState.technology);
+
+      // Fast-forward construction
+      for (let i = 0; i < 12; i++) {
+        gameState.tick();
+      }
+
+      const total = gameState.buildings.getTotalOxygenContribution();
+      expect(total).toBeGreaterThan(0);
+
+      const farms = gameState.buildings.getActiveBuildings()
+        .filter(b => b.definitionId === "basic_farm");
+
+      const effectiveProd = gameState.buildings.getEffectiveProduction(farms[0].id);
+
+      // Base production is 10 food, no penalty
+      expect(effectiveProd.food).toBe(10);
+    });
+  });
+
   describe("BuildingDefinition.oxygenContribution", () => {
     it("should have oxygenContribution defined on habitat", () => {
       const habitat = gameState.buildings.getDefinition("habitat");

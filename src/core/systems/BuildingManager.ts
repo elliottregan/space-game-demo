@@ -19,6 +19,7 @@ import {
   CONDITION_EFFICIENCY_THRESHOLD,
   CONDITION_EFFICIENCY_PENALTY,
   MAINTENANCE_COST_MULTIPLIER,
+  OXYGEN_DEFICIT_EFFICIENCY_PENALTY,
 } from "../balance/BuildingBalance";
 import type { ResourceDelta } from "../models/Resources";
 
@@ -518,6 +519,13 @@ export class BuildingManager {
     return 1;
   }
 
+  private getOxygenDeficitMultiplier(): number {
+    if (this.getTotalOxygenContribution() < 0) {
+      return 1 - OXYGEN_DEFICIT_EFFICIENCY_PENALTY;
+    }
+    return 1;
+  }
+
   getEffectiveProduction(buildingId: string, overrideCondition?: number): ResourceDelta {
     const building = this.buildings.get(buildingId);
     if (!building || building.status !== "active" || building.broken) return {};
@@ -528,10 +536,11 @@ export class BuildingManager {
     const modeMultiplier = BUILDING_MODES[building.mode].production;
     const condition = overrideCondition ?? building.condition;
     const conditionMultiplier = this.getConditionMultiplier(condition);
+    const oxygenMultiplier = this.getOxygenDeficitMultiplier();
     const result: ResourceDelta = {};
 
     for (const [key, value] of Object.entries(def.production)) {
-      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier * conditionMultiplier;
+      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier * conditionMultiplier * oxygenMultiplier;
     }
 
     return result;
@@ -547,10 +556,11 @@ export class BuildingManager {
     const modeMultiplier = BUILDING_MODES[building.mode].consumption;
     const condition = overrideCondition ?? building.condition;
     const conditionMultiplier = this.getConditionMultiplier(condition);
+    const oxygenMultiplier = this.getOxygenDeficitMultiplier();
     const result: ResourceDelta = {};
 
     for (const [key, value] of Object.entries(def.consumption)) {
-      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier * conditionMultiplier;
+      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier * conditionMultiplier * oxygenMultiplier;
     }
 
     return result;
