@@ -681,6 +681,10 @@ export class BuildingManager {
     this.constructionSpeedBonus = bonus;
   }
 
+  getConstructionSpeedBonus(): number {
+    return this.constructionSpeedBonus;
+  }
+
   assignWorker(buildingId: string, colonistId: string): boolean {
     const building = this.buildings.get(buildingId);
     if (!building || building.status !== "active") return false;
