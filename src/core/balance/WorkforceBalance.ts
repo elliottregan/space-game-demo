@@ -60,3 +60,10 @@ export const MAX_SKILL_EFFICIENCY_BONUS = 0.2;
 
 /** Number of skills assigned to each colonist (min, max) */
 export const COLONIST_SKILL_COUNT = { min: 1, max: 2 };
+
+// Job assignment system constants
+export const ROLE_MISMATCH_PENALTY = 0.3; // 30% efficiency penalty
+export const TRAINING_WORK_PENALTY = 0.5; // 50% efficiency while training
+export const LABOR_POOL_BONUS_PER_COLONIST = 0.02; // +2% construction speed
+export const LABOR_POOL_BONUS_CAP = 0.2; // +20% max
+export const STAFFING_CURVE_EXPONENT = 1.5; // Diminishing returns curve
