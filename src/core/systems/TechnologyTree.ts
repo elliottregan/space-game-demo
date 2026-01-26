@@ -112,6 +112,11 @@ export class TechnologyTree {
   }
 
   cancelResearch(): void {
+    this.currentResearchId = null;
+    this.researchQueue = [];
+    // Note: progress is NOT cleared - preserved in researchProgress map
+
+    // Backward compatibility
     this.currentResearch = null;
   }
 

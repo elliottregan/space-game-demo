@@ -123,5 +123,19 @@ describe('TechnologyTree', () => {
       tree.startResearch('hydroponics', resources);
       expect(tree.getResearchProgress('hydroponics')).toBe(10);
     });
+
+    it('should preserve progress when cancelling research', () => {
+      tree.startResearch('hydroponics', resources);
+
+      for (let i = 0; i < 20; i++) {
+        tree.tick();
+      }
+
+      tree.cancelResearch();
+
+      expect(tree.getCurrentResearchId()).toBeNull();
+      expect(tree.getResearchProgress('hydroponics')).toBe(20);
+      expect(tree.getResearchQueue()).toEqual([]);
+    });
   });
 });
