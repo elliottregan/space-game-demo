@@ -85,6 +85,7 @@ export const vResourceGlow: Directive<HTMLElement, string> = {
 
     // Add base styles
     el.style.transition = "outline 0.2s ease";
+    el.style.outlineOffset = "-2px";
     el.dataset.resourceKey = resourceKey;
 
     // Set up reactive effect to watch highlight state
