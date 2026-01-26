@@ -27,7 +27,7 @@ defineProps<{
 <style scoped>
 .g-panel {
   background: var(--g-color-bg-surface);
-  border: 1px solid var(--g-color-border);
+  border: var(--g-border-width) solid var(--panel-accent, var(--g-color-border));
   transition: box-shadow var(--g-transition-normal);
 }
 
@@ -42,9 +42,9 @@ defineProps<{
   align-items: center;
   padding: var(--g-space-sm) var(--g-space-md);
   background: var(--g-color-bg-elevated);
-  border-bottom: 1px solid var(--g-color-border);
+  border-bottom: var(--g-border-width) solid var(--panel-accent, var(--g-color-border));
   font-family: var(--g-font-mono);
-  font-size: var(--g-font-size-sm);
+  font-size: var(--g-font-size-lg);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--g-color-text);
@@ -66,7 +66,7 @@ defineProps<{
 
 .g-panel__footer {
   padding: var(--g-space-sm) var(--g-space-md);
-  border-top: 1px solid var(--g-color-border);
-  background: var(--g-color-bg-elevated);
+  border-top: var(--g-border-width) solid var(--panel-accent, var(--g-color-border));
+  background: var(--g-color-bg-base);
 }
 </style>
