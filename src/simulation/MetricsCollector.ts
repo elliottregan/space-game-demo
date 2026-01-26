@@ -3,6 +3,20 @@
 
 import type { RunResult, AggregateStats } from "./types";
 
+/** Display names for defeat reasons. */
+const DEFEAT_REASON_NAMES: Record<string, string> = {
+  starvation: "Starvation",
+  suffocation: "Suffocation",
+  population_collapse: "Population Collapse",
+};
+
+/** Display names for victory types. */
+const VICTORY_TYPE_NAMES: Record<string, string> = {
+  population: "Population (100)",
+  generation_ship: "Generation Ship",
+  colony_charter: "Colony Charter",
+};
+
 /**
  * MetricsCollector tracks individual simulation run results and computes
  * aggregate statistics for analyzing game balance and strategy effectiveness.
@@ -56,8 +70,7 @@ export class MetricsCollector {
     const defeatBreakdown: Record<string, number> = {};
     for (const defeat of defeats) {
       if (defeat.defeatReason) {
-        defeatBreakdown[defeat.defeatReason] =
-          (defeatBreakdown[defeat.defeatReason] ?? 0) + 1;
+        defeatBreakdown[defeat.defeatReason] = (defeatBreakdown[defeat.defeatReason] ?? 0) + 1;
       }
     }
 
@@ -65,8 +78,7 @@ export class MetricsCollector {
     const victoryBreakdown: Record<string, number> = {};
     for (const victory of victories) {
       if (victory.victoryType) {
-        victoryBreakdown[victory.victoryType] =
-          (victoryBreakdown[victory.victoryType] ?? 0) + 1;
+        victoryBreakdown[victory.victoryType] = (victoryBreakdown[victory.victoryType] ?? 0) + 1;
       }
     }
 
@@ -92,28 +104,24 @@ export class MetricsCollector {
 
     console.log(`=== Simulation Results (${stats.totalRuns} runs) ===`);
     console.log(
-      `Win Rate: ${(stats.winRate * 100).toFixed(0)}% (${victories} victories, ${defeats} defeats)`
+      `Win Rate: ${(stats.winRate * 100).toFixed(0)}% (${victories} victories, ${defeats} defeats)`,
     );
 
     if (victories > 0) {
       console.log(
-        `Average Time to Win: ${stats.avgTimeToWin.toFixed(0)} sols (σ = ${stats.stdDevTimeToWin.toFixed(0)})`
+        `Average Time to Win: ${stats.avgTimeToWin.toFixed(0)} sols (σ = ${stats.stdDevTimeToWin.toFixed(0)})`,
       );
-      console.log(
-        `Fastest Win: ${stats.fastestWin} sols | Slowest Win: ${stats.slowestWin} sols`
-      );
+      console.log(`Fastest Win: ${stats.fastestWin} sols | Slowest Win: ${stats.slowestWin} sols`);
     }
 
     // Defeat breakdown
     if (defeats > 0) {
       console.log("\nDefeat Breakdown:");
-      const defeatReasons = ["starvation", "suffocation", "population_collapse"];
-      for (const reason of defeatReasons) {
+      for (const reason of Object.keys(DEFEAT_REASON_NAMES)) {
         const count = stats.defeatBreakdown[reason] ?? 0;
         if (count > 0) {
           const percentage = ((count / defeats) * 100).toFixed(0);
-          const displayName = this.formatDefeatReason(reason);
-          console.log(`  - ${displayName}: ${percentage}%`);
+          console.log(`  - ${this.formatDefeatReason(reason)}: ${percentage}%`);
         }
       }
     }
@@ -121,13 +129,11 @@ export class MetricsCollector {
     // Victory breakdown
     if (victories > 0) {
       console.log("\nVictory Breakdown:");
-      const victoryTypes = ["population", "generation_ship"];
-      for (const type of victoryTypes) {
+      for (const type of Object.keys(VICTORY_TYPE_NAMES)) {
         const count = stats.victoryBreakdown[type] ?? 0;
         if (count > 0) {
           const percentage = ((count / victories) * 100).toFixed(0);
-          const displayName = this.formatVictoryType(type);
-          console.log(`  - ${displayName}: ${percentage}%`);
+          console.log(`  - ${this.formatVictoryType(type)}: ${percentage}%`);
         }
       }
     }
@@ -144,7 +150,7 @@ export class MetricsCollector {
         runs: this.results,
       },
       null,
-      2
+      2,
     );
   }
 
@@ -188,22 +194,13 @@ export class MetricsCollector {
    * Format defeat reason for display (e.g., "population_collapse" -> "Population Collapse").
    */
   private formatDefeatReason(reason: string): string {
-    const names: Record<string, string> = {
-      starvation: "Starvation",
-      suffocation: "Suffocation",
-      population_collapse: "Population Collapse",
-    };
-    return names[reason] ?? reason;
+    return DEFEAT_REASON_NAMES[reason] ?? reason;
   }
 
   /**
    * Format victory type for display (e.g., "generation_ship" -> "Generation Ship").
    */
   private formatVictoryType(type: string): string {
-    const names: Record<string, string> = {
-      population: "Population (100)",
-      generation_ship: "Generation Ship",
-    };
-    return names[type] ?? type;
+    return VICTORY_TYPE_NAMES[type] ?? type;
   }
 }

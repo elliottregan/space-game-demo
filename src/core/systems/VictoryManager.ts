@@ -47,7 +47,7 @@ export class VictoryManager {
     // Colony Charter - faster victory path (~500 sols)
     const charterReqs = COLONY_CHARTER_REQUIREMENTS;
     const hasRequiredTechs = charterReqs.requiredTechs.every((techId) =>
-      technology.isResearched(techId)
+      technology.isResearched(techId),
     );
     const meetsPopulation = colony.getPopulation() >= charterReqs.minPopulation;
     const meetsMorale = colony.getMorale() >= charterReqs.minMorale;
@@ -56,7 +56,8 @@ export class VictoryManager {
       this.colonyCharterProgress++;
       if (this.colonyCharterProgress >= charterReqs.sustainedSols) {
         this.status = "victory";
-        this.reason = "Colony Charter achieved! Your colony has been officially recognized as self-sustaining!";
+        this.reason =
+          "Colony Charter achieved! Your colony has been officially recognized as self-sustaining!";
         events.push({
           type: "VICTORY",
           reason: this.reason,
@@ -156,7 +157,11 @@ export class VictoryManager {
     };
   }
 
-  static fromJSON(data: { status: GameStatus; reason: string; colonyCharterProgress?: number }): VictoryManager {
+  static fromJSON(data: {
+    status: GameStatus;
+    reason: string;
+    colonyCharterProgress?: number;
+  }): VictoryManager {
     const manager = new VictoryManager();
     manager.status = data.status;
     manager.reason = data.reason;

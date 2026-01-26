@@ -122,7 +122,6 @@ function cancelResearch() {
   selectedTech.value = null;
 }
 
-
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function canResearch(techId: string): boolean {
   return gameService.canResearch(techId) && !state.currentResearch;

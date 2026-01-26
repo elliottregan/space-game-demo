@@ -19,7 +19,7 @@ export type StatusVariant = "positive" | "warning" | "negative";
 export function getStatusVariant(
   value: number,
   positiveThreshold: number,
-  warningThreshold: number
+  warningThreshold: number,
 ): StatusVariant {
   if (value >= positiveThreshold) return "positive";
   if (value >= warningThreshold) return "warning";
@@ -38,5 +38,9 @@ export function getMoraleVariant(morale: number): StatusVariant {
 
 /** Get faction support variant (normalized -1 to 1 scale) */
 export function getFactionSupportNormalizedVariant(support: number): StatusVariant {
-  return getStatusVariant(support, FACTION_SUPPORT_NORMALIZED_POSITIVE, FACTION_SUPPORT_NORMALIZED_WARNING);
+  return getStatusVariant(
+    support,
+    FACTION_SUPPORT_NORMALIZED_POSITIVE,
+    FACTION_SUPPORT_NORMALIZED_WARNING,
+  );
 }

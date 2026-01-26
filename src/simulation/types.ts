@@ -158,12 +158,7 @@ export interface EventOccurrence {
 /**
  * Crisis point types.
  */
-export type CrisisType =
-  | "low_food"
-  | "low_oxygen"
-  | "low_water"
-  | "low_morale"
-  | "population_drop";
+export type CrisisType = "low_food" | "low_oxygen" | "low_water" | "low_morale" | "population_drop";
 
 /**
  * Crisis severity levels.

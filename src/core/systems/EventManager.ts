@@ -99,7 +99,7 @@ export class EventManager {
       for (const [factionId, amount] of Object.entries(choice.effects.support)) {
         const npcs = npcInfluence.getNPCs();
         for (const npc of npcs) {
-          if (npc.faction === factionId as NPCFaction) {
+          if (npc.faction === (factionId as NPCFaction)) {
             // Convert percentage-style support (e.g., 10, -5) to normalized (-1 to 1) range
             // Assuming support values in events are in percentage points (divided by 100)
             npcInfluence.adjustNPCSupport(npc.id, amount / 100);

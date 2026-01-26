@@ -26,9 +26,9 @@ export function formatTechCost(tech: Technology): string {
  * Get CSS color variable for normalized faction support (-1 to 1 scale)
  */
 export function getSupportColor(support: number): string {
-  if (support >= FACTION_SUPPORT_NORMALIZED_POSITIVE) return 'var(--color-positive)';
-  if (support >= FACTION_SUPPORT_NORMALIZED_WARNING) return 'var(--color-warning)';
-  return 'var(--color-danger)';
+  if (support >= FACTION_SUPPORT_NORMALIZED_POSITIVE) return "var(--color-positive)";
+  if (support >= FACTION_SUPPORT_NORMALIZED_WARNING) return "var(--color-warning)";
+  return "var(--color-danger)";
 }
 
 export interface HighlightInfo {
@@ -43,7 +43,7 @@ export interface HighlightInfo {
  */
 export function calculateHighlightInfo(
   cost: ResourceDelta,
-  currentResources: Record<string, number>
+  currentResources: Record<string, number>,
 ): HighlightInfo {
   const requiredResources: string[] = [];
   const deltas: Record<string, number> = {};
