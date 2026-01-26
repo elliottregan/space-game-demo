@@ -84,7 +84,7 @@ export const vResourceGlow: Directive<HTMLElement, string> = {
     const resourceKey = binding.value;
 
     // Add base styles
-    el.style.transition = "outline 0.2s ease, outline-offset 0.2s ease";
+    el.style.transition = "outline 0.2s ease";
     el.dataset.resourceKey = resourceKey;
 
     // Set up reactive effect to watch highlight state
@@ -98,7 +98,6 @@ export const vResourceGlow: Directive<HTMLElement, string> = {
           : RESOURCE_COLORS[resourceKey] || "#455A64";
 
         el.style.outline = `3px solid ${outlineColor}`;
-        el.style.outlineOffset = "2px";
         el.classList.add("resource-highlighted");
 
         if (isInsufficient) {
@@ -113,7 +112,6 @@ export const vResourceGlow: Directive<HTMLElement, string> = {
       } else {
         // Fade out by setting transparent outline (allows transition)
         el.style.outline = "3px solid transparent";
-        el.style.outlineOffset = "2px";
         el.classList.remove("resource-highlighted", "resource-insufficient", "resource-pulse");
       }
     };
