@@ -7,6 +7,9 @@ import { RouterLink } from "vue-router";
     <RouterLink to="/main" class="tab-link" active-class="active">
       Main
     </RouterLink>
+    <RouterLink to="/colony" class="tab-link" active-class="active">
+      Colony
+    </RouterLink>
     <RouterLink to="/politics" class="tab-link" active-class="active">
       Politics
     </RouterLink>
