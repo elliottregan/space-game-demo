@@ -129,20 +129,22 @@ function canResearch(techId: string): boolean {
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const queueWithProgress = computed(() => {
-  return state.researchQueue.map((techId, index) => {
-    const tech = state.technologies.find(t => t.id === techId);
-    if (!tech) return null;
+  return state.researchQueue
+    .map((techId, index) => {
+      const tech = state.technologies.find((t) => t.id === techId);
+      if (!tech) return null;
 
-    const progress = gameService.api.technology.getResearchProgress(techId);
-    const isActive = index === 0 && state.currentResearch?.techId === techId;
+      const progress = gameService.api.technology.getResearchProgress(techId);
+      const isActive = index === 0 && state.currentResearch?.techId === techId;
 
-    return {
-      tech,
-      progress,
-      percentage: (progress / tech.cost.sols) * 100,
-      isActive,
-    };
-  }).filter(Boolean);
+      return {
+        tech,
+        progress,
+        percentage: (progress / tech.cost.sols) * 100,
+        isActive,
+      };
+    })
+    .filter(Boolean);
 });
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
