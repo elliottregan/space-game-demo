@@ -3,6 +3,7 @@
 
 import type { GameAPI } from "../facade/GameAPI";
 import type { EventChoice } from "../core/models/GameEvent";
+import type { BlockedDecision, EventOccurrence } from "./types";
 
 /**
  * HeuristicStrategy simulates a "competent player" making reasonable decisions.
@@ -16,7 +17,43 @@ import type { EventChoice } from "../core/models/GameEvent";
  * 5. Victory Push - Research generation ship when available
  */
 export class HeuristicStrategy {
+  private blockedDecisions: BlockedDecision[] = [];
+  private eventsOccurred: EventOccurrence[] = [];
+
   constructor(private api: GameAPI) {}
+
+  /**
+   * Get all blocked decisions recorded during this game.
+   */
+  getBlockedDecisions(): BlockedDecision[] {
+    return this.blockedDecisions;
+  }
+
+  /**
+   * Get all events that occurred during this game.
+   */
+  getEventsOccurred(): EventOccurrence[] {
+    return this.eventsOccurred;
+  }
+
+  /**
+   * Record a blocked decision attempt.
+   */
+  private recordBlockedDecision(
+    category: BlockedDecision["category"],
+    action: string,
+    reason: string,
+    missingResources?: Record<string, number>
+  ): void {
+    const sol = this.api.game.currentSol();
+    this.blockedDecisions.push({
+      sol,
+      category,
+      action,
+      reason,
+      missingResources,
+    });
+  }
 
   /**
    * Main entry point - called each tick to make decisions.
@@ -59,6 +96,12 @@ export class HeuristicStrategy {
       if (canBuildOxygenGen.allowed) {
         this.api.buildings.build("oxygen_generator");
         return true;
+      } else {
+        this.recordBlockedDecision(
+          "survival",
+          "build_oxygen_generator",
+          canBuildOxygenGen.reason ?? "unknown"
+        );
       }
     }
 
@@ -101,6 +144,12 @@ export class HeuristicStrategy {
       if (canBuildFarm.allowed) {
         this.api.buildings.build("basic_farm");
         return true;
+      } else {
+        this.recordBlockedDecision(
+          "survival",
+          "build_basic_farm",
+          canBuildFarm.reason ?? "unknown"
+        );
       }
     }
 
@@ -110,6 +159,12 @@ export class HeuristicStrategy {
       if (canBuildOxygenGen.allowed) {
         this.api.buildings.build("oxygen_generator");
         return true;
+      } else {
+        this.recordBlockedDecision(
+          "survival",
+          "build_oxygen_generator",
+          canBuildOxygenGen.reason ?? "unknown"
+        );
       }
     }
 
@@ -155,11 +210,11 @@ export class HeuristicStrategy {
       const canBuildExtractor = this.api.buildings.canBuild("water_extractor");
       if (canBuildExtractor.allowed) {
         const result = this.api.buildings.build("water_extractor");
-        if (result.ok) {
+        if (result.success) {
           // Link the new building to the deposit
           const newBuilding =
             buildings.pending.find((b) => b.definitionId === "water_extractor" && !b.depositId) ??
-            result.value;
+            result.data;
           const deposit = developedAvailableWaterSites[0];
           if (newBuilding && deposit) {
             this.api.buildings.linkToDeposit(newBuilding.id, deposit.id);
@@ -221,6 +276,28 @@ export class HeuristicStrategy {
     // 3. First choice (fallback)
     const chosenChoice = this.selectBestEventChoice(choices);
     this.api.events.resolve(chosenChoice.id);
+
+    // Record the event occurrence
+    const effects: EventOccurrence["effects"] = {};
+    if (chosenChoice.effects.resources) {
+      effects.resources = { ...chosenChoice.effects.resources };
+    }
+    if (chosenChoice.effects.population !== undefined) {
+      effects.population = chosenChoice.effects.population;
+    }
+    if (chosenChoice.effects.support) {
+      effects.support = { ...chosenChoice.effects.support };
+    }
+
+    this.eventsOccurred.push({
+      sol: this.api.game.currentSol(),
+      eventId: activeEvent.definition.id,
+      eventName: activeEvent.definition.name,
+      choiceId: chosenChoice.id,
+      choiceText: chosenChoice.text,
+      effects,
+    });
+
     return true;
   }
 
@@ -298,6 +375,17 @@ export class HeuristicStrategy {
             this.api.technology.startResearch(cheapest.id);
             return true;
           }
+        } else {
+          // All available techs are blocked - record first one
+          const firstTech = availableTechs[0];
+          if (firstTech) {
+            const canResearch = this.api.technology.canResearch(firstTech.id);
+            this.recordBlockedDecision(
+              "infrastructure",
+              `research_${firstTech.id}`,
+              canResearch.reason ?? "unknown"
+            );
+          }
         }
       }
     }
@@ -310,6 +398,12 @@ export class HeuristicStrategy {
       if (canBuildSolar.allowed) {
         this.api.buildings.build("solar_panel");
         return true;
+      } else {
+        this.recordBlockedDecision(
+          "infrastructure",
+          "build_solar_panel",
+          canBuildSolar.reason ?? "unknown"
+        );
       }
     }
 
@@ -325,6 +419,12 @@ export class HeuristicStrategy {
       if (canBuildMine.allowed) {
         this.api.buildings.build("mining_station");
         return true;
+      } else {
+        this.recordBlockedDecision(
+          "infrastructure",
+          "build_mining_station",
+          canBuildMine.reason ?? "unknown"
+        );
       }
     }
 
@@ -372,6 +472,12 @@ export class HeuristicStrategy {
       if (canBuildHabitat.allowed) {
         this.api.buildings.build("habitat");
         return true;
+      } else {
+        this.recordBlockedDecision(
+          "growth",
+          "build_habitat",
+          canBuildHabitat.reason ?? "unknown"
+        );
       }
     }
 
@@ -388,6 +494,17 @@ export class HeuristicStrategy {
     if (canResearchGenShip.allowed) {
       this.api.technology.startResearch("generation_ship");
       return true;
+    } else {
+      // Only record if generation ship is in the available list (prerequisites met)
+      const techSnapshot = this.api.technology.snapshot();
+      const genShipAvailable = techSnapshot.available.some(t => t.id === "generation_ship");
+      if (genShipAvailable) {
+        this.recordBlockedDecision(
+          "victory",
+          "research_generation_ship",
+          canResearchGenShip.reason ?? "unknown"
+        );
+      }
     }
 
     return false;

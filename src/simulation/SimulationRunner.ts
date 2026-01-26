@@ -10,6 +10,11 @@ import type {
   AggregateStats,
   VictoryType,
   DefeatReason,
+  ResourceSnapshot,
+  ResourceFlowSnapshot,
+  CrisisPoint,
+  CrisisType,
+  CrisisSeverity,
 } from "./types";
 
 /**
@@ -19,11 +24,41 @@ import type {
 const MAX_SOLS = 10000;
 
 /**
+ * Interval at which resource snapshots are taken.
+ */
+const SNAPSHOT_INTERVAL = 50;
+
+/**
+ * Thresholds for detecting crisis conditions.
+ */
+const CRISIS_THRESHOLDS = {
+  food: { warning: 30, critical: 10 },
+  oxygen: { warning: 30, critical: 10 },
+  water: { warning: 20, critical: 5 },
+  morale: { warning: 40, critical: 25 },
+} as const;
+
+/**
+ * SimulationRunner orchestrates Monte Carlo simulation runs.
+ * It creates fresh game instances, runs them to completion using
+ * HeuristicStrategy, and aggregates results via MetricsCollector.
+ */
+/**
+ * Result of running simulations including both aggregate stats and individual runs.
+ */
+export interface SimulationResults {
+  stats: AggregateStats;
+  runs: RunResult[];
+}
+
+/**
  * SimulationRunner orchestrates Monte Carlo simulation runs.
  * It creates fresh game instances, runs them to completion using
  * HeuristicStrategy, and aggregates results via MetricsCollector.
  */
 export class SimulationRunner {
+  private collector: MetricsCollector | null = null;
+
   constructor(private config: SimulationConfig) {}
 
   /**
@@ -31,7 +66,7 @@ export class SimulationRunner {
    * @returns Aggregate statistics across all runs
    */
   run(): AggregateStats {
-    const collector = new MetricsCollector();
+    this.collector = new MetricsCollector();
 
     for (let i = 0; i < this.config.runs; i++) {
       // Generate seed: config.seed + i if seed provided, otherwise use run index
@@ -39,7 +74,7 @@ export class SimulationRunner {
 
       // Run single game and record result
       const result = this.runSingleGame(seed);
-      collector.recordRun(result);
+      this.collector.recordRun(result);
 
       // Verbose progress logging
       if (this.config.verbose) {
@@ -53,7 +88,26 @@ export class SimulationRunner {
       }
     }
 
-    return collector.getStats();
+    return this.collector.getStats();
+  }
+
+  /**
+   * Run all simulations and return both aggregate stats and individual runs.
+   * @returns Full simulation results including stats and all run data
+   */
+  runWithDetails(): SimulationResults {
+    const stats = this.run();
+    const runs = this.collector ? [...this.collector.getResults()] : [];
+    return { stats, runs };
+  }
+
+  /**
+   * Get individual run results from the last simulation batch.
+   * Must be called after run().
+   * @returns Array of individual run results or empty if run() hasn't been called
+   */
+  getRunResults(): readonly RunResult[] {
+    return this.collector?.getResults() ?? [];
   }
 
   /**
@@ -73,15 +127,27 @@ export class SimulationRunner {
     const buildingsBuiltMap = new Map<string, number>();
     const techsResearchedSet = new Set<string>();
 
+    // Enhanced tracking structures
+    const resourceTimeline: ResourceSnapshot[] = [];
+    const flowTimeline: ResourceFlowSnapshot[] = [];
+    const crisisTimeline: CrisisPoint[] = [];
+    const buildingFirstBuiltSol = new Map<string, number>();
+    const techCompletedSol = new Map<string, number>();
+    let previousPopulation = api.colony.snapshot().population;
+
     // Track initial researched techs (should be none at start)
     for (const tech of api.technology.snapshot().researched) {
       techsResearchedSet.add(tech.id);
+      techCompletedSol.set(tech.id, 0);
     }
 
     // Track initial buildings
     for (const building of api.buildings.snapshot().active) {
       const count = buildingsBuiltMap.get(building.definitionId) ?? 0;
       buildingsBuiltMap.set(building.definitionId, count + 1);
+      if (!buildingFirstBuiltSol.has(building.definitionId)) {
+        buildingFirstBuiltSol.set(building.definitionId, 0);
+      }
     }
 
     // Game loop
@@ -94,15 +160,64 @@ export class SimulationRunner {
       api.game.advanceSol();
       solsRun++;
 
+      const currentSol = api.game.currentSol();
+      const colony = api.colony.snapshot();
+      const resources = api.resources.snapshot();
+
       // Update peak population tracking
-      const currentPop = api.colony.snapshot().population;
+      const currentPop = colony.population;
       if (currentPop > peakPopulation) {
         peakPopulation = currentPop;
       }
 
+      // Track population drops as crisis events
+      if (currentPop < previousPopulation) {
+        const drop = previousPopulation - currentPop;
+        if (drop >= 3) {
+          crisisTimeline.push({
+            sol: currentSol,
+            type: "population_drop",
+            severity: drop >= 5 ? "critical" : "warning",
+            value: currentPop,
+            threshold: previousPopulation,
+          });
+        }
+      }
+      previousPopulation = currentPop;
+
+      // Detect and record crisis conditions
+      this.detectCrisis(currentSol, resources.current, colony.morale, crisisTimeline);
+
+      // Take periodic snapshots
+      if (currentSol % SNAPSHOT_INTERVAL === 0) {
+        resourceTimeline.push({
+          sol: currentSol,
+          food: resources.current.food,
+          oxygen: resources.current.oxygen,
+          water: resources.current.water,
+          power: resources.current.power,
+          materials: resources.current.materials,
+          population: currentPop,
+          morale: colony.morale,
+          health: colony.health,
+        });
+
+        flowTimeline.push({
+          sol: currentSol,
+          netFood: (resources.production.food ?? 0) - (resources.consumption.food ?? 0),
+          netOxygen: (resources.production.oxygen ?? 0) - (resources.consumption.oxygen ?? 0),
+          netWater: (resources.production.water ?? 0) - (resources.consumption.water ?? 0),
+          netPower: (resources.production.power ?? 0) - (resources.consumption.power ?? 0),
+          netMaterials: (resources.production.materials ?? 0) - (resources.consumption.materials ?? 0),
+        });
+      }
+
       // Track newly researched techs
       for (const tech of api.technology.snapshot().researched) {
-        techsResearchedSet.add(tech.id);
+        if (!techsResearchedSet.has(tech.id)) {
+          techsResearchedSet.add(tech.id);
+          techCompletedSol.set(tech.id, currentSol);
+        }
       }
 
       // Track buildings - count current buildings of each type
@@ -117,11 +232,14 @@ export class SimulationRunner {
         currentCounts.set(building.definitionId, count + 1);
       }
 
-      // Update tracking with max seen counts
+      // Update tracking with max seen counts and first-built sol
       for (const [defId, count] of currentCounts) {
         const prevMax = buildingsBuiltMap.get(defId) ?? 0;
         if (count > prevMax) {
           buildingsBuiltMap.set(defId, count);
+          if (!buildingFirstBuiltSol.has(defId)) {
+            buildingFirstBuiltSol.set(defId, currentSol);
+          }
         }
       }
 
@@ -132,6 +250,30 @@ export class SimulationRunner {
     const victoryState = api.game.victoryState();
     const finalSol = api.game.currentSol();
 
+    // Capture resources at death if defeated
+    let resourcesAtDeath: ResourceSnapshot | undefined;
+    let defeatSol: number | undefined;
+    if (victoryState.status !== "victory") {
+      defeatSol = finalSol;
+      const resources = api.resources.snapshot();
+      const colony = api.colony.snapshot();
+      resourcesAtDeath = {
+        sol: finalSol,
+        food: resources.current.food,
+        oxygen: resources.current.oxygen,
+        water: resources.current.water,
+        power: resources.current.power,
+        materials: resources.current.materials,
+        population: colony.population,
+        morale: colony.morale,
+        health: colony.health,
+      };
+    }
+
+    // Get blocked decisions and events from strategy
+    const blockedDecisions = strategy.getBlockedDecisions();
+    const eventsOccurred = strategy.getEventsOccurred();
+
     // Convert to RunResult
     return this.buildRunResult(
       seed,
@@ -139,12 +281,67 @@ export class SimulationRunner {
       peakPopulation,
       victoryState,
       techsResearchedSet,
-      buildingsBuiltMap
+      buildingsBuiltMap,
+      {
+        resourceTimeline,
+        flowTimeline,
+        crisisTimeline,
+        buildingFirstBuiltSol,
+        techCompletedSol,
+        defeatSol,
+        resourcesAtDeath,
+        blockedDecisions,
+        eventsOccurred,
+      }
     );
   }
 
   /**
-   * Build RunResult from game state.
+   * Detect crisis conditions and record them.
+   */
+  private detectCrisis(
+    sol: number,
+    resources: { food: number; oxygen: number; water: number },
+    morale: number,
+    crisisTimeline: CrisisPoint[]
+  ): void {
+    const checkResource = (
+      type: CrisisType,
+      value: number,
+      thresholds: { warning: number; critical: number }
+    ) => {
+      let severity: CrisisSeverity | null = null;
+      let threshold = 0;
+
+      if (value <= thresholds.critical) {
+        severity = "critical";
+        threshold = thresholds.critical;
+      } else if (value <= thresholds.warning) {
+        severity = "warning";
+        threshold = thresholds.warning;
+      }
+
+      if (severity) {
+        // Only record if this is a new crisis or escalation
+        const lastCrisis = crisisTimeline.filter((c) => c.type === type).pop();
+        if (
+          !lastCrisis ||
+          lastCrisis.sol < sol - 10 ||
+          (lastCrisis.severity === "warning" && severity === "critical")
+        ) {
+          crisisTimeline.push({ sol, type, severity, value, threshold });
+        }
+      }
+    };
+
+    checkResource("low_food", resources.food, CRISIS_THRESHOLDS.food);
+    checkResource("low_oxygen", resources.oxygen, CRISIS_THRESHOLDS.oxygen);
+    checkResource("low_water", resources.water, CRISIS_THRESHOLDS.water);
+    checkResource("low_morale", morale, CRISIS_THRESHOLDS.morale);
+  }
+
+  /**
+   * Enhanced tracking data passed to buildRunResult.
    */
   private buildRunResult(
     seed: number,
@@ -152,7 +349,18 @@ export class SimulationRunner {
     peakPopulation: number,
     victoryState: { status: string; reason?: string },
     techsResearched: Set<string>,
-    buildingsBuilt: Map<string, number>
+    buildingsBuilt: Map<string, number>,
+    enhanced?: {
+      resourceTimeline: ResourceSnapshot[];
+      flowTimeline: ResourceFlowSnapshot[];
+      crisisTimeline: CrisisPoint[];
+      buildingFirstBuiltSol: Map<string, number>;
+      techCompletedSol: Map<string, number>;
+      defeatSol?: number;
+      resourcesAtDeath?: ResourceSnapshot;
+      blockedDecisions: import("./types").BlockedDecision[];
+      eventsOccurred: import("./types").EventOccurrence[];
+    }
   ): RunResult {
     const outcome = victoryState.status === "victory" ? "victory" : "defeat";
 
@@ -172,6 +380,21 @@ export class SimulationRunner {
       buildingsRecord[defId] = count;
     }
 
+    // Convert enhanced tracking maps to records
+    const buildingFirstBuiltSolRecord: Record<string, number> = {};
+    if (enhanced?.buildingFirstBuiltSol) {
+      for (const [defId, sol] of enhanced.buildingFirstBuiltSol) {
+        buildingFirstBuiltSolRecord[defId] = sol;
+      }
+    }
+
+    const techCompletedSolRecord: Record<string, number> = {};
+    if (enhanced?.techCompletedSol) {
+      for (const [techId, sol] of enhanced.techCompletedSol) {
+        techCompletedSolRecord[techId] = sol;
+      }
+    }
+
     return {
       seed,
       outcome,
@@ -181,6 +404,24 @@ export class SimulationRunner {
       peakPopulation,
       techsResearched: Array.from(techsResearched),
       buildingsBuilt: buildingsRecord,
+      // Enhanced tracking fields
+      resourceTimeline: enhanced?.resourceTimeline,
+      flowTimeline: enhanced?.flowTimeline,
+      crisisTimeline: enhanced?.crisisTimeline,
+      buildingFirstBuiltSol: Object.keys(buildingFirstBuiltSolRecord).length > 0
+        ? buildingFirstBuiltSolRecord
+        : undefined,
+      techCompletedSol: Object.keys(techCompletedSolRecord).length > 0
+        ? techCompletedSolRecord
+        : undefined,
+      defeatSol: enhanced?.defeatSol,
+      resourcesAtDeath: enhanced?.resourcesAtDeath,
+      blockedDecisions: enhanced?.blockedDecisions?.length
+        ? enhanced.blockedDecisions
+        : undefined,
+      eventsOccurred: enhanced?.eventsOccurred?.length
+        ? enhanced.eventsOccurred
+        : undefined,
     };
   }
 
