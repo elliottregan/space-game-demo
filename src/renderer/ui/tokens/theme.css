@@ -1,7 +1,7 @@
 :root {
   /* Color palette - cool blues/cyans with warm accents */
   --g-color-bg-base: oklch(10% 0.02 250);
-  --g-color-bg-surface: oklch(15% 0.02 250);
+  --g-color-bg-surface: oklch(10% 0.02 250);  /* same as base - no grey differentiation */
   --g-color-bg-elevated: oklch(20% 0.03 250);
 
   --g-color-border: oklch(30% 0.03 250);
@@ -27,12 +27,18 @@
   --g-space-lg: 24px;
   --g-space-xl: 32px;
 
+  /* Border widths */
+  --g-border-width: 2px;
+  --g-border-width-thick: 3px;
+
   /* Typography */
   --g-font-mono: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
   --g-font-size-xs: 0.625rem;
   --g-font-size-sm: 0.75rem;
   --g-font-size-md: 0.875rem;
-  --g-font-size-lg: 1rem;
+  --g-font-size-lg: 1.25rem;
+  --g-font-size-xl: 1.5rem;
+  --g-font-size-2xl: 2rem;
 
   /* Transitions */
   --g-transition-fast: 150ms ease;
