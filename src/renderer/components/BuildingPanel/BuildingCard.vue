@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { GButton } from "../../ui";
+import { GButton, GCard } from "../../ui";
 import type { BuildingDefinition } from "../../../facade";
 
 defineProps<{
@@ -49,21 +49,21 @@ function formatConsumption(def: BuildingDefinition): string {
 </script>
 
 <template>
-  <div
+  <GCard
+    :title="definition.name"
     class="building-card"
     :class="{ locked, disabled: !canBuild && !locked }"
     @mouseenter="emit('hover')"
     @mouseleave="emit('leave')"
   >
-    <div class="building-header">
-      <span class="building-name">{{ definition.name }}</span>
+    <template #header-actions>
       <span v-if="count > 0" class="building-count">
         x{{ count }}
         <span v-if="pendingCount > 0" class="pending">
           ({{ pendingCount }} building)
         </span>
       </span>
-    </div>
+    </template>
 
     <p class="building-desc">{{ definition.description }}</p>
 
@@ -103,16 +103,10 @@ function formatConsumption(def: BuildingDefinition): string {
     >
       Build
     </GButton>
-  </div>
+  </GCard>
 </template>
 
 <style scoped>
-.building-card {
-  padding: var(--g-space-md);
-  border-top: var(--g-border-width) solid var(--g-color-border-strong);
-  border-bottom: var(--g-border-width) solid var(--g-color-border-strong);
-}
-
 .building-card.locked {
   opacity: 0.5;
 }
@@ -121,23 +115,8 @@ function formatConsumption(def: BuildingDefinition): string {
   opacity: 0.7;
 }
 
-.building-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--g-space-xs);
-}
-
-.building-name {
-  font-family: var(--g-font-mono);
-  font-weight: 600;
-  color: var(--g-accent-amber);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: var(--g-font-size-sm);
-}
-
 .building-count {
+  font-family: var(--g-font-mono);
   font-size: var(--g-font-size-sm);
   color: var(--g-color-info);
 }

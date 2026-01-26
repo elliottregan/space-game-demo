@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Building, BuildingDefinition, Colonist, SkillDefinition } from "../../../facade";
-import { GEntityHeader } from "../../ui";
+import { GEntityHeader, GCardGrid } from "../../ui";
 import ColonistRow from "./ColonistRow.vue";
 
 const props = defineProps<{
@@ -36,7 +36,7 @@ const capacity = computed(() => props.definition?.capacity || 0);
       Residents: {{ residents.length }}/{{ capacity }}
     </div>
 
-    <div class="residents-list" v-if="building.status === 'active' && residents.length > 0">
+    <GCardGrid v-if="building.status === 'active' && residents.length > 0" class="residents-list">
       <ColonistRow
         v-for="colonist in residents"
         :key="colonist.id"
@@ -44,7 +44,7 @@ const capacity = computed(() => props.definition?.capacity || 0);
         :skill-definitions="skillDefinitions"
         show-workplace
       />
-    </div>
+    </GCardGrid>
 
     <div
       v-if="building.status === 'active' && residents.length === 0"
@@ -78,9 +78,7 @@ const capacity = computed(() => props.definition?.capacity || 0);
 }
 
 .residents-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--g-space-md);
+  margin-top: var(--g-space-sm);
 }
 
 .no-residents {

@@ -4,7 +4,7 @@ import { gameService } from "../../services/GameService";
 import type { BuildingDefinition } from "../../../facade";
 import { highlightResources, clearHighlights } from "../../directives/ResourceHighlight";
 import { calculateHighlightInfo } from "../../utils/formatters";
-import { GPanel } from "../../ui";
+import { GPanel, GCardGrid } from "../../ui";
 import CategoryTabs from "./CategoryTabs.vue";
 import BuildingCard from "./BuildingCard.vue";
 import ConstructionQueue from "./ConstructionQueue.vue";
@@ -146,7 +146,7 @@ function performMaintenance(buildingId: string): void {
       @update:selected-category="selectedCategory = $event"
     />
 
-    <div class="building-list">
+    <GCardGrid class="building-list">
       <BuildingCard
         v-for="def in filteredBuildings"
         :key="def.id"
@@ -161,7 +161,7 @@ function performMaintenance(buildingId: string): void {
         @hover="onBuildingHover(def)"
         @leave="onBuildingLeave"
       />
-    </div>
+    </GCardGrid>
 
     <ConstructionQueue
       :pending-buildings="pendingBuildings"
@@ -181,9 +181,6 @@ function performMaintenance(buildingId: string): void {
 
 <style scoped>
 .building-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: var(--g-space-md);
   max-height: 100%;
   overflow-y: auto;
 }

@@ -11,6 +11,8 @@ export { default as GEmptyState } from "./primitives/GEmptyState.vue";
 export { default as GSection } from "./primitives/GSection.vue";
 export { default as GTabGroup } from "./primitives/GTabGroup.vue";
 export type { Tab } from "./primitives/GTabGroup.vue";
+export { default as GCardGrid } from "./primitives/GCardGrid.vue";
+export { default as GCard } from "./primitives/GCard.vue";
 
 // Composites
 export { default as ResourceBadge } from "./composites/ResourceBadge.vue";
