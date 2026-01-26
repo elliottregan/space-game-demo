@@ -181,13 +181,10 @@ function performMaintenance(buildingId: string): void {
 
 <style scoped>
 .building-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--g-space-md);
   max-height: 100%;
   overflow-y: auto;
-}
-
-.building-list > :deep(*) + :deep(*) {
-  border-top: var(--g-border-width) solid var(--g-color-border-strong);
 }
 </style>
