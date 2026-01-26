@@ -552,12 +552,14 @@ export class BuildingManager {
     const condition = overrideCondition ?? building.condition;
     const conditionMultiplier = this.getConditionMultiplier(condition);
     const oxygenMultiplier = this.getOxygenDeficitMultiplier();
+    const staffingMultiplier = this.getStaffingEfficiency(buildingId);
+    const workerMultiplier = this.getWorkerEfficiency(buildingId);
     const result: ResourceDelta = {};
 
     for (const [key, value] of Object.entries(def.production)) {
       if (value)
         result[key as keyof ResourceDelta] =
-          value * modeMultiplier * conditionMultiplier * oxygenMultiplier;
+          value * modeMultiplier * conditionMultiplier * oxygenMultiplier * staffingMultiplier * workerMultiplier;
     }
 
     return result;
@@ -574,12 +576,14 @@ export class BuildingManager {
     const condition = overrideCondition ?? building.condition;
     const conditionMultiplier = this.getConditionMultiplier(condition);
     const oxygenMultiplier = this.getOxygenDeficitMultiplier();
+    const staffingMultiplier = this.getStaffingEfficiency(buildingId);
+    const workerMultiplier = this.getWorkerEfficiency(buildingId);
     const result: ResourceDelta = {};
 
     for (const [key, value] of Object.entries(def.consumption)) {
       if (value)
         result[key as keyof ResourceDelta] =
-          value * modeMultiplier * conditionMultiplier * oxygenMultiplier;
+          value * modeMultiplier * conditionMultiplier * oxygenMultiplier * staffingMultiplier * workerMultiplier;
     }
 
     return result;

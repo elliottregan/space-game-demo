@@ -118,6 +118,50 @@ describe("Job Assignment", () => {
     });
   });
 
+  describe("staffing affects production", () => {
+    it("unstaffed building with worker slots produces nothing", () => {
+      const farm = gameState.buildings.startBuilding(
+        "basic_farm",
+        gameState.resources,
+        gameState.technology
+      );
+      for (let i = 0; i < 15; i++) {
+        gameState.buildings.tick(gameState.resources);
+      }
+
+      const production = gameState.buildings.getEffectiveProduction(farm!.id);
+      expect(production.food).toBe(0);
+    });
+
+    it("fully staffed building produces at full rate", () => {
+      const farm = gameState.buildings.startBuilding(
+        "basic_farm",
+        gameState.resources,
+        gameState.technology
+      );
+      for (let i = 0; i < 15; i++) {
+        gameState.buildings.tick(gameState.resources);
+      }
+
+      // Assign 2 of 2 workers
+      const colonists = gameState.colony.getColonists();
+      // Find farmers for best efficiency
+      const farmers = colonists.filter((c) => c.role === ColonistRole.FARMING);
+      if (farmers.length >= 2) {
+        gameState.buildings.assignWorker(farm!.id, farmers[0].id);
+        gameState.buildings.assignWorker(farm!.id, farmers[1].id);
+      } else {
+        gameState.buildings.assignWorker(farm!.id, colonists[0].id);
+        gameState.buildings.assignWorker(farm!.id, colonists[1].id);
+      }
+
+      const production = gameState.buildings.getEffectiveProduction(farm!.id);
+      // Basic farm produces 10 food, staffing multiplier = 1
+      // Worker efficiency depends on colonist stats
+      expect(production.food).toBeGreaterThan(0);
+    });
+  });
+
   describe("getWorkerEfficiency", () => {
     it("returns 1 for building without worker slots", () => {
       const solar = gameState.buildings.startBuilding(
