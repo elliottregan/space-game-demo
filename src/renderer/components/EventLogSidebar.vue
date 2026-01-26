@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { gameService } from "../services/GameService";
-import { GPanel } from "../ui";
+import { GPanel, GEmptyState } from "../ui";
 
 const state = gameService.getState();
 
@@ -51,9 +51,7 @@ function getIcon(type: string): string {
           <span class="event-icon">{{ getIcon(event.type) }}</span>
           <span class="event-message">{{ event.message || event.type }}</span>
         </div>
-        <div v-if="displayedEvents.length === 0" class="no-events">
-          No recent events
-        </div>
+        <GEmptyState v-if="displayedEvents.length === 0" message="No recent events" />
       </div>
     </GPanel>
   </aside>
@@ -115,12 +113,4 @@ function getIcon(type: string): string {
 .event-message {
   color: var(--g-color-text);
   line-height: 1.3;
-}
-
-.no-events {
-  color: var(--g-color-text-muted);
-  font-style: italic;
-  text-align: center;
-  padding: var(--g-space-md);
-}
-</style>
+}</style>

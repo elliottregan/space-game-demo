@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { GButton } from "../../ui";
+import { GTabGroup } from "../../ui";
 
 defineProps<{
   selectedCategory: "all" | "available" | "built" | "recreation";
@@ -13,42 +13,14 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="category-tabs">
-    <GButton
-      :variant="selectedCategory === 'available' ? 'primary' : 'ghost'"
-      size="sm"
-      @click="emit('update:selectedCategory', 'available')"
-    >
-      Available
-    </GButton>
-    <GButton
-      :variant="selectedCategory === 'built' ? 'primary' : 'ghost'"
-      size="sm"
-      @click="emit('update:selectedCategory', 'built')"
-    >
-      Built ({{ activeCount }})
-    </GButton>
-    <GButton
-      :variant="selectedCategory === 'recreation' ? 'primary' : 'ghost'"
-      size="sm"
-      @click="emit('update:selectedCategory', 'recreation')"
-    >
-      Recreation
-    </GButton>
-    <GButton
-      :variant="selectedCategory === 'all' ? 'primary' : 'ghost'"
-      size="sm"
-      @click="emit('update:selectedCategory', 'all')"
-    >
-      All
-    </GButton>
-  </div>
+  <GTabGroup
+    :model-value="selectedCategory"
+    @update:model-value="emit('update:selectedCategory', $event as 'all' | 'available' | 'built' | 'recreation')"
+    :tabs="[
+      { id: 'available', label: 'Available' },
+      { id: 'built', label: 'Built', badge: activeCount },
+      { id: 'recreation', label: 'Recreation' },
+      { id: 'all', label: 'All' }
+    ]"
+  />
 </template>
-
-<style scoped>
-.category-tabs {
-  display: flex;
-  gap: var(--g-space-xs);
-  margin-bottom: var(--g-space-md);
-}
-</style>

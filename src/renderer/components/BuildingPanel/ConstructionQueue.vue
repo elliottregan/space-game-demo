@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { GProgress } from "../../ui";
+import { GProgress, GSection } from "../../ui";
 import type { PendingBuilding } from "../../../facade";
 
 const props = defineProps<{
@@ -24,8 +24,7 @@ function getRemainingBuildTime(building: PendingBuilding): number {
 </script>
 
 <template>
-  <div v-if="pendingBuildings.length > 0" class="construction-queue">
-    <h3>Under Construction</h3>
+  <GSection v-if="pendingBuildings.length > 0" title="Under Construction" variant="warning" border="none" class="construction-queue">
     <div
       v-for="building in pendingBuildings"
       :key="building.id"
@@ -42,7 +41,7 @@ function getRemainingBuildTime(building: PendingBuilding): number {
         {{ getRemainingBuildTime(building) }} sols
       </GProgress>
     </div>
-  </div>
+  </GSection>
 </template>
 
 <style scoped>
@@ -50,14 +49,6 @@ function getRemainingBuildTime(building: PendingBuilding): number {
   margin-top: var(--g-space-lg);
   padding-top: var(--g-space-md);
   border-top: 1px solid var(--g-color-border);
-}
-
-.construction-queue h3 {
-  font-size: var(--g-font-size-sm);
-  color: var(--g-accent-amber);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: var(--g-space-sm);
 }
 
 .construction-item {
