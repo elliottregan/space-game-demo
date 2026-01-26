@@ -3,7 +3,7 @@ import { computed } from "vue";
 import type { Colonist, SkillDefinition } from "../../../facade";
 import { ROLE_DISPLAY_NAMES, MASTERY_DISPLAY_NAMES } from "../../../core/models/Colonist";
 import { gameService } from "../../services/GameService";
-import { GCard } from "../../ui";
+import { GActionCard } from "../../ui";
 import ColonistSkillBadge from "../ColonyPanel/ColonistSkillBadge.vue";
 
 const props = defineProps<{
@@ -46,8 +46,8 @@ function isSkillActive(skill: SkillDefinition): boolean {
 </script>
 
 <template>
-  <GCard :title="colonist.name" class="colonist-row">
-    <template #header-actions>
+  <GActionCard :title="colonist.name" class="colonist-row">
+    <template #tag>
       <span class="colonist-role">
         {{ ROLE_DISPLAY_NAMES[colonist.role] }}
         ({{ MASTERY_DISPLAY_NAMES[colonist.masteryLevel] }})
@@ -74,7 +74,7 @@ function isSkillActive(skill: SkillDefinition): boolean {
         :is-active="isSkillActive(skill)"
       />
     </div>
-  </GCard>
+  </GActionCard>
 </template>
 
 <style scoped>
@@ -87,7 +87,6 @@ function isSkillActive(skill: SkillDefinition): boolean {
 .colonist-details {
   font-size: var(--g-font-size-sm);
   color: var(--g-color-text-muted);
-  margin-bottom: var(--g-space-xs);
 }
 
 .workplace {

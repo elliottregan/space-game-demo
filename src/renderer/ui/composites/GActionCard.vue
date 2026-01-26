@@ -11,7 +11,6 @@ withDefaults(
     selected?: boolean;
   }>(),
   {
-    actionLabel: "Select",
     disabled: false,
     selected: false,
   },
@@ -44,7 +43,7 @@ defineEmits<{
       <slot name="cost">{{ cost }}</slot>
     </div>
 
-    <div class="g-action-card__actions">
+    <div v-if="actionLabel" class="g-action-card__actions">
       <GButton
         size="sm"
         :disabled="disabled"
