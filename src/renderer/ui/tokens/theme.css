@@ -21,7 +21,7 @@
   --g-accent-cyan: oklch(52% 0.10 200);
   --g-accent-olive: oklch(52% 0.12 105);
   --g-accent-amber: oklch(62% 0.18 55);
-  --g-accent-slate: oklch(42% 0.02 250);
+  --g-accent-slate: oklch(50% 0.06 250);
 
   /* Semantic colors */
   --g-color-positive: oklch(48% 0.15 145);
@@ -94,7 +94,7 @@
     --g-accent-cyan: oklch(70% 0.12 200);
     --g-accent-olive: oklch(68% 0.12 105);
     --g-accent-amber: oklch(72% 0.16 65);
-    --g-accent-slate: oklch(55% 0.02 250);
+    --g-accent-slate: oklch(55% 0.14 265);
 
     /* Brightened semantic colors */
     --g-color-positive: oklch(68% 0.17 145);
