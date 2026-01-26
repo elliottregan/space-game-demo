@@ -47,136 +47,10 @@ export class BuildingManager {
       const def = this.definitions.get(building.definitionId);
       if (!def) continue;
 
-      if (building.status === "pending") {
-        const speedMultiplier = 1.0 + this.constructionSpeedBonus;
-        building.constructionProgress += speedMultiplier;
-
-        // Use repurpose time if repurposing
-        const constructionTime = building.repurposeFromDefId
-          ? this.getRepurposeTime(building.definitionId)
-          : def.constructionTime;
-
-        if (building.constructionProgress >= constructionTime) {
-          building.status = "active";
-          building.constructionProgress = constructionTime;
-          building.repurposeFromDefId = undefined; // Clear repurpose flag
-
-          // Add mode-adjusted production/consumption
-          const effectiveProd = this.getEffectiveProduction(building.id);
-          const effectiveCons = this.getEffectiveConsumption(building.id);
-          if (Object.keys(effectiveProd).length > 0) {
-            resources.addProduction(effectiveProd);
-          }
-          if (Object.keys(effectiveCons).length > 0) {
-            resources.addConsumption(effectiveCons);
-          }
-
-          events.push({
-            type: "BUILDING_COMPLETE",
-            buildingId: building.id,
-            buildingName: def.name,
-            severity: "info",
-            message: `${def.name} construction complete!`,
-          });
-        }
-      }
-
-      // Handle repairs
-      if (building.broken && building.repairProgress > 0) {
-        building.repairProgress += 1;
-        if (building.repairProgress >= REPAIR_DURATION_SOLS) {
-          building.broken = false;
-          building.repairProgress = 0;
-
-          // Re-add production/consumption after repair
-          const effectiveProd = this.getEffectiveProduction(building.id);
-          const effectiveCons = this.getEffectiveConsumption(building.id);
-          if (Object.keys(effectiveProd).length > 0) {
-            resources.addProduction(effectiveProd);
-          }
-          if (Object.keys(effectiveCons).length > 0) {
-            resources.addConsumption(effectiveCons);
-          }
-
-          events.push({
-            type: "BUILDING_REPAIRED",
-            buildingId: building.id,
-            buildingName: def.name,
-            severity: "info",
-            message: `${def.name} repaired!`,
-          });
-        }
-      }
-
-      // Handle recycling progress
-      if (building.status === "recycling") {
-        building.recyclingProgress = (building.recyclingProgress || 0) + 1;
-        const recycleTime = this.getRecycleTime(building.id);
-
-        if (building.recyclingProgress >= recycleTime) {
-          const recycleValue = this.getRecycleValue(building.id);
-          if (recycleValue) {
-            resources.add(recycleValue);
-          }
-
-          events.push({
-            type: "BUILDING_RECYCLED",
-            buildingId: building.id,
-            buildingName: def.name,
-            severity: "info",
-            message: `${def.name} recycled for materials.`,
-          });
-
-          buildingsToDelete.push(building.id);
-        }
-      }
-
-      // Handle building aging and condition decay
-      if (building.status === "active" && !building.broken) {
-        building.age += 1;
-
-        // Condition decay starts after MAINTENANCE_START_SOL
-        if (this.currentSol >= MAINTENANCE_START_SOL) {
-          // Decay condition every CONDITION_DECAY_INTERVAL sols
-          if (building.age % CONDITION_DECAY_INTERVAL === 0 && building.condition > 0) {
-            const oldCondition = building.condition;
-            building.condition = Math.max(0, building.condition - CONDITION_DECAY_AMOUNT);
-
-            // Check if crossing efficiency threshold - need to update production/consumption
-            if (
-              oldCondition >= CONDITION_EFFICIENCY_THRESHOLD &&
-              building.condition < CONDITION_EFFICIENCY_THRESHOLD
-            ) {
-              // Remove old production/consumption and re-add with penalty
-              const oldProd = this.getEffectiveProductionWithCondition(building.id, oldCondition);
-              const oldCons = this.getEffectiveConsumptionWithCondition(building.id, oldCondition);
-              if (Object.keys(oldProd).length > 0) {
-                resources.removeProduction(oldProd);
-              }
-              if (Object.keys(oldCons).length > 0) {
-                resources.removeConsumption(oldCons);
-              }
-
-              const newProd = this.getEffectiveProduction(building.id);
-              const newCons = this.getEffectiveConsumption(building.id);
-              if (Object.keys(newProd).length > 0) {
-                resources.addProduction(newProd);
-              }
-              if (Object.keys(newCons).length > 0) {
-                resources.addConsumption(newCons);
-              }
-
-              events.push({
-                type: "BUILDING_DEGRADED",
-                buildingId: building.id,
-                buildingName: def.name,
-                severity: "warning",
-                message: `${def.name} condition critical - efficiency reduced!`,
-              });
-            }
-          }
-        }
-      }
+      this.processConstruction(building, def, resources, events);
+      this.processRepairs(building, def, resources, events);
+      this.processRecycling(building, def, resources, events, buildingsToDelete);
+      this.processMaintenanceDecay(building, def, resources, events);
     }
 
     // Delete buildings that were recycled (outside of iteration loop)
@@ -185,6 +59,134 @@ export class BuildingManager {
     }
 
     return events;
+  }
+
+  private processConstruction(
+    building: Building,
+    def: BuildingDefinition,
+    resources: ResourceManager,
+    events: GameEvent[],
+  ): void {
+    if (building.status !== "pending") return;
+
+    const speedMultiplier = 1.0 + this.constructionSpeedBonus;
+    building.constructionProgress += speedMultiplier;
+
+    // Use repurpose time if repurposing
+    const constructionTime = building.repurposeFromDefId
+      ? this.getRepurposeTime(building.definitionId)
+      : def.constructionTime;
+
+    if (building.constructionProgress >= constructionTime) {
+      building.status = "active";
+      building.constructionProgress = constructionTime;
+      building.repurposeFromDefId = undefined; // Clear repurpose flag
+
+      // Add mode-adjusted production/consumption
+      this.applyBuildingResourceFlow(building.id, resources, true);
+
+      events.push({
+        type: "BUILDING_COMPLETE",
+        buildingId: building.id,
+        buildingName: def.name,
+        severity: "info",
+        message: `${def.name} construction complete!`,
+      });
+    }
+  }
+
+  private processRepairs(
+    building: Building,
+    def: BuildingDefinition,
+    resources: ResourceManager,
+    events: GameEvent[],
+  ): void {
+    if (!building.broken || building.repairProgress <= 0) return;
+
+    building.repairProgress += 1;
+    if (building.repairProgress >= REPAIR_DURATION_SOLS) {
+      building.broken = false;
+      building.repairProgress = 0;
+
+      // Re-add production/consumption after repair
+      this.applyBuildingResourceFlow(building.id, resources, true);
+
+      events.push({
+        type: "BUILDING_REPAIRED",
+        buildingId: building.id,
+        buildingName: def.name,
+        severity: "info",
+        message: `${def.name} repaired!`,
+      });
+    }
+  }
+
+  private processRecycling(
+    building: Building,
+    def: BuildingDefinition,
+    resources: ResourceManager,
+    events: GameEvent[],
+    buildingsToDelete: string[],
+  ): void {
+    if (building.status !== "recycling") return;
+
+    building.recyclingProgress = (building.recyclingProgress || 0) + 1;
+    const recycleTime = this.getRecycleTime(building.id);
+
+    if (building.recyclingProgress >= recycleTime) {
+      const recycleValue = this.getRecycleValue(building.id);
+      if (recycleValue) {
+        resources.add(recycleValue);
+      }
+
+      events.push({
+        type: "BUILDING_RECYCLED",
+        buildingId: building.id,
+        buildingName: def.name,
+        severity: "info",
+        message: `${def.name} recycled for materials.`,
+      });
+
+      buildingsToDelete.push(building.id);
+    }
+  }
+
+  private processMaintenanceDecay(
+    building: Building,
+    def: BuildingDefinition,
+    resources: ResourceManager,
+    events: GameEvent[],
+  ): void {
+    if (building.status !== "active" || building.broken) return;
+
+    building.age += 1;
+
+    // Condition decay starts after MAINTENANCE_START_SOL
+    if (this.currentSol < MAINTENANCE_START_SOL) return;
+
+    // Decay condition every CONDITION_DECAY_INTERVAL sols
+    if (building.age % CONDITION_DECAY_INTERVAL !== 0 || building.condition <= 0) return;
+
+    const oldCondition = building.condition;
+    building.condition = Math.max(0, building.condition - CONDITION_DECAY_AMOUNT);
+
+    // Check if crossing efficiency threshold - need to update production/consumption
+    if (
+      oldCondition >= CONDITION_EFFICIENCY_THRESHOLD &&
+      building.condition < CONDITION_EFFICIENCY_THRESHOLD
+    ) {
+      // Remove old production/consumption and re-add with penalty
+      this.applyBuildingResourceFlow(building.id, resources, false, oldCondition);
+      this.applyBuildingResourceFlow(building.id, resources, true);
+
+      events.push({
+        type: "BUILDING_DEGRADED",
+        buildingId: building.id,
+        buildingName: def.name,
+        severity: "warning",
+        message: `${def.name} condition critical - efficiency reduced!`,
+      });
+    }
   }
 
   canBuild(defId: string, resources: ResourceManager, technology: TechnologyTree): boolean {
@@ -241,27 +243,13 @@ export class BuildingManager {
     if (building.mode === mode) return true; // No change needed
 
     // Remove old production/consumption
-    const oldProd = this.getEffectiveProduction(buildingId);
-    const oldCons = this.getEffectiveConsumption(buildingId);
-    if (Object.keys(oldProd).length > 0) {
-      resources.removeProduction(oldProd);
-    }
-    if (Object.keys(oldCons).length > 0) {
-      resources.removeConsumption(oldCons);
-    }
+    this.applyBuildingResourceFlow(buildingId, resources, false);
 
     // Update mode
     building.mode = mode;
 
     // Add new production/consumption
-    const newProd = this.getEffectiveProduction(buildingId);
-    const newCons = this.getEffectiveConsumption(buildingId);
-    if (Object.keys(newProd).length > 0) {
-      resources.addProduction(newProd);
-    }
-    if (Object.keys(newCons).length > 0) {
-      resources.addConsumption(newCons);
-    }
+    this.applyBuildingResourceFlow(buildingId, resources, true);
 
     return true;
   }
@@ -271,14 +259,7 @@ export class BuildingManager {
     if (!building || building.status !== "active") return false;
 
     // Remove production/consumption before breaking
-    const oldProd = this.getEffectiveProduction(buildingId);
-    const oldCons = this.getEffectiveConsumption(buildingId);
-    if (Object.keys(oldProd).length > 0) {
-      resources.removeProduction(oldProd);
-    }
-    if (Object.keys(oldCons).length > 0) {
-      resources.removeConsumption(oldCons);
-    }
+    this.applyBuildingResourceFlow(buildingId, resources, false);
 
     building.broken = true;
     building.mode = "normal";
@@ -354,14 +335,7 @@ export class BuildingManager {
 
     // If we were below threshold, remove old production/consumption first
     if (wasBelow) {
-      const oldProd = this.getEffectiveProduction(buildingId);
-      const oldCons = this.getEffectiveConsumption(buildingId);
-      if (Object.keys(oldProd).length > 0) {
-        resources.removeProduction(oldProd);
-      }
-      if (Object.keys(oldCons).length > 0) {
-        resources.removeConsumption(oldCons);
-      }
+      this.applyBuildingResourceFlow(buildingId, resources, false);
     }
 
     building.condition = 100;
@@ -369,14 +343,7 @@ export class BuildingManager {
 
     // If we were below threshold, add new production/consumption with full efficiency
     if (wasBelow) {
-      const newProd = this.getEffectiveProduction(buildingId);
-      const newCons = this.getEffectiveConsumption(buildingId);
-      if (Object.keys(newProd).length > 0) {
-        resources.addProduction(newProd);
-      }
-      if (Object.keys(newCons).length > 0) {
-        resources.addConsumption(newCons);
-      }
+      this.applyBuildingResourceFlow(buildingId, resources, true);
     }
 
     return true;
@@ -423,14 +390,7 @@ export class BuildingManager {
 
     // Remove production/consumption if active
     if (building.status === "active" && !building.broken) {
-      const oldProd = this.getEffectiveProduction(buildingId);
-      const oldCons = this.getEffectiveConsumption(buildingId);
-      if (Object.keys(oldProd).length > 0) {
-        resources.removeProduction(oldProd);
-      }
-      if (Object.keys(oldCons).length > 0) {
-        resources.removeConsumption(oldCons);
-      }
+      this.applyBuildingResourceFlow(buildingId, resources, false);
     }
 
     building.status = "recycling";
@@ -445,14 +405,7 @@ export class BuildingManager {
 
     // Remove production/consumption if active
     if (building.status === "active" && !building.broken) {
-      const oldProd = this.getEffectiveProduction(buildingId);
-      const oldCons = this.getEffectiveConsumption(buildingId);
-      if (Object.keys(oldProd).length > 0) {
-        resources.removeProduction(oldProd);
-      }
-      if (Object.keys(oldCons).length > 0) {
-        resources.removeConsumption(oldCons);
-      }
+      this.applyBuildingResourceFlow(buildingId, resources, false);
     }
 
     // Immediate completion with penalty
@@ -531,14 +484,7 @@ export class BuildingManager {
 
     // Remove production/consumption if active
     if (building.status === "active" && !building.broken) {
-      const oldProd = this.getEffectiveProduction(buildingId);
-      const oldCons = this.getEffectiveConsumption(buildingId);
-      if (Object.keys(oldProd).length > 0) {
-        resources.removeProduction(oldProd);
-      }
-      if (Object.keys(oldCons).length > 0) {
-        resources.removeConsumption(oldCons);
-      }
+      this.applyBuildingResourceFlow(buildingId, resources, false);
     }
 
     // Deduct cost
@@ -572,7 +518,7 @@ export class BuildingManager {
     return 1;
   }
 
-  getEffectiveProduction(buildingId: string): ResourceDelta {
+  getEffectiveProduction(buildingId: string, overrideCondition?: number): ResourceDelta {
     const building = this.buildings.get(buildingId);
     if (!building || building.status !== "active" || building.broken) return {};
 
@@ -580,24 +526,7 @@ export class BuildingManager {
     if (!def?.production) return {};
 
     const modeMultiplier = BUILDING_MODES[building.mode].production;
-    const conditionMultiplier = this.getConditionMultiplier(building.condition);
-    const result: ResourceDelta = {};
-
-    for (const [key, value] of Object.entries(def.production)) {
-      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier * conditionMultiplier;
-    }
-
-    return result;
-  }
-
-  getEffectiveProductionWithCondition(buildingId: string, condition: number): ResourceDelta {
-    const building = this.buildings.get(buildingId);
-    if (!building || building.status !== "active" || building.broken) return {};
-
-    const def = this.definitions.get(building.definitionId);
-    if (!def?.production) return {};
-
-    const modeMultiplier = BUILDING_MODES[building.mode].production;
+    const condition = overrideCondition ?? building.condition;
     const conditionMultiplier = this.getConditionMultiplier(condition);
     const result: ResourceDelta = {};
 
@@ -608,7 +537,7 @@ export class BuildingManager {
     return result;
   }
 
-  getEffectiveConsumption(buildingId: string): ResourceDelta {
+  getEffectiveConsumption(buildingId: string, overrideCondition?: number): ResourceDelta {
     const building = this.buildings.get(buildingId);
     if (!building || building.status !== "active" || building.broken) return {};
 
@@ -616,7 +545,8 @@ export class BuildingManager {
     if (!def?.consumption) return {};
 
     const modeMultiplier = BUILDING_MODES[building.mode].consumption;
-    const conditionMultiplier = this.getConditionMultiplier(building.condition);
+    const condition = overrideCondition ?? building.condition;
+    const conditionMultiplier = this.getConditionMultiplier(condition);
     const result: ResourceDelta = {};
 
     for (const [key, value] of Object.entries(def.consumption)) {
@@ -626,22 +556,36 @@ export class BuildingManager {
     return result;
   }
 
-  getEffectiveConsumptionWithCondition(buildingId: string, condition: number): ResourceDelta {
-    const building = this.buildings.get(buildingId);
-    if (!building || building.status !== "active" || building.broken) return {};
+  /**
+   * Helper to add or remove building's production/consumption from resource manager.
+   * @param buildingId - The building to process
+   * @param resources - Resource manager to update
+   * @param add - true to add, false to remove
+   * @param overrideCondition - Optional condition override for calculations
+   */
+  private applyBuildingResourceFlow(
+    buildingId: string,
+    resources: ResourceManager,
+    add: boolean,
+    overrideCondition?: number,
+  ): void {
+    const prod = this.getEffectiveProduction(buildingId, overrideCondition);
+    const cons = this.getEffectiveConsumption(buildingId, overrideCondition);
 
-    const def = this.definitions.get(building.definitionId);
-    if (!def?.consumption) return {};
-
-    const modeMultiplier = BUILDING_MODES[building.mode].consumption;
-    const conditionMultiplier = this.getConditionMultiplier(condition);
-    const result: ResourceDelta = {};
-
-    for (const [key, value] of Object.entries(def.consumption)) {
-      if (value) result[key as keyof ResourceDelta] = value * modeMultiplier * conditionMultiplier;
+    if (Object.keys(prod).length > 0) {
+      if (add) {
+        resources.addProduction(prod);
+      } else {
+        resources.removeProduction(prod);
+      }
     }
-
-    return result;
+    if (Object.keys(cons).length > 0) {
+      if (add) {
+        resources.addConsumption(cons);
+      } else {
+        resources.removeConsumption(cons);
+      }
+    }
   }
 
   getDefinition(defId: string): BuildingDefinition | undefined {
