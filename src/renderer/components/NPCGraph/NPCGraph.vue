@@ -154,9 +154,8 @@ watch(dimensions, render);
   width: 100%;
   height: 100%;
   min-height: 250px;
-  background: var(--g-color-bg);
-  border: 1px solid var(--g-color-border);
-  border-radius: 4px;
+  background: var(--g-color-bg-base);
+  border: var(--g-border-width) solid var(--g-color-border-strong);
   overflow: hidden;
 }
 
@@ -164,11 +163,7 @@ watch(dimensions, render);
   display: block;
   width: 100%;
   height: 100%;
-  background: radial-gradient(
-    circle at center,
-    oklch(20% 0.02 280 / 0.3) 0%,
-    var(--g-color-bg) 100%
-  );
+  background: var(--g-color-bg-surface);
 }
 
 .legend {
@@ -178,10 +173,10 @@ watch(dimensions, render);
   display: flex;
   gap: var(--g-space-md);
   padding: var(--g-space-xs) var(--g-space-sm);
-  background: var(--g-color-bg-elevated);
-  border: 1px solid var(--g-color-border);
-  border-radius: 4px;
+  background: var(--g-color-bg-base);
+  border: var(--g-border-width) solid var(--g-color-border-strong);
   font-size: var(--g-font-size-xs);
+  font-family: var(--g-font-mono);
 }
 
 .legend-item {
@@ -197,14 +192,14 @@ watch(dimensions, render);
 }
 
 .legend-dot.earth_loyalists {
-  background: #60a5fa;
+  background: var(--g-color-info);
 }
 
 .legend-dot.mars_independence {
-  background: #4ade80;
+  background: var(--g-color-positive);
 }
 
 .legend-dot.corporate_interests {
-  background: #fbbf24;
+  background: var(--g-color-warning);
 }
 </style>
