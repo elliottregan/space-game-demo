@@ -313,4 +313,37 @@ describe("Job Assignment", () => {
       expect(gameState.getConstructionSpeedBonus()).toBeCloseTo(expectedBonus, 2);
     });
   });
+
+  describe("integration", () => {
+    it("full workflow: assign, produce, unassign", () => {
+      // Build farm
+      const farm = gameState.buildings.startBuilding(
+        "basic_farm",
+        gameState.resources,
+        gameState.technology
+      );
+      for (let i = 0; i < 15; i++) {
+        gameState.buildings.tick(gameState.resources);
+      }
+
+      // Initially no production (no workers)
+      let production = gameState.buildings.getEffectiveProduction(farm!.id);
+      expect(production.food).toBe(0);
+
+      // Assign worker
+      const colonist = gameState.colony.getColonists()[0];
+      gameState.buildings.assignWorker(farm!.id, colonist.id);
+
+      // Now has production
+      production = gameState.buildings.getEffectiveProduction(farm!.id);
+      expect(production.food).toBeGreaterThan(0);
+
+      // Unassign worker
+      gameState.buildings.removeWorker(farm!.id, colonist.id);
+
+      // Back to no production
+      production = gameState.buildings.getEffectiveProduction(farm!.id);
+      expect(production.food).toBe(0);
+    });
+  });
 });
