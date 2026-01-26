@@ -632,6 +632,18 @@ export class BuildingManager {
     return total;
   }
 
+  getTotalOxygenContribution(): number {
+    let total = 0;
+    for (const building of this.buildings.values()) {
+      if (building.status !== "active" || building.broken) continue;
+      const def = this.definitions.get(building.definitionId);
+      if (def?.oxygenContribution !== undefined) {
+        total += def.oxygenContribution;
+      }
+    }
+    return total;
+  }
+
   setConstructionSpeedBonus(bonus: number): void {
     this.constructionSpeedBonus = bonus;
   }

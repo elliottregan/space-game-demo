@@ -81,6 +81,17 @@ export class TechnologyTree {
     return this.researched.has(techId);
   }
 
+  /**
+   * Instantly completes research on a technology (test helper).
+   * Bypasses prerequisites and resource costs.
+   */
+  completeResearch(techId: string): boolean {
+    const tech = this.technologies.get(techId);
+    if (!tech) return false;
+    this.researched.add(techId);
+    return true;
+  }
+
   getTech(techId: string): Technology | undefined {
     return this.technologies.get(techId);
   }
