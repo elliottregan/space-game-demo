@@ -10,6 +10,7 @@ import {
   FAILURE_TRANSMISSION_PENALTY,
   IGNORED_DEMAND_DECAY_MULTIPLIER,
   LOBBY_BASE_COST,
+  LOBBY_SUPPORT_BOOST,
   PASS_THRESHOLD,
   POLITICAL_PRESSURE_START_SOL,
   PROJECT_PASS_SUPPORT_BOOST,
@@ -182,10 +183,10 @@ export class NPCInfluenceManager {
     // Deduct cost
     resources.deduct(project.proposalCost);
 
-    // Initialize project with all NPCs at neutral support
+    // Initialize project: faction-aligned NPCs start at full support, others at neutral
     const supportLevels = new Map<string, number>();
     for (const npc of this.npcs) {
-      supportLevels.set(npc.id, 0.0);
+      supportLevels.set(npc.id, npc.faction === project.type ? 1.0 : 0.0);
     }
 
     this.activeProject = {
@@ -209,7 +210,7 @@ export class NPCInfluenceManager {
     const npc = this.npcs[npcIdx];
     if (!npc) return Infinity;
     // Cost scales with NPC influence and boost amount
-    return Math.ceil(LOBBY_BASE_COST * npc.influence * (supportBoost / 0.1));
+    return Math.ceil(LOBBY_BASE_COST * npc.influence * (supportBoost / LOBBY_SUPPORT_BOOST));
   }
 
   /**
