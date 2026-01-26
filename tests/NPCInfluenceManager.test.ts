@@ -62,7 +62,7 @@ describe('NPCInfluenceManager', () => {
   });
 
   describe('proposeProject', () => {
-    it('should start a project with all NPCs at neutral support', () => {
+    it('should start faction-aligned NPCs at full support, others at neutral', () => {
       const resources = new ResourceManager({
         food: 100,
         oxygen: 100,
@@ -71,6 +71,7 @@ describe('NPCInfluenceManager', () => {
         materials: 200,
       });
 
+      // generation_ship is an Earth Loyalists project
       const result = manager.proposeProject('generation_ship', resources);
 
       expect(result).toBe(true);
@@ -80,9 +81,10 @@ describe('NPCInfluenceManager', () => {
       expect(active!.projectId).toBe('generation_ship');
       expect(active!.solsRemaining).toBe(10);
 
-      // All NPCs should start at 0.0 support
+      // Earth Loyalists should start at 1.0, others at 0.0
       for (const npc of manager.getNPCs()) {
-        expect(active!.supportLevels.get(npc.id)).toBe(0.0);
+        const expectedSupport = npc.faction === NPCFaction.EarthLoyalists ? 1.0 : 0.0;
+        expect(active!.supportLevels.get(npc.id)).toBe(expectedSupport);
       }
     });
 
@@ -143,12 +145,14 @@ describe('NPCInfluenceManager', () => {
         materials: 500,
       });
 
+      // generation_ship is Earth Loyalists, so lobby a non-aligned NPC
       manager.proposeProject('generation_ship', resources);
 
-      const result = manager.lobbyNPC('chen_wei', 0.3, resources);
+      // maria_santos is Mars Independence, starts at 0.0 for Earth Loyalist project
+      const result = manager.lobbyNPC('maria_santos', 0.3, resources);
 
       expect(result).toBe(true);
-      expect(manager.getActiveProject()!.supportLevels.get('chen_wei')).toBe(0.3);
+      expect(manager.getActiveProject()!.supportLevels.get('maria_santos')).toBe(0.3);
     });
 
     it('should cost materials based on NPC influence and boost amount', () => {
@@ -163,11 +167,11 @@ describe('NPCInfluenceManager', () => {
       manager.proposeProject('generation_ship', resources);
       const startMaterials = resources.getResources().materials;
 
-      // chen_wei has influence 1.5, boosting by 0.3
-      // Cost = LOBBY_BASE_COST * influence * (boost / 0.1) = 10 * 1.5 * 3 = 45
-      manager.lobbyNPC('chen_wei', 0.3, resources);
+      // maria_santos has influence 1.3, boosting by 0.3
+      // Cost = LOBBY_BASE_COST * influence * (boost / LOBBY_SUPPORT_BOOST) = 10 * 1.3 * 1 = 13
+      manager.lobbyNPC('maria_santos', 0.3, resources);
 
-      expect(resources.getResources().materials).toBe(startMaterials - 45);
+      expect(resources.getResources().materials).toBe(startMaterials - 13);
     });
 
     it('should fail if no active project', () => {

@@ -69,8 +69,11 @@ export const TRANSMISSION_FACTORS: Record<
   },
 } as const;
 
-/** Base lobbying cost per 0.1 support boost (in materials) */
+/** Base lobbying cost per lobby action (in materials) */
 export const LOBBY_BASE_COST = 10;
+
+/** Support boost per lobby action */
+export const LOBBY_SUPPORT_BOOST = 0.3;
 
 /** Cost to create a council (in materials) */
 export const COUNCIL_CREATION_COST = 50;
