@@ -1,4 +1,5 @@
 import { STARTING_POPULATION, STARTING_RESOURCES } from "./balance/EconomyBaseline";
+import { LABOR_POOL_BONUS_CAP, LABOR_POOL_BONUS_PER_COLONIST } from "./balance/WorkforceBalance";
 import { BUILDINGS } from "./data/buildings";
 import { RANDOM_EVENTS } from "./data/events";
 import { INITIAL_RELATIONSHIPS, NPCS, PROJECTS } from "./data/npcs";
@@ -34,6 +35,7 @@ export class GameState {
     this.technology = new TechnologyTree(TECHNOLOGIES);
     this.buildings = new BuildingManager(BUILDINGS);
     this.colony = new ColonyManager(STARTING_POPULATION);
+    this.buildings.setColonyManager(this.colony);
     this.workforce = new WorkforceManager();
     this.events = new EventManager(RANDOM_EVENTS);
     this.victory = new VictoryManager();
@@ -51,6 +53,9 @@ export class GameState {
 
     this.currentSol++;
     const events: GameEvent[] = [];
+
+    // Update labor pool bonus before other systems
+    this.updateLaborPoolBonus();
 
     // 1. Resources tick (production/consumption)
     events.push(...this.resources.tick());
@@ -117,6 +122,26 @@ export class GameState {
 
   clearEventLog(): void {
     this.eventLog = [];
+  }
+
+  getConstructionSpeedBonus(): number {
+    return this.buildings.getConstructionSpeedBonus();
+  }
+
+  private updateLaborPoolBonus(): void {
+    const colonists = this.colony.getColonists();
+    const assignedIds = new Set<string>();
+
+    for (const building of this.buildings.getBuildings()) {
+      for (const id of building.assignedWorkers) {
+        assignedIds.add(id);
+      }
+    }
+
+    const unassignedCount = colonists.filter((c) => !assignedIds.has(c.id)).length;
+    const bonus = Math.min(unassignedCount * LABOR_POOL_BONUS_PER_COLONIST, LABOR_POOL_BONUS_CAP);
+
+    this.buildings.setConstructionSpeedBonus(bonus);
   }
 
   /**
@@ -218,6 +243,7 @@ export class GameState {
     state.technology = TechnologyTree.fromJSON(data.technology, TECHNOLOGIES);
     state.buildings = BuildingManager.fromJSON(data.buildings, BUILDINGS);
     state.colony = ColonyManager.fromJSON(data.colony);
+    state.buildings.setColonyManager(state.colony);
     state.events = EventManager.fromJSON(data.events, RANDOM_EVENTS);
     state.victory = VictoryManager.fromJSON(data.victory);
 

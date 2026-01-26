@@ -43,25 +43,25 @@ describe("Distributed Oxygen System", () => {
     it("should not apply penalty when oxygen is positive", () => {
       gameState.resources.add({ materials: 500 });
 
-      // Build habitat (+2) and farm (+2)
+      // Build habitat (+2) and solar panel (no workerSlots, oxygenContribution: 0)
       gameState.buildings.startBuilding("habitat", gameState.resources, gameState.technology);
-      gameState.buildings.startBuilding("basic_farm", gameState.resources, gameState.technology);
+      gameState.buildings.startBuilding("solar_panel", gameState.resources, gameState.technology);
 
       // Fast-forward construction
-      for (let i = 0; i < 12; i++) {
+      for (let i = 0; i < 10; i++) {
         gameState.tick();
       }
 
       const total = gameState.buildings.getTotalOxygenContribution();
-      expect(total).toBeGreaterThan(0);
+      expect(total).toBeGreaterThan(0); // From habitat (+2)
 
-      const farms = gameState.buildings.getActiveBuildings()
-        .filter(b => b.definitionId === "basic_farm");
+      const solarPanels = gameState.buildings.getActiveBuildings()
+        .filter(b => b.definitionId === "solar_panel");
 
-      const effectiveProd = gameState.buildings.getEffectiveProduction(farms[0].id);
+      const effectiveProd = gameState.buildings.getEffectiveProduction(solarPanels[0].id);
 
-      // Base production is 10 food, no penalty
-      expect(effectiveProd.food).toBe(10);
+      // Base production is 10 power, no penalty (solar panels don't require workers)
+      expect(effectiveProd.power).toBe(10);
     });
   });
 

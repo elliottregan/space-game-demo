@@ -90,6 +90,9 @@ export class HeuristicStrategy {
    * Executes priority handlers in order until one takes action.
    */
   executeTick(): void {
+    // First, ensure workers are assigned to buildings
+    this.handleWorkerAssignment();
+
     // Execute priority handlers in order
     // Each returns true if it took an action, allowing for multiple actions per tick
     // but prioritizing survival/events over growth
@@ -101,11 +104,78 @@ export class HeuristicStrategy {
   }
 
   /**
+   * Assign unassigned colonists to buildings with worker slots.
+   * Prioritizes: 1) Farms for food production 2) Other production buildings
+   * Tries to match colonist roles to building requirements.
+   */
+  private handleWorkerAssignment(): void {
+    const buildings = this.api.buildings.snapshot();
+    const colony = this.api.colony.snapshot();
+
+    // Get buildings that need workers (active, have worker slots, not fully staffed)
+    const needsWorkers = buildings.active.filter((b) => {
+      const def = buildings.definitions.find((d) => d.id === b.definitionId);
+      if (!def?.workerSlots) return false;
+      return b.assignedWorkers.length < def.workerSlots;
+    });
+
+    if (needsWorkers.length === 0) return;
+
+    // Sort buildings by priority: farms first (food production), then others
+    needsWorkers.sort((a, b) => {
+      const defA = buildings.definitions.find((d) => d.id === a.definitionId);
+      const defB = buildings.definitions.find((d) => d.id === b.definitionId);
+      const aIsFood = defA?.production?.food ? 1 : 0;
+      const bIsFood = defB?.production?.food ? 1 : 0;
+      return bIsFood - aIsFood; // Food producers first
+    });
+
+    // Get unassigned colonists
+    const assignedIds = new Set<string>();
+    for (const building of buildings.active) {
+      for (const id of building.assignedWorkers) {
+        assignedIds.add(id);
+      }
+    }
+    const unassigned = colony.colonists.filter((c) => !assignedIds.has(c.id));
+
+    if (unassigned.length === 0) return;
+
+    // Assign colonists to buildings
+    for (const building of needsWorkers) {
+      const def = buildings.definitions.find((d) => d.id === building.definitionId);
+      if (!def?.workerSlots) continue;
+
+      const slotsNeeded = def.workerSlots - building.assignedWorkers.length;
+
+      // Find best matching colonists (prefer role match)
+      const candidates = [...unassigned].sort((a, b) => {
+        const aMatch = def.workerRole && a.role === def.workerRole ? 1 : 0;
+        const bMatch = def.workerRole && b.role === def.workerRole ? 1 : 0;
+        return bMatch - aMatch; // Role matches first
+      });
+
+      for (let i = 0; i < slotsNeeded && candidates.length > 0; i++) {
+        const colonist = candidates.shift();
+        if (!colonist) break;
+
+        const result = this.api.colony.assignToBuilding(colonist.id, building.id);
+        if (result.ok) {
+          // Remove from unassigned list
+          const idx = unassigned.findIndex((c) => c.id === colonist.id);
+          if (idx !== -1) unassigned.splice(idx, 1);
+        }
+      }
+    }
+  }
+
+  /**
    * Priority 1 - Survival: Ensure food, oxygen, and water are maintained.
    * @returns true if an action was taken
    */
   private handleSurvival(): boolean {
     const resources = this.api.resources.snapshot();
+    const buildings = this.api.buildings.snapshot();
     const currentFood = resources.current.food;
     const currentOxygen = resources.current.oxygen;
     const currentWater = resources.current.water;
@@ -116,10 +186,8 @@ export class HeuristicStrategy {
     const waterProduction = resources.production.water ?? 0;
     const waterConsumption = resources.consumption.water ?? 0;
 
-    // Early game: Build oxygen generator first if we don't have one
-    if (!this.hasBuilding("oxygen_generator")) {
-      if (this.tryBuild("oxygen_generator", "survival")) return true;
-    }
+    // Calculate oxygen contribution from buildings (not production)
+    const oxygenContribution = buildings.totalOxygenContribution;
 
     // Handle water production early - needed for morale recovery
     if (this.handleWaterProduction(waterProduction, waterConsumption, currentWater)) {
@@ -130,16 +198,21 @@ export class HeuristicStrategy {
     const oxygenFlow = oxygenProduction - oxygenConsumption;
 
     // Critical shortage: address the worse situation first
+    // Both farms and hydroponic gardens contribute oxygen
     if (currentFood < 50 || currentOxygen < 80) {
       const foodCritical = currentFood < 50 || foodFlow < 0;
       const oxygenCritical = currentOxygen < 80 || oxygenFlow < 0;
 
+      // Prioritize food slightly since farms also provide oxygen
       if (foodCritical && (!oxygenCritical || currentFood < currentOxygen)) {
         if (this.tryBuild("basic_farm", "survival", false)) return true;
       }
 
+      // For oxygen, build hydroponic garden (provides oxygen without needing workers)
+      // or farm if we can't build garden
       if (oxygenCritical) {
-        if (this.tryBuild("oxygen_generator", "survival", false)) return true;
+        if (this.tryBuild("hydroponic_garden", "survival", false)) return true;
+        if (this.tryBuild("basic_farm", "survival", false)) return true;
       }
     }
 
@@ -149,9 +222,14 @@ export class HeuristicStrategy {
       if (this.tryBuild("basic_farm", "survival")) return true;
     }
 
-    // Oxygen needs buffer of 3 (population growth + habitats consume oxygen)
-    if (oxygenFlow < 3) {
-      if (this.tryBuild("oxygen_generator", "survival")) return true;
+    // Oxygen needs positive contribution (oxygenContribution is total from buildings)
+    // Need buffer for population growth (each colonist consumes some oxygen)
+    // Note: oxygenContribution is from buildings, oxygenFlow is from production/consumption
+    if (oxygenFlow < 3 || oxygenContribution < 6) {
+      // Hydroponic garden provides oxygen without workers
+      if (this.tryBuild("hydroponic_garden", "survival")) return true;
+      // Farm provides food AND oxygen (if workers are assigned)
+      if (this.tryBuild("basic_farm", "survival")) return true;
     }
 
     return false;
