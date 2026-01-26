@@ -81,6 +81,11 @@ function formatConsumption(def: BuildingDefinition): string {
       <div v-if="definition.moraleBoost" class="stat morale-boost">
         <span class="positive">+{{ definition.moraleBoost }} Morale</span>
       </div>
+      <div v-if="definition.oxygenContribution !== undefined" class="stat oxygen-contrib">
+        <span :class="definition.oxygenContribution > 0 ? 'positive' : definition.oxygenContribution < 0 ? 'negative' : 'neutral'">
+          {{ definition.oxygenContribution > 0 ? '+' : '' }}{{ definition.oxygenContribution }} O₂
+        </span>
+      </div>
       <div class="stat cost">
         Cost: {{ formatCost(definition) }}
       </div>
@@ -180,6 +185,18 @@ function formatConsumption(def: BuildingDefinition): string {
 
 .stat.morale-boost .positive {
   color: var(--g-color-positive);
+}
+
+.stat.oxygen-contrib .positive {
+  color: var(--g-color-positive);
+}
+
+.stat.oxygen-contrib .negative {
+  color: var(--g-color-negative);
+}
+
+.stat.oxygen-contrib .neutral {
+  color: var(--g-color-text-muted);
 }
 
 .stat.cost {

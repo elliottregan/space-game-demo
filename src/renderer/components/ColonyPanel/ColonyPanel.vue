@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import { gameService } from "../../services/GameService";
 import { ColonistRole } from "../../../core/models/Colonist";
-import { getHealthVariant, getMoraleVariant } from "../../utils/displayThresholds";
+import { getHealthVariant, getMoraleVariant, getOxygenVariant } from "../../utils/displayThresholds";
 import { GPanel } from "../../ui";
 import StatRow from "./StatRow.vue";
 import WorkforceGrid from "./WorkforceGrid.vue";
@@ -49,6 +49,15 @@ const workforceStats = computed(() => {
       <span class="value positive">+{{ state.moraleBoost }}</span>
     </div>
 
+    <StatRow
+      label="Air Quality"
+      :value="state.totalOxygenContribution"
+      :variant="getOxygenVariant(state.totalOxygenContribution)"
+    />
+    <div v-if="state.totalOxygenContribution < 0" class="oxygen-warning">
+      Low oxygen! Building efficiency reduced by 50%
+    </div>
+
     <WorkforceGrid :workforce-stats="workforceStats" />
 
     <div class="colonist-list" v-if="state.colonists.length > 0">
@@ -76,6 +85,15 @@ const workforceStats = computed(() => {
 }
 .morale-bonus .positive {
   color: var(--g-color-positive);
+}
+
+.oxygen-warning {
+  font-size: 0.8em;
+  color: var(--g-color-negative);
+  background: oklch(60% 0.2 25 / 0.15);
+  padding: var(--g-space-xs) var(--g-space-sm);
+  border-radius: 4px;
+  margin-bottom: 0.5em;
 }
 
 .colonist-list {
