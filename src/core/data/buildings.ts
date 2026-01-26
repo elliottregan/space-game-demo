@@ -9,7 +9,8 @@ export const BUILDINGS: BuildingDefinition[] = [
     description: "Basic living quarters for colonists",
     cost: { materials: 50 },
     constructionTime: 10,
-    consumption: { power: 2, oxygen: 1 },
+    consumption: { power: 2 },
+    oxygenContribution: 2,
   },
   {
     id: "solar_panel",
@@ -18,15 +19,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     cost: { materials: 30 },
     constructionTime: 5,
     production: { power: 10 },
-  },
-  {
-    id: "oxygen_generator",
-    name: "Oxygen Generator",
-    description: "Extracts oxygen from Martian atmosphere",
-    cost: { materials: 40, power: 20 },
-    constructionTime: 8,
-    production: { oxygen: 12 },
-    consumption: { power: 3 },
+    oxygenContribution: 0,
   },
   {
     id: "water_extractor",
@@ -38,6 +31,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     consumption: { power: 2 },
     requiresDeposit: true,
     repurposeTargets: ["storage_depot", "mining_station"],
+    oxygenContribution: 0,
   },
   {
     id: "storage_depot",
@@ -46,6 +40,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     cost: { materials: 40 },
     constructionTime: 8,
     consumption: { power: 1 },
+    oxygenContribution: 0,
   },
   {
     id: "basic_farm",
@@ -57,6 +52,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     consumption: { water: 3, power: 2 },
     workerSlots: 2,
     workerRole: ColonistRole.FARMING,
+    oxygenContribution: 2,
   },
 
   // Tech-gated buildings
@@ -71,6 +67,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 4,
     workerRole: ColonistRole.FARMING,
     requiredTech: "hydroponics",
+    oxygenContribution: 2,
   },
   {
     id: "water_reclaimer",
@@ -81,6 +78,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     production: { water: 8 },
     consumption: { power: 4 },
     requiredTech: "water_recycling",
+    oxygenContribution: 0,
   },
   {
     id: "research_lab",
@@ -92,6 +90,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 3,
     workerRole: ColonistRole.RESEARCH,
     requiredTech: "advanced_materials",
+    oxygenContribution: -1,
   },
   {
     id: "advanced_habitat",
@@ -99,8 +98,9 @@ export const BUILDINGS: BuildingDefinition[] = [
     description: "Comfortable living for more colonists",
     cost: { materials: 120 },
     constructionTime: 18,
-    consumption: { power: 5, oxygen: 2 },
+    consumption: { power: 5 },
     requiredTech: "advanced_materials",
+    oxygenContribution: 2,
   },
   {
     id: "automated_factory",
@@ -111,6 +111,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     production: { materials: 15 },
     consumption: { power: 15 },
     requiredTech: "robotics",
+    oxygenContribution: -1,
   },
   {
     id: "mining_station",
@@ -125,6 +126,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     requiredTech: "asteroid_mining",
     requiresDeposit: true,
     repurposeTargets: ["storage_depot", "water_extractor"],
+    oxygenContribution: -1,
   },
   {
     id: "nuclear_reactor",
@@ -136,6 +138,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 2,
     workerRole: ColonistRole.ENGINEERING,
     requiredTech: "nuclear_fission",
+    oxygenContribution: 0,
   },
   {
     id: "biolab",
@@ -147,6 +150,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 4,
     workerRole: ColonistRole.RESEARCH,
     requiredTech: "genetics",
+    oxygenContribution: -1,
   },
   {
     id: "medical_center",
@@ -158,6 +162,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 3,
     workerRole: ColonistRole.CIVIL_SCIENCE,
     requiredTech: "advanced_medicine",
+    oxygenContribution: 0,
   },
   {
     id: "cryo_facility",
@@ -167,6 +172,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 30,
     consumption: { power: 15 },
     requiredTech: "cryosleep",
+    oxygenContribution: 0,
   },
 
   // Recreation buildings (morale boost, no production)
@@ -178,6 +184,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 10,
     consumption: { power: 3 },
     moraleBoost: 5,
+    oxygenContribution: 0,
   },
   {
     id: "gymnasium",
@@ -187,6 +194,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 12,
     consumption: { power: 4 },
     moraleBoost: 6,
+    oxygenContribution: 0,
   },
   {
     id: "hydroponic_garden",
@@ -196,6 +204,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 14,
     consumption: { power: 2, water: 1 },
     moraleBoost: 4,
+    oxygenContribution: 2,
   },
   {
     id: "observatory_dome",
@@ -206,5 +215,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     consumption: { power: 5 },
     moraleBoost: 8,
     requiredTech: "advanced_materials",
+    oxygenContribution: 0,
   },
 ];
