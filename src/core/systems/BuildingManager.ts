@@ -17,6 +17,7 @@ import {
   REPURPOSE_TIME_MULTIPLIER,
   RUSH_RECYCLING_PENALTY,
 } from "../balance/OperationsBalance";
+import { STAFFING_CURVE_EXPONENT } from "../balance/WorkforceBalance";
 import type { Building, BuildingDefinition } from "../models/Building";
 import type { GameEvent } from "../models/GameEvent";
 import type { ResourceDelta } from "../models/Resources";
@@ -685,6 +686,24 @@ export class BuildingManager {
 
     building.assignedWorkers.splice(index, 1);
     return true;
+  }
+
+  /**
+   * Calculate staffing efficiency using diminishing returns curve.
+   * Returns 1 for buildings without worker slots.
+   * Formula: 1 - (1 - staffingRatio)^STAFFING_CURVE_EXPONENT
+   */
+  getStaffingEfficiency(buildingId: string): number {
+    const building = this.buildings.get(buildingId);
+    if (!building) return 0;
+
+    const def = this.definitions.get(building.definitionId);
+    if (!def || !def.workerSlots) return 1; // No worker slots = always full efficiency
+
+    if (building.assignedWorkers.length === 0) return 0;
+
+    const staffingRatio = building.assignedWorkers.length / def.workerSlots;
+    return 1 - (1 - staffingRatio) ** STAFFING_CURVE_EXPONENT;
   }
 
   toJSON() {
