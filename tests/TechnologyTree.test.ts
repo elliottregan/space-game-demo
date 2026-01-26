@@ -78,4 +78,17 @@ describe('TechnologyTree', () => {
 
     expect(tree.canResearch('robotics')).toBe(true);
   });
+
+  describe('Research Queue', () => {
+    it('should track progress per tech in a map', () => {
+      tree.startResearch('hydroponics', resources);
+
+      // Advance 10 sols
+      for (let i = 0; i < 10; i++) {
+        tree.tick();
+      }
+
+      expect(tree.getResearchProgress('hydroponics')).toBe(10);
+    });
+  });
 });

@@ -5,11 +5,26 @@ import type { ResourceManager } from "./ResourceManager";
 export class TechnologyTree {
   private technologies: Map<string, Technology> = new Map();
   private researched: Set<string> = new Set();
+  private researchProgress: Map<string, number> = new Map();
+  private currentResearchId: string | null = null;
+  private researchQueue: string[] = [];
   private currentResearch: TechResearch | null = null;
   private researchSpeedBonus: number = 0;
 
   constructor(techs: Technology[]) {
     techs.forEach((t) => this.technologies.set(t.id, t));
+  }
+
+  getResearchProgress(techId: string): number {
+    return this.researchProgress.get(techId) ?? 0;
+  }
+
+  getCurrentResearchId(): string | null {
+    return this.currentResearchId;
+  }
+
+  getResearchQueue(): string[] {
+    return [...this.researchQueue];
   }
 
   tick(): GameEvent[] {
@@ -18,6 +33,12 @@ export class TechnologyTree {
     if (this.currentResearch) {
       const speedMultiplier = 1.0 + this.researchSpeedBonus;
       this.currentResearch.progress += speedMultiplier;
+
+      // Keep researchProgress map in sync with currentResearch
+      this.researchProgress.set(
+        this.currentResearch.techId,
+        this.currentResearch.progress,
+      );
 
       if (this.currentResearch.progress >= this.currentResearch.requiredSols) {
         const tech = this.technologies.get(this.currentResearch.techId);
