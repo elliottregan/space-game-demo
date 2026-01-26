@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Colonist, SkillDefinition } from "../../../facade";
-import { ColonistRole } from "../../../core/models/Colonist";
+import { ROLE_DISPLAY_NAMES, MASTERY_DISPLAY_NAMES } from "../../../core/models/Colonist";
 import ColonistSkillBadge from "./ColonistSkillBadge.vue";
 import { computed } from "vue";
 
@@ -20,27 +20,15 @@ const colonistSkills = computed(() => {
 function isSkillActive(skill: SkillDefinition): boolean {
   return skill.affinity.includes(props.colonist.role);
 }
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-const roleNames: Record<ColonistRole, string> = {
-  [ColonistRole.UNASSIGNED]: "Unassigned",
-  [ColonistRole.RESEARCH]: "Researcher",
-  [ColonistRole.ENGINEERING]: "Engineer",
-  [ColonistRole.CIVIL_SCIENCE]: "Scientist",
-  [ColonistRole.FARMING]: "Farmer",
-};
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-const masteryNames = ["Novice", "Skilled", "Expert", "Master"];
 </script>
 
 <template>
   <div class="colonist-card">
     <div class="colonist-header">
       <span class="colonist-name">{{ colonist.name }}</span>
-      <span class="colonist-role">{{ roleNames[colonist.role] }}</span>
+      <span class="colonist-role">{{ ROLE_DISPLAY_NAMES[colonist.role] }}</span>
     </div>
-    <div class="colonist-mastery">{{ masteryNames[colonist.masteryLevel] }}</div>
+    <div class="colonist-mastery">{{ MASTERY_DISPLAY_NAMES[colonist.masteryLevel] }}</div>
     <div class="colonist-skills" v-if="colonistSkills.length > 0">
       <ColonistSkillBadge
         v-for="skill in colonistSkills"

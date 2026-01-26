@@ -1,14 +1,9 @@
 <script setup lang="ts">
 import { gameService } from "../../services/GameService";
+import { getSupportColor } from "../../utils/formatters";
 import { GPanel } from "../../ui";
 
 const state = gameService.getState();
-
-function getSupportColor(support: number): string {
-  if (support >= 0.5) return 'var(--color-positive)';
-  if (support >= 0) return 'var(--color-warning)';
-  return 'var(--color-danger)';
-}
 
 function formatSupport(support: number): string {
   return `${(support * 100).toFixed(0)}%`;

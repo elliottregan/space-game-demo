@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { gameService } from "../../services/GameService";
 import type { Technology } from "../../../core/models/Technology";
 import { highlightResources, clearHighlights } from "../../directives/ResourceHighlight";
+import { calculateHighlightInfo } from "../../utils/formatters";
 import { GPanel } from "../../ui";
 import TechTreeGraph from "../TechTreeGraph.vue";
 import CurrentResearch from "./CurrentResearch.vue";
@@ -75,24 +76,9 @@ function hasAllPrerequisites(tech: Technology): boolean {
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 function onTechHover(tech: Technology): void {
   if (!tech.cost.resources) return;
-
-  const deltas: Record<string, number> = {};
-  const requiredResources = Object.keys(tech.cost.resources).filter((key) => {
-    const value = (tech.cost.resources as Record<string, number>)[key] || 0;
-    if (value > 0) {
-      deltas[key] = -value;
-      return true;
-    }
-    return false;
-  });
-
-  const insufficientResources = requiredResources.filter((key) => {
-    const required = (tech.cost.resources as Record<string, number>)[key] || 0;
-    const available = (state.resources as Record<string, number>)[key] || 0;
-    return available < required;
-  });
-
-  highlightResources(requiredResources, insufficientResources, deltas);
+  const currentResources = state.resources as Record<string, number>;
+  const info = calculateHighlightInfo(tech.cost.resources, currentResources);
+  highlightResources(info.requiredResources, info.insufficientResources, info.deltas);
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
