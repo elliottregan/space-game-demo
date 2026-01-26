@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { GameState } from "../src/core/GameState";
-import { ColonistRole } from "../src/core/models/Colonist";
+import { ColonistRole, MasteryLevel } from "../src/core/models/Colonist";
 
 describe("Job Assignment", () => {
   let gameState: GameState;
 
   beforeEach(() => {
     gameState = new GameState();
+    // Wire up colonyManager for worker efficiency tests
+    gameState.buildings.setColonyManager(gameState.colony);
   });
 
   describe("getColonistWorkplace", () => {
@@ -113,6 +115,77 @@ describe("Job Assignment", () => {
 
       const efficiency = gameState.buildings.getStaffingEfficiency(farm!.id);
       expect(efficiency).toBe(1);
+    });
+  });
+
+  describe("getWorkerEfficiency", () => {
+    it("returns 1 for building without worker slots", () => {
+      const solar = gameState.buildings.startBuilding(
+        "solar_panel",
+        gameState.resources,
+        gameState.technology
+      );
+      for (let i = 0; i < 10; i++) {
+        gameState.buildings.tick(gameState.resources);
+      }
+
+      const efficiency = gameState.buildings.getWorkerEfficiency(solar!.id);
+      expect(efficiency).toBe(1);
+    });
+
+    it("returns 1 for building with no workers assigned", () => {
+      const farm = gameState.buildings.startBuilding(
+        "basic_farm",
+        gameState.resources,
+        gameState.technology
+      );
+      for (let i = 0; i < 15; i++) {
+        gameState.buildings.tick(gameState.resources);
+      }
+
+      const efficiency = gameState.buildings.getWorkerEfficiency(farm!.id);
+      expect(efficiency).toBe(1); // No workers = base efficiency (staffing handles the 0)
+    });
+
+    it("applies role mismatch penalty", () => {
+      const farm = gameState.buildings.startBuilding(
+        "basic_farm",
+        gameState.resources,
+        gameState.technology
+      );
+      for (let i = 0; i < 15; i++) {
+        gameState.buildings.tick(gameState.resources);
+      }
+
+      // Find a non-farmer colonist
+      const colonists = gameState.colony.getColonists();
+      const nonFarmer = colonists.find((c) => c.role !== ColonistRole.FARMING);
+      if (nonFarmer) {
+        gameState.buildings.assignWorker(farm!.id, nonFarmer.id);
+        const efficiency = gameState.buildings.getWorkerEfficiency(farm!.id);
+        // Should include 30% role mismatch penalty: base * 0.7
+        expect(efficiency).toBeLessThan(1);
+      }
+    });
+
+    it("applies training penalty", () => {
+      const farm = gameState.buildings.startBuilding(
+        "basic_farm",
+        gameState.resources,
+        gameState.technology
+      );
+      for (let i = 0; i < 15; i++) {
+        gameState.buildings.tick(gameState.resources);
+      }
+
+      // Start training a colonist
+      const colonist = gameState.colony.getColonists()[0];
+      gameState.workforce.startTraining(colonist, ColonistRole.FARMING);
+      gameState.buildings.assignWorker(farm!.id, colonist.id);
+
+      const efficiency = gameState.buildings.getWorkerEfficiency(farm!.id);
+      // Should include 50% training penalty
+      expect(efficiency).toBeLessThan(1);
     });
   });
 });

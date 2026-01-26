@@ -17,10 +17,19 @@ import {
   REPURPOSE_TIME_MULTIPLIER,
   RUSH_RECYCLING_PENALTY,
 } from "../balance/OperationsBalance";
-import { STAFFING_CURVE_EXPONENT } from "../balance/WorkforceBalance";
+import {
+  MASTERY_EFFICIENCY,
+  MAX_SKILL_EFFICIENCY_BONUS,
+  ROLE_MISMATCH_PENALTY,
+  STAFFING_CURVE_EXPONENT,
+  TRAINING_WORK_PENALTY,
+} from "../balance/WorkforceBalance";
+import { SKILLS } from "../data/skills";
 import type { Building, BuildingDefinition } from "../models/Building";
+import type { Colonist, ColonistRole } from "../models/Colonist";
 import type { GameEvent } from "../models/GameEvent";
 import type { ResourceDelta } from "../models/Resources";
+import type { ColonyManager } from "./ColonyManager";
 import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
 
@@ -29,6 +38,11 @@ export class BuildingManager {
   private buildings: Map<string, Building> = new Map();
   private nextId: number = 1;
   private constructionSpeedBonus: number = 0;
+  private colonyManager: ColonyManager | null = null;
+
+  setColonyManager(colony: ColonyManager): void {
+    this.colonyManager = colony;
+  }
 
   constructor(defs: BuildingDefinition[]) {
     defs.forEach((d) => {
@@ -704,6 +718,61 @@ export class BuildingManager {
 
     const staffingRatio = building.assignedWorkers.length / def.workerSlots;
     return 1 - (1 - staffingRatio) ** STAFFING_CURVE_EXPONENT;
+  }
+
+  /**
+   * Calculate average worker efficiency for a building.
+   * Factors in: mastery, skills, role mismatch penalty, training penalty.
+   * Returns 1 if no workers assigned or building has no worker slots.
+   */
+  getWorkerEfficiency(buildingId: string): number {
+    const building = this.buildings.get(buildingId);
+    if (!building) return 0;
+
+    const def = this.definitions.get(building.definitionId);
+    if (!def || !def.workerSlots) return 1;
+    if (building.assignedWorkers.length === 0) return 1;
+
+    if (!this.colonyManager) return 1;
+
+    let totalEfficiency = 0;
+    for (const colonistId of building.assignedWorkers) {
+      const colonist = this.colonyManager.getColonist(colonistId);
+      if (!colonist) continue;
+
+      const efficiency = this.calculateSingleWorkerEfficiency(colonist, def.workerRole);
+      totalEfficiency += efficiency;
+    }
+
+    return totalEfficiency / building.assignedWorkers.length;
+  }
+
+  private calculateSingleWorkerEfficiency(colonist: Colonist, requiredRole?: ColonistRole): number {
+    // Base mastery efficiency
+    let efficiency = MASTERY_EFFICIENCY[colonist.masteryLevel] ?? 1;
+
+    // Add skill bonus (capped)
+    let skillBonus = 0;
+    for (const skillId of colonist.skills) {
+      const skill = SKILLS.find((s) => s.id === skillId);
+      if (skill?.affinity.includes(colonist.role)) {
+        skillBonus += skill.efficiencyBonus;
+      }
+    }
+    skillBonus = Math.min(skillBonus, MAX_SKILL_EFFICIENCY_BONUS);
+    efficiency += skillBonus;
+
+    // Role mismatch penalty
+    if (requiredRole && colonist.role !== requiredRole) {
+      efficiency *= 1 - ROLE_MISMATCH_PENALTY;
+    }
+
+    // Training penalty
+    if (colonist.trainingTarget) {
+      efficiency *= 1 - TRAINING_WORK_PENALTY;
+    }
+
+    return efficiency;
   }
 
   toJSON() {
