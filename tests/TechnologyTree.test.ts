@@ -90,5 +90,14 @@ describe('TechnologyTree', () => {
 
       expect(tree.getResearchProgress('hydroponics')).toBe(10);
     });
+
+    it('should increment progress in the map during tick', () => {
+      tree.startResearch('hydroponics', resources);
+      tree.tick();
+      tree.tick();
+
+      expect(tree.getResearchProgress('hydroponics')).toBe(2);
+      expect(tree.getCurrentResearchId()).toBe('hydroponics');
+    });
   });
 });

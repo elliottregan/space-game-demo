@@ -30,33 +30,37 @@ export class TechnologyTree {
   tick(): GameEvent[] {
     const events: GameEvent[] = [];
 
-    if (this.currentResearch) {
+    if (this.currentResearchId) {
       const speedMultiplier = 1.0 + this.researchSpeedBonus;
-      this.currentResearch.progress += speedMultiplier;
+      const currentProgress = this.researchProgress.get(this.currentResearchId) ?? 0;
+      const newProgress = currentProgress + speedMultiplier;
+      this.researchProgress.set(this.currentResearchId, newProgress);
 
-      // Keep researchProgress map in sync with currentResearch
-      this.researchProgress.set(
-        this.currentResearch.techId,
-        this.currentResearch.progress,
-      );
+      const tech = this.technologies.get(this.currentResearchId);
+      if (!tech) {
+        this.currentResearchId = null;
+        return events;
+      }
 
-      if (this.currentResearch.progress >= this.currentResearch.requiredSols) {
-        const tech = this.technologies.get(this.currentResearch.techId);
-        if (!tech) {
-          this.currentResearch = null;
-          return events;
+      if (newProgress >= tech.cost.sols) {
+        this.researched.add(this.currentResearchId);
+        this.researchProgress.delete(this.currentResearchId);
+
+        // Remove from queue front
+        if (this.researchQueue.length > 0 && this.researchQueue[0] === this.currentResearchId) {
+          this.researchQueue.shift();
         }
-        this.researched.add(this.currentResearch.techId);
 
         events.push({
           type: "RESEARCH_COMPLETE",
-          techId: this.currentResearch.techId,
+          techId: this.currentResearchId,
           techName: tech.name,
           severity: "info",
           message: `Research complete: ${tech.name}!`,
         });
 
-        this.currentResearch = null;
+        this.currentResearchId = null;
+        this.currentResearch = null; // Backward compatibility
       }
     }
 
@@ -90,6 +94,9 @@ export class TechnologyTree {
       progress: 0,
       requiredSols: tech.cost.sols,
     };
+
+    // Set the new ID-based tracking (preview of Task 3)
+    this.currentResearchId = techId;
 
     return true;
   }
