@@ -1,6 +1,6 @@
 import type { ResourceDelta } from "./Resources";
 
-export type NPCFaction = "traditionalist" | "progressive" | "futurist";
+export type NPCFaction = "earth_loyalists" | "mars_independence" | "corporate_interests";
 
 export interface NPC {
   id: string;
@@ -10,7 +10,7 @@ export interface NPC {
   influence: number;
 }
 
-export type ProjectType = "traditionalist" | "progressive" | "futurist";
+export type ProjectType = "earth_loyalists" | "mars_independence" | "corporate_interests";
 
 export interface Project {
   id: string;
@@ -42,4 +42,18 @@ export interface Council {
   memberIds: string[];
   /** Relationship boost applied between members */
   relationshipBoost: number;
+}
+
+/**
+ * Represents a demand from a faction to propose one of their projects.
+ */
+export interface FactionDemand {
+  /** Which faction is making the demand */
+  factionId: NPCFaction;
+  /** Sol when the demand was issued */
+  demandedAt: number;
+  /** Sols remaining until demand expires (accelerated decay begins) */
+  deadline: number;
+  /** Project IDs that would satisfy this demand */
+  projectIds: string[];
 }

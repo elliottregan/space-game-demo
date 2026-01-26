@@ -55,7 +55,7 @@ export type { TechnologySnapshot, Technology, TechResearch } from "./technology"
 export type { ColonySnapshot, Colonist, ColonistRole, SkillDefinition } from "./colony";
 
 // Politics types
-export type { PoliticsSnapshot, Faction, Decision, DecisionResult } from "./politics";
+export type { PoliticsSnapshot, FactionStatus, NPCFaction, FactionDemand } from "./politics";
 
 // Operations types
 export type {

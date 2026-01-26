@@ -1,0 +1,1299 @@
+
+ ▐▛███▜▌   Claude Code v2.1.19
+▝▜█████▛▘  Opus 4.5 · Claude Max
+  ▘▘ ▝▝    /workspace
+
+❯ /clear 
+  ⎿  (no content)
+
+❯ run scripts/analyze-simulation.ts 
+
+● Bash(bun run scripts/analyze-simulation.ts)
+  ⎿  Running 200 simulations for detailed analysis (seed: 1)...
+
+       Progress: 50/200
+     … +78 lines (ctrl+o to expand)
+
+● The simulation analysis completed successfully. Key findings:
+
+  - 100% win rate across 200 runs with colony_charter victories
+  - Very consistent timing: 185/200 games (92.5%) finished at exactly 486 sols
+  - Near-optimal performance: 486 sols actual vs 480 sols theoretical minimum (6
+   sol gap for setup)
+  - Core tech path: water_recycling, hydroponics, advanced_materials, robotics
+  researched every game
+  - Only 3 outliers (1.5%) took >550 sols, likely due to random event
+  disruptions
+
+❯ i would expect not to win 100% of the time. it seems like once the player 
+  meets some conditions like building the right buildings, they can sorta   
+  just coast for the rest of the game.                                      
+
+● You're right - that's a game balance problem. Once you establish a positive
+  resource loop (habitats + farms + water extractors + solar panels), there's no
+   escalating pressure or risk that could derail you. The strategy just needs to
+   survive the early game, then it's smooth sailing for 300+ sols of "sustained
+  stability."
+
+  Some potential sources of late-game challenge that might be missing or too
+  weak:
+
+  1. Resource degradation - Buildings could wear out or require maintenance
+  2. Population growth pressure - More colonists arriving whether you want them
+  or not, straining resources
+  3. Escalating events - Dust storms, equipment failures, or crises that get
+  worse over time
+  4. Morale decay - Colonists getting restless or demanding more as the colony
+  matures
+  5. Political instability - Factions becoming more demanding or causing
+  problems
+  6. Supply chain from Earth drying up - Forcing more self-sufficiency over time
+
+  Would you like me to investigate the current event system and late-game
+  mechanics to see where the "coasting" comes from? Or do you have a specific
+  direction in mind for adding more challenge?
+
+❯ yeah investigate 
+
+● Explore(Investigate game coasting mechanics)
+  ⎿  Done (21 tool uses · 73.4k tokens · 51s)
+
+● The investigation found six root causes:
+
+  1. Victory Condition Too Easy (VictoryManager.ts)
+
+  - Colony Charter needs: pop ≥10, morale ≥60, 3 techs, then sustain 300 sols
+  - Once conditions are met, it just increments a counter - no ramping
+  difficulty
+
+  2. Morale Can't Fail (ColonyManager.ts)
+
+  - Base decay is only 0.3/sol from a pool of 100
+  - Positive resource flow gives +0.5/sol recovery
+  - Once you have water production, morale converges to stable equilibrium
+
+  3. No Escalating Resource Demands (EconomyBaseline.ts)
+
+  - Consumption is perfectly linear with population (0.5 food/colonist/sol)
+  - No maintenance costs, no building degradation, no efficiency decay
+  - Buildings work at 100% forever once built
+
+  4. Events Too Rare & Weak (EventBalance.ts)
+
+  - Max 12% chance with 30-sol minimum gap = ~1 event per 30-40 sols
+  - Impacts are capped (dust storm: 20-50 power, disease: 2 colonists)
+  - HeuristicStrategy picks optimal choices every time
+
+  5. Population Growth Has No Downside (ColonyManager.ts)
+
+  - Growth triggers at morale 60+ (same as victory condition!)
+  - More colonists = more workers = faster tech research
+  - Housing is cheap (50 materials), consumption scales linearly
+
+  6. Tech Tree Ends Too Early (technologies.ts)
+
+  - Only need 180 sols of research for victory path
+  - Remaining 300 sols is just... waiting
+
+  The core problem: Once you establish water+oxygen production (~sol 50), the
+  game enters a stable equilibrium that nothing can disrupt. There's no
+  late-game pressure mechanism.
+
+  Want me to propose specific changes to add meaningful mid/late-game challenge?
+
+✻ Cooked for 1m 12s
+
+❯ yeah propose some changes 
+
+● Skill(superpowers:brainstorming)
+  ⎿  Successfully loaded skill
+
+● Let me first check the current project state to understand the game mechanics
+  better.
+
+● Read(src/core/balance/EconomyBaseline.ts)
+  ⎿  Read 23 lines
+
+● Read(src/core/balance/EventBalance.ts)
+  ⎿  Read 13 lines
+
+● Read(src/core/systems/VictoryManager.ts)
+  ⎿  Read 167 lines
+
+● Good context. The core issue is clear: once you hit morale 60 and have 3
+  techs, you just wait 300 sols with no disruption possible.
+
+  Let me ask my first question to understand your design direction:
+
+  What's the primary feeling you want players to have during the mid-to-late 
+  game?
+
+  1. Constant tension - Always on the edge, one bad event away from disaster
+  (Frostpunk-style)
+  2. Escalating challenge - Manageable early, but pressure steadily ramps up
+  requiring adaptation (Factorio-style)
+  3. Strategic pivots - Stable periods punctuated by crises that force you to
+  change strategy (Civilization-style)
+  4. Resource optimization - Surplus early becomes scarcity late, requiring
+  efficiency improvements (Anno-style)
+
+❯ 3, i want the resource management to eventually be less burdensome, and   
+  then be replaced by political tension.                                    
+
+● That's a compelling arc - survival sim evolves into political drama. The
+  colony "growing up" from scrappy survival to managing internal conflict.
+
+  How should political tension manifest as the threat?
+
+  1. Faction demands with teeth - Factions make escalating demands; ignore them
+  and they sabotage buildings, hoard resources, or trigger exodus events
+  2. Power struggles - Factions compete for control; if one gets too strong they
+   stage a coup (game over) or force policy changes that hurt you
+  3. Splinter colonies - Dissatisfied factions threaten to leave and take
+  colonists/resources with them, fragmenting your population
+  4. Civil unrest - Political tension builds a hidden "unrest" meter; if it
+  maxes out, riots break out causing cascading damage
+
+❯ i'm not sure if adding another layer of complexity is right. tell me how  
+  the politics relate to the factions. i want to explore these              
+  relationships. i am finding it hard to know how to play the politics part 
+  ofthe game right now.                                                     
+
+● Let me explore how the current politics and faction systems work.
+
+● Read(src/core/systems/PoliticsManager.ts)
+  ⎿  Error reading file
+
+● Read(src/core/data/factions.ts)
+  ⎿  Read 123 lines
+
+● Read(src/core/models/Politics.ts)
+  ⎿  Read 39 lines
+
+● Search(pattern: "politics|faction|decision", path: "src/core")
+  ⎿  Found 10 files (ctrl+o to expand)
+
+● Read(src/core/systems/PoliticsEngine.ts)
+  ⎿  Read 142 lines
+
+● Read(src/core/systems/NPCInfluenceManager.ts)
+  ⎿  Read 493 lines
+
+● Read(src/core/balance/PoliticsBalance.ts)
+  ⎿  Read 7 lines
+
+● Read(src/core/data/npcs.ts)
+  ⎿  Read 146 lines
+
+● Now I see the issue. You actually have two separate political systems that
+  don't connect:
+
+  System 1: PoliticsEngine (Factions)
+
+  - 3 abstract factions: Earth Loyalists, Mars Independence, Corporate Interests
+  - You make "Decisions" that affect their support
+  - Support decays 0.3/sol, warnings at <20, "hostile" at <10
+  - But hostile factions do nothing - no actual consequences
+
+  System 2: NPCInfluenceManager (NPCs)
+
+  - 10 named NPCs (Dr. Chen Wei, Maria Santos, etc.) in 3 groups: futurist,
+  progressive, traditionalist
+  - You propose "Projects" and lobby NPCs to vote for them
+  - Complex influence propagation between NPCs
+  - But projects are optional - you can ignore the whole system and still win
+
+  Neither system connects to victory/defeat. That's why it feels confusing - the
+   politics is all "flavor" with no stakes.
+
+  Which direction appeals more to you?
+
+  1. Simplify to one system - Keep NPCs, remove abstract factions. NPCs become
+  the political game: their happiness/support determines colony stability
+  2. Connect them - Factions represent ideologies, NPCs are members of factions.
+   Faction unrest causes NPCs to act against you
+  3. Replace both - Design a simpler system where political tension is one
+  number that escalates over time and forces you to make hard choices
+
+✻ Baked for 36s
+
+❯ Simplify to one system. rename futurist, progressive, traditionalist to   
+  Earth Loyalists, Mars Independence, Corporate Interests.                  
+
+● Good choice. So you'll have 10 NPCs belonging to Earth Loyalists, Mars
+  Independence, or Corporate Interests. The NPC system becomes the political
+  game.
+
+  Next question: How should NPC politics create late-game pressure?
+
+  Currently NPCs only matter if you propose a project to them. You can ignore
+  them entirely. What should make politics unavoidable?
+
+  1. NPCs make demands - Each faction periodically demands something (resources,
+   policy decisions). Ignore them and their support drops, eventually causing
+  sabotage or exodus
+  2. NPCs control resources - Factions "own" certain colonists/buildings. Low
+  support means reduced productivity or strikes
+  3. NPCs gate victory - Colony Charter requires minimum political stability
+  (average NPC support > threshold) in addition to current requirements
+  4. NPCs trigger crises - Low support with any faction triggers political
+  events (protests, sabotage, coups) that can spiral into defeat
+
+❯ 1, 4 
+
+● Good combination. Factions demand things, and if you ignore them long enough,
+  crises escalate toward defeat.
+
+  How should faction demands work?
+
+  1. Resource tribute - "Earth Loyalists demand 50 materials sent to Earth" -
+  pay or lose support
+  2. Policy choices - "Corporate Interests want you to prioritize mining over
+  housing" - binary choice that pleases one faction, angers another
+  3. Project pressure - "Mars Independence demands you propose their
+  independence referendum project within 30 sols" - forces you to engage with
+  the NPC project system
+  4. Mixed - Combination of the above, varying by faction personality
+  (Corporates want resources, Loyalists want policies, Independence wants
+  projects)
+
+❯ 3 
+
+● That's elegant - it makes the existing project system mandatory rather than
+  adding a parallel mechanic. Factions demand you champion their projects, and
+  you have to lobby NPCs to get them passed.
+
+  How should crises escalate when you ignore demands or fail projects?
+
+  1. Linear escalation - Support drops → Warning → Unrest → Sabotage → Exodus
+  (predictable, manageable)
+  2. Threshold triggers - Nothing happens until support drops below 30%, then
+  sudden crisis events fire
+  3. Cascading failures - One faction's crisis can anger other factions (e.g.,
+  Corporate sabotage damages a building that Mars Independence was using, now
+  they're mad too)
+  4. Faction-specific consequences - Each faction has unique crisis types:
+  Corporates hoard resources, Loyalists call for Earth intervention,
+  Independence incites rebellion
+
+❯ 1, 4 
+
+● So escalation is predictable (you can see it coming and react), but each
+  faction causes different types of damage.
+
+  What should each faction's crisis consequences look like?
+
+  Here's a proposal - let me know if this fits your vision:
+  ┌───────────┬─────────────────────┬────────────────────┬────────────────────┐
+  │   Stage   │   Earth Loyalists   │ Mars Independence  │     Corporate      │
+  │           │                     │                    │     Interests      │
+  ├───────────┼─────────────────────┼────────────────────┼────────────────────┤
+  │ Warning   │ Complaints in event │ Complaints in      │ Complaints in      │
+  │ (40%)     │  log                │ event log          │ event log          │
+  ├───────────┼─────────────────────┼────────────────────┼────────────────────┤
+  │ Unrest    │ Demand Earth aid    │ Refuse certain     │ Reduce production  │
+  │ (30%)     │ shipment            │ work assignments   │ efficiency         │
+  ├───────────┼─────────────────────┼────────────────────┼────────────────────┤
+  │ Sabotage  │ Leak colony intel   │ Disable Earth-comm │ Hoard materials    │
+  │ (20%)     │ (random negative    │  buildings         │ (you lose access   │
+  │           │ event)              │                    │ to %)              │
+  ├───────────┼─────────────────────┼────────────────────┼────────────────────┤
+  │ Exodus    │ Key colonists       │ Splinter colony    │ Corporate pullout  │
+  │ (10%)     │ defect to Earth     │ takes population   │ (lose buildings)   │
+  │           │ ship                │                    │                    │
+  └───────────┴─────────────────────┴────────────────────┴────────────────────┘
+  Does this feel right, or would you adjust the flavor/consequences?
+
+❯ actually, i don't want to add crisis just yet. loosing their support is   
+  good enough, because it makes it harder to enact proposals                
+
+● That's cleaner. The political pressure becomes:
+
+  1. Factions demand you propose their projects
+  2. Ignore demands → support drops
+  3. Low support → harder to pass any projects (need NPC votes)
+  4. Political gridlock becomes the late-game challenge, not colony destruction
+
+  One more question: How should demands be triggered?
+
+  1. Time-based - Every N sols, a random faction makes a demand
+  2. Event-driven - Demands trigger after certain milestones (tech unlocked,
+  population reached, sol thresholds)
+  3. Support-decay prevention - Demands are how factions ask you to stop their
+  support from naturally decaying (no demand = slow decay, demand ignored = fast
+   decay)
+
+❯ 3 
+
+● Now I have a complete picture. Let me present the design in sections.
+
+  ---
+  Design Section 1: System Consolidation
+
+  Remove: PoliticsEngine and the abstract factions system
+  (src/core/data/factions.ts, src/core/systems/PoliticsEngine.ts)
+
+  Keep & Modify: NPCInfluenceManager becomes the sole political system
+
+  Rename NPC factions:
+  - futurist → earth_loyalists
+  - progressive → mars_independence
+  - traditionalist → corporate_interests
+
+  Reassign NPCs:
+  NPC: Dr. Chen Wei, Nova Silva, Alex Okonkwo
+  Current: futurist
+  New: earth_loyalists
+  ────────────────────────────────────────
+  NPC: Maria Santos, James Liu, Aisha Patel, Marcus Reed
+  Current: progressive
+  New: mars_independence
+  ────────────────────────────────────────
+  NPC: Elena Volkov, David Morrison, Sarah Chen
+  Current: traditionalist
+  New: corporate_interests
+  Does this mapping feel right, or should certain NPCs swap factions based on
+  their names/vibes?
+
+❯ yes 
+
+● ---
+  Design Section 2: Support Decay & Demand Mechanic
+
+  Core loop:
+  1. Each faction's average NPC support decays slowly over time (e.g., 0.01/sol)
+  2. When a faction's average support drops below a threshold (e.g., 50%), they
+  issue a demand: "Propose one of our projects within N sols"
+  3. If you propose and pass their project → support restored, demand satisfied
+  4. If you ignore the demand → decay rate accelerates (e.g., 3x faster)
+  5. Lower support = NPCs vote against your other projects = political gridlock
+
+  New state to track per faction:
+  interface FactionDemand {
+    factionId: string;
+    demandedAt: number;      // sol when demand was issued
+    deadline: number;        // sols until demand expires
+    projectIds: string[];    // valid projects that satisfy demand
+  }
+
+  Tuning knobs:
+  - Base decay rate: 0.01/sol (slow burn)
+  - Demand threshold: 50% average faction support
+  - Demand deadline: 60 sols to propose a project
+  - Accelerated decay: 3x if demand ignored past deadline
+  - Support boost on project pass: +0.3 to all faction NPCs
+
+  Does this mechanic feel right before I move to the final section?
+
+❯ yes 
+
+● ---
+  Design Section 3: Project Reassignment & Integration
+
+  Reassign existing projects to new factions:
+  Project: Build Generation Ship
+  Current: futurist
+  New Faction: earth_loyalists
+  Rationale: Maintaining connection to humanity's future
+  ────────────────────────────────────────
+  Project: AI-Assisted Governance
+  Current: futurist
+  New Faction: corporate_interests
+  Rationale: Efficiency/automation fits corporate
+  ────────────────────────────────────────
+  Project: Universal Housing Initiative
+  Current: progressive
+  New Faction: mars_independence
+  Rationale: Self-sufficiency for Mars
+  ────────────────────────────────────────
+  Project: Healthcare Expansion
+  Current: progressive
+  New Faction: mars_independence
+  Rationale: Colony welfare
+  ────────────────────────────────────────
+  Project: Earth Memorial
+  Current: traditionalist
+  New Faction: earth_loyalists
+  Rationale: Honoring Earth ties
+  ────────────────────────────────────────
+  Project: Heritage Archive
+  Current: traditionalist
+  New Faction: earth_loyalists
+  Rationale: Preserving Earth culture
+  Add 1-2 corporate projects (they currently have none after reassignment):
+  - "Mining Concession" - Grant exclusive extraction rights, unlocks efficient
+  mine building
+  - "Labor Efficiency Program" - Controversial productivity boost
+
+  Files to modify:
+  1. src/core/data/npcs.ts - Rename faction types, reassign projects
+  2. src/core/models/NPCInfluence.ts - Update NPCFaction type
+  3. src/core/balance/NPCInfluenceBalance.ts - Update transmission factors keys
+  4. src/core/systems/NPCInfluenceManager.ts - Add demand tracking & decay logic
+  5. Delete src/core/systems/PoliticsEngine.ts and src/core/data/factions.ts
+  6. Update GameState.ts to remove PoliticsEngine references
+
+  ---
+  Does this complete picture look right? If so, I'll write it up as a design doc
+   and we can move to implementation planning.
+
+❯ yes 
+
+● Bash(mkdir -p /workspace/docs/plans)
+  ⎿  (No content)
+
+● Write(docs/plans/2026-01-24-political-pressure-design.md)
+  ⎿  Wrote 110 lines to docs/plans/2026-01-24-political-pressure-design.md
+      1 # Political Pressure System Design
+      2 
+      3 ## Problem
+      4 
+      5 The game allows "coasting to victory" after early-game resource s
+        etup. Simulations show 100% win rate with most games finishing at
+         exactly 486 sols. Once players build basic resource production (
+        ~sol 50), they can wait 300+ sols with no challenge.
+      6 
+      7 The existing political systems (PoliticsEngine and NPCInfluenceMa
+        nager) have no teeth - you can ignore them entirely and still win
+        .
+      8 
+      9 ## Goal
+     … +100 lines (ctrl+o to expand)
+
+● Bash(git add docs/plans/2026-01-24-political-pressure-design.md && git commit
+      -m "docs: Add political pressure system design…)
+  ⎿  [main 1b5b0f8] docs: Add political pressure system design
+      1 file changed, 109 insertions(+)
+      create mode 100644 docs/plans/2026-01-24-political-pressure-design.md
+
+● Design doc committed.
+
+  Ready to set up for implementation? I can create a detailed implementation
+  plan with tasks broken down by file, or we can discuss any part of the design
+  further first.
+
+✻ Brewed for 36s
+
+❯ yes 
+
+● Skill(superpowers:writing-plans)
+  ⎿  Successfully loaded skill
+
+● I'm using the writing-plans skill to create the implementation plan.
+
+  Let me first read the design doc and explore the files I'll need to modify to
+  write precise implementation steps.
+
+● Read(docs/plans/2026-01-24-political-pressure-design.md)
+  ⎿  Read 110 lines
+
+● Read(src/core/models/NPCInfluence.ts)
+  ⎿  Read 46 lines
+
+● Read(src/core/balance/NPCInfluenceBalance.ts)
+  ⎿  Read 50 lines
+
+● Read(src/core/GameState.ts)
+  ⎿  Read 247 lines
+
+● Search(pattern: "**/*.test.ts", path: "/workspace")
+  ⎿  Found 21 files (ctrl+o to expand)
+
+● Read(tests/NPCInfluenceManager.test.ts)
+  ⎿  Read 371 lines
+
+● Search(pattern: "PoliticsEngine|politics", path: "src/renderer")
+  ⎿  Found 5 files (ctrl+o to expand)
+
+● Read(src/renderer/services/GameService.ts)
+  ⎿  Read 80 lines
+
+● Read(src/renderer/components/PoliticsPanel/PoliticsPanel.vue)
+  ⎿  Read 50 lines
+
+● Search(pattern: "factions|decisions|politics\.", path:
+        "src/renderer/services/GameService.ts", output_mode: "content")
+  ⎿  Found 9 lines (ctrl+o to expand)
+
+● Read(src/facade/GameAPI.ts)
+  ⎿  Read 100 lines
+
+● Read(src/facade/domains/PoliticsFacade.ts)
+  ⎿  Read 106 lines
+
+● Read(src/facade/domains/index.ts)
+  ⎿  Read 13 lines
+
+● Read(src/facade/types/index.ts)
+  ⎿  Read 88 lines
+
+● Read(src/facade/types/politics.ts)
+  ⎿  Read 17 lines
+
+● Read(src/facade/types/npc.ts)
+  ⎿  Read 24 lines
+
+● Now I have a complete picture. Let me write the implementation plan.
+
+● Write(docs/plans/2026-01-24-political-pressure-implementation.md)
+  ⎿  Wrote 1448 lines to
+     docs/plans/2026-01-24-political-pressure-implementation.md
+      1 # Political Pressure System Implementation Plan
+      2 
+      3 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-p
+        lans to implement this plan task-by-task.
+      4 
+      5 **Goal:** Replace the dual politics systems with a unified NPC-ba
+        sed political pressure system that creates late-game challenge th
+        rough faction demands.
+      6 
+      7 **Architecture:** Consolidate PoliticsEngine into NPCInfluenceMan
+        ager. Rename NPC factions to match game lore. Add decay/demand me
+        chanics that force players to engage with the project system.
+      8 
+      9 **Tech Stack:** TypeScript, Bun test runner, Vue 3 (renderer upda
+        tes)
+     … +1438 lines (ctrl+o to expand)
+
+● Bash(git add docs/plans/2026-01-24-political-pressure-implementation.md && git
+       commit -m "docs: Add political pressure implementation plan…)
+  ⎿ [main 01c09bb] docs: Add political pressure implementation plan
+     1 file changed, 1448 insertions(+)
+     create mode 100644 docs/plans/2026-01-24-political-pressure-implementa
+    tion.md
+
+
+● Plan complete and saved.
+
+  Two execution options:
+
+  1. Subagent-Driven (this session) - I dispatch fresh subagent per task, review
+   between tasks, fast iteration
+  2. Parallel Session (separate) - Open new session with executing-plans, batch
+  execution with checkpoints
+
+  Which approach?
+
+✻ Sautéed for 3m 19s
+
+❯ 1 
+
+● Skill(superpowers:subagent-driven-development)
+  ⎿  Successfully loaded skill
+
+● I'm using Subagent-Driven Development to execute this plan.
+
+  Let me first read the plan and extract all tasks.
+
+● Read(docs/plans/2026-01-24-political-pressure-implementation.md)
+  ⎿  Read 1448 lines
+
+● Now I'll create the todo list and start dispatching subagents for each task.
+✔ Task #1 created: Task 1: Update NPCFaction Type
+✔ Task #2 created: Task 2: Update NPC Data
+✔ Task #3 created: Task 3: Update Project Assignments
+✔ Task #4 created: Task 4: Update Transmission Factors
+✔ Task #5 created: Task 5: Add Demand Balance Constants
+✔ Task #6 created: Task 6: Add FactionDemand Interface
+✔ Task #7 created: Task 7: Add Faction Support Tracking
+✔ Task #8 created: Task 8: Add Support Decay Logic
+✔ Task #9 created: Task 9: Add Demand Generation Logic
+✔ Task #10 created: Task 10: Add Demand Deadline and Accelerated Decay
+✔ Task #11 created: Task 11: Add Demand Resolution on Project Pass
+✔ Task #12 created: Task 12: Update GameState tick call
+✔ Task #13 created: Task 13: Remove PoliticsEngine from GameState
+✔ Task #14 created: Task 14: Delete PoliticsEngine files
+✔ Task #15 created: Task 15: Update Facade Layer
+✔ Task #16 created: Task 16: Update GameService
+✔ Task #17 created: Task 17: Update PoliticsPanel UI
+✔ Task #18 created: Task 18: Update Serialization
+✔ Task #19 created: Task 19: Fix Test Suite
+✔ Task #20 created: Task 20: Final Integration Test
+✔ Task #1 updated: status → in progress
+
+● Starting Task 1: Update NPCFaction Type. Dispatching implementer subagent.
+
+● Task(Implement Task 1: Update NPCFaction Type)
+  ⎿  Done (14 tool uses · 35.0k tokens · 1m 2s)
+
+● Task 1 complete. Let me mark it done and move to Task 2.
+✔ Task #1 updated: no fields
+✔ Task #2 updated: status → in progress
+
+● Task 2: Update NPC Data. Dispatching implementer subagent.
+
+● Task(Implement Task 2: Update NPC Data)
+  ⎿  Done (6 tool uses · 29.6k tokens · 40s)
+✔ Task #2 updated: no fields
+✔ Task #3 updated: status → in progress
+
+● Task 3: Update Project Assignments. Dispatching implementer subagent.
+
+● Task(Implement Task 3: Update Project Assignments)
+  ⎿  Done (15 tool uses · 39.4k tokens · 5m 17s)
+✔ Task #3 updated: no fields
+✔ Task #4 updated: status → in progress
+
+● Task 4: Update Transmission Factors. Dispatching implementer subagent.
+
+● Task(Implement Task 4: Update Transmission Factors)
+  ⎿  Done (3 tool uses · 0 tokens · 16s)
+
+● Task(Implement Task 4: Update Transmission Factors)
+  ⎿  Done (0 tool uses · 0 tokens · 0s)
+  ⎿  You've hit your limit · resets 1am (UTC)
+     /upgrade to increase your usage limit.
+
+✻ Brewed for 9m 8s
+
+❯ continue 
+  ⎿  OAuth token revoked · Please run /login
+ ▐▛███▜▌   Claude Code v2.1.19
+▝▜█████▛▘  Opus 4.5 · Claude Max
+  ▘▘ ▝▝    /workspace
+
+❯ /clear 
+  ⎿  (no content)
+
+❯ run scripts/analyze-simulation.ts 
+
+● Bash(bun run scripts/analyze-simulation.ts)
+  ⎿  Running 200 simulations for detailed analysis (seed: 1)...
+
+       Progress: 50/200
+     … +78 lines (ctrl+o to expand)
+
+● The simulation analysis completed successfully. Key findings:
+
+  - 100% win rate across 200 runs with colony_charter victories
+  - Very consistent timing: 185/200 games (92.5%) finished at exactly 486 sols
+  - Near-optimal performance: 486 sols actual vs 480 sols theoretical minimum (6
+   sol gap for setup)
+  - Core tech path: water_recycling, hydroponics, advanced_materials, robotics
+  researched every game
+  - Only 3 outliers (1.5%) took >550 sols, likely due to random event
+  disruptions
+
+❯ i would expect not to win 100% of the time. it seems like once the player 
+  meets some conditions like building the right buildings, they can sorta   
+  just coast for the rest of the game.                                      
+
+● You're right - that's a game balance problem. Once you establish a positive
+  resource loop (habitats + farms + water extractors + solar panels), there's no
+   escalating pressure or risk that could derail you. The strategy just needs to
+   survive the early game, then it's smooth sailing for 300+ sols of "sustained
+  stability."
+
+  Some potential sources of late-game challenge that might be missing or too
+  weak:
+
+  1. Resource degradation - Buildings could wear out or require maintenance
+  2. Population growth pressure - More colonists arriving whether you want them
+  or not, straining resources
+  3. Escalating events - Dust storms, equipment failures, or crises that get
+  worse over time
+  4. Morale decay - Colonists getting restless or demanding more as the colony
+  matures
+  5. Political instability - Factions becoming more demanding or causing
+  problems
+  6. Supply chain from Earth drying up - Forcing more self-sufficiency over time
+
+  Would you like me to investigate the current event system and late-game
+  mechanics to see where the "coasting" comes from? Or do you have a specific
+  direction in mind for adding more challenge?
+
+❯ yeah investigate 
+
+● Explore(Investigate game coasting mechanics)
+  ⎿  Done (21 tool uses · 73.4k tokens · 51s)
+
+● The investigation found six root causes:
+
+  1. Victory Condition Too Easy (VictoryManager.ts)
+
+  - Colony Charter needs: pop ≥10, morale ≥60, 3 techs, then sustain 300 sols
+  - Once conditions are met, it just increments a counter - no ramping
+  difficulty
+
+  2. Morale Can't Fail (ColonyManager.ts)
+
+  - Base decay is only 0.3/sol from a pool of 100
+  - Positive resource flow gives +0.5/sol recovery
+  - Once you have water production, morale converges to stable equilibrium
+
+  3. No Escalating Resource Demands (EconomyBaseline.ts)
+
+  - Consumption is perfectly linear with population (0.5 food/colonist/sol)
+  - No maintenance costs, no building degradation, no efficiency decay
+  - Buildings work at 100% forever once built
+
+  4. Events Too Rare & Weak (EventBalance.ts)
+
+  - Max 12% chance with 30-sol minimum gap = ~1 event per 30-40 sols
+  - Impacts are capped (dust storm: 20-50 power, disease: 2 colonists)
+  - HeuristicStrategy picks optimal choices every time
+
+  5. Population Growth Has No Downside (ColonyManager.ts)
+
+  - Growth triggers at morale 60+ (same as victory condition!)
+  - More colonists = more workers = faster tech research
+  - Housing is cheap (50 materials), consumption scales linearly
+
+  6. Tech Tree Ends Too Early (technologies.ts)
+
+  - Only need 180 sols of research for victory path
+  - Remaining 300 sols is just... waiting
+
+  The core problem: Once you establish water+oxygen production (~sol 50), the
+  game enters a stable equilibrium that nothing can disrupt. There's no
+  late-game pressure mechanism.
+
+  Want me to propose specific changes to add meaningful mid/late-game challenge?
+
+✻ Cooked for 1m 12s
+
+❯ yeah propose some changes 
+
+● Skill(superpowers:brainstorming)
+  ⎿  Successfully loaded skill
+
+● Let me first check the current project state to understand the game mechanics
+  better.
+
+● Read(src/core/balance/EconomyBaseline.ts)
+  ⎿  Read 23 lines
+
+● Read(src/core/balance/EventBalance.ts)
+  ⎿  Read 13 lines
+
+● Read(src/core/systems/VictoryManager.ts)
+  ⎿  Read 167 lines
+
+● Good context. The core issue is clear: once you hit morale 60 and have 3
+  techs, you just wait 300 sols with no disruption possible.
+
+  Let me ask my first question to understand your design direction:
+
+  What's the primary feeling you want players to have during the mid-to-late 
+  game?
+
+  1. Constant tension - Always on the edge, one bad event away from disaster
+  (Frostpunk-style)
+  2. Escalating challenge - Manageable early, but pressure steadily ramps up
+  requiring adaptation (Factorio-style)
+  3. Strategic pivots - Stable periods punctuated by crises that force you to
+  change strategy (Civilization-style)
+  4. Resource optimization - Surplus early becomes scarcity late, requiring
+  efficiency improvements (Anno-style)
+
+❯ 3, i want the resource management to eventually be less burdensome, and   
+  then be replaced by political tension.                                    
+
+● That's a compelling arc - survival sim evolves into political drama. The
+  colony "growing up" from scrappy survival to managing internal conflict.
+
+  How should political tension manifest as the threat?
+
+  1. Faction demands with teeth - Factions make escalating demands; ignore them
+  and they sabotage buildings, hoard resources, or trigger exodus events
+  2. Power struggles - Factions compete for control; if one gets too strong they
+   stage a coup (game over) or force policy changes that hurt you
+  3. Splinter colonies - Dissatisfied factions threaten to leave and take
+  colonists/resources with them, fragmenting your population
+  4. Civil unrest - Political tension builds a hidden "unrest" meter; if it
+  maxes out, riots break out causing cascading damage
+
+❯ i'm not sure if adding another layer of complexity is right. tell me how  
+  the politics relate to the factions. i want to explore these              
+  relationships. i am finding it hard to know how to play the politics part 
+  ofthe game right now.                                                     
+
+● Let me explore how the current politics and faction systems work.
+
+● Read(src/core/systems/PoliticsManager.ts)
+  ⎿  Error reading file
+
+● Read(src/core/data/factions.ts)
+  ⎿  Read 123 lines
+
+● Read(src/core/models/Politics.ts)
+  ⎿  Read 39 lines
+
+● Search(pattern: "politics|faction|decision", path: "src/core")
+  ⎿  Found 10 files (ctrl+o to expand)
+
+● Read(src/core/systems/PoliticsEngine.ts)
+  ⎿  Read 142 lines
+
+● Read(src/core/systems/NPCInfluenceManager.ts)
+  ⎿  Read 493 lines
+
+● Read(src/core/balance/PoliticsBalance.ts)
+  ⎿  Read 7 lines
+
+● Read(src/core/data/npcs.ts)
+  ⎿  Read 146 lines
+
+● Now I see the issue. You actually have two separate political systems that
+  don't connect:
+
+  System 1: PoliticsEngine (Factions)
+
+  - 3 abstract factions: Earth Loyalists, Mars Independence, Corporate Interests
+  - You make "Decisions" that affect their support
+  - Support decays 0.3/sol, warnings at <20, "hostile" at <10
+  - But hostile factions do nothing - no actual consequences
+
+  System 2: NPCInfluenceManager (NPCs)
+
+  - 10 named NPCs (Dr. Chen Wei, Maria Santos, etc.) in 3 groups: futurist,
+  progressive, traditionalist
+  - You propose "Projects" and lobby NPCs to vote for them
+  - Complex influence propagation between NPCs
+  - But projects are optional - you can ignore the whole system and still win
+
+  Neither system connects to victory/defeat. That's why it feels confusing - the
+   politics is all "flavor" with no stakes.
+
+  Which direction appeals more to you?
+
+  1. Simplify to one system - Keep NPCs, remove abstract factions. NPCs become
+  the political game: their happiness/support determines colony stability
+  2. Connect them - Factions represent ideologies, NPCs are members of factions.
+   Faction unrest causes NPCs to act against you
+  3. Replace both - Design a simpler system where political tension is one
+  number that escalates over time and forces you to make hard choices
+
+✻ Baked for 36s
+
+❯ Simplify to one system. rename futurist, progressive, traditionalist to   
+  Earth Loyalists, Mars Independence, Corporate Interests.                  
+
+● Good choice. So you'll have 10 NPCs belonging to Earth Loyalists, Mars
+  Independence, or Corporate Interests. The NPC system becomes the political
+  game.
+
+  Next question: How should NPC politics create late-game pressure?
+
+  Currently NPCs only matter if you propose a project to them. You can ignore
+  them entirely. What should make politics unavoidable?
+
+  1. NPCs make demands - Each faction periodically demands something (resources,
+   policy decisions). Ignore them and their support drops, eventually causing
+  sabotage or exodus
+  2. NPCs control resources - Factions "own" certain colonists/buildings. Low
+  support means reduced productivity or strikes
+  3. NPCs gate victory - Colony Charter requires minimum political stability
+  (average NPC support > threshold) in addition to current requirements
+  4. NPCs trigger crises - Low support with any faction triggers political
+  events (protests, sabotage, coups) that can spiral into defeat
+
+❯ 1, 4 
+
+● Good combination. Factions demand things, and if you ignore them long enough,
+  crises escalate toward defeat.
+
+  How should faction demands work?
+
+  1. Resource tribute - "Earth Loyalists demand 50 materials sent to Earth" -
+  pay or lose support
+  2. Policy choices - "Corporate Interests want you to prioritize mining over
+  housing" - binary choice that pleases one faction, angers another
+  3. Project pressure - "Mars Independence demands you propose their
+  independence referendum project within 30 sols" - forces you to engage with
+  the NPC project system
+  4. Mixed - Combination of the above, varying by faction personality
+  (Corporates want resources, Loyalists want policies, Independence wants
+  projects)
+
+❯ 3 
+
+● That's elegant - it makes the existing project system mandatory rather than
+  adding a parallel mechanic. Factions demand you champion their projects, and
+  you have to lobby NPCs to get them passed.
+
+  How should crises escalate when you ignore demands or fail projects?
+
+  1. Linear escalation - Support drops → Warning → Unrest → Sabotage → Exodus
+  (predictable, manageable)
+  2. Threshold triggers - Nothing happens until support drops below 30%, then
+  sudden crisis events fire
+  3. Cascading failures - One faction's crisis can anger other factions (e.g.,
+  Corporate sabotage damages a building that Mars Independence was using, now
+  they're mad too)
+  4. Faction-specific consequences - Each faction has unique crisis types:
+  Corporates hoard resources, Loyalists call for Earth intervention,
+  Independence incites rebellion
+
+❯ 1, 4 
+
+● So escalation is predictable (you can see it coming and react), but each
+  faction causes different types of damage.
+
+  What should each faction's crisis consequences look like?
+
+  Here's a proposal - let me know if this fits your vision:
+  ┌───────────┬─────────────────────┬────────────────────┬────────────────────┐
+  │   Stage   │   Earth Loyalists   │ Mars Independence  │     Corporate      │
+  │           │                     │                    │     Interests      │
+  ├───────────┼─────────────────────┼────────────────────┼────────────────────┤
+  │ Warning   │ Complaints in event │ Complaints in      │ Complaints in      │
+  │ (40%)     │  log                │ event log          │ event log          │
+  ├───────────┼─────────────────────┼────────────────────┼────────────────────┤
+  │ Unrest    │ Demand Earth aid    │ Refuse certain     │ Reduce production  │
+  │ (30%)     │ shipment            │ work assignments   │ efficiency         │
+  ├───────────┼─────────────────────┼────────────────────┼────────────────────┤
+  │ Sabotage  │ Leak colony intel   │ Disable Earth-comm │ Hoard materials    │
+  │ (20%)     │ (random negative    │  buildings         │ (you lose access   │
+  │           │ event)              │                    │ to %)              │
+  ├───────────┼─────────────────────┼────────────────────┼────────────────────┤
+  │ Exodus    │ Key colonists       │ Splinter colony    │ Corporate pullout  │
+  │ (10%)     │ defect to Earth     │ takes population   │ (lose buildings)   │
+  │           │ ship                │                    │                    │
+  └───────────┴─────────────────────┴────────────────────┴────────────────────┘
+  Does this feel right, or would you adjust the flavor/consequences?
+
+❯ actually, i don't want to add crisis just yet. loosing their support is   
+  good enough, because it makes it harder to enact proposals                
+
+● That's cleaner. The political pressure becomes:
+
+  1. Factions demand you propose their projects
+  2. Ignore demands → support drops
+  3. Low support → harder to pass any projects (need NPC votes)
+  4. Political gridlock becomes the late-game challenge, not colony destruction
+
+  One more question: How should demands be triggered?
+
+  1. Time-based - Every N sols, a random faction makes a demand
+  2. Event-driven - Demands trigger after certain milestones (tech unlocked,
+  population reached, sol thresholds)
+  3. Support-decay prevention - Demands are how factions ask you to stop their
+  support from naturally decaying (no demand = slow decay, demand ignored = fast
+   decay)
+
+❯ 3 
+
+● Now I have a complete picture. Let me present the design in sections.
+
+  ---
+  Design Section 1: System Consolidation
+
+  Remove: PoliticsEngine and the abstract factions system
+  (src/core/data/factions.ts, src/core/systems/PoliticsEngine.ts)
+
+  Keep & Modify: NPCInfluenceManager becomes the sole political system
+
+  Rename NPC factions:
+  - futurist → earth_loyalists
+  - progressive → mars_independence
+  - traditionalist → corporate_interests
+
+  Reassign NPCs:
+  NPC: Dr. Chen Wei, Nova Silva, Alex Okonkwo
+  Current: futurist
+  New: earth_loyalists
+  ────────────────────────────────────────
+  NPC: Maria Santos, James Liu, Aisha Patel, Marcus Reed
+  Current: progressive
+  New: mars_independence
+  ────────────────────────────────────────
+  NPC: Elena Volkov, David Morrison, Sarah Chen
+  Current: traditionalist
+  New: corporate_interests
+  Does this mapping feel right, or should certain NPCs swap factions based on
+  their names/vibes?
+
+❯ yes 
+
+● ---
+  Design Section 2: Support Decay & Demand Mechanic
+
+  Core loop:
+  1. Each faction's average NPC support decays slowly over time (e.g., 0.01/sol)
+  2. When a faction's average support drops below a threshold (e.g., 50%), they
+  issue a demand: "Propose one of our projects within N sols"
+  3. If you propose and pass their project → support restored, demand satisfied
+  4. If you ignore the demand → decay rate accelerates (e.g., 3x faster)
+  5. Lower support = NPCs vote against your other projects = political gridlock
+
+  New state to track per faction:
+  interface FactionDemand {
+    factionId: string;
+    demandedAt: number;      // sol when demand was issued
+    deadline: number;        // sols until demand expires
+    projectIds: string[];    // valid projects that satisfy demand
+  }
+
+  Tuning knobs:
+  - Base decay rate: 0.01/sol (slow burn)
+  - Demand threshold: 50% average faction support
+  - Demand deadline: 60 sols to propose a project
+  - Accelerated decay: 3x if demand ignored past deadline
+  - Support boost on project pass: +0.3 to all faction NPCs
+
+  Does this mechanic feel right before I move to the final section?
+
+❯ yes 
+
+● ---
+  Design Section 3: Project Reassignment & Integration
+
+  Reassign existing projects to new factions:
+  Project: Build Generation Ship
+  Current: futurist
+  New Faction: earth_loyalists
+  Rationale: Maintaining connection to humanity's future
+  ────────────────────────────────────────
+  Project: AI-Assisted Governance
+  Current: futurist
+  New Faction: corporate_interests
+  Rationale: Efficiency/automation fits corporate
+  ────────────────────────────────────────
+  Project: Universal Housing Initiative
+  Current: progressive
+  New Faction: mars_independence
+  Rationale: Self-sufficiency for Mars
+  ────────────────────────────────────────
+  Project: Healthcare Expansion
+  Current: progressive
+  New Faction: mars_independence
+  Rationale: Colony welfare
+  ────────────────────────────────────────
+  Project: Earth Memorial
+  Current: traditionalist
+  New Faction: earth_loyalists
+  Rationale: Honoring Earth ties
+  ────────────────────────────────────────
+  Project: Heritage Archive
+  Current: traditionalist
+  New Faction: earth_loyalists
+  Rationale: Preserving Earth culture
+  Add 1-2 corporate projects (they currently have none after reassignment):
+  - "Mining Concession" - Grant exclusive extraction rights, unlocks efficient
+  mine building
+  - "Labor Efficiency Program" - Controversial productivity boost
+
+  Files to modify:
+  1. src/core/data/npcs.ts - Rename faction types, reassign projects
+  2. src/core/models/NPCInfluence.ts - Update NPCFaction type
+  3. src/core/balance/NPCInfluenceBalance.ts - Update transmission factors keys
+  4. src/core/systems/NPCInfluenceManager.ts - Add demand tracking & decay logic
+  5. Delete src/core/systems/PoliticsEngine.ts and src/core/data/factions.ts
+  6. Update GameState.ts to remove PoliticsEngine references
+
+  ---
+  Does this complete picture look right? If so, I'll write it up as a design doc
+   and we can move to implementation planning.
+
+❯ yes 
+
+● Bash(mkdir -p /workspace/docs/plans)
+  ⎿  (No content)
+
+● Write(docs/plans/2026-01-24-political-pressure-design.md)
+  ⎿  Wrote 110 lines to docs/plans/2026-01-24-political-pressure-design.md
+      1 # Political Pressure System Design
+      2 
+      3 ## Problem
+      4 
+      5 The game allows "coasting to victory" after early-game resource s
+        etup. Simulations show 100% win rate with most games finishing at
+         exactly 486 sols. Once players build basic resource production (
+        ~sol 50), they can wait 300+ sols with no challenge.
+      6 
+      7 The existing political systems (PoliticsEngine and NPCInfluenceMa
+        nager) have no teeth - you can ignore them entirely and still win
+        .
+      8 
+      9 ## Goal
+     … +100 lines (ctrl+o to expand)
+
+● Bash(git add docs/plans/2026-01-24-political-pressure-design.md && git commit
+      -m "docs: Add political pressure system design…)
+  ⎿  [main 1b5b0f8] docs: Add political pressure system design
+      1 file changed, 109 insertions(+)
+      create mode 100644 docs/plans/2026-01-24-political-pressure-design.md
+
+● Design doc committed.
+
+  Ready to set up for implementation? I can create a detailed implementation
+  plan with tasks broken down by file, or we can discuss any part of the design
+  further first.
+
+✻ Brewed for 36s
+
+❯ yes 
+
+● Skill(superpowers:writing-plans)
+  ⎿  Successfully loaded skill
+
+● I'm using the writing-plans skill to create the implementation plan.
+
+  Let me first read the design doc and explore the files I'll need to modify to
+  write precise implementation steps.
+
+● Read(docs/plans/2026-01-24-political-pressure-design.md)
+  ⎿  Read 110 lines
+
+● Read(src/core/models/NPCInfluence.ts)
+  ⎿  Read 46 lines
+
+● Read(src/core/balance/NPCInfluenceBalance.ts)
+  ⎿  Read 50 lines
+
+● Read(src/core/GameState.ts)
+  ⎿  Read 247 lines
+
+● Search(pattern: "**/*.test.ts", path: "/workspace")
+  ⎿  Found 21 files (ctrl+o to expand)
+
+● Read(tests/NPCInfluenceManager.test.ts)
+  ⎿  Read 371 lines
+
+● Search(pattern: "PoliticsEngine|politics", path: "src/renderer")
+  ⎿  Found 5 files (ctrl+o to expand)
+
+● Read(src/renderer/services/GameService.ts)
+  ⎿  Read 80 lines
+
+● Read(src/renderer/components/PoliticsPanel/PoliticsPanel.vue)
+  ⎿  Read 50 lines
+
+● Search(pattern: "factions|decisions|politics\.", path:
+        "src/renderer/services/GameService.ts", output_mode: "content")
+  ⎿  Found 9 lines (ctrl+o to expand)
+
+● Read(src/facade/GameAPI.ts)
+  ⎿  Read 100 lines
+
+● Read(src/facade/domains/PoliticsFacade.ts)
+  ⎿  Read 106 lines
+
+● Read(src/facade/domains/index.ts)
+  ⎿  Read 13 lines
+
+● Read(src/facade/types/index.ts)
+  ⎿  Read 88 lines
+
+● Read(src/facade/types/politics.ts)
+  ⎿  Read 17 lines
+
+● Read(src/facade/types/npc.ts)
+  ⎿  Read 24 lines
+
+● Now I have a complete picture. Let me write the implementation plan.
+
+● Write(docs/plans/2026-01-24-political-pressure-implementation.md)
+  ⎿  Wrote 1448 lines to
+     docs/plans/2026-01-24-political-pressure-implementation.md
+      1 # Political Pressure System Implementation Plan
+      2 
+      3 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-p
+        lans to implement this plan task-by-task.
+      4 
+      5 **Goal:** Replace the dual politics systems with a unified NPC-ba
+        sed political pressure system that creates late-game challenge th
+        rough faction demands.
+      6 
+      7 **Architecture:** Consolidate PoliticsEngine into NPCInfluenceMan
+        ager. Rename NPC factions to match game lore. Add decay/demand me
+        chanics that force players to engage with the project system.
+      8 
+      9 **Tech Stack:** TypeScript, Bun test runner, Vue 3 (renderer upda
+        tes)
+     … +1438 lines (ctrl+o to expand)
+
+● Bash(git add docs/plans/2026-01-24-political-pressure-implementation.md && git
+       commit -m "docs: Add political pressure implementation plan…)
+  ⎿ [main 01c09bb] docs: Add political pressure implementation plan
+     1 file changed, 1448 insertions(+)
+     create mode 100644 docs/plans/2026-01-24-political-pressure-implementa
+    tion.md
+
+
+● Plan complete and saved.
+
+  Two execution options:
+
+  1. Subagent-Driven (this session) - I dispatch fresh subagent per task, review
+   between tasks, fast iteration
+  2. Parallel Session (separate) - Open new session with executing-plans, batch
+  execution with checkpoints
+
+  Which approach?
+
+✻ Sautéed for 3m 19s
+
+❯ 1 
+
+● Skill(superpowers:subagent-driven-development)
+  ⎿  Successfully loaded skill
+
+● I'm using Subagent-Driven Development to execute this plan.
+
+  Let me first read the plan and extract all tasks.
+
+● Read(docs/plans/2026-01-24-political-pressure-implementation.md)
+  ⎿  Read 1448 lines
+
+● Now I'll create the todo list and start dispatching subagents for each task.
+✔ Task #1 created: Task 1: Update NPCFaction Type
+✔ Task #2 created: Task 2: Update NPC Data
+✔ Task #3 created: Task 3: Update Project Assignments
+✔ Task #4 created: Task 4: Update Transmission Factors
+✔ Task #5 created: Task 5: Add Demand Balance Constants
+✔ Task #6 created: Task 6: Add FactionDemand Interface
+✔ Task #7 created: Task 7: Add Faction Support Tracking
+✔ Task #8 created: Task 8: Add Support Decay Logic
+✔ Task #9 created: Task 9: Add Demand Generation Logic
+✔ Task #10 created: Task 10: Add Demand Deadline and Accelerated Decay
+✔ Task #11 created: Task 11: Add Demand Resolution on Project Pass
+✔ Task #12 created: Task 12: Update GameState tick call
+✔ Task #13 created: Task 13: Remove PoliticsEngine from GameState
+✔ Task #14 created: Task 14: Delete PoliticsEngine files
+✔ Task #15 created: Task 15: Update Facade Layer
+✔ Task #16 created: Task 16: Update GameService
+✔ Task #17 created: Task 17: Update PoliticsPanel UI
+✔ Task #18 created: Task 18: Update Serialization
+✔ Task #19 created: Task 19: Fix Test Suite
+✔ Task #20 created: Task 20: Final Integration Test
+✔ Task #1 updated: status → in progress
+
+● Starting Task 1: Update NPCFaction Type. Dispatching implementer subagent.
+
+● Task(Implement Task 1: Update NPCFaction Type)
+  ⎿  Done (14 tool uses · 35.0k tokens · 1m 2s)
+
+● Task 1 complete. Let me mark it done and move to Task 2.
+✔ Task #1 updated: no fields
+✔ Task #2 updated: status → in progress
+
+● Task 2: Update NPC Data. Dispatching implementer subagent.
+
+● Task(Implement Task 2: Update NPC Data)
+  ⎿  Done (6 tool uses · 29.6k tokens · 40s)
+✔ Task #2 updated: no fields
+✔ Task #3 updated: status → in progress
+
+● Task 3: Update Project Assignments. Dispatching implementer subagent.
+
+● Task(Implement Task 3: Update Project Assignments)
+  ⎿  Done (15 tool uses · 39.4k tokens · 5m 17s)
+✔ Task #3 updated: no fields
+✔ Task #4 updated: status → in progress
+
+● Task 4: Update Transmission Factors. Dispatching implementer subagent.
+
+● Task(Implement Task 4: Update Transmission Factors)
+  ⎿  Done (3 tool uses · 0 tokens · 16s)
+
+● Task(Implement Task 4: Update Transmission Factors)
+  ⎿  Done (0 tool uses · 0 tokens · 0s)
+  ⎿  You've hit your limit · resets 1am (UTC)
+     /upgrade to increase your usage limit.
+
+✻ Brewed for 9m 8s
+
+❯ continue 
+  ⎿  OAuth token revoked · Please run /login

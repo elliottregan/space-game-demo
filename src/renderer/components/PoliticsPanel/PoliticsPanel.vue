@@ -1,86 +1,57 @@
 <script setup lang="ts">
-import { ref } from "vue";
 import { gameService } from "../../services/GameService";
-import type { Decision } from "../../../core/models/Politics";
 import { GPanel } from "../../ui";
-import AverageSupportDisplay from "./AverageSupportDisplay.vue";
-import FactionCard from "./FactionCard.vue";
-import DecisionsList from "./DecisionsList.vue";
-import DecisionModal from "./DecisionModal.vue";
 
 const state = gameService.getState();
-const api = gameService.api;
 
-const selectedDecision = ref<Decision | null>(null);
-const decisionResult = ref<string | null>(null);
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function canMakeDecision(decision: Decision): boolean {
-  return api.politics.canMakeDecision(decision.id).allowed;
+function getSupportColor(support: number): string {
+  if (support >= 0.5) return 'var(--color-positive)';
+  if (support >= 0) return 'var(--color-warning)';
+  return 'var(--color-danger)';
 }
 
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function selectDecision(decision: Decision): void {
-  selectedDecision.value = decision;
-  decisionResult.value = null;
-}
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function makeDecision(): void {
-  if (!selectedDecision.value) return;
-
-  const result = api.politics.makeDecision(selectedDecision.value.id);
-  if (result.success) {
-    const impacts = result.data.impacts
-      .map((i) => {
-        const faction = state.factions.find((f) => f.id === i.factionId);
-        const changeStr = i.change >= 0 ? `+${i.change}` : `${i.change}`;
-        return `${faction?.name}: ${changeStr}`;
-      })
-      .join(", ");
-
-    decisionResult.value = result.data.success
-      ? `Decision made! ${impacts}`
-      : `Decision failed. ${impacts}`;
-  } else {
-    console.warn(`Decision failed: ${result.error.type}`, result.error);
-  }
-
-  selectedDecision.value = null;
-}
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function cancelDecision(): void {
-  selectedDecision.value = null;
-  decisionResult.value = null;
+function formatSupport(support: number): string {
+  return `${(support * 100).toFixed(0)}%`;
 }
 </script>
 
 <template>
   <GPanel title="Politics">
-    <AverageSupportDisplay :support="state.averageSupport" />
-
     <div class="factions">
-      <FactionCard
-        v-for="faction in state.factions"
+      <div
+        v-for="faction in state.politics.factions"
         :key="faction.id"
-        :faction="faction"
-      />
+        class="faction-card"
+      >
+        <div class="faction-header">
+          <span class="faction-name">{{ faction.name }}</span>
+          <span
+            class="faction-support"
+            :style="{ color: getSupportColor(faction.support) }"
+          >
+            {{ formatSupport(faction.support) }}
+          </span>
+        </div>
+
+        <div class="support-bar">
+          <div
+            class="support-fill"
+            :style="{
+              width: `${Math.max(0, (faction.support + 1) * 50)}%`,
+              backgroundColor: getSupportColor(faction.support)
+            }"
+          />
+        </div>
+
+        <div v-if="faction.activeDemand" class="demand-warning">
+          ⚠️ Demands project! {{ faction.activeDemand.deadline }} sols remaining
+        </div>
+      </div>
     </div>
 
-    <DecisionsList
-      :decisions="state.decisions"
-      :decision-result="decisionResult"
-      :can-make-decision="canMakeDecision"
-      @select="selectDecision"
-    />
-
-    <DecisionModal
-      v-if="selectedDecision"
-      :decision="selectedDecision"
-      @confirm="makeDecision"
-      @cancel="cancelDecision"
-    />
+    <p class="hint">
+      Propose projects in the NPC tab to satisfy faction demands.
+    </p>
   </GPanel>
 </template>
 
@@ -88,7 +59,49 @@ function cancelDecision(): void {
 .factions {
   display: flex;
   flex-direction: column;
-  gap: var(--g-space-sm);
-  margin-bottom: var(--g-space-lg);
+  gap: 1rem;
+}
+
+.faction-card {
+  padding: 0.75rem;
+  background: var(--color-surface);
+  border-radius: 4px;
+}
+
+.faction-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.faction-name {
+  font-weight: 500;
+}
+
+.support-bar {
+  height: 8px;
+  background: var(--color-muted);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.support-fill {
+  height: 100%;
+  transition: width 0.3s;
+}
+
+.demand-warning {
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--color-warning);
+  color: var(--color-background);
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.hint {
+  margin-top: 1rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
 }
 </style>

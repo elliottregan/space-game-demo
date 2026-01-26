@@ -10,9 +10,8 @@ import {
   type Colonist,
   type ColonistRole,
   type SkillDefinition,
-  type Faction,
-  type Decision,
-  type DecisionResult,
+  type FactionStatus,
+  type FactionDemand,
   type RandomEventDefinition,
   type EventChoice,
   type ActiveEvent,
@@ -51,9 +50,10 @@ interface GameUIState {
   availableTechs: Technology[];
   researchedTechs: Technology[];
   currentResearch: TechResearch | null;
-  factions: Faction[];
-  averageSupport: number;
-  decisions: Decision[];
+  politics: {
+    factions: FactionStatus[];
+    demands: FactionDemand[];
+  };
   activeEvent: { definition: RandomEventDefinition; active: ActiveEvent } | null;
   eventChoices: EventChoice[];
   victoryState: VictoryState;
@@ -156,9 +156,10 @@ class GameService {
       availableTechs: [],
       researchedTechs: [],
       currentResearch: null,
-      factions: [],
-      averageSupport: 50,
-      decisions: [],
+      politics: {
+        factions: [],
+        demands: [],
+      },
       activeEvent: null,
       eventChoices: [],
       victoryState: { status: "playing" },
@@ -220,10 +221,11 @@ class GameService {
     this.state.currentResearch = techs.currentResearch ? { ...techs.currentResearch } : null;
 
     // Politics
-    const politics = this.facade.politics.snapshot();
-    this.state.factions = [...politics.factions];
-    this.state.averageSupport = politics.averageSupport;
-    this.state.decisions = [...politics.decisions];
+    const politicsSnapshot = this.facade.politics.snapshot();
+    this.state.politics = {
+      factions: [...politicsSnapshot.factions],
+      demands: [...politicsSnapshot.demands],
+    };
 
     // Events
     const activeEvent = this.facade.events.getActive();
@@ -319,12 +321,6 @@ class GameService {
 
   cancelTraining(colonistId: string): void {
     this.facade.colony.cancelTraining(colonistId);
-  }
-
-  // Politics actions
-  makeDecision(decisionId: string): DecisionResult | null {
-    const result = this.facade.politics.makeDecision(decisionId);
-    return result.success ? result.data : null;
   }
 
   // Event actions

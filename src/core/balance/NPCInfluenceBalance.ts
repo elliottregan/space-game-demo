@@ -16,20 +16,20 @@ export const TRANSMISSION_FACTORS: Record<
   ProjectType,
   Record<NPCFaction, Record<NPCFaction, number>>
 > = {
-  futurist: {
-    futurist: { futurist: 1.0, progressive: 0.6, traditionalist: 0.2 },
-    progressive: { futurist: 0.7, progressive: 1.0, traditionalist: 0.4 },
-    traditionalist: { futurist: 0.3, progressive: 0.5, traditionalist: 1.0 },
+  earth_loyalists: {
+    earth_loyalists: { earth_loyalists: 1.0, mars_independence: 0.6, corporate_interests: 0.2 },
+    mars_independence: { earth_loyalists: 0.7, mars_independence: 1.0, corporate_interests: 0.4 },
+    corporate_interests: { earth_loyalists: 0.3, mars_independence: 0.5, corporate_interests: 1.0 },
   },
-  progressive: {
-    futurist: { futurist: 1.0, progressive: 0.5, traditionalist: 0.3 },
-    progressive: { futurist: 0.6, progressive: 1.0, traditionalist: 0.6 },
-    traditionalist: { futurist: 0.3, progressive: 0.5, traditionalist: 1.0 },
+  mars_independence: {
+    earth_loyalists: { earth_loyalists: 1.0, mars_independence: 0.5, corporate_interests: 0.3 },
+    mars_independence: { earth_loyalists: 0.6, mars_independence: 1.0, corporate_interests: 0.6 },
+    corporate_interests: { earth_loyalists: 0.3, mars_independence: 0.5, corporate_interests: 1.0 },
   },
-  traditionalist: {
-    futurist: { futurist: 1.0, progressive: 0.4, traditionalist: 0.2 },
-    progressive: { futurist: 0.5, progressive: 1.0, traditionalist: 0.6 },
-    traditionalist: { futurist: 0.3, progressive: 0.7, traditionalist: 1.0 },
+  corporate_interests: {
+    earth_loyalists: { earth_loyalists: 1.0, mars_independence: 0.4, corporate_interests: 0.2 },
+    mars_independence: { earth_loyalists: 0.5, mars_independence: 1.0, corporate_interests: 0.6 },
+    corporate_interests: { earth_loyalists: 0.3, mars_independence: 0.7, corporate_interests: 1.0 },
   },
 } as const;
 
@@ -47,3 +47,23 @@ export const SUCCESS_TRANSMISSION_BOOST = 0.1;
 
 /** Transmission factor change on project failure */
 export const FAILURE_TRANSMISSION_PENALTY = -0.15;
+
+// ============ Faction Demand System ============
+
+/** Rate at which faction support decays per sol (before demands) */
+export const FACTION_SUPPORT_DECAY_RATE = 0.01;
+
+/** Support threshold below which a faction issues a demand */
+export const DEMAND_THRESHOLD = 0.5;
+
+/** Sols given to respond to a faction demand */
+export const DEMAND_DEADLINE = 60;
+
+/** Decay rate multiplier when demand is ignored past deadline */
+export const IGNORED_DEMAND_DECAY_MULTIPLIER = 3;
+
+/** Support boost to all faction NPCs when their project passes */
+export const PROJECT_PASS_SUPPORT_BOOST = 0.3;
+
+/** Minimum sols before political pressure begins */
+export const POLITICAL_PRESSURE_START_SOL = 100;

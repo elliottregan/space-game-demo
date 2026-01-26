@@ -14,6 +14,30 @@ describe('NPCInfluenceManager', () => {
     manager = new NPCInfluenceManager(NPCS, INITIAL_RELATIONSHIPS, PROJECTS);
   });
 
+  describe('faction types', () => {
+    it('should have NPCs in earth_loyalists, mars_independence, and corporate_interests factions', () => {
+      const npcs = manager.getNPCs();
+      const factions = new Set(npcs.map(n => n.faction));
+      expect(factions.has('earth_loyalists')).toBe(true);
+      expect(factions.has('mars_independence')).toBe(true);
+      expect(factions.has('corporate_interests')).toBe(true);
+      expect(factions.size).toBe(3);
+    });
+  });
+
+  describe('project assignments', () => {
+    it('should have projects for each faction', () => {
+      const projects = manager.getProjects();
+      const earthProjects = projects.filter(p => p.type === 'earth_loyalists');
+      const marsProjects = projects.filter(p => p.type === 'mars_independence');
+      const corpProjects = projects.filter(p => p.type === 'corporate_interests');
+
+      expect(earthProjects.length).toBeGreaterThanOrEqual(2);
+      expect(marsProjects.length).toBeGreaterThanOrEqual(2);
+      expect(corpProjects.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
   describe('initialization', () => {
     it('should store all NPCs', () => {
       const npcs = manager.getNPCs();
@@ -22,7 +46,7 @@ describe('NPCInfluenceManager', () => {
 
     it('should store all projects', () => {
       const projects = manager.getProjects();
-      expect(projects.length).toBe(6);
+      expect(projects.length).toBe(8);
     });
 
     it('should build relationship matrix from initial data', () => {
@@ -365,6 +389,192 @@ describe('NPCInfluenceManager', () => {
       const failedEvent = events.find((e) => e.type === 'PROJECT_FAILED');
       expect(failedEvent).toBeDefined();
       expect(failedEvent!.projectId).toBe('generation_ship');
+    });
+  });
+
+  describe('faction support', () => {
+    it('should calculate average support per faction', () => {
+      const support = manager.getFactionSupport();
+
+      expect(support.earth_loyalists).toBeDefined();
+      expect(support.mars_independence).toBeDefined();
+      expect(support.corporate_interests).toBeDefined();
+
+      // Initial support should be 0 (neutral)
+      expect(support.earth_loyalists).toBe(0);
+      expect(support.mars_independence).toBe(0);
+      expect(support.corporate_interests).toBe(0);
+    });
+  });
+
+  describe('support decay', () => {
+    it('should decay faction support over time when no project active', () => {
+      // Set initial support above 0
+      manager.adjustNPCSupport('chen_wei', 0.5);
+      manager.adjustNPCSupport('nova_silva', 0.5);
+      manager.adjustNPCSupport('alex_okonkwo', 0.5);
+
+      const initialSupport = manager.getFactionSupport().earth_loyalists;
+      expect(initialSupport).toBe(0.5);
+
+      // Run 10 ticks with currentSol > POLITICAL_PRESSURE_START_SOL
+      for (let i = 0; i < 10; i++) {
+        manager.tick(150 + i); // Pass currentSol
+      }
+
+      const finalSupport = manager.getFactionSupport().earth_loyalists;
+      expect(finalSupport).toBeLessThan(initialSupport);
+    });
+  });
+
+  describe('faction demands', () => {
+    it('should generate demand when faction support drops below threshold', () => {
+      // Start with no demands
+      expect(manager.getActiveDemands()).toEqual([]);
+
+      // Set support above threshold for mars_independence and corporate_interests
+      // mars_independence: maria_santos, james_liu, aisha_patel, marcus_reed
+      manager.adjustNPCSupport('maria_santos', 0.6);
+      manager.adjustNPCSupport('james_liu', 0.6);
+      manager.adjustNPCSupport('aisha_patel', 0.6);
+      manager.adjustNPCSupport('marcus_reed', 0.6);
+      // corporate_interests: elena_volkov, david_morrison, sarah_chen
+      manager.adjustNPCSupport('elena_volkov', 0.6);
+      manager.adjustNPCSupport('david_morrison', 0.6);
+      manager.adjustNPCSupport('sarah_chen', 0.6);
+
+      // Set support below threshold for earth_loyalists (threshold is 0.5)
+      // earth_loyalists: chen_wei, nova_silva, alex_okonkwo
+      manager.adjustNPCSupport('chen_wei', 0.4);
+      manager.adjustNPCSupport('nova_silva', 0.4);
+      manager.adjustNPCSupport('alex_okonkwo', 0.4);
+
+      // Tick to trigger demand check
+      manager.tick(150);
+
+      const demands = manager.getActiveDemands();
+      expect(demands.length).toBe(1);
+      expect(demands[0].factionId).toBe('earth_loyalists');
+      expect(demands[0].projectIds.length).toBeGreaterThan(0);
+    });
+
+    it('should not duplicate demands for same faction', () => {
+      // Set support above threshold for mars_independence and corporate_interests
+      manager.adjustNPCSupport('maria_santos', 0.6);
+      manager.adjustNPCSupport('james_liu', 0.6);
+      manager.adjustNPCSupport('aisha_patel', 0.6);
+      manager.adjustNPCSupport('marcus_reed', 0.6);
+      manager.adjustNPCSupport('elena_volkov', 0.6);
+      manager.adjustNPCSupport('david_morrison', 0.6);
+      manager.adjustNPCSupport('sarah_chen', 0.6);
+
+      // Set support below threshold for earth_loyalists
+      manager.adjustNPCSupport('chen_wei', 0.4);
+      manager.adjustNPCSupport('nova_silva', 0.4);
+      manager.adjustNPCSupport('alex_okonkwo', 0.4);
+
+      manager.tick(150);
+      manager.tick(151);
+      manager.tick(152);
+
+      const demands = manager.getActiveDemands();
+      const earthDemands = demands.filter(d => d.factionId === 'earth_loyalists');
+      expect(earthDemands.length).toBe(1);
+    });
+  });
+
+  describe('demand resolution', () => {
+    it('should clear demand and boost support when faction project passes', () => {
+      const resources = new ResourceManager({
+        food: 100, oxygen: 100, water: 100, power: 100, materials: 1000,
+      });
+
+      // Set support above threshold for mars_independence and corporate_interests
+      // mars_independence: maria_santos, james_liu, aisha_patel, marcus_reed
+      manager.adjustNPCSupport('maria_santos', 0.6);
+      manager.adjustNPCSupport('james_liu', 0.6);
+      manager.adjustNPCSupport('aisha_patel', 0.6);
+      manager.adjustNPCSupport('marcus_reed', 0.6);
+      // corporate_interests: elena_volkov, david_morrison, sarah_chen
+      manager.adjustNPCSupport('elena_volkov', 0.6);
+      manager.adjustNPCSupport('david_morrison', 0.6);
+      manager.adjustNPCSupport('sarah_chen', 0.6);
+
+      // Create demand for earth_loyalists (below threshold of 0.5)
+      manager.adjustNPCSupport('chen_wei', 0.4);
+      manager.adjustNPCSupport('nova_silva', 0.4);
+      manager.adjustNPCSupport('alex_okonkwo', 0.4);
+      manager.tick(150);
+
+      expect(manager.getActiveDemands().length).toBe(1);
+      expect(manager.getActiveDemands()[0].factionId).toBe('earth_loyalists');
+
+      // Propose an earth_loyalists project
+      manager.proposeProject('earth_memorial', resources);
+
+      // Lobby everyone to pass (need support above PASS_THRESHOLD which is 0.4)
+      for (const npc of manager.getNPCs()) {
+        manager.lobbyNPC(npc.id, 0.9, resources);
+      }
+
+      // Record support before project resolves
+      const supportBefore = manager.getFactionSupport().earth_loyalists;
+
+      // Run until project resolves (PROJECT_VOTE_DELAY is 10)
+      for (let i = 0; i < 15; i++) {
+        manager.tick(160 + i);
+      }
+
+      // Demand should be cleared
+      const earthDemands = manager.getActiveDemands().filter(d => d.factionId === 'earth_loyalists');
+      expect(earthDemands.length).toBe(0);
+
+      // Support should be boosted (PROJECT_PASS_SUPPORT_BOOST is 0.3)
+      const supportAfter = manager.getFactionSupport().earth_loyalists;
+      expect(supportAfter).toBeGreaterThan(supportBefore);
+    });
+  });
+
+  describe('demand deadlines', () => {
+    it('should decrement demand deadline each tick', () => {
+      manager.adjustNPCSupport('chen_wei', 0.4);
+      manager.adjustNPCSupport('nova_silva', 0.4);
+      manager.adjustNPCSupport('alex_okonkwo', 0.4);
+
+      manager.tick(150);
+      const initialDeadline = manager.getActiveDemands()[0].deadline;
+
+      manager.tick(151);
+      const newDeadline = manager.getActiveDemands()[0].deadline;
+
+      expect(newDeadline).toBe(initialDeadline - 1);
+    });
+
+    it('should apply accelerated decay when demand deadline expires', () => {
+      manager.adjustNPCSupport('chen_wei', 0.6);
+      manager.adjustNPCSupport('nova_silva', 0.6);
+      manager.adjustNPCSupport('alex_okonkwo', 0.6);
+
+      // Force a demand with low support
+      manager.adjustNPCSupport('chen_wei', -0.3);
+      manager.adjustNPCSupport('nova_silva', -0.3);
+      manager.adjustNPCSupport('alex_okonkwo', -0.3);
+
+      manager.tick(150); // Generate demand
+
+      // Expire the deadline (60 sols + a bit more)
+      for (let i = 0; i < 65; i++) {
+        manager.tick(151 + i);
+      }
+
+      // Demand should still exist but with deadline <= 0
+      const demand = manager.getActiveDemands().find(d => d.factionId === 'earth_loyalists');
+      expect(demand).toBeDefined();
+      expect(demand!.deadline).toBeLessThanOrEqual(0);
+
+      // Support should have decayed faster (3x rate after deadline)
+      const support = manager.getFactionSupport().earth_loyalists;
+      expect(support).toBeLessThan(0); // Should be significantly negative
     });
   });
 });

@@ -3,56 +3,26 @@
 import type { NPC, Project } from "../models/NPCInfluence";
 
 export const NPCS: NPC[] = [
-  // Futurists (3)
-  { id: "chen_wei", name: "Dr. Chen Wei", faction: "futurist", influence: 1.5 },
-  { id: "nova_silva", name: "Nova Silva", faction: "futurist", influence: 1.0 },
-  { id: "alex_okonkwo", name: "Alex Okonkwo", faction: "futurist", influence: 1.2 },
+  // Earth Loyalists (3) - formerly futurist
+  { id: "chen_wei", name: "Dr. Chen Wei", faction: "earth_loyalists", influence: 1.5 },
+  { id: "nova_silva", name: "Nova Silva", faction: "earth_loyalists", influence: 1.0 },
+  { id: "alex_okonkwo", name: "Alex Okonkwo", faction: "earth_loyalists", influence: 1.2 },
 
-  // Progressives (4)
-  {
-    id: "maria_santos",
-    name: "Maria Santos",
-    faction: "progressive",
-    influence: 1.3,
-  },
-  { id: "james_liu", name: "James Liu", faction: "progressive", influence: 1.0 },
-  {
-    id: "aisha_patel",
-    name: "Aisha Patel",
-    faction: "progressive",
-    influence: 1.1,
-  },
-  {
-    id: "marcus_reed",
-    name: "Marcus Reed",
-    faction: "progressive",
-    influence: 0.9,
-  },
+  // Mars Independence (4) - formerly progressive
+  { id: "maria_santos", name: "Maria Santos", faction: "mars_independence", influence: 1.3 },
+  { id: "james_liu", name: "James Liu", faction: "mars_independence", influence: 1.0 },
+  { id: "aisha_patel", name: "Aisha Patel", faction: "mars_independence", influence: 1.1 },
+  { id: "marcus_reed", name: "Marcus Reed", faction: "mars_independence", influence: 0.9 },
 
-  // Traditionalists (3)
-  {
-    id: "elena_volkov",
-    name: "Elena Volkov",
-    faction: "traditionalist",
-    influence: 1.4,
-  },
-  {
-    id: "david_morrison",
-    name: "David Morrison",
-    faction: "traditionalist",
-    influence: 1.0,
-  },
-  {
-    id: "sarah_chen",
-    name: "Sarah Chen",
-    faction: "traditionalist",
-    influence: 1.1,
-  },
+  // Corporate Interests (3) - formerly traditionalist
+  { id: "elena_volkov", name: "Elena Volkov", faction: "corporate_interests", influence: 1.4 },
+  { id: "david_morrison", name: "David Morrison", faction: "corporate_interests", influence: 1.0 },
+  { id: "sarah_chen", name: "Sarah Chen", faction: "corporate_interests", influence: 1.1 },
 ];
 
 /** Initial relationship weights (asymmetric). Key format: "fromId:toId" -> weight */
 export const INITIAL_RELATIONSHIPS: Record<string, number> = {
-  // Futurist internal connections (strong)
+  // Earth Loyalists internal connections (strong)
   "chen_wei:nova_silva": 0.7,
   "nova_silva:chen_wei": 0.6,
   "chen_wei:alex_okonkwo": 0.5,
@@ -60,7 +30,7 @@ export const INITIAL_RELATIONSHIPS: Record<string, number> = {
   "nova_silva:alex_okonkwo": 0.4,
   "alex_okonkwo:nova_silva": 0.5,
 
-  // Progressive internal connections (moderate)
+  // Mars Independence internal connections (moderate)
   "maria_santos:james_liu": 0.6,
   "james_liu:maria_santos": 0.5,
   "maria_santos:aisha_patel": 0.5,
@@ -70,7 +40,7 @@ export const INITIAL_RELATIONSHIPS: Record<string, number> = {
   "aisha_patel:marcus_reed": 0.3,
   "marcus_reed:aisha_patel": 0.3,
 
-  // Traditionalist internal connections (strong)
+  // Corporate Interests internal connections (strong)
   "elena_volkov:david_morrison": 0.7,
   "david_morrison:elena_volkov": 0.6,
   "elena_volkov:sarah_chen": 0.5,
@@ -90,30 +60,37 @@ export const INITIAL_RELATIONSHIPS: Record<string, number> = {
 };
 
 export const PROJECTS: Project[] = [
-  // Futurist projects
+  // Earth Loyalists projects
   {
     id: "generation_ship",
     name: "Build Generation Ship",
     description: "Begin construction of an interstellar colony ship.",
-    type: "futurist",
+    type: "earth_loyalists",
     proposalCost: { materials: 100 },
     effects: { unlockBuilding: "shipyard" },
   },
   {
-    id: "ai_governance",
-    name: "AI-Assisted Governance",
-    description: "Implement AI systems to help with colony decision-making.",
-    type: "futurist",
-    proposalCost: { materials: 50, power: 50 },
-    effects: { unlockTech: "advanced_ai" },
+    id: "earth_memorial",
+    name: "Earth Memorial",
+    description: "Build a memorial to honor our home planet.",
+    type: "earth_loyalists",
+    proposalCost: { materials: 40 },
+  },
+  {
+    id: "heritage_archive",
+    name: "Heritage Archive",
+    description: "Preserve Earth cultures and traditions.",
+    type: "earth_loyalists",
+    proposalCost: { materials: 50 },
+    effects: { unlockBuilding: "archive" },
   },
 
-  // Progressive projects
+  // Mars Independence projects
   {
     id: "universal_housing",
     name: "Universal Housing Initiative",
     description: "Guarantee housing for all colonists.",
-    type: "progressive",
+    type: "mars_independence",
     proposalCost: { materials: 80 },
     effects: { unlockBuilding: "housing_complex" },
   },
@@ -121,25 +98,33 @@ export const PROJECTS: Project[] = [
     id: "healthcare_expansion",
     name: "Healthcare Expansion",
     description: "Expand medical facilities and access.",
-    type: "progressive",
+    type: "mars_independence",
     proposalCost: { materials: 60, water: 30 },
     effects: { unlockBuilding: "medical_center" },
   },
 
-  // Traditionalist projects
+  // Corporate Interests projects
   {
-    id: "earth_memorial",
-    name: "Earth Memorial",
-    description: "Build a memorial to honor our home planet.",
-    type: "traditionalist",
-    proposalCost: { materials: 40 },
+    id: "ai_governance",
+    name: "AI-Assisted Governance",
+    description: "Implement AI systems to help with colony decision-making.",
+    type: "corporate_interests",
+    proposalCost: { materials: 50, power: 50 },
+    effects: { unlockTech: "advanced_ai" },
   },
   {
-    id: "heritage_archive",
-    name: "Heritage Archive",
-    description: "Preserve Earth cultures and traditions.",
-    type: "traditionalist",
-    proposalCost: { materials: 50 },
-    effects: { unlockBuilding: "archive" },
+    id: "mining_concession",
+    name: "Mining Concession",
+    description: "Grant exclusive extraction rights to corporate partners.",
+    type: "corporate_interests",
+    proposalCost: { materials: 60 },
+    effects: { unlockBuilding: "efficient_mine" },
+  },
+  {
+    id: "labor_efficiency",
+    name: "Labor Efficiency Program",
+    description: "Controversial productivity initiative that increases output.",
+    type: "corporate_interests",
+    proposalCost: { materials: 40 },
   },
 ];

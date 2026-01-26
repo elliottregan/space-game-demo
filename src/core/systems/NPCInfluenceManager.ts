@@ -10,14 +10,21 @@ import type {
   ProjectType,
   ActiveProject,
   Council,
+  FactionDemand,
 } from "../models/NPCInfluence";
 import {
   COUNCIL_CREATION_COST,
   COUNCIL_RELATIONSHIP_BOOST,
+  DEMAND_DEADLINE,
+  DEMAND_THRESHOLD,
   DRIFT_RATE,
+  FACTION_SUPPORT_DECAY_RATE,
   FAILURE_TRANSMISSION_PENALTY,
+  IGNORED_DEMAND_DECAY_MULTIPLIER,
   LOBBY_BASE_COST,
   PASS_THRESHOLD,
+  POLITICAL_PRESSURE_START_SOL,
+  PROJECT_PASS_SUPPORT_BOOST,
   PROJECT_VOTE_DELAY,
   SUCCESS_TRANSMISSION_BOOST,
   TRANSMISSION_FACTORS,
@@ -121,6 +128,8 @@ export class NPCInfluenceManager {
   private relationshipMatrix: number[][];
   private councils: Council[] = [];
   private activeProject: ActiveProject | null = null;
+  private npcSupport: Map<string, number> = new Map();
+  private activeDemands: FactionDemand[] = [];
 
   /** Mutable transmission factors (modified by project outcomes) */
   private transmissionFactors: Record<ProjectType, Record<NPCFaction, Record<NPCFaction, number>>>;
@@ -139,6 +148,11 @@ export class NPCInfluenceManager {
 
     // Deep copy transmission factors so we can modify them
     this.transmissionFactors = JSON.parse(JSON.stringify(TRANSMISSION_FACTORS));
+
+    // Initialize support for each NPC to 0
+    for (const npc of this.npcs) {
+      this.npcSupport.set(npc.id, 0);
+    }
   }
 
   private buildRelationshipMatrix(relationships: Record<string, number>): number[][] {
@@ -186,6 +200,46 @@ export class NPCInfluenceManager {
 
   getCouncils(): readonly Council[] {
     return this.councils;
+  }
+
+  getFactionSupport(): Record<NPCFaction, number> {
+    const result: Record<NPCFaction, number> = {
+      earth_loyalists: 0,
+      mars_independence: 0,
+      corporate_interests: 0,
+    };
+
+    const factions: NPCFaction[] = ['earth_loyalists', 'mars_independence', 'corporate_interests'];
+    for (const faction of factions) {
+      const factionNpcs = this.npcs.filter(n => n.faction === faction);
+      if (factionNpcs.length === 0) continue;
+
+      const totalSupport = factionNpcs.reduce(
+        (sum, npc) => sum + (this.npcSupport.get(npc.id) ?? 0),
+        0
+      );
+      result[faction] = totalSupport / factionNpcs.length;
+    }
+
+    return result;
+  }
+
+  adjustNPCSupport(npcId: string, amount: number): void {
+    const current = this.npcSupport.get(npcId) ?? 0;
+    this.npcSupport.set(npcId, Math.max(-1, Math.min(1, current + amount)));
+  }
+
+  getActiveDemands(): readonly FactionDemand[] {
+    return this.activeDemands;
+  }
+
+  private getFactionDisplayName(faction: NPCFaction): string {
+    const names: Record<NPCFaction, string> = {
+      earth_loyalists: "Earth Loyalists",
+      mars_independence: "Mars Independence",
+      corporate_interests: "Corporate Interests",
+    };
+    return names[faction];
   }
 
   // ============ Project Proposal ============
@@ -322,6 +376,46 @@ export class NPCInfluenceManager {
     return true;
   }
 
+  // ============ Demand Generation ============
+
+  private checkAndGenerateDemands(currentSol: number): GameEvent[] {
+    const events: GameEvent[] = [];
+    const factionSupport = this.getFactionSupport();
+    const factions: NPCFaction[] = ['earth_loyalists', 'mars_independence', 'corporate_interests'];
+
+    for (const faction of factions) {
+      // Skip if already has active demand
+      if (this.activeDemands.some(d => d.factionId === faction)) {
+        continue;
+      }
+
+      // Check if support below threshold
+      if (factionSupport[faction] < DEMAND_THRESHOLD) {
+        const factionProjects = Array.from(this.projects.values())
+          .filter(p => p.type === faction)
+          .map(p => p.id);
+
+        if (factionProjects.length > 0) {
+          const demand: FactionDemand = {
+            factionId: faction,
+            demandedAt: currentSol,
+            deadline: DEMAND_DEADLINE,
+            projectIds: factionProjects,
+          };
+
+          this.activeDemands.push(demand);
+
+          events.push({
+            type: "FACTION_DEMAND",
+            message: `${this.getFactionDisplayName(faction)} demands you propose one of their projects!`,
+          });
+        }
+      }
+    }
+
+    return events;
+  }
+
   // ============ Tick / Game Loop ============
 
   /**
@@ -379,8 +473,33 @@ export class NPCInfluenceManager {
   /**
    * Process one game tick. Propagates influence and resolves projects.
    */
-  tick(): GameEvent[] {
+  tick(currentSol: number = 0): GameEvent[] {
     const events: GameEvent[] = [];
+
+    // Apply support decay if past political pressure start
+    if (currentSol >= POLITICAL_PRESSURE_START_SOL) {
+      // Decrement demand deadlines first
+      for (const demand of this.activeDemands) {
+        demand.deadline--;
+      }
+
+      // Calculate decay rate per NPC based on their faction's demand status
+      for (const npc of this.npcs) {
+        const current = this.npcSupport.get(npc.id) ?? 0;
+
+        // Check if this NPC's faction has an expired demand
+        const factionDemand = this.activeDemands.find(d => d.factionId === npc.faction);
+        const multiplier = (factionDemand && factionDemand.deadline <= 0)
+          ? IGNORED_DEMAND_DECAY_MULTIPLIER
+          : 1;
+
+        const decayed = current - (FACTION_SUPPORT_DECAY_RATE * multiplier);
+        this.npcSupport.set(npc.id, Math.max(-1, decayed));
+      }
+
+      // Check for new demands
+      events.push(...this.checkAndGenerateDemands(currentSol));
+    }
 
     if (!this.activeProject) {
       return events;
@@ -427,6 +546,18 @@ export class NPCInfluenceManager {
 
         // Boost transmission factors for this project type
         this.modifyTransmissionFactors(project.type, SUCCESS_TRANSMISSION_BOOST);
+
+        // Clear any demand for this project's faction
+        const projectFaction = project.type;
+        this.activeDemands = this.activeDemands.filter(d => d.factionId !== projectFaction);
+
+        // Boost support for all NPCs in this faction
+        for (const npc of this.npcs) {
+          if (npc.faction === projectFaction) {
+            const current = this.npcSupport.get(npc.id) ?? 0;
+            this.npcSupport.set(npc.id, Math.min(1, current + PROJECT_PASS_SUPPORT_BOOST));
+          }
+        }
       } else {
         events.push({
           type: "PROJECT_FAILED",
@@ -462,6 +593,8 @@ export class NPCInfluenceManager {
           }
         : null,
       transmissionFactors: this.transmissionFactors,
+      npcSupport: Object.fromEntries(this.npcSupport),
+      activeDemands: this.activeDemands,
     };
   }
 
@@ -485,6 +618,15 @@ export class NPCInfluenceManager {
         ),
         solsRemaining: data.activeProject.solsRemaining,
       };
+    }
+
+    // Restore new state
+    if (data.npcSupport) {
+      manager.npcSupport = new Map(Object.entries(data.npcSupport).map(([k, v]) => [k, Number(v)]));
+    }
+
+    if (data.activeDemands) {
+      manager.activeDemands = data.activeDemands;
     }
 
     return manager;

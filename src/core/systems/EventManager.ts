@@ -6,7 +6,8 @@ import type {
 } from "../models/GameEvent";
 import type { ResourceManager } from "./ResourceManager";
 import type { ColonyManager } from "./ColonyManager";
-import type { PoliticsEngine } from "./PoliticsEngine";
+import type { NPCInfluenceManager } from "./NPCInfluenceManager";
+import type { NPCFaction } from "../models/NPCInfluence";
 import { EVENT_TIMING } from "../balance/EventBalance";
 
 export class EventManager {
@@ -66,7 +67,7 @@ export class EventManager {
     choiceId: string,
     resources: ResourceManager,
     colony: ColonyManager,
-    politics: PoliticsEngine,
+    npcInfluence: NPCInfluenceManager,
   ): GameEvent[] {
     const events: GameEvent[] = [];
 
@@ -94,8 +95,16 @@ export class EventManager {
     }
 
     if (choice.effects.support) {
+      // Adjust support for all NPCs in each affected faction
       for (const [factionId, amount] of Object.entries(choice.effects.support)) {
-        politics.adjustSupport(factionId, amount);
+        const npcs = npcInfluence.getNPCs();
+        for (const npc of npcs) {
+          if (npc.faction === factionId as NPCFaction) {
+            // Convert percentage-style support (e.g., 10, -5) to normalized (-1 to 1) range
+            // Assuming support values in events are in percentage points (divided by 100)
+            npcInfluence.adjustNPCSupport(npc.id, amount / 100);
+          }
+        }
       }
     }
 
