@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { gameService } from "../services/GameService";
 import { GButton } from "../ui";
+import { useTheme, setTheme, type Theme } from "../composables/useTheme";
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const state = gameService.getState();
@@ -25,6 +27,27 @@ function advanceOneSol() {
 function newGame() {
   gameService.newGame();
 }
+
+const { theme } = useTheme();
+
+const themeLabel = computed(() => {
+  switch (theme.value) {
+    case "light":
+      return "Light";
+    case "dark":
+      return "Dark";
+    default:
+      return "Auto";
+  }
+});
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function cycleTheme() {
+  const order: Theme[] = ["system", "light", "dark"];
+  const currentIndex = order.indexOf(theme.value);
+  const nextIndex = (currentIndex + 1) % order.length;
+  setTheme(order[nextIndex]);
+}
 </script>
 
 <template>
@@ -32,6 +55,9 @@ function newGame() {
     <h1>Mars Colony</h1>
     <div class="sol-display">Sol {{ state.currentSol }}</div>
     <div class="header-actions">
+      <GButton variant="secondary" @click="cycleTheme">
+        {{ themeLabel }}
+      </GButton>
       <GButton
         variant="secondary"
         @click="advanceOneSol"
