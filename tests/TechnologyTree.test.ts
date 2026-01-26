@@ -99,5 +99,29 @@ describe('TechnologyTree', () => {
       expect(tree.getResearchProgress('hydroponics')).toBe(2);
       expect(tree.getCurrentResearchId()).toBe('hydroponics');
     });
+
+    it('should set currentResearchId and add to queue on startResearch', () => {
+      tree.startResearch('hydroponics', resources);
+
+      expect(tree.getCurrentResearchId()).toBe('hydroponics');
+      expect(tree.getResearchQueue()).toEqual(['hydroponics']);
+    });
+
+    it('should resume progress if tech was partially researched before', () => {
+      tree.startResearch('hydroponics', resources);
+
+      // Advance 10 sols
+      for (let i = 0; i < 10; i++) {
+        tree.tick();
+      }
+
+      // Cancel (simulate changing target)
+      tree.cancelResearch();
+      expect(tree.getResearchProgress('hydroponics')).toBe(10);
+
+      // Start again - should resume
+      tree.startResearch('hydroponics', resources);
+      expect(tree.getResearchProgress('hydroponics')).toBe(10);
+    });
   });
 });

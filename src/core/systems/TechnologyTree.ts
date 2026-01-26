@@ -76,7 +76,7 @@ export class TechnologyTree {
 
   startResearch(techId: string, resources: ResourceManager): boolean {
     if (!this.canResearch(techId)) return false;
-    if (this.currentResearch) return false;
+    if (this.currentResearchId) return false;
 
     const tech = this.technologies.get(techId);
     if (!tech) return false;
@@ -89,14 +89,24 @@ export class TechnologyTree {
       resources.deduct(tech.cost.resources);
     }
 
+    this.currentResearchId = techId;
+
+    // Add to queue if not already present
+    if (!this.researchQueue.includes(techId)) {
+      this.researchQueue.push(techId);
+    }
+
+    // Initialize progress if not already tracking (preserves existing progress)
+    if (!this.researchProgress.has(techId)) {
+      this.researchProgress.set(techId, 0);
+    }
+
+    // Backward compatibility: maintain currentResearch object
     this.currentResearch = {
       techId,
-      progress: 0,
+      progress: this.researchProgress.get(techId) ?? 0,
       requiredSols: tech.cost.sols,
     };
-
-    // Set the new ID-based tracking (preview of Task 3)
-    this.currentResearchId = techId;
 
     return true;
   }
