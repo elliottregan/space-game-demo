@@ -108,14 +108,7 @@ function formatConsumption(def: BuildingDefinition): string {
 
 <style scoped>
 .building-card {
-  background: var(--g-color-bg-surface);
   padding: var(--g-space-md);
-  border: 1px solid var(--g-color-border);
-  transition: border-color var(--g-transition-fast);
-}
-
-.building-card:hover:not(.locked):not(.disabled) {
-  border-color: var(--g-color-border-focus);
 }
 
 .building-card.locked {

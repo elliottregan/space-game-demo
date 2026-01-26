@@ -62,8 +62,6 @@ const rateClass = computed(() => {
   display: inline-flex;
   align-items: center;
   font-family: var(--g-font-mono);
-  background: var(--g-color-bg-base);
-  border: 1px solid var(--g-color-border);
 }
 
 .resource-badge--sm {
@@ -91,7 +89,6 @@ const rateClass = computed(() => {
 .resource-badge__rate {
   padding: var(--g-space-xs) var(--g-space-sm);
   font-size: 0.85em;
-  border-left: 1px solid var(--g-color-border);
 }
 
 .rate--positive {

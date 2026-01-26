@@ -89,7 +89,10 @@ function getDelta(key: string): number {
 .resource-list {
   display: flex;
   flex-direction: column;
-  gap: var(--g-space-sm);
+}
+
+.resource-list .resource-item + .resource-item {
+  border-top: var(--g-border-width) solid var(--g-color-border-strong);
 }
 
 .resource-item {
@@ -97,8 +100,6 @@ function getDelta(key: string): number {
   align-items: center;
   gap: var(--g-space-sm);
   padding: var(--g-space-sm);
-  background: var(--g-color-bg-surface);
-  border: 1px solid var(--g-color-border);
 }
 
 .projected-value {

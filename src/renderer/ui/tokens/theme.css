@@ -13,6 +13,7 @@
 
   /* Borders */
   --g-color-border: #e0e0e0;
+  --g-color-border-strong: #1a1a1a;
   --g-color-border-focus: #bdbdbd;
 
   /* Section accent colors (solid blocks for headers) */
