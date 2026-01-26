@@ -1,6 +1,60 @@
 import type { RandomEventDefinition } from "../models/GameEvent";
 
 export const RANDOM_EVENTS: RandomEventDefinition[] = [
+  // Early immigration events to help colony reach growth threshold
+  {
+    id: "first_wave_settlers",
+    name: "First Wave Settlers",
+    description:
+      "A group of eager settlers who've been training for years are ready to join your colony. They've heard about your progress and want to be part of Mars history.",
+    minSol: 15,
+    chance: 0.12,
+    weight: 10,
+    choices: [
+      {
+        id: "welcome_settlers",
+        text: "Welcome them all (8 settlers)",
+        effects: {
+          population: 8,
+          resources: { food: -40 },
+        },
+      },
+      {
+        id: "select_skilled",
+        text: "Accept only skilled workers (5 settlers)",
+        effects: {
+          population: 5,
+        },
+      },
+    ],
+  },
+  {
+    id: "family_reunification",
+    name: "Family Reunification Program",
+    description:
+      "Earth has approved a family reunification program. Relatives of your colonists are eager to join them on Mars.",
+    minSol: 30,
+    chance: 0.10,
+    weight: 8,
+    choices: [
+      {
+        id: "approve_all",
+        text: "Approve all applications (5 colonists)",
+        effects: {
+          population: 5,
+          resources: { food: -25 },
+        },
+      },
+      {
+        id: "limited_approval",
+        text: "Limited approval (3 colonists, they bring supplies)",
+        effects: {
+          population: 3,
+          resources: { materials: 30 },
+        },
+      },
+    ],
+  },
   {
     id: "dust_storm",
     name: "Dust Storm Warning",
@@ -152,8 +206,8 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
     id: "new_colonists",
     name: "New Colonists Arrive",
     description: "A transport ship with new colonists is requesting permission to land.",
-    minSol: 70,
-    chance: 0.05,
+    minSol: 40,
+    chance: 0.06,
     choices: [
       {
         id: "welcome_all",
@@ -175,6 +229,78 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
         text: "Deny entry (resources too scarce)",
         effects: {
           support: { earth_loyalists: -10 },
+        },
+      },
+    ],
+  },
+  // Corporate immigration events - population growth with political tradeoffs
+  {
+    id: "corporate_workforce_initiative",
+    name: "Corporate Workforce Initiative",
+    description:
+      "Helios Corp wants to establish a presence on Mars. They're offering to send 8 skilled workers if you agree to favorable trade terms.",
+    minSol: 50,
+    chance: 0.04,
+    weight: 6,
+    choices: [
+      {
+        id: "accept_terms",
+        text: "Accept their terms (8 workers, corporate influence)",
+        effects: {
+          population: 8,
+          resources: { food: -40 },
+          support: { corporate_interests: 15, mars_independence: -10 },
+        },
+      },
+      {
+        id: "negotiate",
+        text: "Negotiate better terms (fewer workers, materials bonus)",
+        effects: {
+          population: 4,
+          resources: { materials: 60 },
+          support: { corporate_interests: 5 },
+        },
+      },
+      {
+        id: "decline",
+        text: "Decline corporate involvement",
+        effects: {
+          support: { mars_independence: 10, corporate_interests: -5 },
+        },
+      },
+    ],
+  },
+  {
+    id: "independence_volunteers",
+    name: "Mars Independence Volunteers",
+    description:
+      "A group of pro-independence activists from Earth want to join your colony. They bring enthusiasm but limited supplies.",
+    minSol: 80,
+    chance: 0.04,
+    weight: 5,
+    choices: [
+      {
+        id: "welcome_volunteers",
+        text: "Welcome them with open arms",
+        effects: {
+          population: 5,
+          support: { mars_independence: 15, earth_loyalists: -5 },
+        },
+      },
+      {
+        id: "conditional_entry",
+        text: "Accept if they contribute materials",
+        effects: {
+          population: 3,
+          resources: { materials: 40 },
+          support: { mars_independence: 5 },
+        },
+      },
+      {
+        id: "reject",
+        text: "Too politically risky right now",
+        effects: {
+          support: { earth_loyalists: 5, mars_independence: -10 },
         },
       },
     ],
