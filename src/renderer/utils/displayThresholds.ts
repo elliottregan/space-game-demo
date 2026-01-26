@@ -13,6 +13,10 @@ export const MORALE_WARNING_THRESHOLD = 40;
 export const FACTION_SUPPORT_NORMALIZED_POSITIVE = 0.5;
 export const FACTION_SUPPORT_NORMALIZED_WARNING = 0;
 
+/** Oxygen contribution thresholds */
+export const OXYGEN_POSITIVE_THRESHOLD = 3; // Green: comfortable surplus
+export const OXYGEN_WARNING_THRESHOLD = 0;  // Yellow: marginal (0-2), Red: deficit (<0)
+
 export type StatusVariant = "positive" | "warning" | "negative";
 
 /** Get variant for a value using thresholds */
@@ -43,4 +47,9 @@ export function getFactionSupportNormalizedVariant(support: number): StatusVaria
     FACTION_SUPPORT_NORMALIZED_POSITIVE,
     FACTION_SUPPORT_NORMALIZED_WARNING,
   );
+}
+
+/** Get oxygen contribution variant */
+export function getOxygenVariant(contribution: number): StatusVariant {
+  return getStatusVariant(contribution, OXYGEN_POSITIVE_THRESHOLD, OXYGEN_WARNING_THRESHOLD);
 }
