@@ -1,33 +1,34 @@
 :root {
   /* === ODYSSEY THEME === */
-  /* Inspired by 2001: A Space Odyssey interfaces */
+  /* Light mode (default) - converted to OKLCH */
 
-  /* Base palette - light backgrounds */
-  --g-color-bg-base: #ffffff;
-  --g-color-bg-surface: #f5f5f5;
-  --g-color-bg-elevated: #fafafa;
+  /* Base palette - light backgrounds (warm cream/manila) */
+  --g-color-bg-base: oklch(96% 0.02 90);
+  --g-color-bg-surface: oklch(94% 0.02 90);
+  --g-color-bg-elevated: oklch(98% 0.015 90);
 
   /* Text colors - dark on light */
-  --g-color-text: #1a1a1a;
-  --g-color-text-muted: #666666;
+  --g-color-text: oklch(15% 0 0);
+  --g-color-text-muted: oklch(40% 0 0);
 
   /* Borders */
-  --g-color-border: #e0e0e0;
-  --g-color-border-strong: #1a1a1a;
-  --g-color-border-focus: #bdbdbd;
+  --g-color-border: oklch(88% 0 0);
+  --g-color-border-strong: oklch(15% 0 0);
+  --g-color-border-focus: oklch(75% 0 0);
 
-  /* Section accent colors (solid blocks for headers) */
-  --g-accent-red: #d32f2f;
-  --g-accent-cyan: #00838f;
-  --g-accent-olive: #827717;
-  --g-accent-amber: #f57c00;
-  --g-accent-slate: #455a64;
+  /* Section accent colors */
+  --g-accent-red: oklch(48% 0.24 25);
+  --g-accent-cyan: oklch(52% 0.10 200);
+  --g-accent-olive: oklch(52% 0.10 145);
+  --g-accent-amber: oklch(62% 0.18 55);
+  --g-accent-slate: oklch(42% 0.02 250);
+  --g-accent-blue: oklch(50% 0.06 250);
 
   /* Semantic colors */
-  --g-color-positive: #2e7d32;
-  --g-color-negative: #c62828;
-  --g-color-warning: #ef6c00;
-  --g-color-info: #00838f;
+  --g-color-positive: oklch(48% 0.15 145);
+  --g-color-negative: oklch(45% 0.24 25);
+  --g-color-warning: oklch(58% 0.18 55);
+  --g-color-info: oklch(52% 0.10 200);
 
   /* Section-specific accent mappings */
   --g-section-resources: var(--g-accent-red);
@@ -41,7 +42,7 @@
   /* Current section accent (set by panels) */
   --g-current-accent: var(--g-accent-slate);
 
-  /* Effects - removed glow for clean look */
+  /* Effects */
   --g-glow-subtle: none;
   --g-glow-focus: 0 0 0 2px var(--g-color-border-focus);
 
@@ -69,4 +70,75 @@
   /* Transitions */
   --g-transition-fast: 150ms ease;
   --g-transition-normal: 250ms ease;
+}
+
+/* === DARK MODE === */
+/* System preference - applies when no manual override */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    /* Pure black backgrounds */
+    --g-color-bg-base: oklch(0% 0 0);
+    --g-color-bg-surface: oklch(0% 0 0);
+    --g-color-bg-elevated: oklch(0% 0 0);
+
+    /* Pure white text */
+    --g-color-text: oklch(100% 0 0);
+    --g-color-text-muted: oklch(60% 0 0);
+
+    /* Dark borders */
+    --g-color-border: oklch(25% 0 0);
+    --g-color-border-strong: oklch(100% 0 0);
+    --g-color-border-focus: oklch(40% 0 0);
+
+    /* Brightened accents for dark mode */
+    --g-accent-red: oklch(58% 0.24 25);
+    --g-accent-cyan: oklch(70% 0.12 200);
+    --g-accent-olive: oklch(65% 0.12 145);
+    --g-accent-amber: oklch(72% 0.16 65);
+    --g-accent-slate: oklch(55% 0.02 250);
+    --g-accent-blue: oklch(55% 0.14 265);
+
+    /* Brightened semantic colors */
+    --g-color-positive: oklch(68% 0.17 145);
+    --g-color-negative: oklch(55% 0.24 25);
+    --g-color-warning: oklch(75% 0.18 60);
+    --g-color-info: oklch(70% 0.12 200);
+
+    /* Glow effect for focus states */
+    --g-glow-focus: 0 0 0 2px var(--g-color-border-focus);
+  }
+}
+
+/* Manual dark mode override */
+:root[data-theme="dark"] {
+  /* Pure black backgrounds */
+  --g-color-bg-base: oklch(0% 0 0);
+  --g-color-bg-surface: oklch(0% 0 0);
+  --g-color-bg-elevated: oklch(0% 0 0);
+
+  /* Pure white text */
+  --g-color-text: oklch(100% 0 0);
+  --g-color-text-muted: oklch(60% 0 0);
+
+  /* Dark borders */
+  --g-color-border: oklch(25% 0 0);
+  --g-color-border-strong: oklch(100% 0 0);
+  --g-color-border-focus: oklch(40% 0 0);
+
+  /* Brightened accents for dark mode */
+  --g-accent-red: oklch(58% 0.24 25);
+  --g-accent-cyan: oklch(70% 0.12 200);
+  --g-accent-olive: oklch(68% 0.12 105);
+  --g-accent-amber: oklch(72% 0.16 65);
+  --g-accent-slate: oklch(55% 0.02 250);
+  --g-accent-blue: oklch(55% 0.14 265);
+
+  /* Brightened semantic colors */
+  --g-color-positive: oklch(68% 0.17 145);
+  --g-color-negative: oklch(55% 0.24 25);
+  --g-color-warning: oklch(75% 0.18 60);
+  --g-color-info: oklch(70% 0.12 200);
+
+  /* Glow effect for focus states */
+  --g-glow-focus: 0 0 0 2px var(--g-color-border-focus);
 }

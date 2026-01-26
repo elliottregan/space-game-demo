@@ -27,17 +27,33 @@ export interface RenderOptions {
   onNodeClick: (npcId: string | null) => void;
 }
 
-// Using theme colors from tokens/theme.css
-const FACTION_COLORS: Record<NPCFaction, string> = {
-  [NPCFaction.EarthLoyalists]: "#00838f", // --g-color-info (cyan)
-  [NPCFaction.MarsIndependence]: "#2e7d32", // --g-color-positive (green)
-  [NPCFaction.CorporateInterests]: "#ef6c00", // --g-color-warning (amber)
-};
-
-const EDGE_COLOR = "#1a1a1a"; // --g-color-border-strong
-const TEXT_COLOR = "#1a1a1a"; // --g-color-text
-
 const NODE_RADIUS = 20;
+
+// Get theme colors from CSS variables
+function getThemeColors() {
+  const style = getComputedStyle(document.documentElement);
+  return {
+    text: style.getPropertyValue("--g-color-text").trim() || "#1a1a1a",
+    border: style.getPropertyValue("--g-color-border-strong").trim() || "#1a1a1a",
+    bgSurface: style.getPropertyValue("--g-color-bg-surface").trim() || "#f5f5f5",
+    info: style.getPropertyValue("--g-color-info").trim() || "#00838f",
+    positive: style.getPropertyValue("--g-color-positive").trim() || "#2e7d32",
+    warning: style.getPropertyValue("--g-color-warning").trim() || "#ef6c00",
+  };
+}
+
+function getFactionColor(faction: NPCFaction, colors: ReturnType<typeof getThemeColors>): string {
+  switch (faction) {
+    case NPCFaction.EarthLoyalists:
+      return colors.info;
+    case NPCFaction.MarsIndependence:
+      return colors.positive;
+    case NPCFaction.CorporateInterests:
+      return colors.warning;
+    default:
+      return colors.text;
+  }
+}
 
 export function renderGraph(
   container: SVGSVGElement,
@@ -46,6 +62,7 @@ export function renderGraph(
 ): void {
   const { width, height, selectedId, onNodeClick } = options;
   const svg = select(container);
+  const colors = getThemeColors();
 
   // Clear previous content
   svg.selectAll("*").remove();
@@ -73,8 +90,8 @@ export function renderGraph(
     if (!source || !target) continue;
 
     const strokeColor = link.inSameCouncil
-      ? "rgba(46, 125, 50, 0.6)" // --g-color-positive with opacity
-      : `${EDGE_COLOR}33`; // --g-color-border-strong with 20% opacity
+      ? colors.positive
+      : colors.border;
     const strokeWidth = Math.max(1, link.weight * 4);
 
     edgesGroup
@@ -84,6 +101,7 @@ export function renderGraph(
       .attr("x2", target.x)
       .attr("y2", target.y)
       .attr("stroke", strokeColor)
+      .attr("stroke-opacity", link.inSameCouncil ? 0.6 : 0.3)
       .attr("stroke-width", strokeWidth);
   }
 
@@ -92,7 +110,7 @@ export function renderGraph(
 
   for (const node of data.nodes) {
     const isSelected = node.id === selectedId;
-    const factionColor = FACTION_COLORS[node.npc.faction];
+    const factionColor = getFactionColor(node.npc.faction, colors);
 
     const nodeGroup = nodesGroup
       .append("g")
@@ -108,7 +126,7 @@ export function renderGraph(
     nodeGroup
       .append("circle")
       .attr("r", NODE_RADIUS)
-      .attr("fill", "white")
+      .attr("fill", colors.bgSurface)
       .attr("stroke", factionColor)
       .attr("stroke-width", isSelected ? 3 : 1.5);
 
@@ -123,7 +141,8 @@ export function renderGraph(
         .insert("circle", "circle")
         .attr("r", NODE_RADIUS + 4)
         .attr("fill", "none")
-        .attr("stroke", "rgba(46, 125, 50, 0.4)") // --g-color-positive with opacity
+        .attr("stroke", colors.positive)
+      .attr("stroke-opacity", 0.4)
         .attr("stroke-width", 2);
     }
 
@@ -150,7 +169,7 @@ export function renderGraph(
       .append("text")
       .attr("y", NODE_RADIUS + 14)
       .attr("text-anchor", "middle")
-      .attr("fill", TEXT_COLOR)
+      .attr("fill", colors.text)
       .attr("font-size", "10px")
       .attr("font-family", "monospace")
       .text(lastName);

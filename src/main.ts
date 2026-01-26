@@ -1,5 +1,6 @@
 import { createApp } from "vue";
 import App from "./renderer/App.vue";
+import { initTheme } from "./renderer/composables/useTheme";
 import { resourceHighlightStyles, vResourceGlow } from "./renderer/directives/ResourceHighlight";
 import router from "./renderer/router";
 import "./renderer/ui/tokens/theme.css";
@@ -16,5 +17,8 @@ app.directive("resource-glow", vResourceGlow);
 
 // Use router
 app.use(router);
+
+// Initialize theme from localStorage
+initTheme();
 
 app.mount("#app");
