@@ -287,6 +287,87 @@ export class ColonyManager {
     };
   }
 
+  /**
+   * Assigns unhoused colonists to available habitats with capacity.
+   * Already-housed colonists are not reassigned.
+   * Clears housing for colonists in non-existent or inactive habitats.
+   */
+  assignHousing(buildingManager: BuildingManager): void {
+    const habitats = buildingManager.getBuildings().filter((b) => {
+      const def = buildingManager.getDefinition(b.definitionId);
+      return def?.capacity && def.capacity > 0 && b.status === "active";
+    });
+
+    // Clear housing for colonists in non-existent or inactive habitats
+    const validHabitatIds = new Set(habitats.map((h) => h.id));
+    for (const colonist of this.colonists.values()) {
+      if (colonist.housingId && !validHabitatIds.has(colonist.housingId)) {
+        colonist.housingId = undefined;
+      }
+    }
+
+    // Get current housing counts per habitat
+    const housingCounts = new Map<string, number>();
+    for (const habitat of habitats) {
+      housingCounts.set(habitat.id, 0);
+    }
+
+    // Count currently housed colonists
+    for (const colonist of this.colonists.values()) {
+      if (colonist.housingId && housingCounts.has(colonist.housingId)) {
+        housingCounts.set(colonist.housingId, (housingCounts.get(colonist.housingId) || 0) + 1);
+      }
+    }
+
+    // Assign unhoused colonists to available habitats
+    for (const colonist of this.colonists.values()) {
+      if (colonist.housingId) continue; // Already housed
+
+      for (const habitat of habitats) {
+        const def = buildingManager.getDefinition(habitat.definitionId);
+        const currentCount = housingCounts.get(habitat.id) || 0;
+        if (def?.capacity && currentCount < def.capacity) {
+          colonist.housingId = habitat.id;
+          housingCounts.set(habitat.id, currentCount + 1);
+          break;
+        }
+      }
+    }
+  }
+
+  /**
+   * Returns all colonists without housing assignments.
+   */
+  getUnhousedColonists(): Colonist[] {
+    return Array.from(this.colonists.values()).filter((c) => !c.housingId);
+  }
+
+  /**
+   * Returns colonists grouped by their housing assignment (habitat ID).
+   */
+  getHousingAssignments(): Record<string, Colonist[]> {
+    const assignments: Record<string, Colonist[]> = {};
+    for (const colonist of this.colonists.values()) {
+      if (colonist.housingId) {
+        if (!assignments[colonist.housingId]) {
+          assignments[colonist.housingId] = [];
+        }
+        assignments[colonist.housingId].push(colonist);
+      }
+    }
+    return assignments;
+  }
+
+  /**
+   * Clears the housing assignment for a specific colonist.
+   */
+  clearHousingAssignment(colonistId: string): void {
+    const colonist = this.colonists.get(colonistId);
+    if (colonist) {
+      colonist.housingId = undefined;
+    }
+  }
+
   static fromJSON(data: {
     colonists: Colonist[];
     nextId: number;

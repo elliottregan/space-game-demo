@@ -34,4 +34,5 @@ export interface Colonist {
   trainingTarget?: ColonistRole;
   trainingProgress?: number;
   skills: string[];
+  housingId?: string; // Building ID of assigned habitat
 }

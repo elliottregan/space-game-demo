@@ -9,7 +9,8 @@ export const BUILDINGS: BuildingDefinition[] = [
     description: "Basic living quarters for colonists",
     cost: { materials: 50 },
     constructionTime: 10,
-    consumption: { power: 2 },
+    consumption: { power: 2, oxygen: 1 },
+    capacity: 4, // Houses 4 colonists
     oxygenContribution: 2,
   },
   {
@@ -100,6 +101,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 18,
     consumption: { power: 5 },
     requiredTech: "advanced_materials",
+    capacity: 8, // Houses 8 colonists
     oxygenContribution: 2,
   },
   {

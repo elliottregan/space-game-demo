@@ -13,6 +13,8 @@ export interface ColonySnapshot {
   readonly morale: number;
   readonly colonists: readonly Readonly<Colonist>[];
   readonly skillDefinitions: readonly Readonly<SkillDefinition>[];
+  readonly housingAssignments: Readonly<Record<string, readonly Readonly<Colonist>[]>>;
+  readonly unhoused: readonly Readonly<Colonist>[];
 }
 
 // Re-export core types

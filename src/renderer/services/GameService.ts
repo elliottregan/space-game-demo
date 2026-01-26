@@ -44,6 +44,8 @@ interface GameUIState {
   totalOxygenContribution: number;
   colonists: Colonist[];
   skillDefinitions: SkillDefinition[];
+  housingAssignments: Record<string, Colonist[]>;
+  unhoused: Colonist[];
   buildings: Building[];
   pendingBuildings: Building[];
   buildingDefinitions: BuildingDefinition[];
@@ -151,6 +153,8 @@ class GameService {
       totalOxygenContribution: 0,
       colonists: [],
       skillDefinitions: [],
+      housingAssignments: {},
+      unhoused: [],
       buildings: [],
       pendingBuildings: [],
       buildingDefinitions: [],
@@ -207,6 +211,10 @@ class GameService {
     this.state.morale = colony.morale;
     this.state.colonists = [...colony.colonists];
     this.state.skillDefinitions = [...colony.skillDefinitions];
+
+    // Housing data
+    this.state.housingAssignments = { ...colony.housingAssignments };
+    this.state.unhoused = [...colony.unhoused];
 
     // Buildings
     const buildings = this.facade.buildings.snapshot();
