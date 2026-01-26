@@ -233,6 +233,36 @@ describe("Job Assignment", () => {
     });
   });
 
+  describe("assignment validation", () => {
+    it("prevents assigning colonist to multiple buildings", () => {
+      // Build two farms
+      const farm1 = gameState.buildings.startBuilding(
+        "basic_farm",
+        gameState.resources,
+        gameState.technology
+      );
+      const farm2 = gameState.buildings.startBuilding(
+        "basic_farm",
+        gameState.resources,
+        gameState.technology
+      );
+
+      for (let i = 0; i < 15; i++) {
+        gameState.buildings.tick(gameState.resources);
+      }
+
+      const colonist = gameState.colony.getColonists()[0];
+
+      // Assign to first farm
+      const result1 = gameState.buildings.assignWorker(farm1!.id, colonist.id);
+      expect(result1).toBe(true);
+
+      // Try to assign to second farm - should fail
+      const result2 = gameState.buildings.assignWorker(farm2!.id, colonist.id);
+      expect(result2).toBe(false);
+    });
+  });
+
   describe("labor pool bonus", () => {
     it("unassigned colonists boost construction speed", () => {
       // Count unassigned colonists

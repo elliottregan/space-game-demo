@@ -559,7 +559,12 @@ export class BuildingManager {
     for (const [key, value] of Object.entries(def.production)) {
       if (value)
         result[key as keyof ResourceDelta] =
-          value * modeMultiplier * conditionMultiplier * oxygenMultiplier * staffingMultiplier * workerMultiplier;
+          value *
+          modeMultiplier *
+          conditionMultiplier *
+          oxygenMultiplier *
+          staffingMultiplier *
+          workerMultiplier;
     }
 
     return result;
@@ -583,7 +588,12 @@ export class BuildingManager {
     for (const [key, value] of Object.entries(def.consumption)) {
       if (value)
         result[key as keyof ResourceDelta] =
-          value * modeMultiplier * conditionMultiplier * oxygenMultiplier * staffingMultiplier * workerMultiplier;
+          value *
+          modeMultiplier *
+          conditionMultiplier *
+          oxygenMultiplier *
+          staffingMultiplier *
+          workerMultiplier;
     }
 
     return result;
@@ -694,6 +704,13 @@ export class BuildingManager {
       return false;
 
     if (building.assignedWorkers.includes(colonistId)) return false;
+
+    // Check if colonist is already assigned elsewhere
+    for (const b of this.buildings.values()) {
+      if (b.assignedWorkers.includes(colonistId)) {
+        return false;
+      }
+    }
 
     building.assignedWorkers.push(colonistId);
     return true;
