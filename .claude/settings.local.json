@@ -54,7 +54,9 @@
       "mcp__plugin_context7_context7__query-docs",
       "WebFetch(domain:oxc.rs)",
       "Bash(bun run:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git fetch:*)",
+      "Bash(git rebase:*)"
     ]
   }
 }
