@@ -1,4 +1,13 @@
+import type { BuildingId } from "./Building";
 import type { ResourceDelta } from "./Resources";
+
+/** Special unlocks that aren't buildings (e.g., victory items) */
+export enum SpecialUnlockId {
+  ARC_SHIP = "arc_ship",
+}
+
+/** Union type for all unlockable items */
+export type UnlockId = BuildingId | SpecialUnlockId;
 
 export enum TechnologyId {
   HYDROPONICS = "hydroponics",
@@ -25,7 +34,7 @@ export interface Technology {
     sols: number;
     resources?: ResourceDelta;
   };
-  unlocks: string[];
+  unlocks: UnlockId[];
   effects?: TechEffect[];
 }
 

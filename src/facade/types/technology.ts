@@ -2,9 +2,11 @@
 // Technology-related types for the facade
 
 import {
+  SpecialUnlockId,
   TechnologyId,
   type Technology,
   type TechResearch,
+  type UnlockId,
 } from "../../core/models/Technology";
 
 /**
@@ -19,5 +21,5 @@ export interface TechnologySnapshot {
 }
 
 // Re-export core types
-export { TechnologyId };
-export type { Technology, TechResearch };
+export { SpecialUnlockId, TechnologyId };
+export type { Technology, TechResearch, UnlockId };

@@ -1,4 +1,5 @@
-import { TechnologyId, type Technology } from "../models/Technology";
+import { BuildingId } from "../models/Building";
+import { SpecialUnlockId, TechnologyId, type Technology } from "../models/Technology";
 
 export const TECHNOLOGIES: Technology[] = [
   // EARLY TIER (Sol 30-90)
@@ -8,7 +9,7 @@ export const TECHNOLOGIES: Technology[] = [
     description: "Advanced soil-free farming techniques",
     prerequisites: [],
     cost: { sols: 60 },
-    unlocks: ["greenhouse"],
+    unlocks: [BuildingId.GREENHOUSE],
   },
   {
     id: TechnologyId.WATER_RECYCLING,
@@ -16,7 +17,7 @@ export const TECHNOLOGIES: Technology[] = [
     description: "Closed-loop water systems",
     prerequisites: [],
     cost: { sols: 45 },
-    unlocks: ["water_reclaimer"],
+    unlocks: [BuildingId.WATER_RECLAIMER],
     effects: [{ type: "production_bonus", value: 0.5 }],
   },
   {
@@ -25,7 +26,7 @@ export const TECHNOLOGIES: Technology[] = [
     description: "Stronger, lighter construction materials",
     prerequisites: [],
     cost: { sols: 75 },
-    unlocks: ["research_lab", "advanced_habitat"],
+    unlocks: [BuildingId.RESEARCH_LAB, BuildingId.ADVANCED_HABITAT],
   },
 
   // MID TIER (Sol 90-200)
@@ -35,7 +36,7 @@ export const TECHNOLOGIES: Technology[] = [
     description: "Automated labor and manufacturing",
     prerequisites: [TechnologyId.ADVANCED_MATERIALS],
     cost: { sols: 120 },
-    unlocks: ["automated_factory"],
+    unlocks: [BuildingId.AUTOMATED_FACTORY],
     effects: [{ type: "construction_speed", value: 1.2 }],
   },
   {
@@ -44,7 +45,7 @@ export const TECHNOLOGIES: Technology[] = [
     description: "Extract resources from nearby asteroids",
     prerequisites: [TechnologyId.ADVANCED_MATERIALS, TechnologyId.ROBOTICS],
     cost: { sols: 150, resources: { materials: 200 } },
-    unlocks: ["mining_station"],
+    unlocks: [BuildingId.MINING_STATION],
   },
   {
     id: TechnologyId.NUCLEAR_FISSION,
@@ -52,7 +53,7 @@ export const TECHNOLOGIES: Technology[] = [
     description: "Safe nuclear power generation",
     prerequisites: [TechnologyId.ADVANCED_MATERIALS],
     cost: { sols: 180 },
-    unlocks: ["nuclear_reactor"],
+    unlocks: [BuildingId.NUCLEAR_REACTOR],
   },
 
   // LATE TIER (Sol 200-400)
@@ -62,7 +63,7 @@ export const TECHNOLOGIES: Technology[] = [
     description: "Modify organisms for Mars conditions",
     prerequisites: [TechnologyId.HYDROPONICS],
     cost: { sols: 200 },
-    unlocks: ["biolab"],
+    unlocks: [BuildingId.BIOLAB],
   },
   {
     id: TechnologyId.ADVANCED_MEDICINE,
@@ -70,7 +71,7 @@ export const TECHNOLOGIES: Technology[] = [
     description: "Extend human lifespan and health",
     prerequisites: [TechnologyId.GENETICS],
     cost: { sols: 250 },
-    unlocks: ["medical_center"],
+    unlocks: [BuildingId.MEDICAL_CENTER],
   },
   {
     id: TechnologyId.LIFE_EXTENSION,
@@ -86,7 +87,7 @@ export const TECHNOLOGIES: Technology[] = [
     description: "Suspend humans for long-duration travel",
     prerequisites: [TechnologyId.ADVANCED_MEDICINE],
     cost: { sols: 250 },
-    unlocks: ["cryo_facility"],
+    unlocks: [BuildingId.CRYO_FACILITY],
   },
 
   // ENDGAME TIER (Sol 400+)
@@ -112,6 +113,6 @@ export const TECHNOLOGIES: Technology[] = [
     description: "Massive vessel for interstellar colonization - VICTORY!",
     prerequisites: [TechnologyId.FUSION_DRIVE, TechnologyId.CRYOSLEEP, TechnologyId.CLOSED_ECOSYSTEM],
     cost: { sols: 500, resources: { materials: 1000 } },
-    unlocks: ["arc_ship"],
+    unlocks: [SpecialUnlockId.ARC_SHIP],
   },
 ];
