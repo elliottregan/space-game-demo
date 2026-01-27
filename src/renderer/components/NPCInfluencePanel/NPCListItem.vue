@@ -26,17 +26,10 @@ function formatSupport(support: number): string {
 </script>
 
 <template>
-  <div
-    class="npc-row"
-    :class="{ selected }"
-    @click="$emit('click')"
-  >
+  <div class="npc-row" :class="{ selected }" @click="$emit('click')">
     <span class="npc-name">{{ npc.name }}</span>
     <slot name="badge" />
-    <span
-      class="support-value"
-      :class="`support-${getSupportVariant(support)}`"
-    >
+    <span class="support-value" :class="`support-${getSupportVariant(support)}`">
       {{ formatSupport(support) }}
     </span>
   </div>

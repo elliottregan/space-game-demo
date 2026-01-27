@@ -28,7 +28,10 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="g-select-wrapper" :class="[`g-select-wrapper--${size}`, `g-select-wrapper--${variant}`]">
+  <div
+    class="g-select-wrapper"
+    :class="[`g-select-wrapper--${size}`, `g-select-wrapper--${variant}`]"
+  >
     <select
       class="g-select"
       :class="[`g-select--${size}`, `g-select--${variant}`]"

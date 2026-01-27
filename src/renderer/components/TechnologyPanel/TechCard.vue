@@ -21,12 +21,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div
-    class="tech-card"
-    :class="variant"
-    @mouseenter="emit('hover')"
-    @mouseleave="emit('leave')"
-  >
+  <div class="tech-card" :class="variant" @mouseenter="emit('hover')" @mouseleave="emit('leave')">
     <div class="tech-name">{{ tech.name }}</div>
 
     <template v-if="variant !== 'completed'">
@@ -35,7 +30,7 @@ const emit = defineEmits<{
       <template v-if="variant === 'available'">
         <div class="tech-cost">{{ formatTechCost(tech) }}</div>
         <div v-if="tech.unlocks.length > 0" class="tech-unlocks">
-          Unlocks: {{ tech.unlocks.join(', ') }}
+          Unlocks: {{ tech.unlocks.join(", ") }}
         </div>
         <GButton
           variant="primary"
@@ -48,7 +43,7 @@ const emit = defineEmits<{
 
       <template v-else-if="variant === 'locked'">
         <div v-if="!hasAllPrerequisites" class="tech-prereqs">
-          Requires: {{ prerequisiteNames.join(', ') }}
+          Requires: {{ prerequisiteNames.join(", ") }}
         </div>
       </template>
     </template>

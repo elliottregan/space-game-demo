@@ -44,10 +44,7 @@ const capacity = computed(() => props.definition?.capacity || 0);
       />
     </GCardGrid>
 
-    <div
-      v-if="building.status === 'active' && residents.length === 0"
-      class="no-residents"
-    >
+    <div v-if="building.status === 'active' && residents.length === 0" class="no-residents">
       No residents assigned
     </div>
   </div>

@@ -113,4 +113,5 @@ function getIcon(type: string): string {
 .event-message {
   color: var(--g-color-text);
   line-height: 1.3;
-}</style>
+}
+</style>

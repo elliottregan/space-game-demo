@@ -13,10 +13,7 @@ withDefaults(
 </script>
 
 <template>
-  <section
-    class="g-section"
-    :class="[`g-section--${variant}`, `g-section--border-${border}`]"
-  >
+  <section class="g-section" :class="[`g-section--${variant}`, `g-section--border-${border}`]">
     <header class="g-section__header">
       <h3 class="g-section__title">{{ title }}</h3>
       <span v-if="$slots['header-actions']" class="g-section__header-actions">

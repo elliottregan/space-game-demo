@@ -4,18 +4,10 @@ import { RouterLink } from "vue-router";
 
 <template>
   <nav class="tab-nav">
-    <RouterLink to="/main" class="tab-link" active-class="active">
-      Main
-    </RouterLink>
-    <RouterLink to="/colony" class="tab-link" active-class="active">
-      Colony
-    </RouterLink>
-    <RouterLink to="/politics" class="tab-link" active-class="active">
-      Politics
-    </RouterLink>
-    <RouterLink to="/research" class="tab-link" active-class="active">
-      Research
-    </RouterLink>
+    <RouterLink to="/main" class="tab-link" active-class="active"> Main </RouterLink>
+    <RouterLink to="/colony" class="tab-link" active-class="active"> Colony </RouterLink>
+    <RouterLink to="/politics" class="tab-link" active-class="active"> Politics </RouterLink>
+    <RouterLink to="/research" class="tab-link" active-class="active"> Research </RouterLink>
   </nav>
 </template>
 
@@ -38,7 +30,9 @@ import { RouterLink } from "vue-router";
   text-transform: uppercase;
   letter-spacing: 0.1em;
   border-bottom: 3px solid transparent;
-  transition: color var(--g-transition-fast), background var(--g-transition-fast);
+  transition:
+    color var(--g-transition-fast),
+    background var(--g-transition-fast);
 }
 
 .tab-link:hover {

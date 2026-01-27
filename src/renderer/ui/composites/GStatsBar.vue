@@ -11,11 +11,7 @@ defineProps<{
   <div class="g-stats-bar">
     <div v-for="stat in stats" :key="stat.label" class="g-stats-bar__stat">
       <span class="g-stats-bar__label">{{ stat.label }}</span>
-      <span
-        v-if="stat.value !== undefined"
-        class="g-stats-bar__value"
-        :class="stat.variant"
-      >
+      <span v-if="stat.value !== undefined" class="g-stats-bar__value" :class="stat.variant">
         {{ stat.prefix }}{{ stat.value }}
       </span>
       <GProgress

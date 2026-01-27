@@ -23,14 +23,14 @@ const emit = defineEmits<{
         <h4>Effects:</h4>
         <ul>
           <li v-for="(value, tag) in decision.tags" :key="tag">
-            {{ tag }}: {{ value >= 0 ? '+' : '' }}{{ value }}
+            {{ tag }}: {{ value >= 0 ? "+" : "" }}{{ value }}
           </li>
         </ul>
         <div v-if="decision.effects?.resources" class="resource-effects">
           <h4>Resource Changes:</h4>
           <ul>
             <li v-for="(value, resource) in decision.effects.resources" :key="resource">
-              {{ resource }}: {{ value >= 0 ? '+' : '' }}{{ value }}
+              {{ resource }}: {{ value >= 0 ? "+" : "" }}{{ value }}
             </li>
           </ul>
         </div>

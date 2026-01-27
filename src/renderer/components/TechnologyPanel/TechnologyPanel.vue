@@ -138,7 +138,11 @@ function onTechLeave(): void {
           />
         </TechSection>
 
-        <TechSection v-if="state.researchedTechs.length > 0" :title="`Completed (${state.researchedTechs.length})`" completed>
+        <TechSection
+          v-if="state.researchedTechs.length > 0"
+          :title="`Completed (${state.researchedTechs.length})`"
+          completed
+        >
           <TechCard
             v-for="tech in state.researchedTechs"
             :key="tech.id"

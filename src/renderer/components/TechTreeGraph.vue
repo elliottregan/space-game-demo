@@ -236,11 +236,7 @@ function isInQueue(techId: string): boolean {
         >
           Cancel Research
         </GButton>
-        <GBadge
-          v-else-if="isInQueue(selectedTech.id)"
-          variant="info"
-          class="status-badge-centered"
-        >
+        <GBadge v-else-if="isInQueue(selectedTech.id)" variant="info" class="status-badge-centered">
           In Queue
         </GBadge>
         <GBadge
@@ -250,9 +246,7 @@ function isInQueue(techId: string): boolean {
         >
           Researched
         </GBadge>
-        <GBadge v-else variant="muted" class="status-badge-centered">
-          Locked
-        </GBadge>
+        <GBadge v-else variant="muted" class="status-badge-centered"> Locked </GBadge>
       </div>
 
       <div v-if="queueWithProgress.length > 0" class="queue-section">
@@ -267,19 +261,11 @@ function isInQueue(techId: string): boolean {
             <span class="queue-index">{{ index + 1 }}.</span>
             <span class="queue-name">{{ item.tech.name }}</span>
             <div class="queue-progress-bar">
-              <div
-                class="queue-progress-fill"
-                :style="{ width: `${item.percentage}%` }"
-              />
+              <div class="queue-progress-fill" :style="{ width: `${item.percentage}%` }" />
             </div>
           </div>
         </div>
-        <GButton
-          variant="ghost"
-          size="sm"
-          class="full-width"
-          @click="clearQueue"
-        >
+        <GButton variant="ghost" size="sm" class="full-width" @click="clearQueue">
           Clear Queue
         </GButton>
       </div>
@@ -288,11 +274,14 @@ function isInQueue(techId: string): boolean {
         <div class="progress-bar">
           <div
             class="progress-fill"
-            :style="{ width: `${(state.currentResearch.progress / state.currentResearch.requiredSols) * 100}%` }"
+            :style="{
+              width: `${(state.currentResearch.progress / state.currentResearch.requiredSols) * 100}%`,
+            }"
           />
         </div>
         <span class="progress-text">
-          {{ Math.floor(state.currentResearch.progress) }} / {{ state.currentResearch.requiredSols }} sols
+          {{ Math.floor(state.currentResearch.progress) }} /
+          {{ state.currentResearch.requiredSols }} sols
         </span>
       </div>
     </div>

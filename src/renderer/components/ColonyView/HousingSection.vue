@@ -22,7 +22,10 @@ defineProps<{
         :residents="housingAssignments[building.id] || []"
         :skill-definitions="skillDefinitions"
       />
-      <GEmptyState v-if="buildings.length === 0" message="No habitats built. Colonists need housing!" />
+      <GEmptyState
+        v-if="buildings.length === 0"
+        message="No habitats built. Colonists need housing!"
+      />
     </div>
   </GPanel>
 </template>

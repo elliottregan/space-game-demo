@@ -53,11 +53,7 @@ function toggleMember(npcId: string) {
     </div>
 
     <h4 class="subsection-title">Form New Council</h4>
-    <GInput
-      v-model="councilName"
-      placeholder="Council name"
-      size="sm"
-    />
+    <GInput v-model="councilName" placeholder="Council name" size="sm" />
     <div class="council-member-select">
       <div
         v-for="npc in state.npcInfluence.npcs"

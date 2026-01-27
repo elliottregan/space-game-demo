@@ -59,7 +59,7 @@ function formatEffects(effects: Record<string, unknown>): string[] {
               class="effect-tag"
               :class="{
                 positive: effect.startsWith('+'),
-                negative: effect.startsWith('-')
+                negative: effect.startsWith('-'),
               }"
             >
               {{ effect }}

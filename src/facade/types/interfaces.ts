@@ -86,8 +86,7 @@ export interface CommandExecutor<TParams extends unknown[], TResult> {
  * }
  */
 export interface CheckedAction<TParams extends unknown[], TResult>
-  extends ActionChecker<TParams>,
-    CommandExecutor<TParams, TResult> {}
+  extends ActionChecker<TParams>, CommandExecutor<TParams, TResult> {}
 
 /**
  * Marker type for query-only facades (no commands).

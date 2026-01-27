@@ -47,7 +47,7 @@ function getFactionVariant(faction: NPCFaction): "info" | "positive" | "warning"
     <h3 class="section-title">Active Proposal</h3>
     <div class="project-status">
       <div class="project-name">
-        {{ projects.find(p => p.id === activeProject.projectId)?.name }}
+        {{ projects.find((p) => p.id === activeProject.projectId)?.name }}
       </div>
       <div class="status-row">
         <span class="status-label">
@@ -56,9 +56,7 @@ function getFactionVariant(faction: NPCFaction): "info" | "positive" | "warning"
             {{ formatSupport(activeProject.averageSupport) }}
           </span>
         </span>
-        <span class="status-label">
-          Sols until vote: {{ activeProject.solsRemaining }}
-        </span>
+        <span class="status-label"> Sols until vote: {{ activeProject.solsRemaining }} </span>
       </div>
       <div class="threshold-container">
         <GProgress

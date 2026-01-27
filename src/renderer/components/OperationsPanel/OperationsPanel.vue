@@ -58,11 +58,14 @@ function developSite(siteId: string): void {
 
 <template>
   <GPanel title="Operations" accent="amber">
-    <GTabGroup v-model="activeTab" :tabs="[
-      { id: 'policies', label: 'Policies' },
-      { id: 'buildings', label: 'Buildings' },
-      { id: 'missions', label: 'Missions' }
-    ]" />
+    <GTabGroup
+      v-model="activeTab"
+      :tabs="[
+        { id: 'policies', label: 'Policies' },
+        { id: 'buildings', label: 'Buildings' },
+        { id: 'missions', label: 'Missions' },
+      ]"
+    />
 
     <PoliciesTab
       v-if="activeTab === 'policies'"
@@ -83,4 +86,3 @@ function developSite(siteId: string): void {
     />
   </GPanel>
 </template>
-

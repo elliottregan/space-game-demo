@@ -58,10 +58,7 @@ function isSkillActive(skill: SkillDefinition): boolean {
       <span v-if="showWorkplace && workplace" class="workplace">
         Works at: {{ workplace.name }}
       </span>
-      <span
-        v-else-if="showWorkplace && colonist.role === 'unassigned'"
-        class="unassigned"
-      >
+      <span v-else-if="showWorkplace && colonist.role === 'unassigned'" class="unassigned">
         Unassigned
       </span>
     </div>

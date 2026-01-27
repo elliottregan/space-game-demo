@@ -15,9 +15,9 @@ function newGame(): void {
   <div class="game-over-overlay">
     <div class="game-over-modal" :class="state.victoryState.status">
       <div class="icon">
-        {{ state.victoryState.status === 'victory' ? '🎉' : '💀' }}
+        {{ state.victoryState.status === "victory" ? "🎉" : "💀" }}
       </div>
-      <h1>{{ state.victoryState.status === 'victory' ? 'Victory!' : 'Defeat' }}</h1>
+      <h1>{{ state.victoryState.status === "victory" ? "Victory!" : "Defeat" }}</h1>
       <p class="reason">{{ state.victoryState.reason }}</p>
 
       <div class="stats">
@@ -39,9 +39,7 @@ function newGame(): void {
         </div>
       </div>
 
-      <GButton variant="primary" @click="newGame">
-        Start New Game
-      </GButton>
+      <GButton variant="primary" @click="newGame"> Start New Game </GButton>
     </div>
   </div>
 </template>

@@ -40,7 +40,10 @@ const developedSites = computed(() => props.prospectingSites.filter((s) => s.dev
     </GSection>
 
     <GSection title="Prospecting Sites" variant="muted">
-      <GEmptyState v-if="prospectingSites.length === 0" message="Complete Survey expeditions to discover sites" />
+      <GEmptyState
+        v-if="prospectingSites.length === 0"
+        message="Complete Survey expeditions to discover sites"
+      />
 
       <div v-for="site in unrevealedSites" :key="site.id" class="site-item unrevealed">
         <span>??? (Unrevealed)</span>
@@ -49,7 +52,9 @@ const developedSites = computed(() => props.prospectingSites.filter((s) => s.dev
 
       <div v-for="site in revealedSites" :key="site.id" class="site-item revealed">
         <span>{{ site.resourceType }} ({{ site.quality }})</span>
-        <GButton size="sm" variant="primary" @click="emit('develop-site', site.id)">Develop</GButton>
+        <GButton size="sm" variant="primary" @click="emit('develop-site', site.id)"
+          >Develop</GButton
+        >
       </div>
 
       <div v-for="site in developedSites" :key="site.id" class="site-item developed">
@@ -60,7 +65,8 @@ const developedSites = computed(() => props.prospectingSites.filter((s) => s.dev
 </template>
 
 <style scoped>
-.expedition-item, .site-item {
+.expedition-item,
+.site-item {
   display: flex;
   justify-content: space-between;
   align-items: center;

@@ -68,9 +68,7 @@ function formatResourceDelta(delta: Record<string, number> | undefined): string 
     </div>
 
     <div class="workers-section" v-if="workerSlots > 0">
-      <div class="workers-header">
-        Workers ({{ assignedWorkers.length }}/{{ workerSlots }}):
-      </div>
+      <div class="workers-header">Workers ({{ assignedWorkers.length }}/{{ workerSlots }}):</div>
       <div class="workers-list">
         <div v-for="worker in assignedWorkers" :key="worker.id" class="worker-row">
           <span class="worker-name">{{ worker.name }}</span>

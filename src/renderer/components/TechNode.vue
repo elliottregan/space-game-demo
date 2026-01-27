@@ -150,13 +150,22 @@ defineProps<Props>();
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 8px oklch(65% 0.15 250 / 0.3); }
-  50% { box-shadow: 0 0 16px oklch(65% 0.15 250 / 0.6); }
+  0%,
+  100% {
+    box-shadow: 0 0 8px oklch(65% 0.15 250 / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 16px oklch(65% 0.15 250 / 0.6);
+  }
 }
 
 .node-name {

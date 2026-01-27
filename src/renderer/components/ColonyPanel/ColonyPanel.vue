@@ -4,10 +4,7 @@ import { ColonistRole } from "../../../core/models/Colonist";
 import { gameService } from "../../services/GameService";
 import type { Stat } from "../../ui";
 import { GButton, GPanel, GStatsBar } from "../../ui";
-import {
-  getHealthVariant,
-  getMoraleVariant,
-} from "../../utils/displayThresholds";
+import { getHealthVariant, getMoraleVariant } from "../../utils/displayThresholds";
 import WorkforceGrid from "./WorkforceGrid.vue";
 
 // Reactive state for template bindings (auto-updates when API syncs)
@@ -96,11 +93,7 @@ function handleToggleAutoAssign(e: Event) {
           Unassigned: {{ unassignedCount }} | Open slots: {{ understaffedSlots }}
         </span>
         <label class="toggle-label">
-          <input
-            type="checkbox"
-            :checked="autoAssignEnabled"
-            @change="handleToggleAutoAssign"
-          />
+          <input type="checkbox" :checked="autoAssignEnabled" @change="handleToggleAutoAssign" />
           Auto-assign new colonists
         </label>
       </div>

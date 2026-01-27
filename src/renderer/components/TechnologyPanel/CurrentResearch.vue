@@ -46,4 +46,5 @@ defineEmits<{
   font-family: var(--g-font-mono);
   font-weight: bold;
   color: var(--g-accent-cyan);
-}</style>
+}
+</style>

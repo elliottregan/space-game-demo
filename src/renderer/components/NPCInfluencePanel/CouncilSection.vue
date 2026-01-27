@@ -21,9 +21,7 @@ const emit = defineEmits<{
 <template>
   <section class="section">
     <h3 class="section-title">Councils</h3>
-    <div v-if="councils.length === 0" class="empty-state">
-      No councils formed yet.
-    </div>
+    <div v-if="councils.length === 0" class="empty-state">No councils formed yet.</div>
     <div v-else class="council-list">
       <div v-for="council in councils" :key="council.id" class="council-item">
         <span class="council-name">{{ council.name }}</span>

@@ -22,7 +22,7 @@
 }
 
 body {
-  font-family: var(--g-font-mono, 'JetBrains Mono', monospace);
+  font-family: var(--g-font-mono, "JetBrains Mono", monospace);
   background: var(--g-color-bg-base);
   color: var(--g-color-text);
   min-height: 100vh;
@@ -172,7 +172,7 @@ body {
 .line-b {
   fill: none;
   stroke-width: 2;
-  stroke-dasharray: 5,5;
+  stroke-dasharray: 5, 5;
 }
 
 .area-a {

@@ -64,15 +64,11 @@ function formatConsumption(def: BuildingDefinition): string {
     <template #tag>
       <span v-if="count > 0" class="building-count">
         x{{ count }}
-        <span v-if="pendingCount > 0" class="pending">
-          ({{ pendingCount }} building)
-        </span>
+        <span v-if="pendingCount > 0" class="pending"> ({{ pendingCount }} building) </span>
       </span>
     </template>
 
-    <div v-if="locked" class="locked-notice">
-      Requires: {{ requiredTechName }}
-    </div>
+    <div v-if="locked" class="locked-notice">Requires: {{ requiredTechName }}</div>
 
     <div v-else class="building-stats">
       <div v-if="formatProduction(definition)" class="stat production">
@@ -85,13 +81,19 @@ function formatConsumption(def: BuildingDefinition): string {
         <span class="positive">+{{ definition.moraleBoost }} Morale</span>
       </div>
       <div v-if="definition.oxygenContribution !== undefined" class="stat oxygen-contrib">
-        <span :class="definition.oxygenContribution > 0 ? 'positive' : definition.oxygenContribution < 0 ? 'negative' : 'neutral'">
-          {{ definition.oxygenContribution > 0 ? '+' : '' }}{{ definition.oxygenContribution }} O₂
+        <span
+          :class="
+            definition.oxygenContribution > 0
+              ? 'positive'
+              : definition.oxygenContribution < 0
+                ? 'negative'
+                : 'neutral'
+          "
+        >
+          {{ definition.oxygenContribution > 0 ? "+" : "" }}{{ definition.oxygenContribution }} O₂
         </span>
       </div>
-      <div class="stat time">
-        Build time: {{ definition.constructionTime }} sols
-      </div>
+      <div class="stat time">Build time: {{ definition.constructionTime }} sols</div>
     </div>
   </GActionCard>
 </template>

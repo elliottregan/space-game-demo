@@ -282,7 +282,10 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
     return this.executeCommand(() => {
       // Get old production state for all understaffed buildings
       const understaffed = this.gameState.buildings.getUnderstaffedBuildings();
-      type ResourceFlow = { prod: Record<string, number | undefined>; cons: Record<string, number | undefined> };
+      type ResourceFlow = {
+        prod: Record<string, number | undefined>;
+        cons: Record<string, number | undefined>;
+      };
       const oldFlows = new Map<string, ResourceFlow>();
 
       for (const building of understaffed) {

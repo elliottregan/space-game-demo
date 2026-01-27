@@ -15,17 +15,10 @@ function formatSupport(support: number): string {
 <template>
   <GPanel title="Politics" accent="slate">
     <div class="factions">
-      <div
-        v-for="faction in state.politics.factions"
-        :key="faction.id"
-        class="faction-card"
-      >
+      <div v-for="faction in state.politics.factions" :key="faction.id" class="faction-card">
         <div class="faction-header">
           <span class="faction-name">{{ faction.name }}</span>
-          <span
-            class="faction-support"
-            :style="{ color: getSupportColor(faction.support) }"
-          >
+          <span class="faction-support" :style="{ color: getSupportColor(faction.support) }">
             {{ formatSupport(faction.support) }}
           </span>
         </div>
@@ -35,7 +28,7 @@ function formatSupport(support: number): string {
             class="support-fill"
             :style="{
               width: `${Math.max(0, (faction.support + 1) * 50)}%`,
-              backgroundColor: getSupportColor(faction.support)
+              backgroundColor: getSupportColor(faction.support),
             }"
           />
         </div>
@@ -46,9 +39,7 @@ function formatSupport(support: number): string {
       </div>
     </div>
 
-    <p class="hint">
-      Propose projects in the NPC tab to satisfy faction demands.
-    </p>
+    <p class="hint">Propose projects in the NPC tab to satisfy faction demands.</p>
   </GPanel>
 </template>
 

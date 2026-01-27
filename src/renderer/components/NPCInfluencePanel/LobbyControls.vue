@@ -24,9 +24,7 @@ function handleLobbyAmountChange(value: string | number) {
 
 <template>
   <div v-if="npc" class="lobby-controls">
-    <h4 class="subsection-title">
-      Lobby {{ npc.name }}
-    </h4>
+    <h4 class="subsection-title">Lobby {{ npc.name }}</h4>
     <div class="lobby-row">
       <div class="lobby-field">
         <label class="field-label">Boost</label>

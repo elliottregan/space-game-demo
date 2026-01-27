@@ -24,20 +24,18 @@ function getRemainingBuildTime(building: PendingBuilding): number {
 </script>
 
 <template>
-  <GSection v-if="pendingBuildings.length > 0" title="Under Construction" variant="warning" border="none" class="construction-queue">
-    <div
-      v-for="building in pendingBuildings"
-      :key="building.id"
-      class="construction-item"
-    >
+  <GSection
+    v-if="pendingBuildings.length > 0"
+    title="Under Construction"
+    variant="warning"
+    border="none"
+    class="construction-queue"
+  >
+    <div v-for="building in pendingBuildings" :key="building.id" class="construction-item">
       <span class="construction-name">
         {{ getBuildingName(building.definitionId) }}
       </span>
-      <GProgress
-        :percent="getConstructionPercent(building)"
-        variant="warning"
-        showLabel
-      >
+      <GProgress :percent="getConstructionPercent(building)" variant="warning" showLabel>
         {{ getRemainingBuildTime(building) }} sols
       </GProgress>
     </div>

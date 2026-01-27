@@ -92,18 +92,14 @@ const constructionPercent = computed(() => {
         <GBadge :variant="statusVariant">
           {{ computedStatusLabel }}
         </GBadge>
-        <span v-if="showCondition" class="condition">
-          {{ Math.round(condition!) }}%
-        </span>
+        <span v-if="showCondition" class="condition"> {{ Math.round(condition!) }}% </span>
         <slot name="stats" />
       </div>
     </div>
 
     <div v-if="showConstructionProgress" class="construction-progress">
       <GProgress :percent="constructionPercent" variant="warning" show-label>
-        <slot name="progress-label">
-          {{ Math.round(constructionPercent) }}%
-        </slot>
+        <slot name="progress-label"> {{ Math.round(constructionPercent) }}% </slot>
       </GProgress>
     </div>
 

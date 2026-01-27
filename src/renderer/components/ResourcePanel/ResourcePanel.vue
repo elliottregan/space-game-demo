@@ -73,11 +73,15 @@ function getDelta(key: string): number {
           :amount="(state.resources as Record<string, number>)[resource.key]"
           :rate="getNetFlow(resource.key)"
         />
-        <span v-if="hasDelta(resource.key)" class="projected-value" :class="{
-          'projected-positive': getDelta(resource.key) > 0,
-          'projected-negative': getDelta(resource.key) < 0,
-          'projected-danger': (getProjectedValue(resource.key) ?? 0) < 0
-        }">
+        <span
+          v-if="hasDelta(resource.key)"
+          class="projected-value"
+          :class="{
+            'projected-positive': getDelta(resource.key) > 0,
+            'projected-negative': getDelta(resource.key) < 0,
+            'projected-danger': (getProjectedValue(resource.key) ?? 0) < 0,
+          }"
+        >
           → {{ formatNumber(getProjectedValue(resource.key) ?? 0) }}
         </span>
       </div>

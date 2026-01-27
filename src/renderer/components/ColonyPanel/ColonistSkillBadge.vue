@@ -11,7 +11,7 @@ defineProps<{
   <span
     class="skill-badge"
     :class="{ active: isActive }"
-    :title="`${skill.name}: ${skill.description} (${isActive ? '+' + (skill.efficiencyBonus * 100) + '% efficiency' : 'not active for current role'})`"
+    :title="`${skill.name}: ${skill.description} (${isActive ? '+' + skill.efficiencyBonus * 100 + '% efficiency' : 'not active for current role'})`"
   >
     {{ skill.name }}
   </span>

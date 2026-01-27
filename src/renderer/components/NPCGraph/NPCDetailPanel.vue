@@ -70,30 +70,20 @@ function formatPercent(value: number): string {
     <div v-if="relationships.length > 0" class="relationships-section">
       <h4>Relationships</h4>
       <div class="relationship-list">
-        <div
-          v-for="rel in relationships"
-          :key="rel.npc.id"
-          class="relationship-item"
-        >
+        <div v-for="rel in relationships" :key="rel.npc.id" class="relationship-item">
           <span class="rel-name">{{ rel.npc.name }}</span>
           <div class="rel-bars">
             <div class="rel-bar">
               <span class="rel-label">From</span>
               <div class="bar-track">
-                <div
-                  class="bar-fill from"
-                  :style="{ width: `${rel.influenceFrom * 100}%` }"
-                />
+                <div class="bar-fill from" :style="{ width: `${rel.influenceFrom * 100}%` }" />
               </div>
               <span class="rel-value">{{ (rel.influenceFrom * 100).toFixed(0) }}%</span>
             </div>
             <div class="rel-bar">
               <span class="rel-label">To</span>
               <div class="bar-track">
-                <div
-                  class="bar-fill to"
-                  :style="{ width: `${rel.influenceTo * 100}%` }"
-                />
+                <div class="bar-fill to" :style="{ width: `${rel.influenceTo * 100}%` }" />
               </div>
               <span class="rel-value">{{ (rel.influenceTo * 100).toFixed(0) }}%</span>
             </div>

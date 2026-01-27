@@ -36,9 +36,7 @@ const consumptionEntries = computed(() => {
   <GPanel :title="building.template.name" :glow="isConstructing" thick>
     <div class="g-building-card__content">
       <div v-if="isConstructing" class="g-building-card__construction">
-        <GProgress :percent="constructionPercent" showLabel>
-          Building...
-        </GProgress>
+        <GProgress :percent="constructionPercent" showLabel> Building... </GProgress>
       </div>
 
       <template v-else>

@@ -44,7 +44,13 @@ function getSupportVariant(support: number): "positive" | "warning" | "negative"
   font-weight: bold;
 }
 
-.support-positive { color: var(--g-color-positive); }
-.support-warning { color: var(--g-color-warning); }
-.support-negative { color: var(--g-color-negative); }
+.support-positive {
+  color: var(--g-color-positive);
+}
+.support-warning {
+  color: var(--g-color-warning);
+}
+.support-negative {
+  color: var(--g-color-negative);
+}
 </style>

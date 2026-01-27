@@ -28,10 +28,7 @@ defineEmits<{
 </script>
 
 <template>
-  <div
-    class="g-action-card"
-    :class="{ disabled, selected }"
-  >
+  <div class="g-action-card" :class="{ disabled, selected }">
     <div class="g-action-card__header">
       <span class="g-action-card__title">{{ title }}</span>
       <span v-if="$slots.tag" class="g-action-card__tag">
@@ -50,12 +47,7 @@ defineEmits<{
     </div>
 
     <div v-if="actionLabel || selectOptions" class="g-action-card__actions">
-      <GButton
-        v-if="actionLabel"
-        size="sm"
-        :disabled="disabled"
-        @click="$emit('click')"
-      >
+      <GButton v-if="actionLabel" size="sm" :disabled="disabled" @click="$emit('click')">
         {{ actionLabel }}
       </GButton>
       <GSelect

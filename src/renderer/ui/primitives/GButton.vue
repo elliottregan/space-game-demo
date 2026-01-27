@@ -38,7 +38,9 @@ withDefaults(
   letter-spacing: 0.05em;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: filter var(--g-transition-fast), border-color var(--g-transition-fast);
+  transition:
+    filter var(--g-transition-fast),
+    border-color var(--g-transition-fast);
 }
 
 .g-button:focus-visible {

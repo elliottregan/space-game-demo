@@ -28,11 +28,7 @@ const roleIcons: Record<ColonistRole, string> = {
   <div class="workforce-section">
     <h3>Workforce</h3>
     <div class="workforce-grid">
-      <div
-        v-for="(count, role) in workforceStats"
-        :key="role"
-        class="workforce-item"
-      >
+      <div v-for="(count, role) in workforceStats" :key="role" class="workforce-item">
         <span class="role-icon">{{ roleIcons[role as ColonistRole] }}</span>
         <span class="role-count">{{ count }}</span>
         <span class="role-name">{{ roleNames[role as ColonistRole] }}</span>

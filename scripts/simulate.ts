@@ -137,16 +137,14 @@ function main(): void {
 
   console.log(`=== Simulation Results (${stats.totalRuns} runs) ===`);
   console.log(
-    `Win Rate: ${(stats.winRate * 100).toFixed(0)}% (${victories} victories, ${defeats} defeats)`
+    `Win Rate: ${(stats.winRate * 100).toFixed(0)}% (${victories} victories, ${defeats} defeats)`,
   );
 
   if (victories > 0) {
     console.log(
-      `Average Time to Win: ${stats.avgTimeToWin.toFixed(0)} sols (std dev = ${stats.stdDevTimeToWin.toFixed(0)})`
+      `Average Time to Win: ${stats.avgTimeToWin.toFixed(0)} sols (std dev = ${stats.stdDevTimeToWin.toFixed(0)})`,
     );
-    console.log(
-      `Fastest Win: ${stats.fastestWin} sols | Slowest Win: ${stats.slowestWin} sols`
-    );
+    console.log(`Fastest Win: ${stats.fastestWin} sols | Slowest Win: ${stats.slowestWin} sols`);
   }
 
   // Defeat breakdown

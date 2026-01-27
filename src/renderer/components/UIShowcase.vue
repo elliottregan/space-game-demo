@@ -83,7 +83,7 @@ function simulateLoading() {
     <!-- Countdown Timer -->
     <section class="showcase__section">
       <h2>CountdownTimer</h2>
-      <div class="showcase__column" style="max-width: 300px;">
+      <div class="showcase__column" style="max-width: 300px">
         <CountdownTimer :remaining="5" :total="10" label="Research" />
         <CountdownTimer :remaining="1" :total="3" label="Construction" />
       </div>

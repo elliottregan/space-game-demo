@@ -82,9 +82,11 @@ function formatMaintenanceCost(cost: ResourceDelta | undefined): string {
             size="sm"
             variant="warning"
             :disabled="!canPerformMaintenance(building.id)"
-            :title="canPerformMaintenance(building.id)
-              ? `Cost: ${formatMaintenanceCost(getMaintenanceCost(building.id))}`
-              : 'Insufficient resources'"
+            :title="
+              canPerformMaintenance(building.id)
+                ? `Cost: ${formatMaintenanceCost(getMaintenanceCost(building.id))}`
+                : 'Insufficient resources'
+            "
             @click="emit('maintain', building.id)"
           >
             Maintain
@@ -93,7 +95,7 @@ function formatMaintenanceCost(cost: ResourceDelta | undefined): string {
       </div>
     </div>
 
-    <p v-if="buildingsNeedingMaintenance.some(b => b.condition < 50)" class="efficiency-warning">
+    <p v-if="buildingsNeedingMaintenance.some((b) => b.condition < 50)" class="efficiency-warning">
       Buildings below 50% condition have reduced efficiency (-25%)
     </p>
   </div>

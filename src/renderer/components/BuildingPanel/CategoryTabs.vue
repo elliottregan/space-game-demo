@@ -15,12 +15,14 @@ const emit = defineEmits<{
 <template>
   <GTabGroup
     :model-value="selectedCategory"
-    @update:model-value="emit('update:selectedCategory', $event as 'all' | 'available' | 'built' | 'recreation')"
+    @update:model-value="
+      emit('update:selectedCategory', $event as 'all' | 'available' | 'built' | 'recreation')
+    "
     :tabs="[
       { id: 'available', label: 'Available' },
       { id: 'built', label: 'Built', badge: activeCount },
       { id: 'recreation', label: 'Recreation' },
-      { id: 'all', label: 'All' }
+      { id: 'all', label: 'All' },
     ]"
   />
 </template>

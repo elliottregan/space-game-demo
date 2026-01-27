@@ -5,21 +5,14 @@ import {
   CONDITION_EFFICIENCY_THRESHOLD,
   MAINTENANCE_START_SOL,
   OXYGEN_DEFICIT_EFFICIENCY_PENALTY,
-} from "../balance/BuildingBalance"
-import {
-  BUILDING_MODES,
-  REPAIR_DURATION_SOLS,
-} from "../balance/OperationsBalance"
-import { getSkillById } from "../data/skills"
-import {
-  type Building,
-  type BuildingDefinition,
-  BuildingId,
-} from "../models/Building"
-import type { Colonist } from "../models/Colonist"
-import { TechnologyId } from "../models/Technology"
-import type { GameEvent } from "../models/GameEvent"
-import type { ResourceDelta } from "../models/Resources"
+} from "../balance/BuildingBalance";
+import { BUILDING_MODES, REPAIR_DURATION_SOLS } from "../balance/OperationsBalance";
+import { getSkillById } from "../data/skills";
+import { type Building, type BuildingDefinition, BuildingId } from "../models/Building";
+import type { Colonist } from "../models/Colonist";
+import { TechnologyId } from "../models/Technology";
+import type { GameEvent } from "../models/GameEvent";
+import type { ResourceDelta } from "../models/Resources";
 import {
   applyRushRecyclingPenalty,
   calculateMaintenanceCost,
@@ -28,89 +21,89 @@ import {
   calculateRepairCost,
   calculateRepurposeCost,
   calculateRepurposeTime,
-} from "../utils/buildingCosts"
-import { applyMultiplier, combineMultipliers } from "../utils/resourceFlow"
+} from "../utils/buildingCosts";
+import { applyMultiplier, combineMultipliers } from "../utils/resourceFlow";
 import {
   calculateAverageWorkerEfficiency,
   calculateStaffingEfficiency,
-} from "../utils/workerEfficiency"
-import type { ColonyManager } from "./ColonyManager"
-import type { ResourceManager } from "./ResourceManager"
-import type { TechnologyTree } from "./TechnologyTree"
+} from "../utils/workerEfficiency";
+import type { ColonyManager } from "./ColonyManager";
+import type { ResourceManager } from "./ResourceManager";
+import type { TechnologyTree } from "./TechnologyTree";
 
 export class BuildingManager {
-  private definitions: Map<BuildingId, BuildingDefinition> = new Map()
-  private buildings: Map<string, Building> = new Map()
-  private nextId: number = 1
-  private constructionSpeedBonus: number = 0
-  private colonyManager: ColonyManager | null = null
-  private technologyTree: TechnologyTree | null = null
+  private definitions: Map<BuildingId, BuildingDefinition> = new Map();
+  private buildings: Map<string, Building> = new Map();
+  private nextId: number = 1;
+  private constructionSpeedBonus: number = 0;
+  private colonyManager: ColonyManager | null = null;
+  private technologyTree: TechnologyTree | null = null;
 
   setColonyManager(colony: ColonyManager): void {
-    this.colonyManager = colony
+    this.colonyManager = colony;
   }
 
   setTechnologyTree(tech: TechnologyTree): void {
-    this.technologyTree = tech
+    this.technologyTree = tech;
   }
 
   constructor(defs: BuildingDefinition[]) {
     defs.forEach((d) => {
-      this.definitions.set(d.id, d)
-    })
+      this.definitions.set(d.id, d);
+    });
   }
 
   /** Get building and its definition together, or undefined if either missing */
-  private getBuildingWithDef(buildingId: string): {
-    building: Building
-    def: BuildingDefinition
-  } | undefined {
-    const building = this.buildings.get(buildingId)
-    if (!building) return undefined
-    const def = this.definitions.get(building.definitionId)
-    if (!def) return undefined
-    return { building, def }
+  private getBuildingWithDef(buildingId: string):
+    | {
+        building: Building;
+        def: BuildingDefinition;
+      }
+    | undefined {
+    const building = this.buildings.get(buildingId);
+    if (!building) return undefined;
+    const def = this.definitions.get(building.definitionId);
+    if (!def) return undefined;
+    return { building, def };
   }
 
   /** Sum a numeric property from definitions across all active, non-broken buildings */
-  private sumActiveBuildings(
-    getter: (def: BuildingDefinition) => number | undefined,
-  ): number {
-    let total = 0
+  private sumActiveBuildings(getter: (def: BuildingDefinition) => number | undefined): number {
+    let total = 0;
     for (const building of this.buildings.values()) {
-      if (building.status !== "active" || building.broken) continue
-      const def = this.definitions.get(building.definitionId)
-      const value = def ? getter(def) : undefined
-      if (value !== undefined) total += value
+      if (building.status !== "active" || building.broken) continue;
+      const def = this.definitions.get(building.definitionId);
+      const value = def ? getter(def) : undefined;
+      if (value !== undefined) total += value;
     }
-    return total
+    return total;
   }
 
-  private currentSol: number = 0
+  private currentSol: number = 0;
 
   tick(resources: ResourceManager, currentSol?: number): GameEvent[] {
     if (currentSol !== undefined) {
-      this.currentSol = currentSol
+      this.currentSol = currentSol;
     }
-    const events: GameEvent[] = []
-    const buildingsToDelete: string[] = []
+    const events: GameEvent[] = [];
+    const buildingsToDelete: string[] = [];
 
     for (const building of this.buildings.values()) {
-      const def = this.definitions.get(building.definitionId)
-      if (!def) continue
+      const def = this.definitions.get(building.definitionId);
+      if (!def) continue;
 
-      this.processConstruction(building, def, resources, events)
-      this.processRepairs(building, def, resources, events)
-      this.processRecycling(building, def, resources, events, buildingsToDelete)
-      this.processMaintenanceDecay(building, def, resources, events)
+      this.processConstruction(building, def, resources, events);
+      this.processRepairs(building, def, resources, events);
+      this.processRecycling(building, def, resources, events, buildingsToDelete);
+      this.processMaintenanceDecay(building, def, resources, events);
     }
 
     // Delete buildings that were recycled (outside of iteration loop)
     for (const id of buildingsToDelete) {
-      this.buildings.delete(id)
+      this.buildings.delete(id);
     }
 
-    return events
+    return events;
   }
 
   private processConstruction(
@@ -119,26 +112,26 @@ export class BuildingManager {
     resources: ResourceManager,
     events: GameEvent[],
   ): void {
-    if (building.status !== "pending") return
+    if (building.status !== "pending") return;
 
-    const speedMultiplier = 1.0 + this.constructionSpeedBonus
-    building.constructionProgress += speedMultiplier
+    const speedMultiplier = 1.0 + this.constructionSpeedBonus;
+    building.constructionProgress += speedMultiplier;
 
     // Use repurpose time if repurposing
     const constructionTime = building.repurposeFromDefId
       ? this.getRepurposeTime(building.definitionId)
-      : def.constructionTime
+      : def.constructionTime;
 
     if (building.constructionProgress >= constructionTime) {
-      building.status = "active"
-      building.constructionProgress = constructionTime
-      building.repurposeFromDefId = undefined // Clear repurpose flag
+      building.status = "active";
+      building.constructionProgress = constructionTime;
+      building.repurposeFromDefId = undefined; // Clear repurpose flag
 
       // Auto-assign workers before applying resource flow (staffing affects efficiency)
-      this.autoAssignWorkers(building, def)
+      this.autoAssignWorkers(building, def);
 
       // Add mode-adjusted production/consumption
-      this.applyBuildingResourceFlow(building.id, resources, true)
+      this.applyBuildingResourceFlow(building.id, resources, true);
 
       events.push({
         type: "BUILDING_COMPLETE",
@@ -146,31 +139,28 @@ export class BuildingManager {
         buildingName: def.name,
         severity: "info",
         message: `${def.name} construction complete!`,
-      })
+      });
     }
   }
 
   /**
    * Score a colonist for a building based on skill affinity.
    */
-  private scoreColonistForBuilding(
-    colonist: Colonist,
-    def: BuildingDefinition,
-  ): number {
-    let score = 0
+  private scoreColonistForBuilding(colonist: Colonist, def: BuildingDefinition): number {
+    let score = 0;
     if (def.workerRole) {
       for (const skillId of colonist.skills) {
-        const skill = getSkillById(skillId)
+        const skill = getSkillById(skillId);
         if (skill?.affinity.includes(def.workerRole)) {
-          score += skill.efficiencyBonus
+          score += skill.efficiencyBonus;
         }
       }
       // Bonus for matching role
       if (colonist.role === def.workerRole) {
-        score += 0.5
+        score += 0.5;
       }
     }
-    return score
+    return score;
   }
 
   /**
@@ -178,36 +168,34 @@ export class BuildingManager {
    * Prioritizes colonists with skill affinities matching the building's worker role.
    */
   private autoAssignWorkers(building: Building, def: BuildingDefinition): void {
-    if (!def.workerSlots || !this.colonyManager) return
+    if (!def.workerSlots || !this.colonyManager) return;
 
     // Get all colonists not already assigned to any building
-    const assignedColonistIds = new Set<string>()
+    const assignedColonistIds = new Set<string>();
     for (const b of this.buildings.values()) {
       for (const colonistId of b.assignedWorkers) {
-        assignedColonistIds.add(colonistId)
+        assignedColonistIds.add(colonistId);
       }
     }
 
-    const allColonists = this.colonyManager.getColonists()
-    const availableColonists = allColonists.filter(
-      (c) => !assignedColonistIds.has(c.id),
-    )
+    const allColonists = this.colonyManager.getColonists();
+    const availableColonists = allColonists.filter((c) => !assignedColonistIds.has(c.id));
 
-    if (availableColonists.length === 0) return
+    if (availableColonists.length === 0) return;
 
     // Score colonists by skill affinity to the building's worker role
     const scoredColonists = availableColonists.map((colonist) => ({
       colonist,
       score: this.scoreColonistForBuilding(colonist, def),
-    }))
+    }));
 
     // Sort by score descending (best matches first)
-    scoredColonists.sort((a, b) => b.score - a.score)
+    scoredColonists.sort((a, b) => b.score - a.score);
 
     // Assign up to workerSlots colonists
-    const toAssign = scoredColonists.slice(0, def.workerSlots)
+    const toAssign = scoredColonists.slice(0, def.workerSlots);
     for (const { colonist } of toAssign) {
-      building.assignedWorkers.push(colonist.id)
+      building.assignedWorkers.push(colonist.id);
     }
   }
 
@@ -216,26 +204,26 @@ export class BuildingManager {
    * Sorted by priority: food buildings first, then by most empty slots.
    */
   getUnderstaffedBuildings(): Building[] {
-    const result: Building[] = []
+    const result: Building[] = [];
     for (const building of this.buildings.values()) {
-      if (building.status !== "active") continue
-      const def = this.definitions.get(building.definitionId)
-      if (!def?.workerSlots) continue
+      if (building.status !== "active") continue;
+      const def = this.definitions.get(building.definitionId);
+      if (!def?.workerSlots) continue;
       if (building.assignedWorkers.length < def.workerSlots) {
-        result.push(building)
+        result.push(building);
       }
     }
     // Sort: food buildings first, then by most slots needed
     return result.sort((a, b) => {
-      const defA = this.definitions.get(a.definitionId)!
-      const defB = this.definitions.get(b.definitionId)!
-      const isFoodA = defA.production?.food ? 1 : 0
-      const isFoodB = defB.production?.food ? 1 : 0
-      if (isFoodA !== isFoodB) return isFoodB - isFoodA
-      const emptyA = defA.workerSlots! - a.assignedWorkers.length
-      const emptyB = defB.workerSlots! - b.assignedWorkers.length
-      return emptyB - emptyA
-    })
+      const defA = this.definitions.get(a.definitionId)!;
+      const defB = this.definitions.get(b.definitionId)!;
+      const isFoodA = defA.production?.food ? 1 : 0;
+      const isFoodB = defB.production?.food ? 1 : 0;
+      if (isFoodA !== isFoodB) return isFoodB - isFoodA;
+      const emptyA = defA.workerSlots! - a.assignedWorkers.length;
+      const emptyB = defB.workerSlots! - b.assignedWorkers.length;
+      return emptyB - emptyA;
+    });
   }
 
   /**
@@ -244,23 +232,21 @@ export class BuildingManager {
    * Never steals workers from other buildings.
    */
   autoAssignAllWorkers(colonyManager: ColonyManager): GameEvent[] {
-    const events: GameEvent[] = []
-    const understaffed = this.getUnderstaffedBuildings()
-    if (understaffed.length === 0) return events
+    const events: GameEvent[] = [];
+    const understaffed = this.getUnderstaffedBuildings();
+    if (understaffed.length === 0) return events;
 
     // Get unassigned colonists
-    const assignedIds = new Set<string>()
+    const assignedIds = new Set<string>();
     for (const b of this.buildings.values()) {
-      for (const id of b.assignedWorkers) assignedIds.add(id)
+      for (const id of b.assignedWorkers) assignedIds.add(id);
     }
-    const unassigned = colonyManager
-      .getColonists()
-      .filter((c) => !assignedIds.has(c.id))
-    if (unassigned.length === 0) return events
+    const unassigned = colonyManager.getColonists().filter((c) => !assignedIds.has(c.id));
+    if (unassigned.length === 0) return events;
 
     for (const building of understaffed) {
-      const def = this.definitions.get(building.definitionId)!
-      const slotsNeeded = def.workerSlots! - building.assignedWorkers.length
+      const def = this.definitions.get(building.definitionId)!;
+      const slotsNeeded = def.workerSlots! - building.assignedWorkers.length;
 
       // Score and sort available colonists
       const scored = unassigned
@@ -269,20 +255,20 @@ export class BuildingManager {
           colonist: c,
           score: this.scoreColonistForBuilding(c, def),
         }))
-        .sort((a, b) => b.score - a.score)
+        .sort((a, b) => b.score - a.score);
 
-      const toAssign = scored.slice(0, slotsNeeded)
+      const toAssign = scored.slice(0, slotsNeeded);
       for (const { colonist } of toAssign) {
-        building.assignedWorkers.push(colonist.id)
-        assignedIds.add(colonist.id)
+        building.assignedWorkers.push(colonist.id);
+        assignedIds.add(colonist.id);
         events.push({
           type: "WORKER_AUTO_ASSIGNED",
           message: `${colonist.name} assigned to ${def.name}`,
           severity: "info",
-        })
+        });
       }
     }
-    return events
+    return events;
   }
 
   private processRepairs(
@@ -291,15 +277,15 @@ export class BuildingManager {
     resources: ResourceManager,
     events: GameEvent[],
   ): void {
-    if (!building.broken || building.repairProgress <= 0) return
+    if (!building.broken || building.repairProgress <= 0) return;
 
-    building.repairProgress += 1
+    building.repairProgress += 1;
     if (building.repairProgress >= REPAIR_DURATION_SOLS) {
-      building.broken = false
-      building.repairProgress = 0
+      building.broken = false;
+      building.repairProgress = 0;
 
       // Re-add production/consumption after repair
-      this.applyBuildingResourceFlow(building.id, resources, true)
+      this.applyBuildingResourceFlow(building.id, resources, true);
 
       events.push({
         type: "BUILDING_REPAIRED",
@@ -307,7 +293,7 @@ export class BuildingManager {
         buildingName: def.name,
         severity: "info",
         message: `${def.name} repaired!`,
-      })
+      });
     }
   }
 
@@ -318,15 +304,15 @@ export class BuildingManager {
     events: GameEvent[],
     buildingsToDelete: string[],
   ): void {
-    if (building.status !== "recycling") return
+    if (building.status !== "recycling") return;
 
-    building.recyclingProgress = (building.recyclingProgress || 0) + 1
-    const recycleTime = this.getRecycleTime(building.id)
+    building.recyclingProgress = (building.recyclingProgress || 0) + 1;
+    const recycleTime = this.getRecycleTime(building.id);
 
     if (building.recyclingProgress >= recycleTime) {
-      const recycleValue = this.getRecycleValue(building.id)
+      const recycleValue = this.getRecycleValue(building.id);
       if (recycleValue) {
-        resources.add(recycleValue)
+        resources.add(recycleValue);
       }
 
       events.push({
@@ -335,9 +321,9 @@ export class BuildingManager {
         buildingName: def.name,
         severity: "info",
         message: `${def.name} recycled for materials.`,
-      })
+      });
 
-      buildingsToDelete.push(building.id)
+      buildingsToDelete.push(building.id);
     }
   }
 
@@ -347,25 +333,18 @@ export class BuildingManager {
     resources: ResourceManager,
     events: GameEvent[],
   ): void {
-    if (building.status !== "active" || building.broken) return
+    if (building.status !== "active" || building.broken) return;
 
-    building.age += 1
+    building.age += 1;
 
     // Condition decay starts after MAINTENANCE_START_SOL
-    if (this.currentSol < MAINTENANCE_START_SOL) return
+    if (this.currentSol < MAINTENANCE_START_SOL) return;
 
     // Decay condition every CONDITION_DECAY_INTERVAL sols
-    if (
-      building.age % CONDITION_DECAY_INTERVAL !== 0 ||
-      building.condition <= 0
-    )
-      return
+    if (building.age % CONDITION_DECAY_INTERVAL !== 0 || building.condition <= 0) return;
 
-    const oldCondition = building.condition
-    building.condition = Math.max(
-      0,
-      building.condition - CONDITION_DECAY_AMOUNT,
-    )
+    const oldCondition = building.condition;
+    building.condition = Math.max(0, building.condition - CONDITION_DECAY_AMOUNT);
 
     // Check if crossing efficiency threshold - need to update production/consumption
     if (
@@ -373,13 +352,8 @@ export class BuildingManager {
       building.condition < CONDITION_EFFICIENCY_THRESHOLD
     ) {
       // Remove old production/consumption and re-add with penalty
-      this.applyBuildingResourceFlow(
-        building.id,
-        resources,
-        false,
-        oldCondition,
-      )
-      this.applyBuildingResourceFlow(building.id, resources, true)
+      this.applyBuildingResourceFlow(building.id, resources, false, oldCondition);
+      this.applyBuildingResourceFlow(building.id, resources, true);
 
       events.push({
         type: "BUILDING_DEGRADED",
@@ -387,23 +361,19 @@ export class BuildingManager {
         buildingName: def.name,
         severity: "warning",
         message: `${def.name} condition critical - efficiency reduced!`,
-      })
+      });
     }
   }
 
-  canBuild(
-    defId: BuildingId,
-    resources: ResourceManager,
-    technology: TechnologyTree,
-  ): boolean {
-    const def = this.definitions.get(defId)
-    if (!def) return false
+  canBuild(defId: BuildingId, resources: ResourceManager, technology: TechnologyTree): boolean {
+    const def = this.definitions.get(defId);
+    if (!def) return false;
 
     if (def.requiredTech && !technology.isResearched(def.requiredTech)) {
-      return false
+      return false;
     }
 
-    return resources.canAfford(def.cost)
+    return resources.canAfford(def.cost);
   }
 
   startBuilding(
@@ -411,11 +381,11 @@ export class BuildingManager {
     resources: ResourceManager,
     technology: TechnologyTree,
   ): Building | null {
-    if (!this.canBuild(defId, resources, technology)) return null
+    if (!this.canBuild(defId, resources, technology)) return null;
 
-    const def = this.definitions.get(defId)
-    if (!def) return null
-    resources.deduct(def.cost)
+    const def = this.definitions.get(defId);
+    if (!def) return null;
+    resources.deduct(def.cost);
 
     const building: Building = {
       id: `building_${this.nextId++}`,
@@ -429,14 +399,14 @@ export class BuildingManager {
       condition: 100,
       age: 0,
       lastMaintenance: this.currentSol,
-    }
+    };
 
-    this.buildings.set(building.id, building)
-    return building
+    this.buildings.set(building.id, building);
+    return building;
   }
 
   getBuilding(id: string): Building | undefined {
-    return this.buildings.get(id)
+    return this.buildings.get(id);
   }
 
   setBuildingMode(
@@ -444,152 +414,142 @@ export class BuildingManager {
     mode: "conservation" | "normal" | "overdrive",
     resources: ResourceManager,
   ): boolean {
-    const building = this.buildings.get(buildingId)
-    if (!building || building.status !== "active" || building.broken)
-      return false
-    if (building.mode === mode) return true // No change needed
+    const building = this.buildings.get(buildingId);
+    if (!building || building.status !== "active" || building.broken) return false;
+    if (building.mode === mode) return true; // No change needed
 
     // Remove old production/consumption
-    this.applyBuildingResourceFlow(buildingId, resources, false)
+    this.applyBuildingResourceFlow(buildingId, resources, false);
 
     // Update mode
-    building.mode = mode
+    building.mode = mode;
 
     // Add new production/consumption
-    this.applyBuildingResourceFlow(buildingId, resources, true)
+    this.applyBuildingResourceFlow(buildingId, resources, true);
 
-    return true
+    return true;
   }
 
   breakBuilding(buildingId: string, resources: ResourceManager): boolean {
-    const building = this.buildings.get(buildingId)
-    if (!building || building.status !== "active") return false
+    const building = this.buildings.get(buildingId);
+    if (!building || building.status !== "active") return false;
 
     // Remove production/consumption before breaking
-    this.applyBuildingResourceFlow(buildingId, resources, false)
+    this.applyBuildingResourceFlow(buildingId, resources, false);
 
-    building.broken = true
-    building.mode = "normal"
-    return true
+    building.broken = true;
+    building.mode = "normal";
+    return true;
   }
 
   getRepairCost(buildingId: string): ResourceDelta | undefined {
-    const result = this.getBuildingWithDef(buildingId)
-    if (!result || !result.building.broken) return undefined
-    return calculateRepairCost(result.def)
+    const result = this.getBuildingWithDef(buildingId);
+    if (!result || !result.building.broken) return undefined;
+    return calculateRepairCost(result.def);
   }
 
   startRepair(buildingId: string, resources: ResourceManager): boolean {
-    const building = this.buildings.get(buildingId)
-    if (!building || !building.broken) return false
+    const building = this.buildings.get(buildingId);
+    if (!building || !building.broken) return false;
 
-    const cost = this.getRepairCost(buildingId)
-    if (!cost || !resources.canAfford(cost)) return false
+    const cost = this.getRepairCost(buildingId);
+    if (!cost || !resources.canAfford(cost)) return false;
 
-    resources.deduct(cost)
-    building.repairProgress = 0.01 // Mark as repairing
-    return true
+    resources.deduct(cost);
+    building.repairProgress = 0.01; // Mark as repairing
+    return true;
   }
 
   isRepairing(buildingId: string): boolean {
-    const building = this.buildings.get(buildingId)
-    return building?.broken === true && building.repairProgress > 0
+    const building = this.buildings.get(buildingId);
+    return building?.broken === true && building.repairProgress > 0;
   }
 
   getMaintenanceCost(buildingId: string): ResourceDelta | undefined {
-    const result = this.getBuildingWithDef(buildingId)
-    if (
-      !result ||
-      result.building.status !== "active" ||
-      result.building.broken
-    )
-      return undefined
-    return calculateMaintenanceCost(result.def)
+    const result = this.getBuildingWithDef(buildingId);
+    if (!result || result.building.status !== "active" || result.building.broken) return undefined;
+    return calculateMaintenanceCost(result.def);
   }
 
-  canPerformMaintenance(
-    buildingId: string,
-    resources: ResourceManager,
-  ): boolean {
-    const cost = this.getMaintenanceCost(buildingId)
-    if (!cost) return false
-    return resources.canAfford(cost)
+  canPerformMaintenance(buildingId: string, resources: ResourceManager): boolean {
+    const cost = this.getMaintenanceCost(buildingId);
+    if (!cost) return false;
+    return resources.canAfford(cost);
   }
 
   performMaintenance(buildingId: string, resources: ResourceManager): boolean {
-    const building = this.buildings.get(buildingId)
-    if (!building) return false
-    if (building.status !== "active" || building.broken) return false
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+    if (building.status !== "active" || building.broken) return false;
 
-    const cost = this.getMaintenanceCost(buildingId)
-    if (!cost || !resources.canAfford(cost)) return false
+    const cost = this.getMaintenanceCost(buildingId);
+    if (!cost || !resources.canAfford(cost)) return false;
 
     // Check if condition was below threshold (production/consumption needs update)
-    const wasBelow = building.condition < CONDITION_EFFICIENCY_THRESHOLD
+    const wasBelow = building.condition < CONDITION_EFFICIENCY_THRESHOLD;
 
-    resources.deduct(cost)
+    resources.deduct(cost);
 
     // If we were below threshold, remove old production/consumption first
     if (wasBelow) {
-      this.applyBuildingResourceFlow(buildingId, resources, false)
+      this.applyBuildingResourceFlow(buildingId, resources, false);
     }
 
-    building.condition = 100
-    building.lastMaintenance = this.currentSol
+    building.condition = 100;
+    building.lastMaintenance = this.currentSol;
 
     // If we were below threshold, add new production/consumption with full efficiency
     if (wasBelow) {
-      this.applyBuildingResourceFlow(buildingId, resources, true)
+      this.applyBuildingResourceFlow(buildingId, resources, true);
     }
 
-    return true
+    return true;
   }
 
   getRecycleValue(buildingId: string): ResourceDelta | undefined {
-    const result = this.getBuildingWithDef(buildingId)
-    if (!result) return undefined
-    return calculateRecycleValue(result.building, result.def)
+    const result = this.getBuildingWithDef(buildingId);
+    if (!result) return undefined;
+    return calculateRecycleValue(result.building, result.def);
   }
 
   getRecycleTime(buildingId: string): number {
-    const result = this.getBuildingWithDef(buildingId)
-    return result ? calculateRecycleTime(result.def) : 0
+    const result = this.getBuildingWithDef(buildingId);
+    return result ? calculateRecycleTime(result.def) : 0;
   }
 
   startRecycling(buildingId: string, resources: ResourceManager): boolean {
-    const building = this.buildings.get(buildingId)
-    if (!building) return false
-    if (building.status === "pending" || building.status === "recycling")
-      return false
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+    if (building.status === "pending" || building.status === "recycling") return false;
 
     // Remove production/consumption if active
     if (building.status === "active" && !building.broken) {
-      this.applyBuildingResourceFlow(buildingId, resources, false)
+      this.applyBuildingResourceFlow(buildingId, resources, false);
     }
 
-    building.status = "recycling"
-    building.recyclingProgress = 0
-    return true
+    building.status = "recycling";
+    building.recyclingProgress = 0;
+    return true;
   }
 
   rushRecycling(buildingId: string, resources: ResourceManager): boolean {
-    const building = this.buildings.get(buildingId)
-    if (!building) return false
-    if (building.status !== "active" && building.status !== "idle") return false
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+    if (building.status !== "active" && building.status !== "idle") return false;
 
     // Remove production/consumption if active
     if (building.status === "active" && !building.broken) {
-      this.applyBuildingResourceFlow(buildingId, resources, false)
+      this.applyBuildingResourceFlow(buildingId, resources, false);
     }
 
     // Immediate completion with penalty
-    const recycleValue = this.getRecycleValue(buildingId)
+    const recycleValue = this.getRecycleValue(buildingId);
     if (recycleValue) {
-      resources.add(applyRushRecyclingPenalty(recycleValue))
+      resources.add(applyRushRecyclingPenalty(recycleValue));
     }
 
-    this.buildings.delete(buildingId)
-    return true
+    this.buildings.delete(buildingId);
+    return true;
   }
 
   canRepurpose(
@@ -598,43 +558,40 @@ export class BuildingManager {
     resources: ResourceManager,
     technology: TechnologyTree,
   ): boolean {
-    const building = this.buildings.get(buildingId)
-    if (!building) return false
-    if (building.status !== "active" && building.status !== "idle") return false
-    if (building.broken) return false // Must repair before repurposing
-    if (building.assignedWorkers.length > 0) return false // Must unassign workers first
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+    if (building.status !== "active" && building.status !== "idle") return false;
+    if (building.broken) return false; // Must repair before repurposing
+    if (building.assignedWorkers.length > 0) return false; // Must unassign workers first
 
-    const currentDef = this.definitions.get(building.definitionId)
-    if (!currentDef?.repurposeTargets?.includes(targetDefId)) return false
+    const currentDef = this.definitions.get(building.definitionId);
+    if (!currentDef?.repurposeTargets?.includes(targetDefId)) return false;
 
-    const targetDef = this.definitions.get(targetDefId)
-    if (!targetDef) return false
+    const targetDef = this.definitions.get(targetDefId);
+    if (!targetDef) return false;
 
     // Check tech requirements for target
-    if (
-      targetDef.requiredTech &&
-      !technology.isResearched(targetDef.requiredTech)
-    ) {
-      return false
+    if (targetDef.requiredTech && !technology.isResearched(targetDef.requiredTech)) {
+      return false;
     }
 
     // Check cost (30% of target building materials)
-    const cost = this.getRepurposeCost(targetDefId)
-    return cost ? resources.canAfford(cost) : false
+    const cost = this.getRepurposeCost(targetDefId);
+    return cost ? resources.canAfford(cost) : false;
   }
 
   getRepurposeCost(targetDefId: BuildingId): ResourceDelta | undefined {
-    const targetDef = this.definitions.get(targetDefId)
-    if (!targetDef) return undefined
+    const targetDef = this.definitions.get(targetDefId);
+    if (!targetDef) return undefined;
 
-    return calculateRepurposeCost(targetDef)
+    return calculateRepurposeCost(targetDef);
   }
 
   getRepurposeTime(targetDefId: BuildingId): number {
-    const targetDef = this.definitions.get(targetDefId)
-    if (!targetDef) return 0
+    const targetDef = this.definitions.get(targetDefId);
+    if (!targetDef) return 0;
 
-    return calculateRepurposeTime(targetDef)
+    return calculateRepurposeTime(targetDef);
   }
 
   startRepurposing(
@@ -643,122 +600,90 @@ export class BuildingManager {
     resources: ResourceManager,
     technology: TechnologyTree,
   ): boolean {
-    if (!this.canRepurpose(buildingId, targetDefId, resources, technology))
-      return false
+    if (!this.canRepurpose(buildingId, targetDefId, resources, technology)) return false;
 
-    const building = this.buildings.get(buildingId)
-    if (!building) return false
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
 
     // Remove production/consumption if active
     if (building.status === "active" && !building.broken) {
-      this.applyBuildingResourceFlow(buildingId, resources, false)
+      this.applyBuildingResourceFlow(buildingId, resources, false);
     }
 
     // Deduct cost
-    const cost = this.getRepurposeCost(targetDefId)
-    if (cost) resources.deduct(cost)
+    const cost = this.getRepurposeCost(targetDefId);
+    if (cost) resources.deduct(cost);
 
     // Update building
-    const originalDefId = building.definitionId
-    building.definitionId = targetDefId
-    building.repurposeFromDefId = originalDefId
-    building.status = "pending"
-    building.constructionProgress = 0
-    building.mode = "normal"
-    building.repairProgress = 0
+    const originalDefId = building.definitionId;
+    building.definitionId = targetDefId;
+    building.repurposeFromDefId = originalDefId;
+    building.status = "pending";
+    building.constructionProgress = 0;
+    building.mode = "normal";
+    building.repairProgress = 0;
 
     // Clear depositId during repurposing - player must re-link to appropriate deposit
     // (deposit types may not be compatible between building types)
-    building.depositId = undefined
+    building.depositId = undefined;
 
-    return true
+    return true;
   }
 
-  getBuildingMode(
-    buildingId: string,
-  ): "conservation" | "normal" | "overdrive" | undefined {
-    return this.buildings.get(buildingId)?.mode
+  getBuildingMode(buildingId: string): "conservation" | "normal" | "overdrive" | undefined {
+    return this.buildings.get(buildingId)?.mode;
   }
 
   private getConditionMultiplier(condition: number): number {
-    return condition < CONDITION_EFFICIENCY_THRESHOLD
-      ? 1 - CONDITION_EFFICIENCY_PENALTY
-      : 1
+    return condition < CONDITION_EFFICIENCY_THRESHOLD ? 1 - CONDITION_EFFICIENCY_PENALTY : 1;
   }
 
   private getOxygenDeficitMultiplier(): number {
-    return this.getTotalOxygenContribution() < 0
-      ? 1 - OXYGEN_DEFICIT_EFFICIENCY_PENALTY
-      : 1
+    return this.getTotalOxygenContribution() < 0 ? 1 - OXYGEN_DEFICIT_EFFICIENCY_PENALTY : 1;
   }
 
   /**
    * Calculate the combined efficiency multiplier for a building.
    * Factors: condition, oxygen, staffing, worker efficiency.
    */
-  private getBuildingEfficiencyMultiplier(
-    buildingId: string,
-    overrideCondition?: number,
-  ): number {
-    const building = this.buildings.get(buildingId)
-    if (!building) return 0
+  private getBuildingEfficiencyMultiplier(buildingId: string, overrideCondition?: number): number {
+    const building = this.buildings.get(buildingId);
+    if (!building) return 0;
 
-    const condition = overrideCondition ?? building.condition
+    const condition = overrideCondition ?? building.condition;
 
     return combineMultipliers(
       this.getConditionMultiplier(condition),
       this.getOxygenDeficitMultiplier(),
       this.getStaffingEfficiency(buildingId),
       this.getWorkerEfficiency(buildingId),
-    )
+    );
   }
 
-  getEffectiveProduction(
-    buildingId: string,
-    overrideCondition?: number,
-  ): ResourceDelta {
-    const result = this.getBuildingWithDef(buildingId)
-    if (
-      !result ||
-      result.building.status !== "active" ||
-      result.building.broken
-    )
-      return {}
-    if (!result.def.production) return {}
+  getEffectiveProduction(buildingId: string, overrideCondition?: number): ResourceDelta {
+    const result = this.getBuildingWithDef(buildingId);
+    if (!result || result.building.status !== "active" || result.building.broken) return {};
+    if (!result.def.production) return {};
 
-    const modeMultiplier = BUILDING_MODES[result.building.mode].production
+    const modeMultiplier = BUILDING_MODES[result.building.mode].production;
     const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(
       buildingId,
       overrideCondition,
-    )
-    return applyMultiplier(
-      result.def.production,
-      modeMultiplier * efficiencyMultiplier,
-    )
+    );
+    return applyMultiplier(result.def.production, modeMultiplier * efficiencyMultiplier);
   }
 
-  getEffectiveConsumption(
-    buildingId: string,
-    overrideCondition?: number,
-  ): ResourceDelta {
-    const result = this.getBuildingWithDef(buildingId)
-    if (
-      !result ||
-      result.building.status !== "active" ||
-      result.building.broken
-    )
-      return {}
-    if (!result.def.consumption) return {}
+  getEffectiveConsumption(buildingId: string, overrideCondition?: number): ResourceDelta {
+    const result = this.getBuildingWithDef(buildingId);
+    if (!result || result.building.status !== "active" || result.building.broken) return {};
+    if (!result.def.consumption) return {};
 
-    const modeMultiplier = BUILDING_MODES[result.building.mode].consumption
+    const modeMultiplier = BUILDING_MODES[result.building.mode].consumption;
     const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(
       buildingId,
       overrideCondition,
-    )
-    return applyMultiplier(
-      result.def.consumption,
-      modeMultiplier * efficiencyMultiplier,
-    )
+    );
+    return applyMultiplier(result.def.consumption, modeMultiplier * efficiencyMultiplier);
   }
 
   /**
@@ -774,106 +699,99 @@ export class BuildingManager {
     add: boolean,
     overrideCondition?: number,
   ): void {
-    const prod = this.getEffectiveProduction(buildingId, overrideCondition)
-    const cons = this.getEffectiveConsumption(buildingId, overrideCondition)
+    const prod = this.getEffectiveProduction(buildingId, overrideCondition);
+    const cons = this.getEffectiveConsumption(buildingId, overrideCondition);
 
     if (Object.keys(prod).length > 0) {
       if (add) {
-        resources.addProduction(prod)
+        resources.addProduction(prod);
       } else {
-        resources.removeProduction(prod)
+        resources.removeProduction(prod);
       }
     }
     if (Object.keys(cons).length > 0) {
       if (add) {
-        resources.addConsumption(cons)
+        resources.addConsumption(cons);
       } else {
-        resources.removeConsumption(cons)
+        resources.removeConsumption(cons);
       }
     }
   }
 
   getDefinition(defId: BuildingId): BuildingDefinition | undefined {
-    return this.definitions.get(defId)
+    return this.definitions.get(defId);
   }
 
   getAllDefinitions(): BuildingDefinition[] {
-    return Array.from(this.definitions.values())
+    return Array.from(this.definitions.values());
   }
 
   getBuildings(): Building[] {
-    return Array.from(this.buildings.values())
+    return Array.from(this.buildings.values());
   }
 
   getActiveBuildings(): Building[] {
-    return Array.from(this.buildings.values()).filter(
-      (b) => b.status === "active",
-    )
+    return Array.from(this.buildings.values()).filter((b) => b.status === "active");
   }
 
   getPendingBuildings(): Building[] {
-    return Array.from(this.buildings.values()).filter(
-      (b) => b.status === "pending",
-    )
+    return Array.from(this.buildings.values()).filter((b) => b.status === "pending");
   }
 
   getBuildingsByDefinition(defId: BuildingId): Building[] {
-    return Array.from(this.buildings.values()).filter(
-      (b) => b.definitionId === defId,
-    )
+    return Array.from(this.buildings.values()).filter((b) => b.definitionId === defId);
   }
 
   getBuildingCount(): number {
-    return this.buildings.size
+    return this.buildings.size;
   }
 
   getActiveBuildingCount(): number {
-    return this.getActiveBuildings().length
+    return this.getActiveBuildings().length;
   }
 
   getTotalMoraleBoost(): number {
-    return this.sumActiveBuildings((def) => def.moraleBoost)
+    return this.sumActiveBuildings((def) => def.moraleBoost);
   }
 
   getTotalOxygenContribution(): number {
-    return this.sumActiveBuildings((def) => def.oxygenContribution)
+    return this.sumActiveBuildings((def) => def.oxygenContribution);
   }
 
   setConstructionSpeedBonus(bonus: number): void {
-    this.constructionSpeedBonus = bonus
+    this.constructionSpeedBonus = bonus;
   }
 
   getConstructionSpeedBonus(): number {
-    return this.constructionSpeedBonus
+    return this.constructionSpeedBonus;
   }
 
   assignWorker(buildingId: string, colonistId: string): boolean {
-    const result = this.getBuildingWithDef(buildingId)
-    if (!result || result.building.status !== "active") return false
-    const { building, def } = result
+    const result = this.getBuildingWithDef(buildingId);
+    if (!result || result.building.status !== "active") return false;
+    const { building, def } = result;
 
-    if (!def.workerSlots || building.assignedWorkers.length >= def.workerSlots)
-      return false
-    if (building.assignedWorkers.includes(colonistId)) return false
+    if (!def.workerSlots || building.assignedWorkers.length >= def.workerSlots) return false;
+    if (building.assignedWorkers.includes(colonistId)) return false;
 
     // Check if colonist is already assigned elsewhere
     for (const b of this.buildings.values()) {
-      if (b.assignedWorkers.includes(colonistId)) return false
+      if (b.assignedWorkers.includes(colonistId)) return false;
     }
 
-    building.assignedWorkers.push(colonistId)
-    return true
+    building.assignedWorkers.push(colonistId);
+    return true;
   }
 
   removeWorker(buildingId: string, colonistId: string): boolean {
-    const building = this.buildings.get(buildingId)
-    if (!building) return false
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
 
-    const index = building.assignedWorkers.indexOf(colonistId)
-    if (index === -1) return false
+    const index = building.assignedWorkers.indexOf(colonistId);
+    if (index === -1) return false;
 
-    building.assignedWorkers.splice(index, 1)
-    return true
+    building.assignedWorkers.splice(index, 1);
+    return true;
   }
 
   /**
@@ -882,26 +800,22 @@ export class BuildingManager {
    * Mining buildings get bonus efficiency with Robotics: 1 worker = 80%, 2+ = 100%.
    */
   getStaffingEfficiency(buildingId: string): number {
-    const result = this.getBuildingWithDef(buildingId)
-    if (!result) return 0
-    const { building, def } = result
+    const result = this.getBuildingWithDef(buildingId);
+    if (!result) return 0;
+    const { building, def } = result;
 
-    if (!def.workerSlots) return 1
-    if (building.assignedWorkers.length === 0) return 0
+    if (!def.workerSlots) return 1;
+    if (building.assignedWorkers.length === 0) return 0;
 
     // Check for mining efficiency bonus from Robotics
-    const isMiningBuilding = def.requiresDeposit && def.production?.materials
-    const hasRobotics =
-      this.technologyTree?.isResearched(TechnologyId.ROBOTICS) ?? false
+    const isMiningBuilding = def.requiresDeposit && def.production?.materials;
+    const hasRobotics = this.technologyTree?.isResearched(TechnologyId.ROBOTICS) ?? false;
 
     if (isMiningBuilding && hasRobotics) {
-      return building.assignedWorkers.length >= 2 ? 1 : 0.8
+      return building.assignedWorkers.length >= 2 ? 1 : 0.8;
     }
 
-    return calculateStaffingEfficiency(
-      building.assignedWorkers.length,
-      def.workerSlots,
-    )
+    return calculateStaffingEfficiency(building.assignedWorkers.length, def.workerSlots);
   }
 
   /**
@@ -910,18 +824,18 @@ export class BuildingManager {
    * Returns 1 if no workers assigned or building has no worker slots.
    */
   getWorkerEfficiency(buildingId: string): number {
-    const result = this.getBuildingWithDef(buildingId)
-    if (!result) return 0
-    const { building, def } = result
+    const result = this.getBuildingWithDef(buildingId);
+    if (!result) return 0;
+    const { building, def } = result;
 
-    if (!def.workerSlots || building.assignedWorkers.length === 0) return 1
-    if (!this.colonyManager) return 1
+    if (!def.workerSlots || building.assignedWorkers.length === 0) return 1;
+    if (!this.colonyManager) return 1;
 
     const colonists = building.assignedWorkers
       .map((id) => this.colonyManager?.getColonist(id))
-      .filter((c) => c !== undefined)
+      .filter((c) => c !== undefined);
 
-    return calculateAverageWorkerEfficiency(colonists, def.workerRole)
+    return calculateAverageWorkerEfficiency(colonists, def.workerRole);
   }
 
   toJSON() {
@@ -929,18 +843,18 @@ export class BuildingManager {
       buildings: Array.from(this.buildings.values()),
       nextId: this.nextId,
       constructionSpeedBonus: this.constructionSpeedBonus,
-    }
+    };
   }
 
   static fromJSON(
     data: {
-      buildings: Building[]
-      nextId: number
-      constructionSpeedBonus: number
+      buildings: Building[];
+      nextId: number;
+      constructionSpeedBonus: number;
     },
     defs: BuildingDefinition[],
   ): BuildingManager {
-    const manager = new BuildingManager(defs)
+    const manager = new BuildingManager(defs);
     data.buildings.forEach((b) => {
       // Add defaults for new fields (backward compatibility)
       const building: Building = {
@@ -953,11 +867,11 @@ export class BuildingManager {
         condition: b.condition ?? 100,
         age: b.age ?? 0,
         lastMaintenance: b.lastMaintenance ?? 0,
-      }
-      manager.buildings.set(building.id, building)
-    })
-    manager.nextId = data.nextId
-    manager.constructionSpeedBonus = data.constructionSpeedBonus || 0
-    return manager
+      };
+      manager.buildings.set(building.id, building);
+    });
+    manager.nextId = data.nextId;
+    manager.constructionSpeedBonus = data.constructionSpeedBonus || 0;
+    return manager;
   }
 }
