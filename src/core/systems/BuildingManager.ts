@@ -53,6 +53,29 @@ export class BuildingManager {
     });
   }
 
+  /** Get building and its definition together, or undefined if either missing */
+  private getBuildingWithDef(
+    buildingId: string,
+  ): { building: Building; def: BuildingDefinition } | undefined {
+    const building = this.buildings.get(buildingId);
+    if (!building) return undefined;
+    const def = this.definitions.get(building.definitionId);
+    if (!def) return undefined;
+    return { building, def };
+  }
+
+  /** Sum a numeric property from definitions across all active, non-broken buildings */
+  private sumActiveBuildings(getter: (def: BuildingDefinition) => number | undefined): number {
+    let total = 0;
+    for (const building of this.buildings.values()) {
+      if (building.status !== "active" || building.broken) continue;
+      const def = this.definitions.get(building.definitionId);
+      const value = def ? getter(def) : undefined;
+      if (value !== undefined) total += value;
+    }
+    return total;
+  }
+
   private currentSol: number = 0;
 
   tick(resources: ResourceManager, currentSol?: number): GameEvent[] {
@@ -414,13 +437,9 @@ export class BuildingManager {
   }
 
   getRepairCost(buildingId: string): ResourceDelta | undefined {
-    const building = this.buildings.get(buildingId);
-    if (!building || !building.broken) return undefined;
-
-    const def = this.definitions.get(building.definitionId);
-    if (!def) return undefined;
-
-    return calculateRepairCost(def);
+    const result = this.getBuildingWithDef(buildingId);
+    if (!result || !result.building.broken) return undefined;
+    return calculateRepairCost(result.def);
   }
 
   startRepair(buildingId: string, resources: ResourceManager): boolean {
@@ -441,14 +460,9 @@ export class BuildingManager {
   }
 
   getMaintenanceCost(buildingId: string): ResourceDelta | undefined {
-    const building = this.buildings.get(buildingId);
-    if (!building) return undefined;
-    if (building.status !== "active" || building.broken) return undefined;
-
-    const def = this.definitions.get(building.definitionId);
-    if (!def) return undefined;
-
-    return calculateMaintenanceCost(def);
+    const result = this.getBuildingWithDef(buildingId);
+    if (!result || result.building.status !== "active" || result.building.broken) return undefined;
+    return calculateMaintenanceCost(result.def);
   }
 
   canPerformMaintenance(buildingId: string, resources: ResourceManager): boolean {
@@ -487,23 +501,14 @@ export class BuildingManager {
   }
 
   getRecycleValue(buildingId: string): ResourceDelta | undefined {
-    const building = this.buildings.get(buildingId);
-    if (!building) return undefined;
-
-    const def = this.definitions.get(building.definitionId);
-    if (!def) return undefined;
-
-    return calculateRecycleValue(building, def);
+    const result = this.getBuildingWithDef(buildingId);
+    if (!result) return undefined;
+    return calculateRecycleValue(result.building, result.def);
   }
 
   getRecycleTime(buildingId: string): number {
-    const building = this.buildings.get(buildingId);
-    if (!building) return 0;
-
-    const def = this.definitions.get(building.definitionId);
-    if (!def) return 0;
-
-    return calculateRecycleTime(def);
+    const result = this.getBuildingWithDef(buildingId);
+    return result ? calculateRecycleTime(result.def) : 0;
   }
 
   startRecycling(buildingId: string, resources: ResourceManager): boolean {
@@ -650,35 +655,23 @@ export class BuildingManager {
   }
 
   getEffectiveProduction(buildingId: string, overrideCondition?: number): ResourceDelta {
-    const building = this.buildings.get(buildingId);
-    if (!building || building.status !== "active" || building.broken) return {};
+    const result = this.getBuildingWithDef(buildingId);
+    if (!result || result.building.status !== "active" || result.building.broken) return {};
+    if (!result.def.production) return {};
 
-    const def = this.definitions.get(building.definitionId);
-    if (!def?.production) return {};
-
-    const modeMultiplier = BUILDING_MODES[building.mode].production;
-    const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(
-      buildingId,
-      overrideCondition,
-    );
-
-    return applyMultiplier(def.production, modeMultiplier * efficiencyMultiplier);
+    const modeMultiplier = BUILDING_MODES[result.building.mode].production;
+    const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(buildingId, overrideCondition);
+    return applyMultiplier(result.def.production, modeMultiplier * efficiencyMultiplier);
   }
 
   getEffectiveConsumption(buildingId: string, overrideCondition?: number): ResourceDelta {
-    const building = this.buildings.get(buildingId);
-    if (!building || building.status !== "active" || building.broken) return {};
+    const result = this.getBuildingWithDef(buildingId);
+    if (!result || result.building.status !== "active" || result.building.broken) return {};
+    if (!result.def.consumption) return {};
 
-    const def = this.definitions.get(building.definitionId);
-    if (!def?.consumption) return {};
-
-    const modeMultiplier = BUILDING_MODES[building.mode].consumption;
-    const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(
-      buildingId,
-      overrideCondition,
-    );
-
-    return applyMultiplier(def.consumption, modeMultiplier * efficiencyMultiplier);
+    const modeMultiplier = BUILDING_MODES[result.building.mode].consumption;
+    const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(buildingId, overrideCondition);
+    return applyMultiplier(result.def.consumption, modeMultiplier * efficiencyMultiplier);
   }
 
   /**
@@ -746,27 +739,11 @@ export class BuildingManager {
   }
 
   getTotalMoraleBoost(): number {
-    let total = 0;
-    for (const building of this.buildings.values()) {
-      if (building.status !== "active" || building.broken) continue;
-      const def = this.definitions.get(building.definitionId);
-      if (def?.moraleBoost) {
-        total += def.moraleBoost;
-      }
-    }
-    return total;
+    return this.sumActiveBuildings((def) => def.moraleBoost);
   }
 
   getTotalOxygenContribution(): number {
-    let total = 0;
-    for (const building of this.buildings.values()) {
-      if (building.status !== "active" || building.broken) continue;
-      const def = this.definitions.get(building.definitionId);
-      if (def?.oxygenContribution !== undefined) {
-        total += def.oxygenContribution;
-      }
-    }
-    return total;
+    return this.sumActiveBuildings((def) => def.oxygenContribution);
   }
 
   setConstructionSpeedBonus(bonus: number): void {
@@ -778,20 +755,16 @@ export class BuildingManager {
   }
 
   assignWorker(buildingId: string, colonistId: string): boolean {
-    const building = this.buildings.get(buildingId);
-    if (!building || building.status !== "active") return false;
+    const result = this.getBuildingWithDef(buildingId);
+    if (!result || result.building.status !== "active") return false;
+    const { building, def } = result;
 
-    const def = this.definitions.get(building.definitionId);
-    if (!def || !def.workerSlots || building.assignedWorkers.length >= def.workerSlots)
-      return false;
-
+    if (!def.workerSlots || building.assignedWorkers.length >= def.workerSlots) return false;
     if (building.assignedWorkers.includes(colonistId)) return false;
 
     // Check if colonist is already assigned elsewhere
     for (const b of this.buildings.values()) {
-      if (b.assignedWorkers.includes(colonistId)) {
-        return false;
-      }
+      if (b.assignedWorkers.includes(colonistId)) return false;
     }
 
     building.assignedWorkers.push(colonistId);
@@ -815,11 +788,11 @@ export class BuildingManager {
    * Mining buildings get bonus efficiency with Robotics: 1 worker = 80%, 2+ = 100%.
    */
   getStaffingEfficiency(buildingId: string): number {
-    const building = this.buildings.get(buildingId);
-    if (!building) return 0;
+    const result = this.getBuildingWithDef(buildingId);
+    if (!result) return 0;
+    const { building, def } = result;
 
-    const def = this.definitions.get(building.definitionId);
-    if (!def?.workerSlots) return 1;
+    if (!def.workerSlots) return 1;
     if (building.assignedWorkers.length === 0) return 0;
 
     // Check for mining efficiency bonus from Robotics
@@ -827,7 +800,6 @@ export class BuildingManager {
     const hasRobotics = this.technologyTree?.isResearched(TechnologyId.ROBOTICS) ?? false;
 
     if (isMiningBuilding && hasRobotics) {
-      // With Robotics: 1 worker = 80%, 2+ workers = 100%
       return building.assignedWorkers.length >= 2 ? 1 : 0.8;
     }
 
@@ -840,12 +812,11 @@ export class BuildingManager {
    * Returns 1 if no workers assigned or building has no worker slots.
    */
   getWorkerEfficiency(buildingId: string): number {
-    const building = this.buildings.get(buildingId);
-    if (!building) return 0;
+    const result = this.getBuildingWithDef(buildingId);
+    if (!result) return 0;
+    const { building, def } = result;
 
-    const def = this.definitions.get(building.definitionId);
-    if (!def || !def.workerSlots) return 1;
-    if (building.assignedWorkers.length === 0) return 1;
+    if (!def.workerSlots || building.assignedWorkers.length === 0) return 1;
     if (!this.colonyManager) return 1;
 
     const colonists = building.assignedWorkers
