@@ -51,6 +51,7 @@ export type BuildingAction =
 export { SkillId } from "./colony";
 export type { Colonist, ColonistRole, ColonySnapshot, SkillDefinition } from "./colony";
 // Event types
+export { EventId } from "./events";
 export type {
   ActiveEvent,
   ActiveEventSnapshot,
@@ -61,6 +62,7 @@ export type {
 // Game types
 export type { AdvanceSolsResult, VictoryState } from "./game";
 // NPC types
+export { NPCId, ProjectId } from "./npc";
 export type { Council, NPC, NPCInfluenceSnapshot, Project } from "./npc";
 // Operations types
 export type {

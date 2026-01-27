@@ -17,8 +17,66 @@ export const ALL_FACTIONS: readonly NPCFaction[] = [
   NPCFaction.CorporateInterests,
 ] as const;
 
+/**
+ * NPC identifiers for the 10 council members.
+ * Using a string enum for type safety while maintaining string serialization.
+ */
+export enum NPCId {
+  CHEN_WEI = "chen_wei",
+  NOVA_SILVA = "nova_silva",
+  ALEX_OKONKWO = "alex_okonkwo",
+  MARIA_SANTOS = "maria_santos",
+  JAMES_LIU = "james_liu",
+  AISHA_PATEL = "aisha_patel",
+  MARCUS_REED = "marcus_reed",
+  ELENA_VOLKOV = "elena_volkov",
+  DAVID_MORRISON = "david_morrison",
+  SARAH_CHEN = "sarah_chen",
+}
+
+/** All NPC IDs as an array for iteration */
+export const ALL_NPC_IDS: readonly NPCId[] = [
+  NPCId.CHEN_WEI,
+  NPCId.NOVA_SILVA,
+  NPCId.ALEX_OKONKWO,
+  NPCId.MARIA_SANTOS,
+  NPCId.JAMES_LIU,
+  NPCId.AISHA_PATEL,
+  NPCId.MARCUS_REED,
+  NPCId.ELENA_VOLKOV,
+  NPCId.DAVID_MORRISON,
+  NPCId.SARAH_CHEN,
+] as const;
+
+/**
+ * Project identifiers for political proposals.
+ * Using a string enum for type safety while maintaining string serialization.
+ */
+export enum ProjectId {
+  GENERATION_SHIP = "generation_ship",
+  EARTH_MEMORIAL = "earth_memorial",
+  HERITAGE_ARCHIVE = "heritage_archive",
+  UNIVERSAL_HOUSING = "universal_housing",
+  HEALTHCARE_EXPANSION = "healthcare_expansion",
+  AI_GOVERNANCE = "ai_governance",
+  MINING_CONCESSION = "mining_concession",
+  LABOR_EFFICIENCY = "labor_efficiency",
+}
+
+/** All project IDs as an array for iteration */
+export const ALL_PROJECT_IDS: readonly ProjectId[] = [
+  ProjectId.GENERATION_SHIP,
+  ProjectId.EARTH_MEMORIAL,
+  ProjectId.HERITAGE_ARCHIVE,
+  ProjectId.UNIVERSAL_HOUSING,
+  ProjectId.HEALTHCARE_EXPANSION,
+  ProjectId.AI_GOVERNANCE,
+  ProjectId.MINING_CONCESSION,
+  ProjectId.LABOR_EFFICIENCY,
+] as const;
+
 export interface NPC {
-  id: string;
+  id: NPCId;
   name: string;
   faction: NPCFaction;
   /** Base cost multiplier for lobbying this NPC (1.0 = normal, 2.0 = expensive) */
@@ -29,7 +87,7 @@ export interface NPC {
 export type ProjectType = NPCFaction;
 
 export interface Project {
-  id: string;
+  id: ProjectId;
   name: string;
   description: string;
   type: ProjectType;
@@ -44,9 +102,9 @@ export interface Project {
 }
 
 export interface ActiveProject {
-  projectId: string;
+  projectId: ProjectId;
   /** NPC id -> support level (-1 to +1) */
-  supportLevels: Map<string, number>;
+  supportLevels: Map<NPCId, number>;
   /** Sols remaining before vote */
   solsRemaining: number;
 }
@@ -55,7 +113,7 @@ export interface Council {
   id: string;
   name: string;
   /** NPC ids that are members */
-  memberIds: string[];
+  memberIds: NPCId[];
   /** Relationship boost applied between members */
   relationshipBoost: number;
 }
@@ -71,5 +129,5 @@ export interface FactionDemand {
   /** Sols remaining until demand expires (accelerated decay begins) */
   deadline: number;
   /** Project IDs that would satisfy this demand */
-  projectIds: string[];
+  projectIds: ProjectId[];
 }
