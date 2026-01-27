@@ -56,7 +56,8 @@
       "Bash(bun run:*)",
       "Bash(ls:*)",
       "Bash(git fetch:*)",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "Bash(grep:*)"
     ]
   }
 }
