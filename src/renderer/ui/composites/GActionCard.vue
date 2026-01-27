@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import GButton from "../primitives/GButton.vue";
+import GSelect, { type SelectOption } from "../primitives/GSelect.vue";
 
 withDefaults(
   defineProps<{
@@ -9,6 +10,10 @@ withDefaults(
     actionLabel?: string;
     disabled?: boolean;
     selected?: boolean;
+    // Select props
+    selectOptions?: SelectOption[];
+    selectModelValue?: string | number;
+    selectPlaceholder?: string;
   }>(),
   {
     disabled: false,
@@ -18,6 +23,7 @@ withDefaults(
 
 defineEmits<{
   click: [];
+  "update:selectModelValue": [value: string | number];
 }>();
 </script>
 
@@ -43,14 +49,24 @@ defineEmits<{
       <slot name="cost">{{ cost }}</slot>
     </div>
 
-    <div v-if="actionLabel" class="g-action-card__actions">
+    <div v-if="actionLabel || selectOptions" class="g-action-card__actions">
       <GButton
+        v-if="actionLabel"
         size="sm"
         :disabled="disabled"
         @click="$emit('click')"
       >
         {{ actionLabel }}
       </GButton>
+      <GSelect
+        v-if="selectOptions"
+        size="sm"
+        :options="selectOptions"
+        :model-value="selectModelValue"
+        :placeholder="selectPlaceholder"
+        :disabled="disabled"
+        @update:model-value="$emit('update:selectModelValue', $event)"
+      />
     </div>
   </div>
 </template>

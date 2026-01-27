@@ -1,7 +1,8 @@
 <script setup lang="ts">
-export interface SelectOption {
-  value: string | number;
+export interface SelectOption<T extends string | number = string | number> {
+  value: T;
   label: string;
+  disabled?: boolean;
 }
 
 withDefaults(
@@ -11,11 +12,13 @@ withDefaults(
     placeholder?: string;
     disabled?: boolean;
     size?: "sm" | "md";
+    variant?: "primary" | "secondary" | "ghost";
   }>(),
   {
     placeholder: "",
     disabled: false,
     size: "md",
+    variant: "secondary",
   },
 );
 
@@ -25,16 +28,21 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="g-select-wrapper" :class="`g-select-wrapper--${size}`">
+  <div class="g-select-wrapper" :class="[`g-select-wrapper--${size}`, `g-select-wrapper--${variant}`]">
     <select
       class="g-select"
-      :class="`g-select--${size}`"
+      :class="[`g-select--${size}`, `g-select--${variant}`]"
       :value="modelValue"
       :disabled="disabled"
       @change="$emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
     >
       <option v-if="placeholder" value="" disabled>{{ placeholder }}</option>
-      <option v-for="option in options" :key="option.value" :value="option.value">
+      <option
+        v-for="option in options"
+        :key="option.value"
+        :value="option.value"
+        :disabled="option.disabled"
+      >
         {{ option.label }}
       </option>
     </select>
@@ -91,5 +99,42 @@ defineEmits<{
   padding: var(--g-space-sm) var(--g-space-md);
   padding-right: calc(var(--g-space-md) + 1.5em);
   font-size: var(--g-font-size-sm);
+}
+
+/* Variants */
+.g-select--primary {
+  background: var(--g-accent-red);
+  color: white;
+  border-color: var(--g-accent-red);
+}
+
+.g-select--primary:hover:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+.g-select-wrapper--primary .g-select__arrow {
+  color: white;
+}
+
+.g-select--secondary {
+  background: var(--g-color-bg-base);
+  color: var(--g-color-text);
+  border-color: var(--g-color-border);
+}
+
+.g-select--secondary:hover:not(:disabled) {
+  border-color: var(--g-color-border-focus);
+  background: var(--g-color-bg-surface);
+}
+
+.g-select--ghost {
+  background: transparent;
+  color: var(--g-color-text-muted);
+  border-color: transparent;
+}
+
+.g-select--ghost:hover:not(:disabled) {
+  color: var(--g-color-text);
+  background: var(--g-color-bg-surface);
 }
 </style>
