@@ -165,13 +165,11 @@ body {
 }
 
 .line-a {
-  stroke: var(--chart-batch-a);
   fill: none;
   stroke-width: 2;
 }
 
 .line-b {
-  stroke: var(--chart-batch-b);
   fill: none;
   stroke-width: 2;
   stroke-dasharray: 5,5;
@@ -206,6 +204,22 @@ body {
 
 .legend-swatch.batch-b {
   background: var(--chart-batch-b);
+}
+
+.legend-line {
+  width: 24px;
+  height: 2px;
+  background: var(--g-color-text);
+}
+
+.legend-line.dashed {
+  background: repeating-linear-gradient(
+    to right,
+    var(--g-color-text) 0,
+    var(--g-color-text) 5px,
+    transparent 5px,
+    transparent 8px
+  );
 }
 
 /* Two-column layout for smaller charts */

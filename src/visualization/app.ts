@@ -122,7 +122,7 @@ function renderChartsContent(): string {
     </div>
     <div class="chart-panel">
       <h2>Resource Timeline</h2>
-      ${batchB ? renderLegend() : ""}
+      ${batchB ? renderTimelineLegend() : ""}
       <div id="timeline" class="chart-container"></div>
     </div>
     <div class="charts-row">
@@ -684,6 +684,24 @@ function renderLegend(): string {
       <div class="legend-item">
         <span class="legend-swatch batch-b"></span>
         <span>Batch B</span>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Render legend for resource timeline (line style indicates batch).
+ */
+function renderTimelineLegend(): string {
+  return `
+    <div class="legend">
+      <div class="legend-item">
+        <span class="legend-line solid"></span>
+        <span>Batch A (solid)</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-line dashed"></span>
+        <span>Batch B (dashed)</span>
       </div>
     </div>
   `;

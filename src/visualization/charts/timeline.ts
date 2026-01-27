@@ -50,8 +50,17 @@ export function renderTimeline(
   );
   const x = d3.scaleLinear().domain([0, maxSol]).range([0, width]);
 
-  // Y scale (normalize to 0-100 for comparison)
-  const y = d3.scaleLinear().domain([0, 150]).range([height, 0]);
+  // Y scale - calculate max from all displayed resources
+  const resources: (keyof ResourceSnapshot)[] = ["food", "oxygen", "water", "population", "morale"];
+  let maxValue = 0;
+  for (const resource of resources) {
+    const maxA = d3.max(timelineA, (d) => d[resource] as number) ?? 0;
+    const maxB = d3.max(timelineB, (d) => d[resource] as number) ?? 0;
+    maxValue = Math.max(maxValue, maxA, maxB);
+  }
+  // Add 10% padding to the top
+  maxValue = Math.ceil(maxValue * 1.1);
+  const y = d3.scaleLinear().domain([0, maxValue]).range([height, 0]);
 
   // Grid
   svg
@@ -73,15 +82,14 @@ export function renderTimeline(
       .curve(d3.curveMonotoneX);
 
   // Draw lines for each resource
-  const resources: (keyof ResourceSnapshot)[] = ["food", "oxygen", "water", "population", "morale"];
-
   for (const resource of resources) {
     // Batch A - solid lines
     svg
       .append("path")
       .datum(timelineA)
-      .attr("class", "line-a")
-      .attr("stroke", RESOURCE_COLORS[resource])
+      .attr("fill", "none")
+      .attr("stroke-width", 2)
+      .style("stroke", RESOURCE_COLORS[resource])
       .attr("d", line(resource));
 
     // Batch B - dashed lines
@@ -89,8 +97,10 @@ export function renderTimeline(
       svg
         .append("path")
         .datum(timelineB)
-        .attr("class", "line-b")
-        .attr("stroke", RESOURCE_COLORS[resource])
+        .attr("fill", "none")
+        .attr("stroke-width", 2)
+        .attr("stroke-dasharray", "5,5")
+        .style("stroke", RESOURCE_COLORS[resource])
         .attr("d", line(resource));
     }
   }
