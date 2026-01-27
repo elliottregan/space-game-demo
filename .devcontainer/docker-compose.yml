@@ -20,11 +20,10 @@ services:
 
     volumes:
       - ..:/workspace:cached
-      - devcontainer-claude-config:/home/dev/.claude
+      - ~/.claude:/home/dev/.claude
       - devcontainer-gh-config:/home/dev/.config/gh
       - ~/.ssh:/home/dev/.ssh:ro
       - ~/.claude.json:/home/dev/.claude.json
-      - ./.credentials.json:/home/dev/.claude/.credentials.json:ro
 
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
@@ -35,5 +34,4 @@ services:
     stdin_open: true
 
 volumes:
-  devcontainer-claude-config:
   devcontainer-gh-config:
