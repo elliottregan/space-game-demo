@@ -1,0 +1,6 @@
+# Ignore simulation logs (generated files)
+simulations/*.txt
+simulations/*.json
+
+# Keep directory structure
+!simulations/.gitkeep
