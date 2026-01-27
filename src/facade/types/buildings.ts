@@ -2,9 +2,9 @@
 // Building-related types for the facade
 
 import {
-  BuildingId,
   type Building,
   type BuildingDefinition,
+  BuildingId,
   type BuildingStatus,
   type PlacedBuilding,
 } from "../../core/models/Building";

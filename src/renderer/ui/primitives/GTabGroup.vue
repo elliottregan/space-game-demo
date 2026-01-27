@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import GButton from "./GButton.vue";
-
-export interface Tab {
-  id: string;
-  label: string;
-  badge?: string | number;
-}
+import type { Tab } from "../types";
 
 const props = withDefaults(
   defineProps<{

@@ -7,7 +7,7 @@ import {
   SHORTAGE_THRESHOLDS,
 } from "../balance/EconomyBaseline";
 import { COLONIST_SKILL_COUNT } from "../balance/WorkforceBalance";
-import { SKILLS } from "../data/skills";
+import { type SkillId, SKILLS } from "../data/skills";
 import type { Colonist } from "../models/Colonist";
 import { ColonistRole, MasteryLevel } from "../models/Colonist";
 import type { GameEvent } from "../models/GameEvent";
@@ -131,7 +131,7 @@ export class ColonyManager {
     }
   }
 
-  private assignRandomSkills(): string[] {
+  private assignRandomSkills(): SkillId[] {
     const skillCount =
       Math.floor(Math.random() * (COLONIST_SKILL_COUNT.max - COLONIST_SKILL_COUNT.min + 1)) +
       COLONIST_SKILL_COUNT.min;
@@ -448,10 +448,11 @@ export class ColonyManager {
     const assignments: Record<string, Colonist[]> = {};
     for (const colonist of this.colonists.values()) {
       if (colonist.housingId) {
-        if (!assignments[colonist.housingId]) {
-          assignments[colonist.housingId] = [];
+        const housingId = colonist.housingId;
+        if (!assignments[housingId]) {
+          assignments[housingId] = [];
         }
-        assignments[colonist.housingId].push(colonist);
+        assignments[housingId]!.push(colonist);
       }
     }
     return assignments;

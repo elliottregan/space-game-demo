@@ -3,8 +3,8 @@
 
 import {
   SpecialUnlockId,
-  TechnologyId,
   type Technology,
+  TechnologyId,
   type TechResearch,
   type UnlockId,
 } from "../../core/models/Technology";

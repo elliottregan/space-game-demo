@@ -5,11 +5,6 @@ import { RANDOM_EVENTS } from "./data/events";
 import { INITIAL_RELATIONSHIPS, NPCS, PROJECTS } from "./data/npcs";
 import { TECHNOLOGIES } from "./data/technologies";
 import type { GameEvent } from "./models/GameEvent";
-import {
-  canExtract,
-  getBaseProductionForDeposit,
-  getDepletionEvents,
-} from "./utils/depositExtraction";
 import { BuildingManager } from "./systems/BuildingManager";
 import { ColonyManager } from "./systems/ColonyManager";
 import { EventManager } from "./systems/EventManager";
@@ -19,6 +14,11 @@ import { ResourceManager } from "./systems/ResourceManager";
 import { TechnologyTree } from "./systems/TechnologyTree";
 import { VictoryManager } from "./systems/VictoryManager";
 import { WorkforceManager } from "./systems/WorkforceManager";
+import {
+  canExtract,
+  getBaseProductionForDeposit,
+  getDepletionEvents,
+} from "./utils/depositExtraction";
 
 export class GameState {
   currentSol: number = 0;

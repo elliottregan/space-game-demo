@@ -1,8 +1,8 @@
 // src/facade/types/index.ts
 // Re-export all facade types
 
-// Building types
-export { BuildingId } from "./buildings";
+import { BuildingId } from "./buildings";
+
 export type {
   Building,
   BuildingDefinition,
@@ -11,6 +11,8 @@ export type {
   BuildingStatus,
   PlacedBuilding,
 } from "./buildings";
+// Building types
+export { BuildingId } from "./buildings";
 // Common types (includes ok/err helper functions)
 export {
   type AlreadyInProgressError,
@@ -43,15 +45,13 @@ export type { ResourceDelta, ResourceSnapshot, Resources } from "./resources";
 
 // Building action discriminated union for ActionChecker
 export type BuildingAction =
-  | { action: "build"; defId: string }
+  | { action: "build"; defId: BuildingId }
   | { action: "recycle"; buildingId: string }
-  | { action: "repurpose"; buildingId: string; targetDefId: string };
+  | { action: "repurpose"; buildingId: string; targetDefId: BuildingId };
 
+export type { Colonist, ColonistRole, ColonySnapshot, SkillDefinition } from "./colony";
 // Colony types
 export { SkillId } from "./colony";
-export type { Colonist, ColonistRole, ColonySnapshot, SkillDefinition } from "./colony";
-// Event types
-export { EventId } from "./events";
 export type {
   ActiveEvent,
   ActiveEventSnapshot,
@@ -59,11 +59,13 @@ export type {
   GameEvent,
   RandomEventDefinition,
 } from "./events";
+// Event types
+export { EventId } from "./events";
 // Game types
 export type { AdvanceSolsResult, VictoryState } from "./game";
+export type { Council, NPC, NPCInfluenceSnapshot, Project } from "./npc";
 // NPC types
 export { NPCId, ProjectId } from "./npc";
-export type { Council, NPC, NPCInfluenceSnapshot, Project } from "./npc";
 // Operations types
 export type {
   ActiveExpedition,
@@ -79,6 +81,6 @@ export type {
 } from "./operations";
 // Politics types
 export type { FactionDemand, FactionStatus, NPCFaction, PoliticsSnapshot } from "./politics";
+export type { Technology, TechnologySnapshot, TechResearch, UnlockId } from "./technology";
 // Technology types
 export { SpecialUnlockId, TechnologyId } from "./technology";
-export type { Technology, TechnologySnapshot, TechResearch, UnlockId } from "./technology";

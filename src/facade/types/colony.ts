@@ -1,7 +1,7 @@
 // src/facade/types/colony.ts
 // Colony and colonist types for the facade
 
-import { SkillId, type SkillDefinition } from "../../core/data/skills";
+import { type SkillDefinition, SkillId } from "../../core/data/skills";
 import type { Colonist, ColonistRole } from "../../core/models/Colonist";
 
 /**

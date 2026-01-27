@@ -5,6 +5,7 @@ import {
   type ActiveExpedition,
   type Building,
   type BuildingDefinition,
+  BuildingId,
   type BuildingMode,
   type Colonist,
   type ColonistRole,
@@ -15,14 +16,17 @@ import {
   type FactionStatus,
   GameAPI,
   type GameEvent,
+  NPCId,
   type PolicyType,
   type PolicyValue,
+  ProjectId,
   type ProspectingSite,
   type RandomEventDefinition,
   type ResourceDelta,
   type Resources,
   type SkillDefinition,
   type Technology,
+  TechnologyId,
   type TechResearch,
   type VictoryState,
 } from "../../facade";
@@ -214,8 +218,10 @@ class GameService {
     this.state.colonists = [...colony.colonists];
     this.state.skillDefinitions = [...colony.skillDefinitions];
 
-    // Housing data
-    this.state.housingAssignments = { ...colony.housingAssignments };
+    // Housing data - deep copy the arrays
+    this.state.housingAssignments = Object.fromEntries(
+      Object.entries(colony.housingAssignments).map(([k, v]) => [k, [...v]]),
+    );
     this.state.unhoused = [...colony.unhoused];
 
     // Buildings - deep copy to ensure assignedWorkers arrays trigger reactivity
@@ -309,25 +315,25 @@ class GameService {
 
   // Building actions
   canBuild(defId: string): boolean {
-    return this.facade.buildings.canBuild(defId).allowed;
+    return this.facade.buildings.canBuild(defId as BuildingId).allowed;
   }
 
   startBuilding(defId: string): Building | null {
-    const result = this.facade.buildings.build(defId);
+    const result = this.facade.buildings.build(defId as BuildingId);
     return result.success ? result.data : null;
   }
 
   getBuildingDefinition(defId: string): BuildingDefinition | undefined {
-    return this.facade.buildings.getDefinition(defId);
+    return this.facade.buildings.getDefinition(defId as BuildingId);
   }
 
   // Technology actions
   canResearch(techId: string): boolean {
-    return this.facade.technology.canResearch(techId).allowed;
+    return this.facade.technology.canResearch(techId as TechnologyId).allowed;
   }
 
   startResearch(techId: string): boolean {
-    return this.facade.technology.startResearch(techId).success;
+    return this.facade.technology.startResearch(techId as TechnologyId).success;
   }
 
   cancelResearch(): void {
@@ -372,19 +378,19 @@ class GameService {
 
   // NPC Influence actions
   proposeProject(projectId: string): boolean {
-    return this.facade.npc.proposeProject(projectId).success;
+    return this.facade.npc.proposeProject(projectId as ProjectId).success;
   }
 
   lobbyNPC(npcId: string, supportBoost: number): boolean {
-    return this.facade.npc.lobbyNPC(npcId, supportBoost).success;
+    return this.facade.npc.lobbyNPC(npcId as NPCId, supportBoost).success;
   }
 
   createCouncil(name: string, memberIds: string[]): boolean {
-    return this.facade.npc.createCouncil(name, memberIds).success;
+    return this.facade.npc.createCouncil(name, memberIds as NPCId[]).success;
   }
 
   getLobbyCost(npcId: string, supportBoost: number): number {
-    return this.facade.npc.getLobbyCost(npcId, supportBoost);
+    return this.facade.npc.getLobbyCost(npcId as NPCId, supportBoost);
   }
 
   // Deposit methods
@@ -415,15 +421,15 @@ class GameService {
 
   // Repurposing methods
   canRepurpose(buildingId: string, targetDefId: string): boolean {
-    return this.facade.buildings.canRepurpose(buildingId, targetDefId).allowed;
+    return this.facade.buildings.canRepurpose(buildingId, targetDefId as BuildingId).allowed;
   }
 
   getRepurposeCost(targetDefId: string): ResourceDelta | undefined {
-    return this.facade.buildings.getRepurposeCost(targetDefId);
+    return this.facade.buildings.getRepurposeCost(targetDefId as BuildingId);
   }
 
   startRepurposing(buildingId: string, targetDefId: string): boolean {
-    return this.facade.buildings.repurpose(buildingId, targetDefId).success;
+    return this.facade.buildings.repurpose(buildingId, targetDefId as BuildingId).success;
   }
 
   // Game management

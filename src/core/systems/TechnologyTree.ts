@@ -1,13 +1,13 @@
 import type { GameEvent } from "../models/GameEvent";
-import type { Technology, TechResearch } from "../models/Technology";
+import { type Technology, type TechResearch, TechnologyId } from "../models/Technology";
 import type { ResourceManager } from "./ResourceManager";
 
 export class TechnologyTree {
-  private technologies: Map<string, Technology> = new Map();
-  private researched: Set<string> = new Set();
-  private researchProgress: Map<string, number> = new Map();
-  private currentResearchId: string | null = null;
-  private researchQueue: string[] = [];
+  private technologies: Map<TechnologyId, Technology> = new Map();
+  private researched: Set<TechnologyId> = new Set();
+  private researchProgress: Map<TechnologyId, number> = new Map();
+  private currentResearchId: TechnologyId | null = null;
+  private researchQueue: TechnologyId[] = [];
   private currentResearch: TechResearch | null = null;
   private researchSpeedBonus: number = 0;
 
@@ -15,15 +15,15 @@ export class TechnologyTree {
     techs.forEach((t) => this.technologies.set(t.id, t));
   }
 
-  getResearchProgress(techId: string): number {
+  getResearchProgress(techId: TechnologyId): number {
     return this.researchProgress.get(techId) ?? 0;
   }
 
-  getCurrentResearchId(): string | null {
+  getCurrentResearchId(): TechnologyId | null {
     return this.currentResearchId;
   }
 
-  getResearchQueue(): string[] {
+  getResearchQueue(): TechnologyId[] {
     return [...this.researchQueue];
   }
 
@@ -78,6 +78,7 @@ export class TechnologyTree {
     if (this.currentResearchId) return;
 
     const nextTechId = this.researchQueue[0];
+    if (!nextTechId) return;
     const tech = this.technologies.get(nextTechId);
     if (!tech) return;
 
@@ -98,14 +99,14 @@ export class TechnologyTree {
     this.currentResearchId = nextTechId;
   }
 
-  canResearch(techId: string): boolean {
+  canResearch(techId: TechnologyId): boolean {
     const tech = this.technologies.get(techId);
     if (!tech || this.researched.has(techId)) return false;
 
     return tech.prerequisites.every((prereq) => this.researched.has(prereq));
   }
 
-  startResearch(techId: string, resources: ResourceManager): boolean {
+  startResearch(techId: TechnologyId, resources: ResourceManager): boolean {
     if (!this.canResearch(techId)) return false;
     if (this.currentResearchId) return false;
 
@@ -151,7 +152,7 @@ export class TechnologyTree {
     this.currentResearch = null;
   }
 
-  isResearched(techId: string): boolean {
+  isResearched(techId: TechnologyId): boolean {
     return this.researched.has(techId);
   }
 
@@ -159,14 +160,14 @@ export class TechnologyTree {
    * Instantly completes research on a technology (test helper).
    * Bypasses prerequisites and resource costs.
    */
-  completeResearch(techId: string): boolean {
+  completeResearch(techId: TechnologyId): boolean {
     const tech = this.technologies.get(techId);
     if (!tech) return false;
     this.researched.add(techId);
     return true;
   }
 
-  getTech(techId: string): Technology | undefined {
+  getTech(techId: TechnologyId): Technology | undefined {
     return this.technologies.get(techId);
   }
 
@@ -208,7 +209,7 @@ export class TechnologyTree {
    * Preserves progress for all techs. Starts researching the first
    * unresearched tech in the chain.
    */
-  queueResearch(techId: string, resources: ResourceManager): boolean {
+  queueResearch(techId: TechnologyId, resources: ResourceManager): boolean {
     const chain = this.getPrerequisiteChain(techId);
     if (chain.length === 0) return false;
 
@@ -217,6 +218,7 @@ export class TechnologyTree {
 
     // Find first unresearched tech in chain to start
     const firstTech = chain[0];
+    if (!firstTech) return false;
 
     // If we're not already researching the first tech, switch to it
     if (this.currentResearchId !== firstTech) {
@@ -248,15 +250,15 @@ export class TechnologyTree {
    * Returns all unresearched prerequisites in topological order,
    * ending with the target tech.
    */
-  getPrerequisiteChain(techId: string): string[] {
+  getPrerequisiteChain(techId: TechnologyId): TechnologyId[] {
     const tech = this.technologies.get(techId);
     if (!tech) return [];
     if (this.researched.has(techId)) return [];
 
-    const visited = new Set<string>();
-    const result: string[] = [];
+    const visited = new Set<TechnologyId>();
+    const result: TechnologyId[] = [];
 
-    const visit = (id: string) => {
+    const visit = (id: TechnologyId) => {
       if (visited.has(id)) return;
       if (this.researched.has(id)) return;
 
@@ -289,10 +291,10 @@ export class TechnologyTree {
 
   static fromJSON(
     data: {
-      researched: string[];
+      researched: TechnologyId[];
       researchProgress?: Record<string, number>;
-      currentResearchId?: string | null;
-      researchQueue?: string[];
+      currentResearchId?: TechnologyId | null;
+      researchQueue?: TechnologyId[];
       // Legacy field
       currentResearch?: TechResearch | null;
       researchSpeedBonus: number;
@@ -305,7 +307,9 @@ export class TechnologyTree {
 
     // Handle new format
     if (data.researchProgress) {
-      tree.researchProgress = new Map(Object.entries(data.researchProgress));
+      tree.researchProgress = new Map(
+        Object.entries(data.researchProgress).map(([k, v]) => [k as TechnologyId, v]),
+      );
     }
     tree.currentResearchId = data.currentResearchId ?? null;
     tree.researchQueue = data.researchQueue ?? [];

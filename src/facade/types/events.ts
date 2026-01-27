@@ -2,9 +2,9 @@
 // Event-related types for the facade
 
 import {
-  EventId,
   type ActiveEvent,
   type EventChoice,
+  EventId,
   type GameEvent,
   type RandomEventDefinition,
 } from "../../core/models/GameEvent";

@@ -3,8 +3,8 @@ import { computed } from "vue";
 import { MASTERY_DISPLAY_NAMES, ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist";
 import type { BuildingDefinition, Colonist, SkillDefinition } from "../../../facade";
 import { gameService } from "../../services/GameService";
-import type { SelectOption } from "../../ui/primitives/GSelect.vue";
 import GActionCard from "../../ui/composites/GActionCard.vue";
+import type { SelectOption } from "../../ui/primitives/GSelect.vue";
 import ColonistSkillBadge from "./ColonistSkillBadge.vue";
 
 const props = defineProps<{

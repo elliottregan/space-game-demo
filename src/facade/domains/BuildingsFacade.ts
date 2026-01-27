@@ -2,6 +2,7 @@
 // Building queries and commands facade
 
 import type { GameState } from "../../core/GameState";
+import { BuildingId } from "../../core/models/Building";
 import type {
   ActionChecker,
   Building,
@@ -62,7 +63,7 @@ export class BuildingsFacade
   /**
    * Get a building definition by ID.
    */
-  getDefinition(defId: string): Readonly<BuildingDefinition> | undefined {
+  getDefinition(defId: BuildingId): Readonly<BuildingDefinition> | undefined {
     return this.gameState.buildings.getDefinition(defId);
   }
 
@@ -84,7 +85,7 @@ export class BuildingsFacade
   /**
    * Check if a building can be constructed.
    */
-  canBuild(defId: string): CanDoResult {
+  canBuild(defId: BuildingId): CanDoResult {
     const def = this.gameState.buildings.getDefinition(defId);
     if (!def) {
       return { allowed: false, reason: `Building type "${defId}" not found` };
@@ -158,7 +159,7 @@ export class BuildingsFacade
   /**
    * Check if a building can be repurposed to a target type.
    */
-  canRepurpose(buildingId: string, targetDefId: string): CanDoResult {
+  canRepurpose(buildingId: string, targetDefId: BuildingId): CanDoResult {
     const canDo = this.gameState.buildings.canRepurpose(
       buildingId,
       targetDefId,
@@ -197,7 +198,7 @@ export class BuildingsFacade
   /**
    * Get the cost to repurpose to a target building type.
    */
-  getRepurposeCost(targetDefId: string): ResourceDelta | undefined {
+  getRepurposeCost(targetDefId: BuildingId): ResourceDelta | undefined {
     return this.gameState.buildings.getRepurposeCost(targetDefId);
   }
 
@@ -245,7 +246,7 @@ export class BuildingsFacade
   /**
    * Start construction of a new building.
    */
-  build(defId: string): Result<Building> {
+  build(defId: BuildingId): Result<Building> {
     return this.executeCommand(() => {
       const check = this.canBuild(defId);
       if (!check.allowed) {
@@ -376,7 +377,7 @@ export class BuildingsFacade
   /**
    * Start repurposing a building to a different type.
    */
-  repurpose(buildingId: string, targetDefId: string): Result<void> {
+  repurpose(buildingId: string, targetDefId: BuildingId): Result<void> {
     return this.executeCommand(() => {
       const check = this.canRepurpose(buildingId, targetDefId);
       if (!check.allowed) {
