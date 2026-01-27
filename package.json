@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "simulate": "bun run scripts/simulate.ts",
-    "simulate:analyze": "bun run scripts/analyze-simulation.ts"
+    "simulate:analyze": "bun run scripts/analyze-simulation.ts",
+    "visualize": "bun run scripts/visualize.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",
