@@ -28,7 +28,7 @@ just claude
 | `just claude` | Run Claude Code in the container |
 | `just rebuild` | Rebuild container from scratch |
 | `just extract-credentials` | Extract OAuth credentials from macOS Keychain |
-| `just refresh-auth` | Extract credentials and restart container |
+| `just refresh-auth` | Refresh OAuth credentials (no restart needed) |
 
 ## Ports
 
@@ -39,11 +39,10 @@ just claude
 
 ## Claude Code Authentication
 
-Claude Code in the container uses credentials from your host machine. Three files are mounted:
+Claude Code in the container uses credentials from your host machine:
 
 1. **`~/.claude.json`** - Settings and project trust configuration
-2. **`~/.claude.json` → `/home/dev/.claude.json`** - Mounted read-write so Claude can update settings
-3. **`.credentials.json` → `/home/dev/.claude/.credentials.json`** - OAuth tokens (read-only)
+2. **`~/.claude/`** - Claude state directory (includes `.credentials.json` with OAuth tokens)
 
 ### Setting Up Authentication
 
@@ -66,7 +65,7 @@ OAuth tokens expire. If you get authentication errors:
 just refresh-auth
 ```
 
-This extracts fresh credentials from your macOS Keychain and restarts the container.
+This extracts fresh credentials from your macOS Keychain to `~/.claude/.credentials.json`. The container picks up changes immediately via bind mount (no restart needed).
 
 ## GitHub CLI Authentication
 
@@ -122,8 +121,7 @@ docker volume rm devcontainer_devcontainer-gh-config
 | `..` (project root) | `/workspace` | Project files |
 | `~/.ssh` | `/home/dev/.ssh` | SSH keys (read-only) |
 | `~/.claude.json` | `/home/dev/.claude.json` | Claude settings |
-| `.credentials.json` | `/home/dev/.claude/.credentials.json` | OAuth tokens |
-| Named volume | `/home/dev/.claude` | Claude cache/state |
+| `~/.claude` | `/home/dev/.claude` | Claude state (includes OAuth credentials) |
 | Named volume | `/home/dev/.config/gh` | GitHub CLI config |
 
 ## Environment Variables

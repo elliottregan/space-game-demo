@@ -2,7 +2,7 @@ FROM oven/bun:alpine
 
 # Install system dependencies for Claude Code, SSH, and GitHub CLI
 RUN apk add --no-cache \
-    git curl ca-certificates openssh sudo github-cli bash \
+    git git-init-template curl ca-certificates openssh sudo github-cli bash \
     # Claude Code dependencies for native install
     libgcc libstdc++ ripgrep \
     # Context7 dependencies for install
@@ -29,6 +29,8 @@ RUN echo 'dev:devpass' | chpasswd
 USER dev
 ENV PATH="/home/dev/.local/bin:$PATH"
 RUN curl -fsSL https://claude.ai/install.sh | bash
+# Use HTTPS for GitHub (container doesn't have SSH agent access)
+RUN git config --global url."https://github.com/".insteadOf "git@github.com:"
 USER root
 
 # Workspace setup
