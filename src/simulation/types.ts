@@ -175,3 +175,28 @@ export interface CrisisPoint {
   value: number;
   threshold: number;
 }
+
+/**
+ * Complete analysis output for visualization.
+ */
+export interface AnalysisOutput {
+  metadata: {
+    timestamp: string;
+    runs: number;
+    seed: number;
+  };
+  summary: {
+    winRate: number;
+    victories: number;
+    defeats: number;
+    victoryTypes: Record<string, number>;
+    defeatReasons: Record<string, number>;
+  };
+  victoryTimes: number[];
+  peakPopulations: number[];
+  techFrequency: Record<string, number>;
+  buildingCounts: Record<string, number>;
+  resourceTimeline: ResourceSnapshot[];
+  crisisEvents: CrisisPoint[];
+  runs: RunResult[];
+}

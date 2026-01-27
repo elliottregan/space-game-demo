@@ -12,6 +12,7 @@ import type {
   CrisisPoint,
   BlockedDecision,
   EventOccurrence,
+  AnalysisOutput,
 } from "../src/simulation/types";
 
 /**
@@ -326,6 +327,115 @@ async function writeDebugLog(runs: number, seed: number): Promise<string> {
 }
 
 /**
+ * Write analysis data as JSON for visualization.
+ */
+async function writeJsonOutput(
+  results: RunResult[],
+  runs: number,
+  seed: number
+): Promise<string> {
+  const now = new Date();
+  const timestamp = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const filename = `analysis-${timestamp}-r${runs}-s${seed}.json`;
+  const filepath = `logs/simulations/${filename}`;
+
+  const victories = results.filter((r) => r.outcome === "victory");
+  const defeats = results.filter((r) => r.outcome === "defeat");
+
+  // Aggregate tech frequency
+  const techFrequency: Record<string, number> = {};
+  for (const result of results) {
+    for (const tech of result.techsResearched) {
+      techFrequency[tech] = (techFrequency[tech] ?? 0) + 1;
+    }
+  }
+
+  // Aggregate building counts
+  const buildingCounts: Record<string, number> = {};
+  for (const result of results) {
+    for (const [building, count] of Object.entries(result.buildingsBuilt)) {
+      buildingCounts[building] = (buildingCounts[building] ?? 0) + count;
+    }
+  }
+
+  // Victory type breakdown
+  const victoryTypes: Record<string, number> = {};
+  for (const v of victories) {
+    if (v.victoryType) {
+      victoryTypes[v.victoryType] = (victoryTypes[v.victoryType] ?? 0) + 1;
+    }
+  }
+
+  // Defeat reason breakdown
+  const defeatReasons: Record<string, number> = {};
+  for (const d of defeats) {
+    if (d.defeatReason) {
+      defeatReasons[d.defeatReason] = (defeatReasons[d.defeatReason] ?? 0) + 1;
+    }
+  }
+
+  // Aggregate resource timeline (average across runs at each snapshot interval)
+  const timelineBySOL = new Map<number, ResourceSnapshot[]>();
+  for (const result of results) {
+    if (!result.resourceTimeline) continue;
+    for (const snapshot of result.resourceTimeline) {
+      const existing = timelineBySOL.get(snapshot.sol) ?? [];
+      existing.push(snapshot);
+      timelineBySOL.set(snapshot.sol, existing);
+    }
+  }
+
+  const resourceTimeline: ResourceSnapshot[] = [];
+  for (const [sol, snapshots] of Array.from(timelineBySOL.entries()).sort((a, b) => a[0] - b[0])) {
+    const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
+    resourceTimeline.push({
+      sol,
+      food: avg(snapshots.map((s) => s.food)),
+      oxygen: avg(snapshots.map((s) => s.oxygen)),
+      water: avg(snapshots.map((s) => s.water)),
+      power: avg(snapshots.map((s) => s.power)),
+      materials: avg(snapshots.map((s) => s.materials)),
+      population: avg(snapshots.map((s) => s.population)),
+      morale: avg(snapshots.map((s) => s.morale)),
+      health: avg(snapshots.map((s) => s.health)),
+    });
+  }
+
+  // Aggregate crisis events
+  const crisisEvents: CrisisPoint[] = [];
+  for (const result of results) {
+    if (result.crisisTimeline) {
+      crisisEvents.push(...result.crisisTimeline);
+    }
+  }
+
+  const output: AnalysisOutput = {
+    metadata: {
+      timestamp: now.toISOString(),
+      runs,
+      seed,
+    },
+    summary: {
+      winRate: victories.length / results.length,
+      victories: victories.length,
+      defeats: defeats.length,
+      victoryTypes,
+      defeatReasons,
+    },
+    victoryTimes: victories.map((r) => r.finalSol),
+    peakPopulations: results.map((r) => r.peakPopulation),
+    techFrequency,
+    buildingCounts,
+    resourceTimeline,
+    crisisEvents,
+    runs: results,
+  };
+
+  await Bun.write(filepath, JSON.stringify(output, null, 2));
+  return filepath;
+}
+
+/**
  * Main analysis function.
  */
 async function main(): Promise<void> {
@@ -507,6 +617,10 @@ async function main(): Promise<void> {
     const filepath = await writeDebugLog(runs, seed);
     output(`\nAnalysis written to: ${filepath}`);
   }
+
+  // Always write JSON output for visualization
+  const jsonPath = await writeJsonOutput(results, runs, seed);
+  output(`\nJSON data written to: ${jsonPath}`);
 }
 
 /**
