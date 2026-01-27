@@ -1,6 +1,8 @@
 import { describe, test, expect } from "bun:test";
-import { OperationsManager } from "../src/core/systems/OperationsManager";
+
+import { BuildingId } from "../src/core/models/Building";
 import { GameState } from "../src/core/GameState";
+import { OperationsManager } from "../src/core/systems/OperationsManager";
 
 describe("Deposit-Building Linking", () => {
   test("linkBuildingToDeposit links a building to a developed deposit", () => {
@@ -204,10 +206,10 @@ describe("GameState Deposit Extraction Integration", () => {
     }];
 
     // Build a water extractor and complete construction
-    const building = state.buildings.startBuilding("water_extractor", state.resources, state.technology);
+    const building = state.buildings.startBuilding(BuildingId.WATER_EXTRACTOR, state.resources, state.technology);
     expect(building).not.toBeNull();
 
-    // Complete construction (water_extractor takes 7 sols)
+    // Complete construction (BuildingId.WATER_EXTRACTOR takes 7 sols)
     for (let i = 0; i < 10; i++) {
       state.buildings.tick(state.resources);
     }
@@ -220,7 +222,7 @@ describe("GameState Deposit Extraction Integration", () => {
     const initialReserves = state.operations.getSites()[0]!.remainingReserves;
     state.tick();
 
-    // Reserves should have decreased (water_extractor produces 4 water, moderate = 1.0x)
+    // Reserves should have decreased (BuildingId.WATER_EXTRACTOR produces 4 water, moderate = 1.0x)
     const newReserves = state.operations.getSites()[0]!.remainingReserves;
     expect(newReserves).toBeLessThan(initialReserves);
     expect(newReserves).toBe(initialReserves - 4);
@@ -244,7 +246,7 @@ describe("GameState Deposit Extraction Integration", () => {
     }];
 
     // Build and complete a water extractor
-    const building = state.buildings.startBuilding("water_extractor", state.resources, state.technology);
+    const building = state.buildings.startBuilding(BuildingId.WATER_EXTRACTOR, state.resources, state.technology);
     for (let i = 0; i < 10; i++) {
       state.buildings.tick(state.resources);
     }
@@ -285,7 +287,7 @@ describe("GameState Deposit Extraction Integration", () => {
     }];
 
     // Build and complete a water extractor
-    const building = state.buildings.startBuilding("water_extractor", state.resources, state.technology);
+    const building = state.buildings.startBuilding(BuildingId.WATER_EXTRACTOR, state.resources, state.technology);
     for (let i = 0; i < 10; i++) {
       state.buildings.tick(state.resources);
     }

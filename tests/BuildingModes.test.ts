@@ -4,6 +4,7 @@ import { BuildingManager } from "../src/core/systems/BuildingManager";
 import { ResourceManager } from "../src/core/systems/ResourceManager";
 import { BUILDINGS } from "../src/core/data/buildings";
 import { BUILDING_MODES } from "../src/core/balance/OperationsBalance";
+import { BuildingId } from "../src/core/models/Building";
 
 describe("Building Modes", () => {
   let buildings: BuildingManager;
@@ -21,7 +22,7 @@ describe("Building Modes", () => {
   });
 
   test("new buildings default to normal mode", () => {
-    const building = buildings.startBuilding("solar_panel", resources, {
+    const building = buildings.startBuilding(BuildingId.SOLAR_PANEL, resources, {
       isResearched: () => true,
     } as never);
     expect(building?.mode).toBe("normal");
@@ -30,7 +31,7 @@ describe("Building Modes", () => {
   });
 
   test("setBuildingMode changes mode", () => {
-    const building = buildings.startBuilding("solar_panel", resources, {
+    const building = buildings.startBuilding(BuildingId.SOLAR_PANEL, resources, {
       isResearched: () => true,
     } as never);
     // Complete construction first - mode can only change on active buildings
@@ -49,7 +50,7 @@ describe("Building Modes", () => {
   });
 
   test("getEffectiveProduction applies mode multiplier", () => {
-    const building = buildings.startBuilding("solar_panel", resources, {
+    const building = buildings.startBuilding(BuildingId.SOLAR_PANEL, resources, {
       isResearched: () => true,
     } as never);
     // Complete construction
@@ -79,7 +80,7 @@ describe("Building Breakdown", () => {
   });
 
   test("breakBuilding sets broken to true", () => {
-    const building = buildings.startBuilding("solar_panel", resources, {
+    const building = buildings.startBuilding(BuildingId.SOLAR_PANEL, resources, {
       isResearched: () => true,
     } as never);
     for (let i = 0; i < 10; i++) buildings.tick(resources);
@@ -89,7 +90,7 @@ describe("Building Breakdown", () => {
   });
 
   test("broken building produces nothing", () => {
-    const building = buildings.startBuilding("solar_panel", resources, {
+    const building = buildings.startBuilding(BuildingId.SOLAR_PANEL, resources, {
       isResearched: () => true,
     } as never);
     for (let i = 0; i < 10; i++) buildings.tick(resources);
@@ -100,7 +101,7 @@ describe("Building Breakdown", () => {
   });
 
   test("startRepair begins repair process", () => {
-    const building = buildings.startBuilding("solar_panel", resources, {
+    const building = buildings.startBuilding(BuildingId.SOLAR_PANEL, resources, {
       isResearched: () => true,
     } as never);
     for (let i = 0; i < 10; i++) buildings.tick(resources);
@@ -115,7 +116,7 @@ describe("Building Breakdown", () => {
   });
 
   test("repair completes after REPAIR_DURATION_SOLS", () => {
-    const building = buildings.startBuilding("solar_panel", resources, {
+    const building = buildings.startBuilding(BuildingId.SOLAR_PANEL, resources, {
       isResearched: () => true,
     } as never);
     for (let i = 0; i < 10; i++) buildings.tick(resources);

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import { computeForceLayout, type LayoutInput } from "../src/renderer/utils/forceLayout";
-import { NPCFaction, type NPC } from "../src/core/models/NPCInfluence";
+import { NPCFaction, NPCId, type NPC } from "../src/core/models/NPCInfluence";
 
 describe("computeForceLayout", () => {
-  const createNPC = (id: string, faction: NPCFaction): NPC => ({
+  const createNPC = (id: NPCId, faction: NPCFaction): NPC => ({
     id,
     name: `NPC ${id}`,
     faction,
@@ -25,12 +25,12 @@ describe("computeForceLayout", () => {
 
   it("should return positions for all NPCs", () => {
     const mockNPCs: NPC[] = [
-      { id: "f1", name: "Earth 1", faction: NPCFaction.EarthLoyalists, influence: 1.0 },
-      { id: "f2", name: "Earth 2", faction: NPCFaction.EarthLoyalists, influence: 1.0 },
-      { id: "p1", name: "Mars 1", faction: NPCFaction.MarsIndependence, influence: 1.0 },
-      { id: "p2", name: "Mars 2", faction: NPCFaction.MarsIndependence, influence: 1.0 },
-      { id: "t1", name: "Corp 1", faction: NPCFaction.CorporateInterests, influence: 1.0 },
-      { id: "t2", name: "Corp 2", faction: NPCFaction.CorporateInterests, influence: 1.0 },
+      { id: NPCId.CHEN_WEI, name: "Earth 1", faction: NPCFaction.EarthLoyalists, influence: 1.0 },
+      { id: NPCId.NOVA_SILVA, name: "Earth 2", faction: NPCFaction.EarthLoyalists, influence: 1.0 },
+      { id: NPCId.ALEX_OKONKWO, name: "Mars 1", faction: NPCFaction.MarsIndependence, influence: 1.0 },
+      { id: NPCId.MARIA_SANTOS, name: "Mars 2", faction: NPCFaction.MarsIndependence, influence: 1.0 },
+      { id: NPCId.JAMES_LIU, name: "Corp 1", faction: NPCFaction.CorporateInterests, influence: 1.0 },
+      { id: NPCId.AISHA_PATEL, name: "Corp 2", faction: NPCFaction.CorporateInterests, influence: 1.0 },
     ];
 
     const mockMatrix = [
@@ -60,22 +60,22 @@ describe("computeForceLayout", () => {
 
   it("should cluster same-faction NPCs closer together", () => {
     const mockNPCs: NPC[] = [
-      { id: "f1", name: "Earth 1", faction: NPCFaction.EarthLoyalists, influence: 1.0 },
-      { id: "f2", name: "Earth 2", faction: NPCFaction.EarthLoyalists, influence: 1.0 },
-      { id: "p1", name: "Mars 1", faction: NPCFaction.MarsIndependence, influence: 1.0 },
-      { id: "p2", name: "Mars 2", faction: NPCFaction.MarsIndependence, influence: 1.0 },
-      { id: "t1", name: "Corp 1", faction: NPCFaction.CorporateInterests, influence: 1.0 },
-      { id: "t2", name: "Corp 2", faction: NPCFaction.CorporateInterests, influence: 1.0 },
+      { id: NPCId.CHEN_WEI, name: "Earth 1", faction: NPCFaction.EarthLoyalists, influence: 1.0 },
+      { id: NPCId.NOVA_SILVA, name: "Earth 2", faction: NPCFaction.EarthLoyalists, influence: 1.0 },
+      { id: NPCId.ALEX_OKONKWO, name: "Mars 1", faction: NPCFaction.MarsIndependence, influence: 1.0 },
+      { id: NPCId.MARIA_SANTOS, name: "Mars 2", faction: NPCFaction.MarsIndependence, influence: 1.0 },
+      { id: NPCId.JAMES_LIU, name: "Corp 1", faction: NPCFaction.CorporateInterests, influence: 1.0 },
+      { id: NPCId.AISHA_PATEL, name: "Corp 2", faction: NPCFaction.CorporateInterests, influence: 1.0 },
     ];
 
     // Relationship matrix where same-faction NPCs have strong connections
     const mockMatrix = [
-      [0, 0.8, 0.1, 0, 0, 0],   // f1: strong to f2
-      [0.8, 0, 0, 0.1, 0, 0],   // f2: strong to f1
-      [0.1, 0, 0, 0.8, 0, 0],   // p1: strong to p2
-      [0, 0.1, 0.8, 0, 0, 0],   // p2: strong to p1
-      [0, 0, 0, 0, 0, 0.8],     // t1: strong to t2
-      [0, 0, 0, 0, 0.8, 0],     // t2: strong to t1
+      [0, 0.8, 0.1, 0, 0, 0],   // chen_wei: strong to nova_silva
+      [0.8, 0, 0, 0.1, 0, 0],   // nova_silva: strong to chen_wei
+      [0.1, 0, 0, 0.8, 0, 0],   // alex_okonkwo: strong to maria_santos
+      [0, 0.1, 0.8, 0, 0, 0],   // maria_santos: strong to alex_okonkwo
+      [0, 0, 0, 0, 0, 0.8],     // james_liu: strong to aisha_patel
+      [0, 0, 0, 0, 0.8, 0],     // aisha_patel: strong to james_liu
     ];
 
     const result = computeForceLayout({
@@ -88,24 +88,24 @@ describe("computeForceLayout", () => {
     const positions = Object.fromEntries(result.map((n) => [n.id, n]));
 
     // Distance between same-faction NPCs
-    const f1f2 = Math.hypot(
-      positions.f1!.x - positions.f2!.x,
-      positions.f1!.y - positions.f2!.y
+    const earthDist = Math.hypot(
+      positions[NPCId.CHEN_WEI]!.x - positions[NPCId.NOVA_SILVA]!.x,
+      positions[NPCId.CHEN_WEI]!.y - positions[NPCId.NOVA_SILVA]!.y
     );
-    const p1p2 = Math.hypot(
-      positions.p1!.x - positions.p2!.x,
-      positions.p1!.y - positions.p2!.y
+    const marsDist = Math.hypot(
+      positions[NPCId.ALEX_OKONKWO]!.x - positions[NPCId.MARIA_SANTOS]!.x,
+      positions[NPCId.ALEX_OKONKWO]!.y - positions[NPCId.MARIA_SANTOS]!.y
     );
 
     // Distance between different-faction NPCs
-    const f1p1 = Math.hypot(
-      positions.f1!.x - positions.p1!.x,
-      positions.f1!.y - positions.p1!.y
+    const crossFactionDist = Math.hypot(
+      positions[NPCId.CHEN_WEI]!.x - positions[NPCId.ALEX_OKONKWO]!.x,
+      positions[NPCId.CHEN_WEI]!.y - positions[NPCId.ALEX_OKONKWO]!.y
     );
 
     // Same-faction should be closer than different-faction
-    expect(f1f2).toBeLessThan(f1p1);
-    expect(p1p2).toBeLessThan(f1p1);
+    expect(earthDist).toBeLessThan(crossFactionDist);
+    expect(marsDist).toBeLessThan(crossFactionDist);
   });
 
   it("should handle empty NPC list", () => {
@@ -122,8 +122,8 @@ describe("computeForceLayout", () => {
   it("positions NPCs from same faction near each other", () => {
     const input: LayoutInput = {
       npcs: [
-        createNPC("npc1", NPCFaction.MarsIndependence),
-        createNPC("npc2", NPCFaction.MarsIndependence),
+        createNPC(NPCId.MARCUS_REED, NPCFaction.MarsIndependence),
+        createNPC(NPCId.ELENA_VOLKOV, NPCFaction.MarsIndependence),
       ],
       relationshipMatrix: [
         [0, 0.5],
@@ -136,8 +136,8 @@ describe("computeForceLayout", () => {
     const result = computeForceLayout(input);
 
     expect(result).toHaveLength(2);
-    const pos1 = result.find((p) => p.id === "npc1")!;
-    const pos2 = result.find((p) => p.id === "npc2")!;
+    const pos1 = result.find((p) => p.id === NPCId.MARCUS_REED)!;
+    const pos2 = result.find((p) => p.id === NPCId.ELENA_VOLKOV)!;
 
     // Both should be relatively close together (same faction)
     const distance = Math.hypot(pos1.x - pos2.x, pos1.y - pos2.y);
@@ -147,8 +147,8 @@ describe("computeForceLayout", () => {
   it("pulls strongly connected cross-faction NPCs closer together", () => {
     const input: LayoutInput = {
       npcs: [
-        createNPC("earth1", NPCFaction.EarthLoyalists),
-        createNPC("corp1", NPCFaction.CorporateInterests),
+        createNPC(NPCId.DAVID_MORRISON, NPCFaction.EarthLoyalists),
+        createNPC(NPCId.SARAH_CHEN, NPCFaction.CorporateInterests),
       ],
       relationshipMatrix: [
         [0, 0.9], // Strong connection
@@ -159,8 +159,8 @@ describe("computeForceLayout", () => {
     };
 
     const result = computeForceLayout(input);
-    const earth = result.find((p) => p.id === "earth1")!;
-    const corp = result.find((p) => p.id === "corp1")!;
+    const earth = result.find((p) => p.id === NPCId.DAVID_MORRISON)!;
+    const corp = result.find((p) => p.id === NPCId.SARAH_CHEN)!;
 
     // Calculate distance between them
     const distance = Math.sqrt((earth.x - corp.x) ** 2 + (earth.y - corp.y) ** 2);
@@ -172,9 +172,9 @@ describe("computeForceLayout", () => {
   it("returns deterministic positions for same input", () => {
     const input: LayoutInput = {
       npcs: [
-        createNPC("npc1", NPCFaction.EarthLoyalists),
-        createNPC("npc2", NPCFaction.MarsIndependence),
-        createNPC("npc3", NPCFaction.CorporateInterests),
+        createNPC(NPCId.CHEN_WEI, NPCFaction.EarthLoyalists),
+        createNPC(NPCId.ALEX_OKONKWO, NPCFaction.MarsIndependence),
+        createNPC(NPCId.JAMES_LIU, NPCFaction.CorporateInterests),
       ],
       relationshipMatrix: [
         [0, 0.3, 0.2],

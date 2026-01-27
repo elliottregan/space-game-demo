@@ -5,6 +5,7 @@ import {
   calculateAverageWorkerEfficiency,
 } from "../../src/core/utils/workerEfficiency";
 import { ColonistRole, MasteryLevel, type Colonist } from "../../src/core/models/Colonist";
+import { SkillId } from "../../src/core/data/skills";
 import {
   MASTERY_EFFICIENCY,
   ROLE_MISMATCH_PENALTY,
@@ -65,7 +66,7 @@ describe("calculateColonistEfficiency", () => {
   it("returns base mastery efficiency for colonist with no skills or penalties", () => {
     const colonist = createColonist({ masteryLevel: MasteryLevel.SKILLED });
     const efficiency = calculateColonistEfficiency(colonist);
-    expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.SKILLED]);
+    expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.SKILLED]!);
   });
 
   it("applies different mastery level efficiencies", () => {
@@ -74,29 +75,29 @@ describe("calculateColonistEfficiency", () => {
     const expert = createColonist({ masteryLevel: MasteryLevel.EXPERT });
     const master = createColonist({ masteryLevel: MasteryLevel.MASTER });
 
-    expect(calculateColonistEfficiency(novice)).toBe(MASTERY_EFFICIENCY[0]); // 0.7
-    expect(calculateColonistEfficiency(skilled)).toBe(MASTERY_EFFICIENCY[1]); // 1.0
-    expect(calculateColonistEfficiency(expert)).toBe(MASTERY_EFFICIENCY[2]); // 1.3
-    expect(calculateColonistEfficiency(master)).toBe(MASTERY_EFFICIENCY[3]); // 1.6
+    expect(calculateColonistEfficiency(novice)).toBe(MASTERY_EFFICIENCY[MasteryLevel.NOVICE]!); // 0.7
+    expect(calculateColonistEfficiency(skilled)).toBe(MASTERY_EFFICIENCY[MasteryLevel.SKILLED]!); // 1.0
+    expect(calculateColonistEfficiency(expert)).toBe(MASTERY_EFFICIENCY[MasteryLevel.EXPERT]!); // 1.3
+    expect(calculateColonistEfficiency(master)).toBe(MASTERY_EFFICIENCY[MasteryLevel.MASTER]!); // 1.6
   });
 
   it("applies role mismatch penalty when colonist role does not match required role", () => {
     const colonist = createColonist({ role: ColonistRole.ENGINEERING });
     const efficiency = calculateColonistEfficiency(colonist, ColonistRole.RESEARCH);
-    const expected = MASTERY_EFFICIENCY[MasteryLevel.SKILLED] * (1 - ROLE_MISMATCH_PENALTY);
+    const expected = MASTERY_EFFICIENCY[MasteryLevel.SKILLED]! * (1 - ROLE_MISMATCH_PENALTY);
     expect(efficiency).toBeCloseTo(expected);
   });
 
   it("does not apply role mismatch penalty when roles match", () => {
     const colonist = createColonist({ role: ColonistRole.ENGINEERING });
     const efficiency = calculateColonistEfficiency(colonist, ColonistRole.ENGINEERING);
-    expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.SKILLED]);
+    expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.SKILLED]!);
   });
 
   it("does not apply role mismatch penalty when no role is required", () => {
     const colonist = createColonist({ role: ColonistRole.ENGINEERING });
     const efficiency = calculateColonistEfficiency(colonist);
-    expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.SKILLED]);
+    expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.SKILLED]!);
   });
 
   it("applies training penalty when colonist is training", () => {
@@ -105,7 +106,7 @@ describe("calculateColonistEfficiency", () => {
       trainingProgress: 2,
     });
     const efficiency = calculateColonistEfficiency(colonist);
-    const expected = MASTERY_EFFICIENCY[MasteryLevel.SKILLED] * (1 - TRAINING_WORK_PENALTY);
+    const expected = MASTERY_EFFICIENCY[MasteryLevel.SKILLED]! * (1 - TRAINING_WORK_PENALTY);
     expect(efficiency).toBeCloseTo(expected);
   });
 
@@ -116,7 +117,7 @@ describe("calculateColonistEfficiency", () => {
     });
     const efficiency = calculateColonistEfficiency(colonist, ColonistRole.FARMING);
     const expected =
-      MASTERY_EFFICIENCY[MasteryLevel.SKILLED] *
+      MASTERY_EFFICIENCY[MasteryLevel.SKILLED]! *
       (1 - ROLE_MISMATCH_PENALTY) *
       (1 - TRAINING_WORK_PENALTY);
     expect(efficiency).toBeCloseTo(expected);
@@ -125,40 +126,40 @@ describe("calculateColonistEfficiency", () => {
   it("adds skill bonus for matching skill affinity", () => {
     const colonist = createColonist({
       role: ColonistRole.ENGINEERING,
-      skills: ["jury_rigger"], // +0.15 for engineering
+      skills: [SkillId.JURY_RIGGER], // +0.15 for engineering
     });
     const efficiency = calculateColonistEfficiency(colonist);
-    expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.SKILLED] + 0.15);
+    expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.SKILLED]! + 0.15);
   });
 
   it("does not add skill bonus when skill affinity does not match role", () => {
     const colonist = createColonist({
       role: ColonistRole.ENGINEERING,
-      skills: ["green_thumb"], // only applies to farming
+      skills: [SkillId.GREEN_THUMB], // only applies to farming
     });
     const efficiency = calculateColonistEfficiency(colonist);
-    expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.SKILLED]);
+    expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.SKILLED]!);
   });
 
   it("caps skill bonus at MAX_SKILL_EFFICIENCY_BONUS", () => {
     // Give colonist multiple matching skills that would exceed the cap
     const colonist = createColonist({
       role: ColonistRole.ENGINEERING,
-      skills: ["jury_rigger", "calm_under_pressure", "quick_learner", "night_owl"],
+      skills: [SkillId.JURY_RIGGER, SkillId.CALM_UNDER_PRESSURE, SkillId.QUICK_LEARNER, SkillId.NIGHT_OWL],
       // jury_rigger: 0.15, calm_under_pressure: 0.1, quick_learner: 0.05, night_owl: 0.05
       // Total: 0.35, but capped at MAX_SKILL_EFFICIENCY_BONUS (0.2)
     });
     const efficiency = calculateColonistEfficiency(colonist);
-    expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.SKILLED] + MAX_SKILL_EFFICIENCY_BONUS);
+    expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.SKILLED]! + MAX_SKILL_EFFICIENCY_BONUS);
   });
 
   it("stacks skill bonuses up to the cap", () => {
     const colonist = createColonist({
       role: ColonistRole.ENGINEERING,
-      skills: ["quick_learner", "night_owl"], // 0.05 + 0.05 = 0.1
+      skills: [SkillId.QUICK_LEARNER, SkillId.NIGHT_OWL], // 0.05 + 0.05 = 0.1
     });
     const efficiency = calculateColonistEfficiency(colonist);
-    expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.SKILLED] + 0.1);
+    expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.SKILLED]! + 0.1);
   });
 });
 
@@ -170,14 +171,14 @@ describe("calculateAverageWorkerEfficiency", () => {
   it("returns single colonist efficiency for one worker", () => {
     const colonist = createColonist({ masteryLevel: MasteryLevel.EXPERT });
     const efficiency = calculateAverageWorkerEfficiency([colonist]);
-    expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.EXPERT]);
+    expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.EXPERT]!);
   });
 
   it("averages efficiency across multiple workers", () => {
     const novice = createColonist({ id: "1", masteryLevel: MasteryLevel.NOVICE });
     const master = createColonist({ id: "2", masteryLevel: MasteryLevel.MASTER });
     const efficiency = calculateAverageWorkerEfficiency([novice, master]);
-    const expected = (MASTERY_EFFICIENCY[0] + MASTERY_EFFICIENCY[3]) / 2;
+    const expected = (MASTERY_EFFICIENCY[MasteryLevel.NOVICE]! + MASTERY_EFFICIENCY[MasteryLevel.MASTER]!) / 2;
     expect(efficiency).toBeCloseTo(expected);
   });
 
@@ -187,8 +188,8 @@ describe("calculateAverageWorkerEfficiency", () => {
 
     const efficiency = calculateAverageWorkerEfficiency([matching, mismatched], ColonistRole.RESEARCH);
 
-    const matchingEff = MASTERY_EFFICIENCY[MasteryLevel.SKILLED];
-    const mismatchedEff = MASTERY_EFFICIENCY[MasteryLevel.SKILLED] * (1 - ROLE_MISMATCH_PENALTY);
+    const matchingEff = MASTERY_EFFICIENCY[MasteryLevel.SKILLED]!;
+    const mismatchedEff = MASTERY_EFFICIENCY[MasteryLevel.SKILLED]! * (1 - ROLE_MISMATCH_PENALTY);
     const expected = (matchingEff + mismatchedEff) / 2;
     expect(efficiency).toBeCloseTo(expected);
   });
@@ -204,13 +205,13 @@ describe("calculateAverageWorkerEfficiency", () => {
         id: "2",
         masteryLevel: MasteryLevel.EXPERT,
         role: ColonistRole.ENGINEERING,
-        skills: ["jury_rigger"],
+        skills: [SkillId.JURY_RIGGER],
       }),
     ];
 
     const efficiency = calculateAverageWorkerEfficiency(workers);
-    const eff1 = MASTERY_EFFICIENCY[0]; // 0.7
-    const eff2 = MASTERY_EFFICIENCY[2] + 0.15; // 1.3 + 0.15 = 1.45
+    const eff1 = MASTERY_EFFICIENCY[MasteryLevel.NOVICE]!; // 0.7
+    const eff2 = MASTERY_EFFICIENCY[MasteryLevel.EXPERT]! + 0.15; // 1.3 + 0.15 = 1.45
     expect(efficiency).toBeCloseTo((eff1 + eff2) / 2);
   });
 });

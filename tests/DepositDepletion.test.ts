@@ -1,7 +1,7 @@
 // tests/DepositDepletion.test.ts
 import { describe, test, expect } from "bun:test";
 import type { ProspectingSite } from "../src/core/models/Operation";
-import type { Building } from "../src/core/models/Building";
+import { BuildingId, type Building } from "../src/core/models/Building";
 import {
   DEPOSIT_RESERVES,
   EXTRACTION_RATE_MULTIPLIERS,
@@ -66,7 +66,7 @@ describe("Building Model Extensions", () => {
   test("Building can have idle status and depositId", () => {
     const building: Building = {
       id: "building_1",
-      definitionId: "water_extractor",
+      definitionId: BuildingId.WATER_EXTRACTOR,
       status: "idle",
       constructionProgress: 0,
       assignedWorkers: [],
@@ -74,6 +74,9 @@ describe("Building Model Extensions", () => {
       broken: false,
       repairProgress: 0,
       depositId: "site_1",
+      condition: 100,
+      age: 0,
+      lastMaintenance: 0,
     };
 
     expect(building.status).toBe("idle");

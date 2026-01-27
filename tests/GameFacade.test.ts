@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach } from "bun:test";
+import { BuildingId } from "../src/core/models/Building";
+import { TechnologyId } from "../src/core/models/Technology";
 import { GameAPI } from "../src/facade";
 
 describe("GameAPI", () => {
@@ -43,19 +45,19 @@ describe("GameAPI", () => {
     });
 
     it("should get building definition by ID", () => {
-      const def = api.buildings.getDefinition("solar_panel");
+      const def = api.buildings.getDefinition(BuildingId.SOLAR_PANEL);
       expect(def).toBeDefined();
       expect(def?.name).toBe("Solar Panel Array");
     });
 
     it("should check if can build", () => {
-      const check = api.buildings.canBuild("solar_panel");
+      const check = api.buildings.canBuild(BuildingId.SOLAR_PANEL);
       // Should be able to build solar panel with starting resources
       expect(check.allowed).toBe(true);
     });
 
     it("should return reason when cannot build", () => {
-      const check = api.buildings.canBuild("nonexistent_building");
+      const check = api.buildings.canBuild("nonexistent_building" as BuildingId);
       expect(check.allowed).toBe(false);
       expect(check.reason).toBeDefined();
     });
@@ -63,10 +65,10 @@ describe("GameAPI", () => {
 
   describe("Building Commands", () => {
     it("should build structure successfully", () => {
-      const result = api.buildings.build("solar_panel");
+      const result = api.buildings.build(BuildingId.SOLAR_PANEL);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.definitionId).toBe("solar_panel");
+        expect(result.data.definitionId).toBe(BuildingId.SOLAR_PANEL);
         expect(result.data.status).toBe("pending");
       }
     });
@@ -74,10 +76,10 @@ describe("GameAPI", () => {
     it("should fail to build with insufficient resources", () => {
       // Build many structures to deplete resources
       for (let i = 0; i < 20; i++) {
-        api.buildings.build("solar_panel");
+        api.buildings.build(BuildingId.SOLAR_PANEL);
       }
 
-      const result = api.buildings.build("habitat");
+      const result = api.buildings.build(BuildingId.HABITAT);
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.type).toBeDefined();
@@ -85,7 +87,7 @@ describe("GameAPI", () => {
     });
 
     it("should fail to build nonexistent building type", () => {
-      const result = api.buildings.build("nonexistent");
+      const result = api.buildings.build("nonexistent" as BuildingId);
       expect(result.success).toBe(false);
     });
   });
@@ -101,7 +103,7 @@ describe("GameAPI", () => {
 
     it("should check research prerequisites", () => {
       // robotics requires advanced_materials
-      const check = api.technology.canResearch("robotics");
+      const check = api.technology.canResearch(TechnologyId.ROBOTICS);
       expect(check.allowed).toBe(false);
       expect(check.reason).toContain("prerequisite");
     });
@@ -240,7 +242,7 @@ describe("GameAPI", () => {
     it("should save and load game state", () => {
       // Advance some sols and build something
       api.game.advanceSols(5);
-      api.buildings.build("solar_panel");
+      api.buildings.build(BuildingId.SOLAR_PANEL);
 
       const savedSol = api.game.currentSol();
       const savedBuildings = api.buildings.snapshot().pending.length + api.buildings.snapshot().active.length;
@@ -266,7 +268,7 @@ describe("GameAPI", () => {
 
   describe("Result Type Safety", () => {
     it("should return typed errors", () => {
-      const result = api.buildings.build("nonexistent");
+      const result = api.buildings.build("nonexistent" as BuildingId);
       expect(result.success).toBe(false);
       if (!result.success) {
         // Type narrowing works
@@ -276,11 +278,11 @@ describe("GameAPI", () => {
     });
 
     it("should return typed success data", () => {
-      const result = api.buildings.build("solar_panel");
+      const result = api.buildings.build(BuildingId.SOLAR_PANEL);
       if (result.success) {
         // Type narrowing works - data is Building type
         expect(result.data.id).toBeDefined();
-        expect(result.data.definitionId).toBe("solar_panel");
+        expect(result.data.definitionId).toBe(BuildingId.SOLAR_PANEL);
         expect(result.data.status).toBeDefined();
       }
     });
@@ -301,7 +303,7 @@ describe("GameAPI", () => {
     it("should reflect new pending building immediately after build command", () => {
       const initialPending = api.buildings.snapshot().pending.length;
 
-      const result = api.buildings.build("solar_panel");
+      const result = api.buildings.build(BuildingId.SOLAR_PANEL);
       expect(result.success).toBe(true);
 
       // The next snapshot call should immediately show the new building
@@ -315,7 +317,7 @@ describe("GameAPI", () => {
         notificationCount++;
       });
 
-      api.buildings.build("solar_panel");
+      api.buildings.build(BuildingId.SOLAR_PANEL);
 
       expect(notificationCount).toBe(1);
     });
@@ -323,9 +325,9 @@ describe("GameAPI", () => {
     it("should accumulate multiple buildings in snapshot", () => {
       const initialPending = api.buildings.snapshot().pending.length;
 
-      api.buildings.build("solar_panel");
-      api.buildings.build("solar_panel");
-      api.buildings.build("solar_panel");
+      api.buildings.build(BuildingId.SOLAR_PANEL);
+      api.buildings.build(BuildingId.SOLAR_PANEL);
+      api.buildings.build(BuildingId.SOLAR_PANEL);
 
       const finalPending = api.buildings.snapshot().pending.length;
       expect(finalPending).toBe(initialPending + 3);
@@ -339,8 +341,8 @@ describe("GameAPI", () => {
         counts.push(api.buildings.snapshot().pending.length);
       });
 
-      api.buildings.build("solar_panel");
-      api.buildings.build("solar_panel");
+      api.buildings.build(BuildingId.SOLAR_PANEL);
+      api.buildings.build(BuildingId.SOLAR_PANEL);
 
       // Each notification should see the updated count
       expect(counts).toEqual([1, 2]);
@@ -348,18 +350,18 @@ describe("GameAPI", () => {
 
     it("should reflect resource changes after building", () => {
       const initialMaterials = api.resources.snapshot().current.materials ?? 0;
-      const solarPanelDef = api.buildings.getDefinition("solar_panel");
+      const solarPanelDef = api.buildings.getDefinition(BuildingId.SOLAR_PANEL);
       const cost = solarPanelDef?.cost.materials ?? 0;
 
-      api.buildings.build("solar_panel");
+      api.buildings.build(BuildingId.SOLAR_PANEL);
 
       const newMaterials = api.resources.snapshot().current.materials ?? 0;
       expect(newMaterials).toBe(initialMaterials - cost);
     });
 
     it("should show building in active list after construction completes", () => {
-      api.buildings.build("solar_panel");
-      const solarPanelDef = api.buildings.getDefinition("solar_panel");
+      api.buildings.build(BuildingId.SOLAR_PANEL);
+      const solarPanelDef = api.buildings.getDefinition(BuildingId.SOLAR_PANEL);
       const buildTime = solarPanelDef?.constructionTime ?? 1;
 
       // Advance time to complete construction
@@ -369,7 +371,7 @@ describe("GameAPI", () => {
 
       const snapshot = api.buildings.snapshot();
       const activeSolarPanels = snapshot.active.filter(
-        (b) => b.definitionId === "solar_panel"
+        (b) => b.definitionId === BuildingId.SOLAR_PANEL
       );
       expect(activeSolarPanels.length).toBeGreaterThan(0);
     });
@@ -378,14 +380,14 @@ describe("GameAPI", () => {
       const initialActive = api.buildings.snapshot().active.length;
       const initialPending = api.buildings.snapshot().pending.length;
 
-      api.buildings.build("solar_panel");
+      api.buildings.build(BuildingId.SOLAR_PANEL);
 
       // Verify it's in pending
       expect(api.buildings.snapshot().pending.length).toBe(initialPending + 1);
       expect(api.buildings.snapshot().active.length).toBe(initialActive);
 
       // Complete construction
-      const solarPanelDef = api.buildings.getDefinition("solar_panel");
+      const solarPanelDef = api.buildings.getDefinition(BuildingId.SOLAR_PANEL);
       const buildTime = solarPanelDef?.constructionTime ?? 1;
       for (let i = 0; i < buildTime; i++) {
         api.game.advanceSol();

@@ -5,7 +5,7 @@ import { NPCInfluenceManager } from '../src/core/systems/NPCInfluenceManager';
 import { ResourceManager } from '../src/core/systems/ResourceManager';
 import { NPCS, INITIAL_RELATIONSHIPS, PROJECTS } from '../src/core/data/npcs';
 import { LOBBY_BASE_COST, COUNCIL_CREATION_COST, COUNCIL_RELATIONSHIP_BOOST } from '../src/core/balance/NPCInfluenceBalance';
-import { NPCFaction } from '../src/core/models/NPCInfluence';
+import { NPCFaction, NPCId, ProjectId } from '../src/core/models/NPCInfluence';
 import type { GameEvent } from '../src/core/models/GameEvent';
 
 describe('NPCInfluenceManager', () => {
@@ -72,13 +72,13 @@ describe('NPCInfluenceManager', () => {
       });
 
       // generation_ship is an Earth Loyalists project
-      const result = manager.proposeProject('generation_ship', resources);
+      const result = manager.proposeProject(ProjectId.GENERATION_SHIP, resources);
 
       expect(result).toBe(true);
 
       const active = manager.getActiveProject();
       expect(active).not.toBeNull();
-      expect(active!.projectId).toBe('generation_ship');
+      expect(active!.projectId).toBe(ProjectId.GENERATION_SHIP);
       expect(active!.solsRemaining).toBe(10);
 
       // Earth Loyalists should start at 1.0, others at 0.0
@@ -97,7 +97,7 @@ describe('NPCInfluenceManager', () => {
         materials: 200,
       });
 
-      manager.proposeProject('generation_ship', resources);
+      manager.proposeProject(ProjectId.GENERATION_SHIP, resources);
 
       // generation_ship costs 100 materials
       expect(resources.getResources().materials).toBe(100);
@@ -112,7 +112,7 @@ describe('NPCInfluenceManager', () => {
         materials: 50, // Not enough for generation_ship (100)
       });
 
-      const result = manager.proposeProject('generation_ship', resources);
+      const result = manager.proposeProject(ProjectId.GENERATION_SHIP, resources);
 
       expect(result).toBe(false);
       expect(manager.getActiveProject()).toBeNull();
@@ -127,11 +127,11 @@ describe('NPCInfluenceManager', () => {
         materials: 200,
       });
 
-      manager.proposeProject('generation_ship', resources);
-      const result = manager.proposeProject('universal_housing', resources);
+      manager.proposeProject(ProjectId.GENERATION_SHIP, resources);
+      const result = manager.proposeProject(ProjectId.UNIVERSAL_HOUSING, resources);
 
       expect(result).toBe(false);
-      expect(manager.getActiveProject()!.projectId).toBe('generation_ship');
+      expect(manager.getActiveProject()!.projectId).toBe(ProjectId.GENERATION_SHIP);
     });
   });
 
@@ -146,13 +146,13 @@ describe('NPCInfluenceManager', () => {
       });
 
       // generation_ship is Earth Loyalists, so lobby a non-aligned NPC
-      manager.proposeProject('generation_ship', resources);
+      manager.proposeProject(ProjectId.GENERATION_SHIP, resources);
 
       // maria_santos is Mars Independence, starts at 0.0 for Earth Loyalist project
-      const result = manager.lobbyNPC('maria_santos', 0.3, resources);
+      const result = manager.lobbyNPC(NPCId.MARIA_SANTOS, 0.3, resources);
 
       expect(result).toBe(true);
-      expect(manager.getActiveProject()!.supportLevels.get('maria_santos')).toBe(0.3);
+      expect(manager.getActiveProject()!.supportLevels.get(NPCId.MARIA_SANTOS)).toBe(0.3);
     });
 
     it('should cost materials based on NPC influence and boost amount', () => {
@@ -164,12 +164,12 @@ describe('NPCInfluenceManager', () => {
         materials: 500,
       });
 
-      manager.proposeProject('generation_ship', resources);
+      manager.proposeProject(ProjectId.GENERATION_SHIP, resources);
       const startMaterials = resources.getResources().materials;
 
       // maria_santos has influence 1.3, boosting by 0.3
       // Cost = LOBBY_BASE_COST * influence * (boost / LOBBY_SUPPORT_BOOST) = 10 * 1.3 * 1 = 13
-      manager.lobbyNPC('maria_santos', 0.3, resources);
+      manager.lobbyNPC(NPCId.MARIA_SANTOS, 0.3, resources);
 
       expect(resources.getResources().materials).toBe(startMaterials - 13);
     });
@@ -183,7 +183,7 @@ describe('NPCInfluenceManager', () => {
         materials: 500,
       });
 
-      const result = manager.lobbyNPC('chen_wei', 0.3, resources);
+      const result = manager.lobbyNPC(NPCId.CHEN_WEI, 0.3, resources);
 
       expect(result).toBe(false);
     });
@@ -197,11 +197,11 @@ describe('NPCInfluenceManager', () => {
         materials: 1000,
       });
 
-      manager.proposeProject('generation_ship', resources);
-      manager.lobbyNPC('chen_wei', 0.8, resources);
-      manager.lobbyNPC('chen_wei', 0.8, resources); // Would be 1.6, should clamp
+      manager.proposeProject(ProjectId.GENERATION_SHIP, resources);
+      manager.lobbyNPC(NPCId.CHEN_WEI, 0.8, resources);
+      manager.lobbyNPC(NPCId.CHEN_WEI, 0.8, resources); // Would be 1.6, should clamp
 
-      expect(manager.getActiveProject()!.supportLevels.get('chen_wei')).toBe(1.0);
+      expect(manager.getActiveProject()!.supportLevels.get(NPCId.CHEN_WEI)).toBe(1.0);
     });
   });
 
@@ -215,7 +215,7 @@ describe('NPCInfluenceManager', () => {
         materials: 500,
       });
 
-      const memberIds = ['chen_wei', 'maria_santos', 'elena_volkov'];
+      const memberIds: NPCId[] = [NPCId.CHEN_WEI, NPCId.MARIA_SANTOS, NPCId.ELENA_VOLKOV];
       const result = manager.createCouncil('Science Council', memberIds, resources);
 
       expect(result).toBe(true);
@@ -242,7 +242,7 @@ describe('NPCInfluenceManager', () => {
       const initialMatrix = manager.getRelationshipMatrix();
       const initialWeight = initialMatrix[elenaIdx]![chenIdx]!;
 
-      manager.createCouncil('Science Council', ['chen_wei', 'elena_volkov'], resources);
+      manager.createCouncil('Science Council', [NPCId.CHEN_WEI, NPCId.ELENA_VOLKOV], resources);
 
       const newMatrix = manager.getRelationshipMatrix();
       expect(newMatrix[elenaIdx]![chenIdx]!).toBe(Math.min(1.0, initialWeight + COUNCIL_RELATIONSHIP_BOOST));
@@ -257,7 +257,7 @@ describe('NPCInfluenceManager', () => {
         materials: 500,
       });
 
-      manager.createCouncil('Science Council', ['chen_wei', 'maria_santos'], resources);
+      manager.createCouncil('Science Council', [NPCId.CHEN_WEI, NPCId.MARIA_SANTOS], resources);
 
       expect(resources.getResources().materials).toBe(500 - COUNCIL_CREATION_COST);
     });
@@ -271,7 +271,7 @@ describe('NPCInfluenceManager', () => {
         materials: 10, // Not enough
       });
 
-      const result = manager.createCouncil('Science Council', ['chen_wei', 'maria_santos'], resources);
+      const result = manager.createCouncil('Science Council', [NPCId.CHEN_WEI, NPCId.MARIA_SANTOS], resources);
 
       expect(result).toBe(false);
       expect(manager.getCouncils().length).toBe(0);
@@ -288,16 +288,16 @@ describe('NPCInfluenceManager', () => {
         materials: 500,
       });
 
-      manager.proposeProject('generation_ship', resources);
+      manager.proposeProject(ProjectId.GENERATION_SHIP, resources);
 
       // Seed support for chen_wei (futurist)
-      manager.lobbyNPC('chen_wei', 0.8, resources);
+      manager.lobbyNPC(NPCId.CHEN_WEI, 0.8, resources);
 
       // Run a tick
       manager.tick();
 
       // nova_silva (futurist, connected to chen_wei) should have gained some support
-      const novaSupport = manager.getActiveProject()!.supportLevels.get('nova_silva')!;
+      const novaSupport = manager.getActiveProject()!.supportLevels.get(NPCId.NOVA_SILVA)!;
       expect(novaSupport).toBeGreaterThan(0);
     });
 
@@ -310,7 +310,7 @@ describe('NPCInfluenceManager', () => {
         materials: 500,
       });
 
-      manager.proposeProject('generation_ship', resources);
+      manager.proposeProject(ProjectId.GENERATION_SHIP, resources);
       const initialSols = manager.getActiveProject()!.solsRemaining;
 
       manager.tick();
@@ -327,14 +327,14 @@ describe('NPCInfluenceManager', () => {
         materials: 1000,
       });
 
-      manager.proposeProject('generation_ship', resources);
+      manager.proposeProject(ProjectId.GENERATION_SHIP, resources);
 
       // Lobby enough NPCs to pass
-      manager.lobbyNPC('chen_wei', 0.9, resources);
-      manager.lobbyNPC('nova_silva', 0.9, resources);
-      manager.lobbyNPC('alex_okonkwo', 0.9, resources);
-      manager.lobbyNPC('maria_santos', 0.7, resources);
-      manager.lobbyNPC('james_liu', 0.7, resources);
+      manager.lobbyNPC(NPCId.CHEN_WEI, 0.9, resources);
+      manager.lobbyNPC(NPCId.NOVA_SILVA, 0.9, resources);
+      manager.lobbyNPC(NPCId.ALEX_OKONKWO, 0.9, resources);
+      manager.lobbyNPC(NPCId.MARIA_SANTOS, 0.7, resources);
+      manager.lobbyNPC(NPCId.JAMES_LIU, 0.7, resources);
 
       // Run 10 ticks to resolve
       for (let i = 0; i < 10; i++) {
@@ -354,7 +354,7 @@ describe('NPCInfluenceManager', () => {
         materials: 1000,
       });
 
-      manager.proposeProject('generation_ship', resources);
+      manager.proposeProject(ProjectId.GENERATION_SHIP, resources);
 
       // Lobby most NPCs heavily
       for (const npc of manager.getNPCs()) {
@@ -369,7 +369,7 @@ describe('NPCInfluenceManager', () => {
 
       const passedEvent = events.find((e) => e.type === 'PROJECT_PASSED');
       expect(passedEvent).toBeDefined();
-      expect(passedEvent!.projectId).toBe('generation_ship');
+      expect(passedEvent!.projectId).toBe(ProjectId.GENERATION_SHIP);
     });
 
     it('should emit PROJECT_FAILED event when project fails', () => {
@@ -381,7 +381,7 @@ describe('NPCInfluenceManager', () => {
         materials: 500,
       });
 
-      manager.proposeProject('generation_ship', resources);
+      manager.proposeProject(ProjectId.GENERATION_SHIP, resources);
 
       // Don't lobby anyone - all at 0.0, will fail
 
@@ -393,7 +393,7 @@ describe('NPCInfluenceManager', () => {
 
       const failedEvent = events.find((e) => e.type === 'PROJECT_FAILED');
       expect(failedEvent).toBeDefined();
-      expect(failedEvent!.projectId).toBe('generation_ship');
+      expect(failedEvent!.projectId).toBe(ProjectId.GENERATION_SHIP);
     });
   });
 
@@ -415,9 +415,9 @@ describe('NPCInfluenceManager', () => {
   describe('support decay', () => {
     it('should decay faction support over time when no project active', () => {
       // Set initial support above 0
-      manager.adjustNPCSupport('chen_wei', 0.5);
-      manager.adjustNPCSupport('nova_silva', 0.5);
-      manager.adjustNPCSupport('alex_okonkwo', 0.5);
+      manager.adjustNPCSupport(NPCId.CHEN_WEI, 0.5);
+      manager.adjustNPCSupport(NPCId.NOVA_SILVA, 0.5);
+      manager.adjustNPCSupport(NPCId.ALEX_OKONKWO, 0.5);
 
       const initialSupport = manager.getFactionSupport().earth_loyalists;
       expect(initialSupport).toBe(0.5);
@@ -439,44 +439,44 @@ describe('NPCInfluenceManager', () => {
 
       // Set support above threshold for mars_independence and corporate_interests
       // mars_independence: maria_santos, james_liu, aisha_patel, marcus_reed
-      manager.adjustNPCSupport('maria_santos', 0.6);
-      manager.adjustNPCSupport('james_liu', 0.6);
-      manager.adjustNPCSupport('aisha_patel', 0.6);
-      manager.adjustNPCSupport('marcus_reed', 0.6);
+      manager.adjustNPCSupport(NPCId.MARIA_SANTOS, 0.6);
+      manager.adjustNPCSupport(NPCId.JAMES_LIU, 0.6);
+      manager.adjustNPCSupport(NPCId.AISHA_PATEL, 0.6);
+      manager.adjustNPCSupport(NPCId.MARCUS_REED, 0.6);
       // corporate_interests: elena_volkov, david_morrison, sarah_chen
-      manager.adjustNPCSupport('elena_volkov', 0.6);
-      manager.adjustNPCSupport('david_morrison', 0.6);
-      manager.adjustNPCSupport('sarah_chen', 0.6);
+      manager.adjustNPCSupport(NPCId.ELENA_VOLKOV, 0.6);
+      manager.adjustNPCSupport(NPCId.DAVID_MORRISON, 0.6);
+      manager.adjustNPCSupport(NPCId.SARAH_CHEN, 0.6);
 
       // Set support below threshold for earth_loyalists (threshold is 0.5)
       // earth_loyalists: chen_wei, nova_silva, alex_okonkwo
-      manager.adjustNPCSupport('chen_wei', 0.4);
-      manager.adjustNPCSupport('nova_silva', 0.4);
-      manager.adjustNPCSupport('alex_okonkwo', 0.4);
+      manager.adjustNPCSupport(NPCId.CHEN_WEI, 0.4);
+      manager.adjustNPCSupport(NPCId.NOVA_SILVA, 0.4);
+      manager.adjustNPCSupport(NPCId.ALEX_OKONKWO, 0.4);
 
       // Tick to trigger demand check
       manager.tick(150);
 
       const demands = manager.getActiveDemands();
       expect(demands.length).toBe(1);
-      expect(demands[0].factionId).toBe(NPCFaction.EarthLoyalists);
-      expect(demands[0].projectIds.length).toBeGreaterThan(0);
+      expect(demands[0]!.factionId).toBe(NPCFaction.EarthLoyalists);
+      expect(demands[0]!.projectIds.length).toBeGreaterThan(0);
     });
 
     it('should not duplicate demands for same faction', () => {
       // Set support above threshold for mars_independence and corporate_interests
-      manager.adjustNPCSupport('maria_santos', 0.6);
-      manager.adjustNPCSupport('james_liu', 0.6);
-      manager.adjustNPCSupport('aisha_patel', 0.6);
-      manager.adjustNPCSupport('marcus_reed', 0.6);
-      manager.adjustNPCSupport('elena_volkov', 0.6);
-      manager.adjustNPCSupport('david_morrison', 0.6);
-      manager.adjustNPCSupport('sarah_chen', 0.6);
+      manager.adjustNPCSupport(NPCId.MARIA_SANTOS, 0.6);
+      manager.adjustNPCSupport(NPCId.JAMES_LIU, 0.6);
+      manager.adjustNPCSupport(NPCId.AISHA_PATEL, 0.6);
+      manager.adjustNPCSupport(NPCId.MARCUS_REED, 0.6);
+      manager.adjustNPCSupport(NPCId.ELENA_VOLKOV, 0.6);
+      manager.adjustNPCSupport(NPCId.DAVID_MORRISON, 0.6);
+      manager.adjustNPCSupport(NPCId.SARAH_CHEN, 0.6);
 
       // Set support below threshold for earth_loyalists
-      manager.adjustNPCSupport('chen_wei', 0.4);
-      manager.adjustNPCSupport('nova_silva', 0.4);
-      manager.adjustNPCSupport('alex_okonkwo', 0.4);
+      manager.adjustNPCSupport(NPCId.CHEN_WEI, 0.4);
+      manager.adjustNPCSupport(NPCId.NOVA_SILVA, 0.4);
+      manager.adjustNPCSupport(NPCId.ALEX_OKONKWO, 0.4);
 
       manager.tick(150);
       manager.tick(151);
@@ -496,26 +496,26 @@ describe('NPCInfluenceManager', () => {
 
       // Set support above threshold for mars_independence and corporate_interests
       // mars_independence: maria_santos, james_liu, aisha_patel, marcus_reed
-      manager.adjustNPCSupport('maria_santos', 0.6);
-      manager.adjustNPCSupport('james_liu', 0.6);
-      manager.adjustNPCSupport('aisha_patel', 0.6);
-      manager.adjustNPCSupport('marcus_reed', 0.6);
+      manager.adjustNPCSupport(NPCId.MARIA_SANTOS, 0.6);
+      manager.adjustNPCSupport(NPCId.JAMES_LIU, 0.6);
+      manager.adjustNPCSupport(NPCId.AISHA_PATEL, 0.6);
+      manager.adjustNPCSupport(NPCId.MARCUS_REED, 0.6);
       // corporate_interests: elena_volkov, david_morrison, sarah_chen
-      manager.adjustNPCSupport('elena_volkov', 0.6);
-      manager.adjustNPCSupport('david_morrison', 0.6);
-      manager.adjustNPCSupport('sarah_chen', 0.6);
+      manager.adjustNPCSupport(NPCId.ELENA_VOLKOV, 0.6);
+      manager.adjustNPCSupport(NPCId.DAVID_MORRISON, 0.6);
+      manager.adjustNPCSupport(NPCId.SARAH_CHEN, 0.6);
 
       // Create demand for earth_loyalists (below threshold of 0.5)
-      manager.adjustNPCSupport('chen_wei', 0.4);
-      manager.adjustNPCSupport('nova_silva', 0.4);
-      manager.adjustNPCSupport('alex_okonkwo', 0.4);
+      manager.adjustNPCSupport(NPCId.CHEN_WEI, 0.4);
+      manager.adjustNPCSupport(NPCId.NOVA_SILVA, 0.4);
+      manager.adjustNPCSupport(NPCId.ALEX_OKONKWO, 0.4);
       manager.tick(150);
 
       expect(manager.getActiveDemands().length).toBe(1);
-      expect(manager.getActiveDemands()[0].factionId).toBe(NPCFaction.EarthLoyalists);
+      expect(manager.getActiveDemands()[0]!.factionId).toBe(NPCFaction.EarthLoyalists);
 
       // Propose an earth_loyalists project
-      manager.proposeProject('earth_memorial', resources);
+      manager.proposeProject(ProjectId.EARTH_MEMORIAL, resources);
 
       // Lobby everyone to pass (need support above PASS_THRESHOLD which is 0.4)
       for (const npc of manager.getNPCs()) {
@@ -542,28 +542,28 @@ describe('NPCInfluenceManager', () => {
 
   describe('demand deadlines', () => {
     it('should decrement demand deadline each tick', () => {
-      manager.adjustNPCSupport('chen_wei', 0.4);
-      manager.adjustNPCSupport('nova_silva', 0.4);
-      manager.adjustNPCSupport('alex_okonkwo', 0.4);
+      manager.adjustNPCSupport(NPCId.CHEN_WEI, 0.4);
+      manager.adjustNPCSupport(NPCId.NOVA_SILVA, 0.4);
+      manager.adjustNPCSupport(NPCId.ALEX_OKONKWO, 0.4);
 
       manager.tick(150);
-      const initialDeadline = manager.getActiveDemands()[0].deadline;
+      const initialDeadline = manager.getActiveDemands()[0]!.deadline;
 
       manager.tick(151);
-      const newDeadline = manager.getActiveDemands()[0].deadline;
+      const newDeadline = manager.getActiveDemands()[0]!.deadline;
 
       expect(newDeadline).toBe(initialDeadline - 1);
     });
 
     it('should apply accelerated decay when demand deadline expires', () => {
-      manager.adjustNPCSupport('chen_wei', 0.6);
-      manager.adjustNPCSupport('nova_silva', 0.6);
-      manager.adjustNPCSupport('alex_okonkwo', 0.6);
+      manager.adjustNPCSupport(NPCId.CHEN_WEI, 0.6);
+      manager.adjustNPCSupport(NPCId.NOVA_SILVA, 0.6);
+      manager.adjustNPCSupport(NPCId.ALEX_OKONKWO, 0.6);
 
       // Force a demand with low support
-      manager.adjustNPCSupport('chen_wei', -0.3);
-      manager.adjustNPCSupport('nova_silva', -0.3);
-      manager.adjustNPCSupport('alex_okonkwo', -0.3);
+      manager.adjustNPCSupport(NPCId.CHEN_WEI, -0.3);
+      manager.adjustNPCSupport(NPCId.NOVA_SILVA, -0.3);
+      manager.adjustNPCSupport(NPCId.ALEX_OKONKWO, -0.3);
 
       manager.tick(150); // Generate demand
 

@@ -1,6 +1,7 @@
 // tests/ColonyFacade.test.ts
 import { describe, it, expect, beforeEach } from "bun:test";
 import { GameAPI } from "../src/facade";
+import { BuildingId } from "../src/core/models/Building";
 import { ColonistRole } from "../src/core/models/Colonist";
 
 describe("ColonyFacade", () => {
@@ -106,8 +107,7 @@ describe("ColonyFacade", () => {
       const result = api.colony.trainColonist("nonexistent_colonist", ColonistRole.ENGINEERING);
 
       expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.type).toBe("INVALID_STATE");
+      if (!result.success && result.error.type === "INVALID_STATE") {
         expect(result.error.reason).toContain("not found");
       }
     });
@@ -152,8 +152,7 @@ describe("ColonyFacade", () => {
       const result = api.colony.cancelTraining("nonexistent_colonist");
 
       expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.type).toBe("NOT_FOUND");
+      if (!result.success && result.error.type === "NOT_FOUND") {
         expect(result.error.entity).toBe("colonist");
       }
     });
@@ -166,8 +165,7 @@ describe("ColonyFacade", () => {
         const result = api.colony.cancelTraining(notTraining.id);
 
         expect(result.success).toBe(false);
-        if (!result.success) {
-          expect(result.error.type).toBe("INVALID_STATE");
+        if (!result.success && result.error.type === "INVALID_STATE") {
           expect(result.error.reason).toContain("not in training");
         }
       }
@@ -326,16 +324,16 @@ describe("ColonyFacade", () => {
   describe("assignToBuilding", () => {
     it("should assign colonist to building", () => {
       // Build a farm
-      api.buildings.build("basic_farm");
+      api.buildings.build(BuildingId.BASIC_FARM);
 
       // Complete construction
       for (let i = 0; i < 15; i++) {
         api.game.advanceSol();
       }
 
-      const colonist = api.colony.snapshot().colonists[0];
+      const colonist = api.colony.snapshot().colonists[0]!;
       const activeBuildings = api.buildings.snapshot().active;
-      const farm = activeBuildings.find((b) => b.definitionId === "basic_farm");
+      const farm = activeBuildings.find((b) => b.definitionId === BuildingId.BASIC_FARM);
 
       const result = api.colony.assignToBuilding(colonist.id, farm!.id);
       expect(result.success).toBe(true);
@@ -343,19 +341,19 @@ describe("ColonyFacade", () => {
 
     it("should fail if colonist already assigned", () => {
       // Build two farms
-      api.buildings.build("basic_farm");
-      api.buildings.build("basic_farm");
+      api.buildings.build(BuildingId.BASIC_FARM);
+      api.buildings.build(BuildingId.BASIC_FARM);
 
       for (let i = 0; i < 15; i++) {
         api.game.advanceSol();
       }
 
-      const colonist = api.colony.snapshot().colonists[0];
+      const colonist = api.colony.snapshot().colonists[0]!;
       const activeBuildings = api.buildings.snapshot().active;
-      const farms = activeBuildings.filter((b) => b.definitionId === "basic_farm");
+      const farms = activeBuildings.filter((b) => b.definitionId === BuildingId.BASIC_FARM);
 
-      api.colony.assignToBuilding(colonist.id, farms[0].id);
-      const result = api.colony.assignToBuilding(colonist.id, farms[1].id);
+      api.colony.assignToBuilding(colonist.id, farms[0]!.id);
+      const result = api.colony.assignToBuilding(colonist.id, farms[1]!.id);
 
       expect(result.success).toBe(false);
     });
@@ -366,14 +364,14 @@ describe("ColonyFacade", () => {
   // ==========================================================================
   describe("unassignFromBuilding", () => {
     it("should unassign colonist from building", () => {
-      api.buildings.build("basic_farm");
+      api.buildings.build(BuildingId.BASIC_FARM);
       for (let i = 0; i < 15; i++) {
         api.game.advanceSol();
       }
 
-      const colonist = api.colony.snapshot().colonists[0];
+      const colonist = api.colony.snapshot().colonists[0]!;
       const activeBuildings = api.buildings.snapshot().active;
-      const farm = activeBuildings.find((b) => b.definitionId === "basic_farm");
+      const farm = activeBuildings.find((b) => b.definitionId === BuildingId.BASIC_FARM);
 
       api.colony.assignToBuilding(colonist.id, farm!.id);
       const result = api.colony.unassignFromBuilding(colonist.id);
@@ -387,14 +385,14 @@ describe("ColonyFacade", () => {
   // ==========================================================================
   describe("getWorkplace", () => {
     it("should return building id for assigned colonist", () => {
-      api.buildings.build("basic_farm");
+      api.buildings.build(BuildingId.BASIC_FARM);
       for (let i = 0; i < 15; i++) {
         api.game.advanceSol();
       }
 
-      const colonist = api.colony.snapshot().colonists[0];
+      const colonist = api.colony.snapshot().colonists[0]!;
       const activeBuildings = api.buildings.snapshot().active;
-      const farm = activeBuildings.find((b) => b.definitionId === "basic_farm");
+      const farm = activeBuildings.find((b) => b.definitionId === BuildingId.BASIC_FARM);
 
       api.colony.assignToBuilding(colonist.id, farm!.id);
 
@@ -403,7 +401,7 @@ describe("ColonyFacade", () => {
     });
 
     it("should return undefined for unassigned colonist", () => {
-      const colonist = api.colony.snapshot().colonists[0];
+      const colonist = api.colony.snapshot().colonists[0]!;
       const workplace = api.colony.getWorkplace(colonist.id);
       expect(workplace).toBeUndefined();
     });
