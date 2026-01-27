@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "vue"],
+  "plugins": ["eslint", "unicorn", "typescript", "vue"],
   "globals": {
     "Bun": "readonly"
   },

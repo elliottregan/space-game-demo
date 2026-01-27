@@ -47,7 +47,7 @@ export class EventsFacade {
    * Get recent game events.
    */
   getRecent(limit: number = 15): readonly Readonly<GameEvent>[] {
-    return Object.freeze([...this.getLastEvents().slice(-limit)]);
+    return Object.freeze(this.getLastEvents().slice(-limit));
   }
 
   // ==========================================================================
