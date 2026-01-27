@@ -6,5 +6,5 @@
   "remoteUser": "dev",
   "forwardPorts": [5173, 24678],
   "postCreateCommand": "bun install",
-  "postStartCommand": "sudo /usr/local/bin/init-firewall.sh"
+  "postStartCommand": "sudo /usr/local/bin/init-firewall.sh && /usr/local/bin/init-claude-plugins.sh"
 }

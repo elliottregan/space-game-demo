@@ -20,7 +20,10 @@ services:
 
     volumes:
       - ..:/workspace:cached
-      - ~/.claude:/home/dev/.claude
+      - ~/.claude/.credentials.json:/home/dev/.claude/.credentials.json:ro
+      - ~/.claude/settings.json:/home/dev/.claude/settings.json:ro
+      - ~/.claude/plugins:/tmp/host-claude-plugins:ro
+      - devcontainer-claude-plugins:/home/dev/.claude/plugins
       - devcontainer-gh-config:/home/dev/.config/gh
       - ~/.ssh:/home/dev/.ssh:ro
       - ~/.claude.json:/home/dev/.claude.json
@@ -35,3 +38,4 @@ services:
 
 volumes:
   devcontainer-gh-config:
+  devcontainer-claude-plugins:

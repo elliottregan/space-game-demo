@@ -45,7 +45,16 @@ RUN mkdir -p /home/dev/.claude && chown dev:dev /home/dev/.claude
 COPY init-firewall.sh /usr/local/bin/init-firewall.sh
 RUN chmod +x /usr/local/bin/init-firewall.sh
 
+# Copy Claude plugins initialization script
+COPY init-claude-plugins.sh /usr/local/bin/init-claude-plugins.sh
+RUN chmod +x /usr/local/bin/init-claude-plugins.sh
+
+# Copy entrypoint script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 WORKDIR /workspace
 EXPOSE 22 5173
 
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["/usr/sbin/sshd", "-D"]

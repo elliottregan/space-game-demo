@@ -42,7 +42,10 @@ just claude
 Claude Code in the container uses credentials from your host machine:
 
 1. **`~/.claude.json`** - Settings and project trust configuration
-2. **`~/.claude/`** - Claude state directory (includes `.credentials.json` with OAuth tokens)
+2. **`~/.claude/.credentials.json`** - OAuth tokens (read-only)
+3. **`~/.claude/settings.json`** - Claude settings (read-only)
+
+Note: Only specific credential files are mounted, not the entire `~/.claude/` directory. This keeps the container's plugins, cache, and history separate from the host.
 
 ### Setting Up Authentication
 
@@ -114,6 +117,43 @@ The named volume `devcontainer-gh-config` persists your auth between container r
 docker volume rm devcontainer_devcontainer-gh-config
 ```
 
+## Claude Code Plugins
+
+Plugins in the container are separate from your host machine but initialized from your host's marketplace configuration.
+
+### How It Works
+
+On first container start, the entrypoint script:
+1. Copies `known_marketplaces.json` from your host's `~/.claude/plugins/`
+2. Transforms paths from `/Users/<user>/.claude/...` to `/home/dev/.claude/...`
+3. Stores plugins in a named Docker volume that persists across rebuilds
+
+### Installing Plugins
+
+After starting the container, install plugins using:
+
+```bash
+just ssh
+claude
+# Then in Claude Code:
+/plugin install <plugin-name>
+```
+
+Or install all official plugins:
+
+```bash
+/plugin install-all
+```
+
+### Resetting Plugins
+
+To reset the plugins volume and re-initialize from host:
+
+```bash
+docker volume rm devcontainer-claude-plugins
+just rebuild
+```
+
 ## Volumes
 
 | Host | Container | Purpose |
@@ -121,7 +161,10 @@ docker volume rm devcontainer_devcontainer-gh-config
 | `..` (project root) | `/workspace` | Project files |
 | `~/.ssh` | `/home/dev/.ssh` | SSH keys (read-only) |
 | `~/.claude.json` | `/home/dev/.claude.json` | Claude settings |
-| `~/.claude` | `/home/dev/.claude` | Claude state (includes OAuth credentials) |
+| `~/.claude/.credentials.json` | `/home/dev/.claude/.credentials.json` | OAuth credentials (read-only) |
+| `~/.claude/settings.json` | `/home/dev/.claude/settings.json` | Claude settings (read-only) |
+| `~/.claude/plugins` | `/tmp/host-claude-plugins` | Host plugins config (read-only, for initialization) |
+| Named volume | `/home/dev/.claude/plugins` | Container's Claude plugins |
 | Named volume | `/home/dev/.config/gh` | GitHub CLI config |
 
 ## Environment Variables
