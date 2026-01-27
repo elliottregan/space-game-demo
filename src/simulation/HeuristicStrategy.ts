@@ -14,9 +14,10 @@ import type { BlockedDecision, EventOccurrence } from "./types";
  * Priorities (in order):
  * 1. Survival - Ensure food and oxygen are maintained
  * 2. Event Resolution - Handle active events
- * 3. Infrastructure - Research, power, materials
- * 4. Growth - Expand population when stable
- * 5. Victory Push - Research generation ship when available
+ * 3. Morale - Build recreation buildings to maintain morale for Colony Charter
+ * 4. Infrastructure - Research, power, materials
+ * 5. Growth - Expand population when stable
+ * 6. Victory Push - Research generation ship when available
  */
 export class HeuristicStrategy {
   private blockedDecisions: BlockedDecision[] = [];
@@ -100,6 +101,7 @@ export class HeuristicStrategy {
     // but prioritizing survival/events over growth
     if (this.handleSurvival()) return;
     if (this.handleEventResolution()) return;
+    if (this.handleMorale()) return;
     if (this.handleInfrastructure()) return;
     if (this.handleGrowth()) return;
     this.handleVictoryPush();
@@ -392,7 +394,56 @@ export class HeuristicStrategy {
   }
 
   /**
-   * Priority 3 - Infrastructure: Research, power, materials.
+   * Priority 3 - Morale: Build recreation buildings to maintain morale for Colony Charter.
+   * Colony Charter requires sustained morale >= 60, so we target 70 as a buffer.
+   * @returns true if an action was taken
+   */
+  private handleMorale(): boolean {
+    const colony = this.api.colony.snapshot();
+    const buildings = this.api.buildings.snapshot();
+
+    // Target morale threshold (Colony Charter needs 60, we want buffer)
+    const MORALE_TARGET = 70;
+
+    // Don't build recreation if morale is healthy
+    if (colony.morale >= MORALE_TARGET) return false;
+
+    // Calculate current morale boost from buildings
+    const currentMoraleBoost = buildings.moraleBoost;
+
+    // Each point of moraleBoost adds 0.1 to recovery rate
+    // Base recovery is 0.5, decay is 0.3, so net is +0.2 without buildings
+    // With moraleBoost of 10, recovery becomes 0.5 + 1.0 = 1.5, net +1.2
+    // We want enough boost to recover morale reliably
+
+    // If we already have decent morale boost (15+), don't over-build
+    if (currentMoraleBoost >= 15 && colony.morale > 50) return false;
+
+    // Build recreation buildings in order of cost-effectiveness
+    // COMMON_ROOM: 60 materials, +5 boost (0.083 boost per material)
+    // GYMNASIUM: 80 materials, +6 boost (0.075 boost per material)
+    // OBSERVATORY_DOME: 150 materials, +8 boost (0.053 boost per material, needs tech)
+
+    // Start with common room - cheapest and good boost
+    if (!this.hasBuilding(BuildingId.COMMON_ROOM)) {
+      if (this.tryBuild(BuildingId.COMMON_ROOM, "morale")) return true;
+    }
+
+    // Then gymnasium for additional boost
+    if (!this.hasBuilding(BuildingId.GYMNASIUM)) {
+      if (this.tryBuild(BuildingId.GYMNASIUM, "morale")) return true;
+    }
+
+    // Observatory dome if we have tech and need more boost
+    if (currentMoraleBoost < 15) {
+      if (this.tryBuild(BuildingId.OBSERVATORY_DOME, "morale", false)) return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Priority 4 - Infrastructure: Research, power, materials.
    * @returns true if an action was taken
    */
   private handleInfrastructure(): boolean {
@@ -441,7 +492,7 @@ export class HeuristicStrategy {
   }
 
   /**
-   * Priority 4 - Growth: Expand population when stable.
+   * Priority 5 - Growth: Expand population when stable.
    * @returns true if an action was taken
    */
   private handleGrowth(): boolean {
@@ -472,7 +523,7 @@ export class HeuristicStrategy {
   }
 
   /**
-   * Priority 5 - Victory Push: Research generation ship when available.
+   * Priority 6 - Victory Push: Research generation ship when available.
    * @returns true if an action was taken
    */
   private handleVictoryPush(): boolean {

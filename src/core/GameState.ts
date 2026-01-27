@@ -62,6 +62,12 @@ export class GameState {
     // Update labor pool bonus before other systems
     this.updateLaborPoolBonus();
 
+    // Add oxygen from building contributions before resource tick
+    const oxygenContribution = this.buildings.getTotalOxygenContribution();
+    if (oxygenContribution !== 0) {
+      this.resources.add({ oxygen: oxygenContribution });
+    }
+
     // 1. Resources tick (production/consumption)
     events.push(...this.resources.tick());
 

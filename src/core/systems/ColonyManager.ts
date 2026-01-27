@@ -210,8 +210,12 @@ export class ColonyManager {
     buildings?: BuildingManager,
   ): void {
     const netFlow = resources.getNetFlow();
+    // Include oxygen contribution from buildings (added via resources.add, not tracked in production)
+    const oxygenContribution = buildings?.getTotalOxygenContribution() ?? 0;
     const hasPositiveFlow =
-      (netFlow.food || 0) > 0 && (netFlow.oxygen || 0) > 0 && (netFlow.water || 0) > 0;
+      (netFlow.food || 0) > 0 &&
+      (netFlow.oxygen || 0) + oxygenContribution > 0 &&
+      (netFlow.water || 0) > 0;
 
     if (!hasPositiveFlow) return;
 

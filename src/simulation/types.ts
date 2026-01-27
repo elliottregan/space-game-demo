@@ -133,7 +133,7 @@ export interface ResourceFlowSnapshot {
  */
 export interface BlockedDecision {
   sol: number;
-  category: "survival" | "infrastructure" | "growth" | "victory";
+  category: "survival" | "morale" | "infrastructure" | "growth" | "victory";
   action: string;
   reason: string;
   missingResources?: Record<string, number>;
