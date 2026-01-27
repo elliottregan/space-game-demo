@@ -88,12 +88,22 @@ const server = Bun.serve({
 
     // Serve JS/TS (transpiled by Bun)
     if (path.endsWith(".ts") || path.endsWith(".js")) {
-      const tsPath = `src/visualization${path.replace(".js", ".ts")}`;
-      const file = Bun.file(tsPath);
+      // Handle both root and subdirectory files
+      let tsPath = `src/visualization${path.replace(".js", ".ts")}`;
+
+      // Check if file exists
+      let file = Bun.file(tsPath);
+      if (!(await file.exists())) {
+        // Try without .ts replacement for actual .ts files
+        tsPath = `src/visualization${path}`;
+        file = Bun.file(tsPath);
+      }
+
       if (await file.exists()) {
         const result = await Bun.build({
           entrypoints: [tsPath],
           target: "browser",
+          external: [], // Bundle everything
         });
         if (result.outputs.length > 0) {
           const text = await result.outputs[0].text();
