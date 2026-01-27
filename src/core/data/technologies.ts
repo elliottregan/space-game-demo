@@ -8,7 +8,7 @@ export const TECHNOLOGIES: Technology[] = [
     name: "Hydroponics",
     description: "Advanced soil-free farming techniques",
     prerequisites: [],
-    cost: { sols: 60 },
+    cost: { sols: 45 },
     unlocks: [BuildingId.GREENHOUSE],
   },
   {
@@ -16,7 +16,7 @@ export const TECHNOLOGIES: Technology[] = [
     name: "Water Recycling",
     description: "Closed-loop water systems",
     prerequisites: [],
-    cost: { sols: 45 },
+    cost: { sols: 35 },
     unlocks: [BuildingId.WATER_RECLAIMER],
     effects: [{ type: "production_bonus", value: 0.5 }],
   },
@@ -25,7 +25,7 @@ export const TECHNOLOGIES: Technology[] = [
     name: "Advanced Materials",
     description: "Stronger, lighter construction materials",
     prerequisites: [],
-    cost: { sols: 75 },
+    cost: { sols: 55 },
     unlocks: [BuildingId.RESEARCH_LAB, BuildingId.ADVANCED_HABITAT],
   },
 

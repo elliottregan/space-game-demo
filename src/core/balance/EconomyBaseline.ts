@@ -8,22 +8,22 @@ export const COLONIST_NEEDS = {
 } as const;
 
 export const STARTING_RESOURCES: Resources = {
-  food: 300,
-  oxygen: 400, // More buffer since no oxygen generator
-  water: 120,
+  food: 280,
+  oxygen: 140, // Very tight - creates early race between food and oxygen
+  water: 100,
   power: 500,
   materials: 500,
 };
 
 export const STARTING_POPULATION = 10;
 
-export const POPULATION_GROWTH_RATE = 0.02;
+export const POPULATION_GROWTH_RATE = 0.05;
 
-export const MIN_POPULATION_FOR_GROWTH = 20;
+export const MIN_POPULATION_FOR_GROWTH = 15;
 
 // Colony morale and health thresholds
 export const COLONY_MORALE = {
-  BASE_DECAY: 0.3,
+  BASE_DECAY: 0.2,
   BASE_RECOVERY: 0.5,
   HEALTH_RECOVERY: 0.2,
   LOW_WARNING_THRESHOLD: 30,

@@ -271,7 +271,7 @@ describe('TechnologyTree', () => {
       expect(research).not.toBeNull();
       expect(research?.techId).toBe(TechnologyId.HYDROPONICS);
       expect(research?.progress).toBe(10);
-      expect(research?.requiredSols).toBe(60);
+      expect(research?.requiredSols).toBe(45);
     });
 
     it('should serialize and restore queue and progress', () => {
