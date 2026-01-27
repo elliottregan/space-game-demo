@@ -16,6 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `bun test tests/ResourceManager.test.ts` - Run single test file
 - `bun run simulate` - Run game simulation
 - `bun run simulate:analyze` - Analyze simulation results
+- `bun run visualize` - Start visualization server for simulation analysis
 
 ## Architecture
 
