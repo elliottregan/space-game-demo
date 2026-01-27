@@ -85,7 +85,7 @@ Tests are in the `tests/` directory using Bun's test runner. Test files cover:
 For significant features, use git worktrees to isolate work from the main branch.
 
 ### Pull Requests
-Larger changes should go through pull requests. Use `/commit-push-pr` or create PRs manually.
+All changes should go through pull requests. Use `/commit-push-pr` or create PRs manually.
 
 ### Subagent-Driven Development
 When executing implementation plans, use `superpowers:subagent-driven-development` to parallelize independent tasks.
