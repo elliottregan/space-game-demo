@@ -1,0 +1,11 @@
+pre-commit:
+  parallel: true
+  commands:
+    lint:
+      glob: "*.{ts,tsx,vue}"
+      run: bunx oxlint --fix {staged_files}
+      stage_fixed: true
+    format:
+      glob: "*.{ts,tsx,vue,css}"
+      run: bunx oxfmt --write --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true
