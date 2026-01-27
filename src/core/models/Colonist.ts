@@ -1,3 +1,5 @@
+import type { SkillId } from "../data/skills";
+
 export enum ColonistRole {
   UNASSIGNED = "unassigned",
   RESEARCH = "research",
@@ -33,6 +35,6 @@ export interface Colonist {
   masteryLevel: MasteryLevel;
   trainingTarget?: ColonistRole;
   trainingProgress?: number;
-  skills: string[];
+  skills: SkillId[];
   housingId?: string; // Building ID of assigned habitat
 }

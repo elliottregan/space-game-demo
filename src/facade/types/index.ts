@@ -48,6 +48,7 @@ export type BuildingAction =
   | { action: "repurpose"; buildingId: string; targetDefId: string };
 
 // Colony types
+export { SkillId } from "./colony";
 export type { Colonist, ColonistRole, ColonySnapshot, SkillDefinition } from "./colony";
 // Event types
 export type {
