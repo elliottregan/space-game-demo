@@ -26,9 +26,9 @@ import type {
 /**
  * Parse command line arguments.
  */
-function parseArgs(): { runs: number seed: number debug: boolean } {
+function parseArgs(): { runs: number seed: number quiet: boolean } {
   const args = process.argv.slice(2)
-  const result = { runs: 200, seed: 1, debug: false }
+  const result = { runs: 200, seed: 1, quiet: false }
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
@@ -38,10 +38,10 @@ function parseArgs(): { runs: number seed: number debug: boolean } {
     } else if (arg === "--seed" || arg === "-s") {
       const value = args[++i]
       if (value) result.seed = parseInt(value, 10)
-    } else if (arg === "--debug" || arg === "-d") {
-      result.debug = true
+    } else if (arg === "--quiet" || arg === "-q") {
+      result.quiet = true
     } else if (arg === "--help" || arg === "-h") {
-      output(`
+      console.log(`
 Simulation Analysis Tool
 
 Usage: bun run scripts/analyze-simulation.ts [options]
@@ -49,8 +49,11 @@ Usage: bun run scripts/analyze-simulation.ts [options]
 Options:
   --runs N, -r N    Number of simulation runs (default: 200)
   --seed N, -s N    Starting seed (default: 1)
-  --debug, -d       Write analysis to logs/simulations/ with timestamp
+  --quiet, -q       Suppress console output (logs still saved)
   --help, -h        Show this help message
+
+Output:
+  JSON and TXT analysis files are saved to logs/simulations/
 `)
       process.exit(0)
     }
@@ -324,24 +327,24 @@ function detectCrisis(
   checkResource("low_morale", morale, CRISIS_THRESHOLDS.morale)
 }
 
-// Module-level output capture for debug logging
+// Module-level output capture for logging
 const outputLines: string[] = []
-let captureOutput = false
+let quietMode = false
 
 /**
- * Output function that logs to console and optionally captures for file writing.
+ * Output function that captures for file writing and optionally logs to console.
  */
 function output(message: string = ""): void {
-  console.log(message)
-  if (captureOutput) {
-    outputLines.push(message)
+  outputLines.push(message)
+  if (!quietMode) {
+    console.log(message)
   }
 }
 
 /**
- * Write analysis output to a file in the logs directory.
+ * Write analysis output to a text file in the logs directory.
  */
-async function writeDebugLog(runs: number, seed: number): Promise<string> {
+async function writeTextLog(runs: number, seed: number): Promise<string> {
   const now = new Date()
   const timestamp = now.toISOString().replace(/[:.]/g, "-").slice(0, 19)
   const filename = `analysis-${timestamp}-r${runs}-s${seed}.txt`
@@ -808,10 +811,10 @@ async function writeJsonOutput(
  * Main analysis function.
  */
 async function main(): Promise<void> {
-  const { runs, seed, debug } = parseArgs()
+  const { runs, seed, quiet } = parseArgs()
 
-  if (debug) {
-    captureOutput = true
+  if (quiet) {
+    quietMode = true
   }
 
   output(`Running ${runs} simulations for detailed analysis (seed: ${seed})...`)
@@ -996,15 +999,12 @@ async function main(): Promise<void> {
 
   output("\n" + "=".repeat(60))
 
-  // Write debug log if enabled
-  if (debug) {
-    const filepath = await writeDebugLog(runs, seed)
-    output(`\nAnalysis written to: ${filepath}`)
-  }
-
-  // Always write JSON output for visualization
+  // Write analysis logs
+  const txtPath = await writeTextLog(runs, seed)
   const jsonPath = await writeJsonOutput(results, runs, seed)
-  output(`\nJSON data written to: ${jsonPath}`)
+
+  output(`\nAnalysis written to: ${txtPath}`)
+  output(`JSON data written to: ${jsonPath}`)
 }
 
 /**
