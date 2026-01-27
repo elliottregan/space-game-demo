@@ -453,10 +453,7 @@ export class ColonyManager {
     for (const colonist of this.colonists.values()) {
       if (colonist.housingId) {
         const housingId = colonist.housingId;
-        if (!assignments[housingId]) {
-          assignments[housingId] = [];
-        }
-        assignments[housingId]!.push(colonist);
+        (assignments[housingId] ??= []).push(colonist);
       }
     }
     return assignments;
