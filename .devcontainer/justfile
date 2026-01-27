@@ -29,7 +29,12 @@ extract-credentials:
     security find-generic-password -s "Claude Code-credentials" -a "$(whoami)" -w > ~/.claude/.credentials.json
     @echo "Credentials extracted to ~/.claude/.credentials.json"
 
-# Refresh credentials (container picks up changes via bind mount)
+# Restart the container
+restart:
+    docker compose restart
+
+# Refresh credentials and restart container for changes to take effect
 refresh-auth:
     just extract-credentials
-    @echo "Auth refreshed"
+    just restart
+    @echo "Auth refreshed and container restarted"
