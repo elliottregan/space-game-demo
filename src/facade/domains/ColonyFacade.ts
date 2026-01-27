@@ -261,4 +261,67 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
   getWorkplace(colonistId: string): string | undefined {
     return this.gameState.workforce.getColonistWorkplace(colonistId, this.gameState.buildings);
   }
+
+  /**
+   * Get all colonists not currently assigned to any building.
+   */
+  getUnassignedColonists(): readonly Readonly<Colonist>[] {
+    const assignedIds = new Set<string>();
+    for (const building of this.gameState.buildings.getBuildings()) {
+      for (const id of building.assignedWorkers) assignedIds.add(id);
+    }
+    return this.gameState.colony.getColonists().filter((c) => !assignedIds.has(c.id));
+  }
+
+  /**
+   * Optimize workforce by auto-assigning unassigned colonists to understaffed buildings.
+   * Prioritizes food buildings, then buildings with more empty slots.
+   * Never steals workers from other buildings.
+   */
+  optimizeWorkforce(): Result<{ assignmentsChanged: number }> {
+    return this.executeCommand(() => {
+      // Get old production state for all understaffed buildings
+      const understaffed = this.gameState.buildings.getUnderstaffedBuildings();
+      type ResourceFlow = { prod: Record<string, number | undefined>; cons: Record<string, number | undefined> };
+      const oldFlows = new Map<string, ResourceFlow>();
+
+      for (const building of understaffed) {
+        oldFlows.set(building.id, {
+          prod: { ...this.gameState.buildings.getEffectiveProduction(building.id) },
+          cons: { ...this.gameState.buildings.getEffectiveConsumption(building.id) },
+        });
+      }
+
+      // Perform auto-assignment
+      const events = this.gameState.buildings.autoAssignAllWorkers(this.gameState.colony);
+
+      // Update resource flows for changed buildings
+      for (const building of understaffed) {
+        const old = oldFlows.get(building.id)!;
+        const newProd = this.gameState.buildings.getEffectiveProduction(building.id);
+        const newCons = this.gameState.buildings.getEffectiveConsumption(building.id);
+
+        this.gameState.resources.removeProduction(old.prod);
+        this.gameState.resources.removeConsumption(old.cons);
+        this.gameState.resources.addProduction(newProd);
+        this.gameState.resources.addConsumption(newCons);
+      }
+
+      return ok({ assignmentsChanged: events.length });
+    });
+  }
+
+  /**
+   * Get whether new colonists are automatically assigned to buildings.
+   */
+  getAutoAssignNewColonists(): boolean {
+    return this.gameState.getAutoAssignNewColonists();
+  }
+
+  /**
+   * Set whether new colonists should be automatically assigned to buildings.
+   */
+  setAutoAssignNewColonists(value: boolean): void {
+    this.gameState.setAutoAssignNewColonists(value);
+  }
 }

@@ -16,6 +16,7 @@ export enum EventId {
   ABANDONED_CACHE = "abandoned_cache",
   GEOLOGICAL_SURVEY = "geological_survey",
   EQUIPMENT_WINDFALL = "equipment_windfall",
+  WORKER_AUTO_ASSIGNED = "worker_auto_assigned",
 }
 
 export type EventSeverity = "info" | "warning" | "critical";
