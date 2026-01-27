@@ -5,14 +5,6 @@ import type { ProspectingSite } from "../models/Operation";
 export type WarningLevel = "none" | "warning" | "critical" | "depleted";
 
 /**
- * Result of processing a single building's extraction.
- */
-export interface ExtractionResult {
-  events: GameEvent[];
-  buildingBecameIdle: boolean;
-}
-
-/**
  * Create a warning event for a deposit threshold crossing.
  */
 export function createDepositWarningEvent(
@@ -90,10 +82,7 @@ export function getDepletionEvents(
 /**
  * Check if a building should extract from a deposit.
  */
-export function canExtract(
-  building: Building,
-  def: BuildingDefinition | undefined,
-): boolean {
+export function canExtract(building: Building, def: BuildingDefinition | undefined): boolean {
   if (!def?.requiresDeposit) return false;
   if (!building.depositId) return false;
   if (building.broken) return false;
@@ -103,9 +92,6 @@ export function canExtract(
 /**
  * Get the base production rate for a building's linked deposit type.
  */
-export function getBaseProductionForDeposit(
-  def: BuildingDefinition,
-  resourceType: string,
-): number {
+export function getBaseProductionForDeposit(def: BuildingDefinition, resourceType: string): number {
   return def.production?.[resourceType as keyof typeof def.production] ?? 0;
 }

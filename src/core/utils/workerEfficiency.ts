@@ -82,6 +82,11 @@ function calculateSkillBonus(colonist: Colonist): number {
 /**
  * Calculate average worker efficiency for a set of colonists at a building.
  *
+ * Note: This averages over the provided colonists array only. If some assigned
+ * worker IDs fail to resolve to colonists, they should be filtered out before
+ * calling this function. This is intentional - invalid/missing colonist IDs
+ * should not penalize efficiency.
+ *
  * @param colonists - Array of colonists assigned to the building
  * @param requiredRole - The role the building requires (if any)
  * @returns Average efficiency across all workers, or 1 if no workers

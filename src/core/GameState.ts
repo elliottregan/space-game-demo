@@ -9,7 +9,6 @@ import {
   canExtract,
   getBaseProductionForDeposit,
   getDepletionEvents,
-  type WarningLevel,
 } from "./utils/depositExtraction";
 import { BuildingManager } from "./systems/BuildingManager";
 import { ColonyManager } from "./systems/ColonyManager";
@@ -167,9 +166,9 @@ export class GameState {
       const baseProduction = getBaseProductionForDeposit(def, site.resourceType);
       if (baseProduction === 0) continue;
 
-      const warningBefore = this.operations.getDepletionWarningLevel(site.id) as WarningLevel;
+      const warningBefore = this.operations.getDepletionWarningLevel(site.id);
       this.operations.processExtraction(building.id, baseProduction);
-      const warningAfter = this.operations.getDepletionWarningLevel(site.id) as WarningLevel;
+      const warningAfter = this.operations.getDepletionWarningLevel(site.id);
 
       events.push(...getDepletionEvents(warningBefore, warningAfter, site, building, def.name));
 
