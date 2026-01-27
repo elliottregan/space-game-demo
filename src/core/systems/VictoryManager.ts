@@ -27,9 +27,9 @@ export interface VictoryState {
  * Immigration events can accelerate growth with political tradeoffs.
  */
 export const COLONY_CHARTER_REQUIREMENTS = {
-  minPopulation: 30,
+  minPopulation: 50,
   minMorale: 60,
-  sustainedSols: 200,
+  sustainedSols: 100,
   requiredTechs: [
     TechnologyId.HYDROPONICS,
     TechnologyId.WATER_RECYCLING,

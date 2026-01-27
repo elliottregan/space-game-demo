@@ -212,9 +212,10 @@ export class HeuristicStrategy {
         if (this.tryBuild(BuildingId.BASIC_FARM, "survival", false)) return true;
       }
 
-      // For oxygen, build hydroponic garden (provides oxygen without needing workers)
-      // or farm if we can't build garden
+      // For oxygen, build oxygen generator (produces oxygen directly)
+      // or hydroponic garden/farm as fallback
       if (oxygenCritical) {
+        if (this.tryBuild(BuildingId.OXYGEN_GENERATOR, "survival", false)) return true;
         if (this.tryBuild(BuildingId.HYDROPONIC_GARDEN, "survival", false)) return true;
         if (this.tryBuild(BuildingId.BASIC_FARM, "survival", false)) return true;
       }
@@ -226,13 +227,14 @@ export class HeuristicStrategy {
       if (this.tryBuild(BuildingId.BASIC_FARM, "survival")) return true;
     }
 
-    // Oxygen needs positive contribution (oxygenContribution is total from buildings)
-    // Need buffer for population growth (each colonist consumes some oxygen)
+    // Oxygen needs positive flow for population growth
     // Note: oxygenContribution is from buildings, oxygenFlow is from production/consumption
     if (oxygenFlow < 3 || oxygenContribution < 6) {
-      // Hydroponic garden provides oxygen without workers
+      // Oxygen generator produces oxygen directly
+      if (this.tryBuild(BuildingId.OXYGEN_GENERATOR, "survival")) return true;
+      // Hydroponic garden provides oxygen contribution without workers
       if (this.tryBuild(BuildingId.HYDROPONIC_GARDEN, "survival")) return true;
-      // Farm provides food AND oxygen (if workers are assigned)
+      // Farm provides food AND oxygen contribution (if workers are assigned)
       if (this.tryBuild(BuildingId.BASIC_FARM, "survival")) return true;
     }
 

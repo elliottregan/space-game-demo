@@ -70,6 +70,16 @@ export const BUILDINGS: BuildingDefinition[] = [
     repurposeTargets: [BuildingId.STORAGE_DEPOT],
     oxygenContribution: -2,
   },
+  {
+    id: BuildingId.OXYGEN_GENERATOR,
+    name: "Oxygen Generator",
+    description: "Electrolyzes water to produce breathable oxygen",
+    cost: { materials: 55 },
+    constructionTime: 12,
+    production: { oxygen: 5 },
+    consumption: { water: 2, power: 3 },
+    oxygenContribution: 0,
+  },
 
   // Tech-gated buildings
   {

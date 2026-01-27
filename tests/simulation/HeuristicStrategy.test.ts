@@ -196,7 +196,7 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).toContain(BuildingId.HYDROPONIC_GARDEN);
+      expect(buildCalls).toContain(BuildingId.OXYGEN_GENERATOR);
     });
 
     it("builds farm when food production <= consumption", () => {
@@ -232,7 +232,7 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).toContain(BuildingId.HYDROPONIC_GARDEN);
+      expect(buildCalls).toContain(BuildingId.OXYGEN_GENERATOR);
     });
 
     it("does not build if cannot afford", () => {
