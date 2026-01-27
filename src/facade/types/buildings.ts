@@ -1,11 +1,12 @@
 // src/facade/types/buildings.ts
 // Building-related types for the facade
 
-import type {
-  Building,
-  BuildingDefinition,
-  BuildingStatus,
-  PlacedBuilding,
+import {
+  BuildingId,
+  type Building,
+  type BuildingDefinition,
+  type BuildingStatus,
+  type PlacedBuilding,
 } from "../../core/models/Building";
 import type { BuildingMode } from "../../core/models/Operation";
 
@@ -21,4 +22,5 @@ export interface BuildingSnapshot {
 }
 
 // Re-export core types
+export { BuildingId };
 export type { Building, BuildingDefinition, BuildingStatus, BuildingMode, PlacedBuilding };

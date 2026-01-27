@@ -1,10 +1,32 @@
 import type { ColonistRole } from "./Colonist";
 import type { ResourceDelta } from "./Resources";
 
+export enum BuildingId {
+  HABITAT = "habitat",
+  SOLAR_PANEL = "solar_panel",
+  WATER_EXTRACTOR = "water_extractor",
+  STORAGE_DEPOT = "storage_depot",
+  BASIC_FARM = "basic_farm",
+  GREENHOUSE = "greenhouse",
+  WATER_RECLAIMER = "water_reclaimer",
+  RESEARCH_LAB = "research_lab",
+  ADVANCED_HABITAT = "advanced_habitat",
+  AUTOMATED_FACTORY = "automated_factory",
+  MINING_STATION = "mining_station",
+  NUCLEAR_REACTOR = "nuclear_reactor",
+  BIOLAB = "biolab",
+  MEDICAL_CENTER = "medical_center",
+  CRYO_FACILITY = "cryo_facility",
+  COMMON_ROOM = "common_room",
+  GYMNASIUM = "gymnasium",
+  HYDROPONIC_GARDEN = "hydroponic_garden",
+  OBSERVATORY_DOME = "observatory_dome",
+}
+
 export type BuildingStatus = "pending" | "active" | "disabled" | "idle" | "recycling";
 
 export interface BuildingDefinition {
-  id: string;
+  id: BuildingId;
   name: string;
   description: string;
   cost: ResourceDelta;
@@ -15,7 +37,7 @@ export interface BuildingDefinition {
   workerRole?: ColonistRole;
   requiredTech?: string;
   requiresDeposit?: boolean; // true for mining buildings
-  repurposeTargets?: string[]; // building IDs this can convert to
+  repurposeTargets?: readonly BuildingId[];
   moraleBoost?: number; // Passive morale boost when active
   capacity?: number; // Housing capacity for habitats
   oxygenContribution?: number; // Oxygen units contributed per sol when active
@@ -23,7 +45,7 @@ export interface BuildingDefinition {
 
 export interface Building {
   id: string;
-  definitionId: string;
+  definitionId: BuildingId;
   status: BuildingStatus;
   constructionProgress: number;
   assignedWorkers: string[];
@@ -32,7 +54,7 @@ export interface Building {
   repairProgress: number;
   depositId?: string; // linked deposit for mining buildings
   recyclingProgress?: number;
-  repurposeFromDefId?: string; // Set when repurposing, cleared when complete
+  repurposeFromDefId?: BuildingId; // Set when repurposing, cleared when complete
   /** Building condition 0-100%, affects efficiency when low */
   condition: number;
   /** Sols since construction */

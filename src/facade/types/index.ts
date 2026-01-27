@@ -2,6 +2,7 @@
 // Re-export all facade types
 
 // Building types
+export { BuildingId } from "./buildings";
 export type {
   Building,
   BuildingDefinition,

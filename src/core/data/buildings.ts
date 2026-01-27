@@ -1,10 +1,10 @@
-import type { BuildingDefinition } from "../models/Building";
+import { BuildingId, type BuildingDefinition } from "../models/Building";
 import { ColonistRole } from "../models/Colonist";
 
 export const BUILDINGS: BuildingDefinition[] = [
   // Basic buildings (no tech required)
   {
-    id: "habitat",
+    id: BuildingId.HABITAT,
     name: "Habitat Module",
     description: "Basic living quarters for colonists",
     cost: { materials: 50 },
@@ -14,7 +14,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     oxygenContribution: 2,
   },
   {
-    id: "solar_panel",
+    id: BuildingId.SOLAR_PANEL,
     name: "Solar Panel Array",
     description: "Generates power from sunlight",
     cost: { materials: 30 },
@@ -23,7 +23,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     oxygenContribution: 0,
   },
   {
-    id: "water_extractor",
+    id: BuildingId.WATER_EXTRACTOR,
     name: "Water Extractor",
     description: "Extracts water from ice deposits",
     cost: { materials: 35 },
@@ -31,11 +31,11 @@ export const BUILDINGS: BuildingDefinition[] = [
     production: { water: 4 },
     consumption: { power: 2 },
     requiresDeposit: true,
-    repurposeTargets: ["storage_depot", "mining_station"],
+    repurposeTargets: [BuildingId.STORAGE_DEPOT, BuildingId.MINING_STATION],
     oxygenContribution: 0,
   },
   {
-    id: "storage_depot",
+    id: BuildingId.STORAGE_DEPOT,
     name: "Storage Depot",
     description: "Increases colony storage capacity. Can be built on depleted mining sites.",
     cost: { materials: 40 },
@@ -44,7 +44,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     oxygenContribution: 0,
   },
   {
-    id: "basic_farm",
+    id: BuildingId.BASIC_FARM,
     name: "Basic Farm",
     description: "Simple hydroponic food production",
     cost: { materials: 45 },
@@ -58,7 +58,7 @@ export const BUILDINGS: BuildingDefinition[] = [
 
   // Tech-gated buildings
   {
-    id: "greenhouse",
+    id: BuildingId.GREENHOUSE,
     name: "Greenhouse",
     description: "Advanced food production facility",
     cost: { materials: 100 },
@@ -71,7 +71,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     oxygenContribution: 2,
   },
   {
-    id: "water_reclaimer",
+    id: BuildingId.WATER_RECLAIMER,
     name: "Water Reclaimer",
     description: "Recycles water for efficiency",
     cost: { materials: 60 },
@@ -82,7 +82,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     oxygenContribution: 0,
   },
   {
-    id: "research_lab",
+    id: BuildingId.RESEARCH_LAB,
     name: "Research Lab",
     description: "Speeds up technology research",
     cost: { materials: 150 },
@@ -94,7 +94,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     oxygenContribution: -1,
   },
   {
-    id: "advanced_habitat",
+    id: BuildingId.ADVANCED_HABITAT,
     name: "Advanced Habitat",
     description: "Comfortable living for more colonists",
     cost: { materials: 120 },
@@ -105,7 +105,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     oxygenContribution: 2,
   },
   {
-    id: "automated_factory",
+    id: BuildingId.AUTOMATED_FACTORY,
     name: "Automated Factory",
     description: "Produces materials automatically",
     cost: { materials: 200 },
@@ -116,7 +116,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     oxygenContribution: -1,
   },
   {
-    id: "mining_station",
+    id: BuildingId.MINING_STATION,
     name: "Mining Station",
     description: "Extracts materials from asteroids",
     cost: { materials: 300 },
@@ -127,11 +127,11 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerRole: ColonistRole.ENGINEERING,
     requiredTech: "asteroid_mining",
     requiresDeposit: true,
-    repurposeTargets: ["storage_depot", "water_extractor"],
+    repurposeTargets: [BuildingId.STORAGE_DEPOT, BuildingId.WATER_EXTRACTOR],
     oxygenContribution: -1,
   },
   {
-    id: "nuclear_reactor",
+    id: BuildingId.NUCLEAR_REACTOR,
     name: "Nuclear Reactor",
     description: "Massive power generation",
     cost: { materials: 250 },
@@ -143,7 +143,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     oxygenContribution: 0,
   },
   {
-    id: "biolab",
+    id: BuildingId.BIOLAB,
     name: "Biolab",
     description: "Genetic research facility",
     cost: { materials: 180 },
@@ -155,7 +155,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     oxygenContribution: -1,
   },
   {
-    id: "medical_center",
+    id: BuildingId.MEDICAL_CENTER,
     name: "Medical Center",
     description: "Advanced healthcare for colonists",
     cost: { materials: 200 },
@@ -167,7 +167,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     oxygenContribution: 0,
   },
   {
-    id: "cryo_facility",
+    id: BuildingId.CRYO_FACILITY,
     name: "Cryogenic Facility",
     description: "Long-term colonist storage",
     cost: { materials: 220 },
@@ -179,7 +179,7 @@ export const BUILDINGS: BuildingDefinition[] = [
 
   // Recreation buildings (morale boost, no production)
   {
-    id: "common_room",
+    id: BuildingId.COMMON_ROOM,
     name: "Common Room",
     description: "A shared space for colonists to relax and socialize",
     cost: { materials: 60 },
@@ -189,7 +189,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     oxygenContribution: 0,
   },
   {
-    id: "gymnasium",
+    id: BuildingId.GYMNASIUM,
     name: "Gymnasium",
     description: "Exercise facility to maintain physical and mental health",
     cost: { materials: 80 },
@@ -199,7 +199,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     oxygenContribution: 0,
   },
   {
-    id: "hydroponic_garden",
+    id: BuildingId.HYDROPONIC_GARDEN,
     name: "Hydroponic Garden",
     description: "Decorative plants providing a calming environment",
     cost: { materials: 70 },
@@ -209,7 +209,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     oxygenContribution: 2,
   },
   {
-    id: "observatory_dome",
+    id: BuildingId.OBSERVATORY_DOME,
     name: "Observatory Dome",
     description: "A dome for stargazing, reminding colonists why they came",
     cost: { materials: 150 },
