@@ -1,9 +1,9 @@
-import type { RandomEventDefinition } from "../models/GameEvent";
+import { EventId, type RandomEventDefinition } from "../models/GameEvent";
 
 export const RANDOM_EVENTS: RandomEventDefinition[] = [
   // Early immigration events to help colony reach growth threshold
   {
-    id: "first_wave_settlers",
+    id: EventId.FIRST_WAVE_SETTLERS,
     name: "First Wave Settlers",
     description:
       "A group of eager settlers who've been training for years are ready to join your colony. They've heard about your progress and want to be part of Mars history.",
@@ -29,7 +29,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
     ],
   },
   {
-    id: "family_reunification",
+    id: EventId.FAMILY_REUNIFICATION,
     name: "Family Reunification Program",
     description:
       "Earth has approved a family reunification program. Relatives of your colonists are eager to join them on Mars.",
@@ -56,7 +56,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
     ],
   },
   {
-    id: "dust_storm",
+    id: EventId.DUST_STORM,
     name: "Dust Storm Warning",
     description: "A massive dust storm is approaching the colony. Solar power will be reduced.",
     minSol: 30,
@@ -79,7 +79,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
     ],
   },
   {
-    id: "meteor_strike",
+    id: EventId.METEOR_STRIKE,
     name: "Meteor Strike",
     description:
       "A meteor has impacted near the colony! Scans show it contains valuable minerals, but salvage operations carry risk.",
@@ -102,7 +102,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
     ],
   },
   {
-    id: "disease_outbreak",
+    id: EventId.DISEASE_OUTBREAK,
     name: "Disease Outbreak",
     description: "A mysterious illness is spreading among colonists.",
     minSol: 80,
@@ -125,7 +125,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
     ],
   },
   {
-    id: "earth_supply_ship",
+    id: EventId.EARTH_SUPPLY_SHIP,
     name: "Supply Ship from Earth",
     description: "An unexpected supply ship from Earth has arrived with resources.",
     minSol: 60,
@@ -149,7 +149,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
     ],
   },
   {
-    id: "colonist_dispute",
+    id: EventId.COLONIST_DISPUTE,
     name: "Colonist Dispute",
     description: "Factions among the colonists are arguing about resource allocation.",
     minSol: 40,
@@ -179,7 +179,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
     ],
   },
   {
-    id: "scientific_discovery",
+    id: EventId.SCIENTIFIC_DISCOVERY,
     name: "Scientific Discovery",
     description: "Researchers have made an exciting discovery!",
     minSol: 100,
@@ -203,7 +203,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
     ],
   },
   {
-    id: "new_colonists",
+    id: EventId.NEW_COLONISTS,
     name: "New Colonists Arrive",
     description: "A transport ship with new colonists is requesting permission to land.",
     minSol: 40,
@@ -235,7 +235,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
   },
   // Corporate immigration events - population growth with political tradeoffs
   {
-    id: "corporate_workforce_initiative",
+    id: EventId.CORPORATE_WORKFORCE_INITIATIVE,
     name: "Corporate Workforce Initiative",
     description:
       "Helios Corp wants to establish a presence on Mars. They're offering to send 8 skilled workers if you agree to favorable trade terms.",
@@ -271,7 +271,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
     ],
   },
   {
-    id: "independence_volunteers",
+    id: EventId.INDEPENDENCE_VOLUNTEERS,
     name: "Mars Independence Volunteers",
     description:
       "A group of pro-independence activists from Earth want to join your colony. They bring enthusiasm but limited supplies.",
@@ -306,7 +306,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
     ],
   },
   {
-    id: "equipment_failure",
+    id: EventId.EQUIPMENT_FAILURE,
     name: "Critical Equipment Failure",
     description: "The main life support system is showing signs of failure.",
     minSol: 90,
@@ -330,7 +330,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
   },
   // Resource windfall events
   {
-    id: "abandoned_cache",
+    id: EventId.ABANDONED_CACHE,
     name: "Abandoned Supply Cache",
     description:
       "Survey teams discovered a supply cache from a previous mission! The containers are intact.",
@@ -348,7 +348,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
     ],
   },
   {
-    id: "geological_survey",
+    id: EventId.GEOLOGICAL_SURVEY,
     name: "Earth Survey Data",
     description:
       "Mission control has transmitted new geological survey data revealing promising deposit locations.",
@@ -367,7 +367,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
     ],
   },
   {
-    id: "equipment_windfall",
+    id: EventId.EQUIPMENT_WINDFALL,
     name: "Supply Ship Bonus",
     description:
       "The latest colonist transport brought extra equipment. The crew pooled their personal supplies for the colony.",

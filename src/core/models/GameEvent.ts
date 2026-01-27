@@ -1,5 +1,23 @@
 import type { ResourceDelta } from "./Resources";
 
+export enum EventId {
+  FIRST_WAVE_SETTLERS = "first_wave_settlers",
+  FAMILY_REUNIFICATION = "family_reunification",
+  DUST_STORM = "dust_storm",
+  METEOR_STRIKE = "meteor_strike",
+  DISEASE_OUTBREAK = "disease_outbreak",
+  EARTH_SUPPLY_SHIP = "earth_supply_ship",
+  COLONIST_DISPUTE = "colonist_dispute",
+  SCIENTIFIC_DISCOVERY = "scientific_discovery",
+  NEW_COLONISTS = "new_colonists",
+  CORPORATE_WORKFORCE_INITIATIVE = "corporate_workforce_initiative",
+  INDEPENDENCE_VOLUNTEERS = "independence_volunteers",
+  EQUIPMENT_FAILURE = "equipment_failure",
+  ABANDONED_CACHE = "abandoned_cache",
+  GEOLOGICAL_SURVEY = "geological_survey",
+  EQUIPMENT_WINDFALL = "equipment_windfall",
+}
+
 export type EventSeverity = "info" | "warning" | "critical";
 
 export interface GameEvent {
@@ -10,7 +28,7 @@ export interface GameEvent {
 }
 
 export interface RandomEventDefinition {
-  id: string;
+  id: EventId;
   name: string;
   description: string;
   minSol: number;
@@ -31,7 +49,7 @@ export interface EventChoice {
 }
 
 export interface ActiveEvent {
-  eventId: string;
+  eventId: EventId;
   triggeredAt: number;
   resolved: boolean;
 }

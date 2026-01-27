@@ -1,11 +1,12 @@
 // src/facade/types/events.ts
 // Event-related types for the facade
 
-import type {
-  ActiveEvent,
-  EventChoice,
-  GameEvent,
-  RandomEventDefinition,
+import {
+  EventId,
+  type ActiveEvent,
+  type EventChoice,
+  type GameEvent,
+  type RandomEventDefinition,
 } from "../../core/models/GameEvent";
 
 /**
@@ -18,4 +19,5 @@ export interface ActiveEventSnapshot {
 }
 
 // Re-export core types
+export { EventId };
 export type { GameEvent, RandomEventDefinition, EventChoice, ActiveEvent };
