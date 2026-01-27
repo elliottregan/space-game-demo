@@ -9,6 +9,8 @@ import {
 import { BUILDING_MODES, REPAIR_DURATION_SOLS } from "../balance/OperationsBalance";
 import { getSkillById } from "../data/skills";
 import { type Building, type BuildingDefinition, BuildingId } from "../models/Building";
+import type { Colonist } from "../models/Colonist";
+import { TechnologyId } from "../models/Technology";
 import type { GameEvent } from "../models/GameEvent";
 import type { ResourceDelta } from "../models/Resources";
 import {
@@ -35,9 +37,14 @@ export class BuildingManager {
   private nextId: number = 1;
   private constructionSpeedBonus: number = 0;
   private colonyManager: ColonyManager | null = null;
+  private technologyTree: TechnologyTree | null = null;
 
   setColonyManager(colony: ColonyManager): void {
     this.colonyManager = colony;
+  }
+
+  setTechnologyTree(tech: TechnologyTree): void {
+    this.technologyTree = tech;
   }
 
   constructor(defs: BuildingDefinition[]) {
@@ -111,6 +118,26 @@ export class BuildingManager {
   }
 
   /**
+   * Score a colonist for a building based on skill affinity.
+   */
+  private scoreColonistForBuilding(colonist: Colonist, def: BuildingDefinition): number {
+    let score = 0;
+    if (def.workerRole) {
+      for (const skillId of colonist.skills) {
+        const skill = getSkillById(skillId);
+        if (skill?.affinity.includes(def.workerRole)) {
+          score += skill.efficiencyBonus;
+        }
+      }
+      // Bonus for matching role
+      if (colonist.role === def.workerRole) {
+        score += 0.5;
+      }
+    }
+    return score;
+  }
+
+  /**
    * Auto-assign available colonists to a newly completed building.
    * Prioritizes colonists with skill affinities matching the building's worker role.
    */
@@ -131,20 +158,10 @@ export class BuildingManager {
     if (availableColonists.length === 0) return;
 
     // Score colonists by skill affinity to the building's worker role
-    const scoredColonists = availableColonists.map((colonist) => {
-      let score = 0;
-
-      if (def.workerRole) {
-        for (const skillId of colonist.skills) {
-          const skill = getSkillById(skillId);
-          if (skill?.affinity.includes(def.workerRole)) {
-            score += skill.efficiencyBonus;
-          }
-        }
-      }
-
-      return { colonist, score };
-    });
+    const scoredColonists = availableColonists.map((colonist) => ({
+      colonist,
+      score: this.scoreColonistForBuilding(colonist, def),
+    }));
 
     // Sort by score descending (best matches first)
     scoredColonists.sort((a, b) => b.score - a.score);
@@ -154,6 +171,75 @@ export class BuildingManager {
     for (const { colonist } of toAssign) {
       building.assignedWorkers.push(colonist.id);
     }
+  }
+
+  /**
+   * Get all active buildings that have fewer workers than their worker slots.
+   * Sorted by priority: food buildings first, then by most empty slots.
+   */
+  getUnderstaffedBuildings(): Building[] {
+    const result: Building[] = [];
+    for (const building of this.buildings.values()) {
+      if (building.status !== "active") continue;
+      const def = this.definitions.get(building.definitionId);
+      if (!def?.workerSlots) continue;
+      if (building.assignedWorkers.length < def.workerSlots) {
+        result.push(building);
+      }
+    }
+    // Sort: food buildings first, then by most slots needed
+    return result.sort((a, b) => {
+      const defA = this.definitions.get(a.definitionId)!;
+      const defB = this.definitions.get(b.definitionId)!;
+      const isFoodA = defA.production?.food ? 1 : 0;
+      const isFoodB = defB.production?.food ? 1 : 0;
+      if (isFoodA !== isFoodB) return isFoodB - isFoodA;
+      const emptyA = defA.workerSlots! - a.assignedWorkers.length;
+      const emptyB = defB.workerSlots! - b.assignedWorkers.length;
+      return emptyB - emptyA;
+    });
+  }
+
+  /**
+   * Auto-assign all unassigned colonists to understaffed buildings.
+   * Prioritizes food buildings, then buildings with more empty slots.
+   * Never steals workers from other buildings.
+   */
+  autoAssignAllWorkers(colonyManager: ColonyManager): GameEvent[] {
+    const events: GameEvent[] = [];
+    const understaffed = this.getUnderstaffedBuildings();
+    if (understaffed.length === 0) return events;
+
+    // Get unassigned colonists
+    const assignedIds = new Set<string>();
+    for (const b of this.buildings.values()) {
+      for (const id of b.assignedWorkers) assignedIds.add(id);
+    }
+    const unassigned = colonyManager.getColonists().filter((c) => !assignedIds.has(c.id));
+    if (unassigned.length === 0) return events;
+
+    for (const building of understaffed) {
+      const def = this.definitions.get(building.definitionId)!;
+      const slotsNeeded = def.workerSlots! - building.assignedWorkers.length;
+
+      // Score and sort available colonists
+      const scored = unassigned
+        .filter((c) => !assignedIds.has(c.id))
+        .map((c) => ({ colonist: c, score: this.scoreColonistForBuilding(c, def) }))
+        .sort((a, b) => b.score - a.score);
+
+      const toAssign = scored.slice(0, slotsNeeded);
+      for (const { colonist } of toAssign) {
+        building.assignedWorkers.push(colonist.id);
+        assignedIds.add(colonist.id);
+        events.push({
+          type: "WORKER_AUTO_ASSIGNED",
+          message: `${colonist.name} assigned to ${def.name}`,
+          severity: "info",
+        });
+      }
+    }
+    return events;
   }
 
   private processRepairs(
@@ -726,13 +812,26 @@ export class BuildingManager {
   /**
    * Calculate staffing efficiency using diminishing returns curve.
    * Returns 1 for buildings without worker slots.
+   * Mining buildings get bonus efficiency with Robotics: 1 worker = 80%, 2+ = 100%.
    */
   getStaffingEfficiency(buildingId: string): number {
     const building = this.buildings.get(buildingId);
     if (!building) return 0;
 
     const def = this.definitions.get(building.definitionId);
-    return calculateStaffingEfficiency(building.assignedWorkers.length, def?.workerSlots);
+    if (!def?.workerSlots) return 1;
+    if (building.assignedWorkers.length === 0) return 0;
+
+    // Check for mining efficiency bonus from Robotics
+    const isMiningBuilding = def.requiresDeposit && def.production?.materials;
+    const hasRobotics = this.technologyTree?.isResearched(TechnologyId.ROBOTICS) ?? false;
+
+    if (isMiningBuilding && hasRobotics) {
+      // With Robotics: 1 worker = 80%, 2+ workers = 100%
+      return building.assignedWorkers.length >= 2 ? 1 : 0.8;
+    }
+
+    return calculateStaffingEfficiency(building.assignedWorkers.length, def.workerSlots);
   }
 
   /**

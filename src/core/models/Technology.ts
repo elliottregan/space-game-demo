@@ -39,7 +39,7 @@ export interface Technology {
 }
 
 export interface TechEffect {
-  type: "research_speed" | "construction_speed" | "production_bonus";
+  type: "research_speed" | "construction_speed" | "production_bonus" | "mining_efficiency";
   value: number;
 }
 

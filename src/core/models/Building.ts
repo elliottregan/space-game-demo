@@ -8,6 +8,7 @@ export enum BuildingId {
   WATER_EXTRACTOR = "water_extractor",
   STORAGE_DEPOT = "storage_depot",
   BASIC_FARM = "basic_farm",
+  BASIC_MINE = "basic_mine",
   GREENHOUSE = "greenhouse",
   WATER_RECLAIMER = "water_reclaimer",
   RESEARCH_LAB = "research_lab",

@@ -37,7 +37,10 @@ export const TECHNOLOGIES: Technology[] = [
     prerequisites: [TechnologyId.ADVANCED_MATERIALS],
     cost: { sols: 120 },
     unlocks: [BuildingId.AUTOMATED_FACTORY],
-    effects: [{ type: "construction_speed", value: 1.2 }],
+    effects: [
+      { type: "construction_speed", value: 1.2 },
+      { type: "mining_efficiency", value: 1 },
+    ],
   },
   {
     id: TechnologyId.ASTEROID_MINING,
