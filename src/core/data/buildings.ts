@@ -1,5 +1,6 @@
 import { BuildingId, type BuildingDefinition } from "../models/Building";
 import { ColonistRole } from "../models/Colonist";
+import { TechnologyId } from "../models/Technology";
 
 export const BUILDINGS: BuildingDefinition[] = [
   // Basic buildings (no tech required)
@@ -67,7 +68,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     consumption: { water: 8, power: 5 },
     workerSlots: 4,
     workerRole: ColonistRole.FARMING,
-    requiredTech: "hydroponics",
+    requiredTech: TechnologyId.HYDROPONICS,
     oxygenContribution: 2,
   },
   {
@@ -78,7 +79,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 15,
     production: { water: 8 },
     consumption: { power: 4 },
-    requiredTech: "water_recycling",
+    requiredTech: TechnologyId.WATER_RECYCLING,
     oxygenContribution: 0,
   },
   {
@@ -90,7 +91,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     consumption: { power: 10 },
     workerSlots: 3,
     workerRole: ColonistRole.RESEARCH,
-    requiredTech: "advanced_materials",
+    requiredTech: TechnologyId.ADVANCED_MATERIALS,
     oxygenContribution: -1,
   },
   {
@@ -100,7 +101,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     cost: { materials: 120 },
     constructionTime: 18,
     consumption: { power: 5 },
-    requiredTech: "advanced_materials",
+    requiredTech: TechnologyId.ADVANCED_MATERIALS,
     capacity: 8, // Houses 8 colonists
     oxygenContribution: 2,
   },
@@ -112,7 +113,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 30,
     production: { materials: 15 },
     consumption: { power: 15 },
-    requiredTech: "robotics",
+    requiredTech: TechnologyId.ROBOTICS,
     oxygenContribution: -1,
   },
   {
@@ -125,7 +126,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     consumption: { power: 20 },
     workerSlots: 5,
     workerRole: ColonistRole.ENGINEERING,
-    requiredTech: "asteroid_mining",
+    requiredTech: TechnologyId.ASTEROID_MINING,
     requiresDeposit: true,
     repurposeTargets: [BuildingId.STORAGE_DEPOT, BuildingId.WATER_EXTRACTOR],
     oxygenContribution: -1,
@@ -139,7 +140,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     production: { power: 100 },
     workerSlots: 2,
     workerRole: ColonistRole.ENGINEERING,
-    requiredTech: "nuclear_fission",
+    requiredTech: TechnologyId.NUCLEAR_FISSION,
     oxygenContribution: 0,
   },
   {
@@ -151,7 +152,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     consumption: { power: 12 },
     workerSlots: 4,
     workerRole: ColonistRole.RESEARCH,
-    requiredTech: "genetics",
+    requiredTech: TechnologyId.GENETICS,
     oxygenContribution: -1,
   },
   {
@@ -163,7 +164,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     consumption: { power: 8 },
     workerSlots: 3,
     workerRole: ColonistRole.CIVIL_SCIENCE,
-    requiredTech: "advanced_medicine",
+    requiredTech: TechnologyId.ADVANCED_MEDICINE,
     oxygenContribution: 0,
   },
   {
@@ -173,7 +174,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     cost: { materials: 220 },
     constructionTime: 30,
     consumption: { power: 15 },
-    requiredTech: "cryosleep",
+    requiredTech: TechnologyId.CRYOSLEEP,
     oxygenContribution: 0,
   },
 
@@ -216,7 +217,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 20,
     consumption: { power: 5 },
     moraleBoost: 8,
-    requiredTech: "advanced_materials",
+    requiredTech: TechnologyId.ADVANCED_MATERIALS,
     oxygenContribution: 0,
   },
 ];

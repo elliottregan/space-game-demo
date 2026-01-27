@@ -77,4 +77,5 @@ export type {
 // Politics types
 export type { FactionDemand, FactionStatus, NPCFaction, PoliticsSnapshot } from "./politics";
 // Technology types
+export { TechnologyId } from "./technology";
 export type { Technology, TechnologySnapshot, TechResearch } from "./technology";

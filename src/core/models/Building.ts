@@ -1,5 +1,6 @@
 import type { ColonistRole } from "./Colonist";
 import type { ResourceDelta } from "./Resources";
+import type { TechnologyId } from "./Technology";
 
 export enum BuildingId {
   HABITAT = "habitat",
@@ -35,7 +36,7 @@ export interface BuildingDefinition {
   consumption?: ResourceDelta;
   workerSlots?: number;
   workerRole?: ColonistRole;
-  requiredTech?: string;
+  requiredTech?: TechnologyId;
   requiresDeposit?: boolean; // true for mining buildings
   repurposeTargets?: readonly BuildingId[];
   moraleBoost?: number; // Passive morale boost when active

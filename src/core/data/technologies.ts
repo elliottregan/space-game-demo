@@ -1,9 +1,9 @@
-import type { Technology } from "../models/Technology";
+import { TechnologyId, type Technology } from "../models/Technology";
 
 export const TECHNOLOGIES: Technology[] = [
   // EARLY TIER (Sol 30-90)
   {
-    id: "hydroponics",
+    id: TechnologyId.HYDROPONICS,
     name: "Hydroponics",
     description: "Advanced soil-free farming techniques",
     prerequisites: [],
@@ -11,7 +11,7 @@ export const TECHNOLOGIES: Technology[] = [
     unlocks: ["greenhouse"],
   },
   {
-    id: "water_recycling",
+    id: TechnologyId.WATER_RECYCLING,
     name: "Water Recycling",
     description: "Closed-loop water systems",
     prerequisites: [],
@@ -20,7 +20,7 @@ export const TECHNOLOGIES: Technology[] = [
     effects: [{ type: "production_bonus", value: 0.5 }],
   },
   {
-    id: "advanced_materials",
+    id: TechnologyId.ADVANCED_MATERIALS,
     name: "Advanced Materials",
     description: "Stronger, lighter construction materials",
     prerequisites: [],
@@ -30,87 +30,87 @@ export const TECHNOLOGIES: Technology[] = [
 
   // MID TIER (Sol 90-200)
   {
-    id: "robotics",
+    id: TechnologyId.ROBOTICS,
     name: "Robotics",
     description: "Automated labor and manufacturing",
-    prerequisites: ["advanced_materials"],
+    prerequisites: [TechnologyId.ADVANCED_MATERIALS],
     cost: { sols: 120 },
     unlocks: ["automated_factory"],
     effects: [{ type: "construction_speed", value: 1.2 }],
   },
   {
-    id: "asteroid_mining",
+    id: TechnologyId.ASTEROID_MINING,
     name: "Asteroid Mining",
     description: "Extract resources from nearby asteroids",
-    prerequisites: ["advanced_materials", "robotics"],
+    prerequisites: [TechnologyId.ADVANCED_MATERIALS, TechnologyId.ROBOTICS],
     cost: { sols: 150, resources: { materials: 200 } },
     unlocks: ["mining_station"],
   },
   {
-    id: "nuclear_fission",
+    id: TechnologyId.NUCLEAR_FISSION,
     name: "Nuclear Fission",
     description: "Safe nuclear power generation",
-    prerequisites: ["advanced_materials"],
+    prerequisites: [TechnologyId.ADVANCED_MATERIALS],
     cost: { sols: 180 },
     unlocks: ["nuclear_reactor"],
   },
 
   // LATE TIER (Sol 200-400)
   {
-    id: "genetics",
+    id: TechnologyId.GENETICS,
     name: "Genetic Engineering",
     description: "Modify organisms for Mars conditions",
-    prerequisites: ["hydroponics"],
+    prerequisites: [TechnologyId.HYDROPONICS],
     cost: { sols: 200 },
     unlocks: ["biolab"],
   },
   {
-    id: "advanced_medicine",
+    id: TechnologyId.ADVANCED_MEDICINE,
     name: "Advanced Medicine",
     description: "Extend human lifespan and health",
-    prerequisites: ["genetics"],
+    prerequisites: [TechnologyId.GENETICS],
     cost: { sols: 250 },
     unlocks: ["medical_center"],
   },
   {
-    id: "life_extension",
+    id: TechnologyId.LIFE_EXTENSION,
     name: "Life Extension",
     description: "Double human lifespan through genetic therapy",
-    prerequisites: ["genetics", "advanced_medicine"],
+    prerequisites: [TechnologyId.GENETICS, TechnologyId.ADVANCED_MEDICINE],
     cost: { sols: 300 },
     unlocks: [],
   },
   {
-    id: "cryosleep",
+    id: TechnologyId.CRYOSLEEP,
     name: "Cryogenic Sleep",
     description: "Suspend humans for long-duration travel",
-    prerequisites: ["advanced_medicine"],
+    prerequisites: [TechnologyId.ADVANCED_MEDICINE],
     cost: { sols: 250 },
     unlocks: ["cryo_facility"],
   },
 
   // ENDGAME TIER (Sol 400+)
   {
-    id: "fusion_drive",
+    id: TechnologyId.FUSION_DRIVE,
     name: "Fusion Drive",
     description: "Propulsion system for interstellar travel",
-    prerequisites: ["nuclear_fission", "advanced_materials"],
+    prerequisites: [TechnologyId.NUCLEAR_FISSION, TechnologyId.ADVANCED_MATERIALS],
     cost: { sols: 400 },
     unlocks: [],
   },
   {
-    id: "closed_ecosystem",
+    id: TechnologyId.CLOSED_ECOSYSTEM,
     name: "Closed Ecosystem",
     description: "Fully self-sustaining life support",
-    prerequisites: ["hydroponics", "water_recycling", "genetics"],
+    prerequisites: [TechnologyId.HYDROPONICS, TechnologyId.WATER_RECYCLING, TechnologyId.GENETICS],
     cost: { sols: 350 },
     unlocks: [],
   },
   {
-    id: "generation_ship",
+    id: TechnologyId.GENERATION_SHIP,
     name: "Generation Ship",
     description: "Massive vessel for interstellar colonization - VICTORY!",
-    prerequisites: ["fusion_drive", "cryosleep", "closed_ecosystem"],
+    prerequisites: [TechnologyId.FUSION_DRIVE, TechnologyId.CRYOSLEEP, TechnologyId.CLOSED_ECOSYSTEM],
     cost: { sols: 500, resources: { materials: 1000 } },
     unlocks: ["arc_ship"],
   },

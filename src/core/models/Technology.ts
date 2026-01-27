@@ -1,10 +1,26 @@
 import type { ResourceDelta } from "./Resources";
 
+export enum TechnologyId {
+  HYDROPONICS = "hydroponics",
+  WATER_RECYCLING = "water_recycling",
+  ADVANCED_MATERIALS = "advanced_materials",
+  ROBOTICS = "robotics",
+  ASTEROID_MINING = "asteroid_mining",
+  NUCLEAR_FISSION = "nuclear_fission",
+  GENETICS = "genetics",
+  ADVANCED_MEDICINE = "advanced_medicine",
+  LIFE_EXTENSION = "life_extension",
+  CRYOSLEEP = "cryosleep",
+  FUSION_DRIVE = "fusion_drive",
+  CLOSED_ECOSYSTEM = "closed_ecosystem",
+  GENERATION_SHIP = "generation_ship",
+}
+
 export interface Technology {
-  id: string;
+  id: TechnologyId;
   name: string;
   description: string;
-  prerequisites: string[];
+  prerequisites: TechnologyId[];
   cost: {
     sols: number;
     resources?: ResourceDelta;
@@ -19,7 +35,7 @@ export interface TechEffect {
 }
 
 export interface TechResearch {
-  techId: string;
+  techId: TechnologyId;
   progress: number;
   requiredSols: number;
 }
