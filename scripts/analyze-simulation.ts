@@ -17,9 +17,9 @@ import type {
 /**
  * Parse command line arguments.
  */
-function parseArgs(): { runs: number; seed: number } {
+function parseArgs(): { runs: number; seed: number; debug: boolean } {
   const args = process.argv.slice(2);
-  const result = { runs: 200, seed: 1 };
+  const result = { runs: 200, seed: 1, debug: false };
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -29,8 +29,10 @@ function parseArgs(): { runs: number; seed: number } {
     } else if (arg === "--seed" || arg === "-s") {
       const value = args[++i];
       if (value) result.seed = parseInt(value, 10);
+    } else if (arg === "--debug" || arg === "-d") {
+      result.debug = true;
     } else if (arg === "--help" || arg === "-h") {
-      console.log(`
+      output(`
 Simulation Analysis Tool
 
 Usage: bun run scripts/analyze-simulation.ts [options]
@@ -38,6 +40,7 @@ Usage: bun run scripts/analyze-simulation.ts [options]
 Options:
   --runs N, -r N    Number of simulation runs (default: 200)
   --seed N, -s N    Starting seed (default: 1)
+  --debug, -d       Write analysis to logs/simulations/ with timestamp
   --help, -h        Show this help message
 `);
       process.exit(0);
@@ -295,26 +298,58 @@ function detectCrisis(
   checkResource("low_morale", morale, CRISIS_THRESHOLDS.morale);
 }
 
+// Module-level output capture for debug logging
+const outputLines: string[] = [];
+let captureOutput = false;
+
+/**
+ * Output function that logs to console and optionally captures for file writing.
+ */
+function output(message: string = ""): void {
+  console.log(message);
+  if (captureOutput) {
+    outputLines.push(message);
+  }
+}
+
+/**
+ * Write analysis output to a file in the logs directory.
+ */
+async function writeDebugLog(runs: number, seed: number): Promise<string> {
+  const now = new Date();
+  const timestamp = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const filename = `analysis-${timestamp}-r${runs}-s${seed}.txt`;
+  const filepath = `logs/simulations/${filename}`;
+
+  await Bun.write(filepath, outputLines.join("\n"));
+  return filepath;
+}
+
 /**
  * Main analysis function.
  */
-function main(): void {
-  const { runs, seed } = parseArgs();
+async function main(): Promise<void> {
+  const { runs, seed, debug } = parseArgs();
 
-  console.log(`Running ${runs} simulations for detailed analysis (seed: ${seed})...\n`);
+  if (debug) {
+    captureOutput = true;
+  }
+
+  output(`Running ${runs} simulations for detailed analysis (seed: ${seed})...`);
+  output();
 
   const results: RunResult[] = [];
   for (let i = 0; i < runs; i++) {
     results.push(runSingleGame(seed + i));
     if ((i + 1) % 50 === 0) {
-      console.log(`  Progress: ${i + 1}/${runs}`);
+      output(`  Progress: ${i + 1}/${runs}`);
     }
   }
 
   // === ANALYSIS ===
-  console.log("\n" + "=".repeat(60));
-  console.log(`SIMULATION INSIGHTS ANALYSIS (${runs} runs)`);
-  console.log("=".repeat(60));
+  output("\n" + "=".repeat(60));
+  output(`SIMULATION INSIGHTS ANALYSIS (${runs} runs)`);
+  output("=".repeat(60));
 
   // 1. Victory Time Distribution
   const victories = results.filter((r) => r.outcome === "victory");
@@ -328,38 +363,38 @@ function main(): void {
     const p95 = sortedTimes[Math.floor(sortedTimes.length * 0.95)] ?? 0;
     const mean = victoryTimes.reduce((a, b) => a + b, 0) / victoryTimes.length;
 
-    console.log("\n[Victory Time Distribution]");
-    console.log("-".repeat(40));
-    console.log(`  Min:    ${Math.min(...victoryTimes)} sols`);
-    console.log(`  Median: ${median} sols`);
-    console.log(`  Mean:   ${mean.toFixed(0)} sols`);
-    console.log(`  P90:    ${p90} sols`);
-    console.log(`  P95:    ${p95} sols`);
-    console.log(`  Max:    ${Math.max(...victoryTimes)} sols`);
+    output("\n[Victory Time Distribution]");
+    output("-".repeat(40));
+    output(`  Min:    ${Math.min(...victoryTimes)} sols`);
+    output(`  Median: ${median} sols`);
+    output(`  Mean:   ${mean.toFixed(0)} sols`);
+    output(`  P90:    ${p90} sols`);
+    output(`  P95:    ${p95} sols`);
+    output(`  Max:    ${Math.max(...victoryTimes)} sols`);
 
     // Histogram of victory times
-    console.log("\n  Time Distribution Histogram:");
+    output("\n  Time Distribution Histogram:");
     const buckets = [486, 490, 500, 550, 600, 700, 1000];
     let prevBucket = 0;
     for (const bucket of buckets) {
       const count = victoryTimes.filter((t) => t > prevBucket && t <= bucket).length;
       const bar = "#".repeat(Math.ceil(count / 3));
-      console.log(`  ${prevBucket.toString().padStart(4)}-${bucket.toString().padStart(4)}: ${bar} (${count})`);
+      output(`  ${prevBucket.toString().padStart(4)}-${bucket.toString().padStart(4)}: ${bar} (${count})`);
       prevBucket = bucket;
     }
   }
 
   // 2. Peak Population Analysis
   const peakPops = results.map((r) => r.peakPopulation);
-  console.log("\n[Peak Population Analysis]");
-  console.log("-".repeat(40));
-  console.log(`  Min:  ${Math.min(...peakPops)}`);
-  console.log(`  Mean: ${(peakPops.reduce((a, b) => a + b, 0) / peakPops.length).toFixed(1)}`);
-  console.log(`  Max:  ${Math.max(...peakPops)}`);
+  output("\n[Peak Population Analysis]");
+  output("-".repeat(40));
+  output(`  Min:  ${Math.min(...peakPops)}`);
+  output(`  Mean: ${(peakPops.reduce((a, b) => a + b, 0) / peakPops.length).toFixed(1)}`);
+  output(`  Max:  ${Math.max(...peakPops)}`);
 
   // 3. Technology Research Patterns
-  console.log("\n[Technology Research Frequency]");
-  console.log("-".repeat(40));
+  output("\n[Technology Research Frequency]");
+  output("-".repeat(40));
   const techCounts: Record<string, number> = {};
   for (const result of results) {
     for (const tech of result.techsResearched) {
@@ -369,12 +404,12 @@ function main(): void {
   const sortedTechs = Object.entries(techCounts).sort((a, b) => b[1] - a[1]);
   for (const [tech, count] of sortedTechs) {
     const pct = ((count / results.length) * 100).toFixed(0);
-    console.log(`  ${tech.padEnd(25)} ${pct}%`);
+    output(`  ${tech.padEnd(25)} ${pct}%`);
   }
 
   // 4. Building Construction Patterns
-  console.log("\n[Building Construction (avg count per game)]");
-  console.log("-".repeat(40));
+  output("\n[Building Construction (avg count per game)]");
+  output("-".repeat(40));
   const buildingTotals: Record<string, number> = {};
   for (const result of results) {
     for (const [building, count] of Object.entries(result.buildingsBuilt)) {
@@ -385,43 +420,43 @@ function main(): void {
     .map(([name, total]) => [name, total / results.length] as [string, number])
     .sort((a, b) => b[1] - a[1]);
   for (const [building, avg] of sortedBuildings) {
-    console.log(`  ${building.padEnd(20)} ${avg.toFixed(1)}`);
+    output(`  ${building.padEnd(20)} ${avg.toFixed(1)}`);
   }
 
   // 5. Outlier Analysis (slow victories)
   const slowRuns = results.filter((r) => r.outcome === "victory" && r.finalSol > 550);
-  console.log("\n[Outlier Analysis (victories > 550 sols)]");
-  console.log("-".repeat(40));
-  console.log(`  Count: ${slowRuns.length} / ${victories.length} (${((slowRuns.length / Math.max(victories.length, 1)) * 100).toFixed(1)}%)`);
+  output("\n[Outlier Analysis (victories > 550 sols)]");
+  output("-".repeat(40));
+  output(`  Count: ${slowRuns.length} / ${victories.length} (${((slowRuns.length / Math.max(victories.length, 1)) * 100).toFixed(1)}%)`);
   if (slowRuns.length > 0) {
     const avgSlowTime = slowRuns.reduce((a, r) => a + r.finalSol, 0) / slowRuns.length;
-    console.log(`  Avg time: ${avgSlowTime.toFixed(0)} sols`);
-    console.log(`  Likely cause: Random events disrupting morale/resources`);
+    output(`  Avg time: ${avgSlowTime.toFixed(0)} sols`);
+    output(`  Likely cause: Random events disrupting morale/resources`);
   }
 
   // 6. Critical Path Analysis
-  console.log("\n[Critical Path Analysis]");
-  console.log("-".repeat(40));
-  console.log("  Colony Charter requires:");
-  console.log("    - hydroponics (60 sols)");
-  console.log("    - water_recycling (45 sols)");
-  console.log("    - advanced_materials (75 sols)");
-  console.log("    = 180 sols minimum for tech");
-  console.log("    + 300 sols sustained = 480 sols theoretical minimum");
+  output("\n[Critical Path Analysis]");
+  output("-".repeat(40));
+  output("  Colony Charter requires:");
+  output("    - hydroponics (60 sols)");
+  output("    - water_recycling (45 sols)");
+  output("    - advanced_materials (75 sols)");
+  output("    = 180 sols minimum for tech");
+  output("    + 300 sols sustained = 480 sols theoretical minimum");
   if (victoryTimes.length > 0) {
-    console.log(`  Actual minimum achieved: ${Math.min(...victoryTimes)} sols`);
-    console.log(`  Gap: ${Math.min(...victoryTimes) - 480} sols (setup/building time)`);
+    output(`  Actual minimum achieved: ${Math.min(...victoryTimes)} sols`);
+    output(`  Gap: ${Math.min(...victoryTimes) - 480} sols (setup/building time)`);
   }
 
   // 7. Overall Statistics
-  console.log("\n[Overall Statistics]");
-  console.log("-".repeat(40));
-  console.log(`  Win Rate: ${((victories.length / results.length) * 100).toFixed(0)}%`);
-  console.log(`  Victories: ${victories.length}`);
-  console.log(`  Defeats: ${defeats.length}`);
+  output("\n[Overall Statistics]");
+  output("-".repeat(40));
+  output(`  Win Rate: ${((victories.length / results.length) * 100).toFixed(0)}%`);
+  output(`  Victories: ${victories.length}`);
+  output(`  Defeats: ${defeats.length}`);
 
   if (defeats.length > 0) {
-    console.log("\n  Defeat Reasons:");
+    output("\n  Defeat Reasons:");
     const defeatCounts: Record<string, number> = {};
     for (const d of defeats) {
       if (d.defeatReason) {
@@ -429,13 +464,13 @@ function main(): void {
       }
     }
     for (const [reason, count] of Object.entries(defeatCounts)) {
-      console.log(`    - ${reason}: ${count}`);
+      output(`    - ${reason}: ${count}`);
     }
   }
 
   // Victory breakdown
   if (victories.length > 0) {
-    console.log("\n  Victory Types:");
+    output("\n  Victory Types:");
     const victoryCounts: Record<string, number> = {};
     for (const v of victories) {
       if (v.victoryType) {
@@ -444,7 +479,7 @@ function main(): void {
     }
     for (const [type, count] of Object.entries(victoryCounts)) {
       const pct = ((count / victories.length) * 100).toFixed(0);
-      console.log(`    - ${type}: ${count} (${pct}%)`);
+      output(`    - ${type}: ${count} (${pct}%)`);
     }
   }
 
@@ -465,7 +500,13 @@ function main(): void {
   // 12. Crisis Timeline Analysis
   analyzeCrisisTimeline(results);
 
-  console.log("\n" + "=".repeat(60));
+  output("\n" + "=".repeat(60));
+
+  // Write debug log if enabled
+  if (debug) {
+    const filepath = await writeDebugLog(runs, seed);
+    output(`\nAnalysis written to: ${filepath}`);
+  }
 }
 
 /**
@@ -496,11 +537,11 @@ function analyzeVictoriesVsDefeats(
   victories: RunResult[],
   defeats: RunResult[]
 ): void {
-  console.log("\n[Victory vs Defeat Comparison]");
-  console.log("-".repeat(40));
+  output("\n[Victory vs Defeat Comparison]");
+  output("-".repeat(40));
 
   if (victories.length === 0 || defeats.length === 0) {
-    console.log("  Need both victories and defeats for comparison");
+    output("  Need both victories and defeats for comparison");
     return;
   }
 
@@ -522,11 +563,11 @@ function analyzeVictoriesVsDefeats(
     defeats.reduce((a, r) => a + Object.values(r.buildingsBuilt).reduce((s, c) => s + c, 0), 0) /
     defeats.length;
 
-  console.log("  Metric                   Victory    Defeat");
-  console.log("  " + "-".repeat(45));
-  console.log(`  Avg Peak Population      ${avgPeakPopVictory.toFixed(1).padStart(7)}    ${avgPeakPopDefeat.toFixed(1).padStart(6)}`);
-  console.log(`  Avg Tech Count           ${avgTechCountVictory.toFixed(1).padStart(7)}    ${avgTechCountDefeat.toFixed(1).padStart(6)}`);
-  console.log(`  Avg Building Count       ${avgBuildingCountVictory.toFixed(1).padStart(7)}    ${avgBuildingCountDefeat.toFixed(1).padStart(6)}`);
+  output("  Metric                   Victory    Defeat");
+  output("  " + "-".repeat(45));
+  output(`  Avg Peak Population      ${avgPeakPopVictory.toFixed(1).padStart(7)}    ${avgPeakPopDefeat.toFixed(1).padStart(6)}`);
+  output(`  Avg Tech Count           ${avgTechCountVictory.toFixed(1).padStart(7)}    ${avgTechCountDefeat.toFixed(1).padStart(6)}`);
+  output(`  Avg Building Count       ${avgBuildingCountVictory.toFixed(1).padStart(7)}    ${avgBuildingCountDefeat.toFixed(1).padStart(6)}`);
 
   // First building timing comparison
   const getFirstBuildingSol = (results: RunResult[], buildingId: string): number[] => {
@@ -535,7 +576,7 @@ function analyzeVictoriesVsDefeats(
       .map((r) => r.buildingFirstBuiltSol?.[buildingId] ?? 0);
   };
 
-  console.log("\n  First Building Timing (avg sol):");
+  output("\n  First Building Timing (avg sol):");
   const buildings = ["basic_farm", "oxygen_generator", "solar_panel", "habitat"];
   for (const building of buildings) {
     const victoryTimes = getFirstBuildingSol(victories, building);
@@ -550,7 +591,7 @@ function analyzeVictoriesVsDefeats(
         defeatTimes.length > 0
           ? (defeatTimes.reduce((a, b) => a + b, 0) / defeatTimes.length).toFixed(0)
           : "N/A";
-      console.log(`    ${building.padEnd(20)} ${avgVictory.padStart(7)}    ${avgDefeat.padStart(6)}`);
+      output(`    ${building.padEnd(20)} ${avgVictory.padStart(7)}    ${avgDefeat.padStart(6)}`);
     }
   }
 
@@ -560,10 +601,10 @@ function analyzeVictoriesVsDefeats(
     const sortedDefeatSols = [...defeatSols].sort((a, b) => a - b);
     const medianDefeatSol = sortedDefeatSols[Math.floor(sortedDefeatSols.length / 2)] ?? 0;
 
-    console.log("\n  Defeat Sol Distribution:");
-    console.log(`    Min: ${Math.min(...defeatSols)}`);
-    console.log(`    Median: ${medianDefeatSol}`);
-    console.log(`    Max: ${Math.max(...defeatSols)}`);
+    output("\n  Defeat Sol Distribution:");
+    output(`    Min: ${Math.min(...defeatSols)}`);
+    output(`    Median: ${medianDefeatSol}`);
+    output(`    Max: ${Math.max(...defeatSols)}`);
   }
 }
 
@@ -571,8 +612,8 @@ function analyzeVictoriesVsDefeats(
  * Analyze correlations between early game metrics and outcomes.
  */
 function analyzeCorrelations(results: RunResult[]): void {
-  console.log("\n[Correlation Analysis]");
-  console.log("-".repeat(40));
+  output("\n[Correlation Analysis]");
+  output("-".repeat(40));
 
   // Convert outcome to numeric (1 = victory, 0 = defeat)
   const outcomes = results.map((r) => (r.outcome === "victory" ? 1 : 0));
@@ -596,24 +637,24 @@ function analyzeCorrelations(results: RunResult[]): void {
   });
   const pop100Corr = pearsonCorrelation(popAt100, outcomes);
 
-  console.log("  Correlation with Victory (Pearson r):");
-  console.log(`    First Farm Sol:        ${farmCorr.toFixed(3)} ${farmCorr < -0.1 ? "(earlier = better)" : ""}`);
-  console.log(`    Tech Count:            ${techCorr.toFixed(3)} ${techCorr > 0.1 ? "(more = better)" : ""}`);
-  console.log(`    Peak Population:       ${popCorr.toFixed(3)} ${popCorr > 0.1 ? "(higher = better)" : ""}`);
-  console.log(`    Population at Sol 100: ${pop100Corr.toFixed(3)} ${pop100Corr > 0.1 ? "(higher = better)" : ""}`);
+  output("  Correlation with Victory (Pearson r):");
+  output(`    First Farm Sol:        ${farmCorr.toFixed(3)} ${farmCorr < -0.1 ? "(earlier = better)" : ""}`);
+  output(`    Tech Count:            ${techCorr.toFixed(3)} ${techCorr > 0.1 ? "(more = better)" : ""}`);
+  output(`    Peak Population:       ${popCorr.toFixed(3)} ${popCorr > 0.1 ? "(higher = better)" : ""}`);
+  output(`    Population at Sol 100: ${pop100Corr.toFixed(3)} ${pop100Corr > 0.1 ? "(higher = better)" : ""}`);
 
-  console.log("\n  Interpretation:");
-  console.log("    |r| > 0.5: Strong correlation");
-  console.log("    |r| > 0.3: Moderate correlation");
-  console.log("    |r| > 0.1: Weak correlation");
+  output("\n  Interpretation:");
+  output("    |r| > 0.5: Strong correlation");
+  output("    |r| > 0.3: Moderate correlation");
+  output("    |r| > 0.1: Weak correlation");
 }
 
 /**
  * Analyze blocked decisions to identify bottlenecks.
  */
 function analyzeBottlenecks(results: RunResult[]): void {
-  console.log("\n[Bottleneck Analysis]");
-  console.log("-".repeat(40));
+  output("\n[Bottleneck Analysis]");
+  output("-".repeat(40));
 
   // Aggregate blocked decisions
   const blockCounts: Record<string, number> = {};
@@ -635,35 +676,35 @@ function analyzeBottlenecks(results: RunResult[]): void {
   const sortedBlocks = Object.entries(blockCounts).sort((a, b) => b[1] - a[1]);
 
   if (sortedBlocks.length === 0) {
-    console.log("  No blocked decisions recorded");
+    output("  No blocked decisions recorded");
     return;
   }
 
-  console.log("  Top 10 Most Frequent Blocks:");
-  console.log("  " + "-".repeat(50));
+  output("  Top 10 Most Frequent Blocks:");
+  output("  " + "-".repeat(50));
   for (const [key, count] of sortedBlocks.slice(0, 10)) {
     const pct = ((count / results.length) * 100).toFixed(0);
-    console.log(`    ${key.padEnd(35)} ${count} (${pct}%)`);
+    output(`    ${key.padEnd(35)} ${count} (${pct}%)`);
 
     // Show top reason for this block
     const reasons = blockReasons[key];
     if (reasons) {
       const topReason = Object.entries(reasons).sort((a, b) => b[1] - a[1])[0];
       if (topReason) {
-        console.log(`      └─ Reason: ${topReason[0].substring(0, 40)}`);
+        output(`      └─ Reason: ${topReason[0].substring(0, 40)}`);
       }
     }
   }
 
   // Resource bottleneck frequency
-  console.log("\n  Bottleneck by Category:");
+  output("\n  Bottleneck by Category:");
   const categoryTotals: Record<string, number> = {};
   for (const [key, count] of sortedBlocks) {
     const category = key.split(":")[0] ?? "unknown";
     categoryTotals[category] = (categoryTotals[category] ?? 0) + count;
   }
   for (const [category, total] of Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])) {
-    console.log(`    ${category.padEnd(15)} ${total}`);
+    output(`    ${category.padEnd(15)} ${total}`);
   }
 }
 
@@ -671,8 +712,8 @@ function analyzeBottlenecks(results: RunResult[]): void {
  * Analyze event impact on game outcomes.
  */
 function analyzeEventImpact(results: RunResult[]): void {
-  console.log("\n[Event Impact Analysis]");
-  console.log("-".repeat(40));
+  output("\n[Event Impact Analysis]");
+  output("-".repeat(40));
 
   // Count events by type and track victory rate
   const eventStats: Record<string, { total: number; victories: number }> = {};
@@ -697,22 +738,22 @@ function analyzeEventImpact(results: RunResult[]): void {
   }
 
   if (Object.keys(eventStats).length === 0) {
-    console.log("  No events recorded");
+    output("  No events recorded");
     return;
   }
 
   // Sort by frequency
   const sortedEvents = Object.entries(eventStats).sort((a, b) => b[1].total - a[1].total);
 
-  console.log("  Events by Frequency and Victory Rate:");
-  console.log("  " + "-".repeat(55));
-  console.log("  Event ID                  Count    Victory Rate");
+  output("  Events by Frequency and Victory Rate:");
+  output("  " + "-".repeat(55));
+  output("  Event ID                  Count    Victory Rate");
   for (const [eventId, stats] of sortedEvents) {
     const victoryRate = stats.total > 0 ? (stats.victories / stats.total) * 100 : 0;
     const baseVictoryRate = (results.filter((r) => r.outcome === "victory").length / results.length) * 100;
     const diff = victoryRate - baseVictoryRate;
     const diffStr = diff > 0 ? `+${diff.toFixed(0)}%` : `${diff.toFixed(0)}%`;
-    console.log(
+    output(
       `  ${eventId.padEnd(25)} ${stats.total.toString().padStart(5)}    ${victoryRate.toFixed(0)}% (${diffStr})`
     );
   }
@@ -720,15 +761,15 @@ function analyzeEventImpact(results: RunResult[]): void {
   // Calculate baseline victory rate for reference
   const baseVictoryRate =
     (results.filter((r) => r.outcome === "victory").length / results.length) * 100;
-  console.log(`\n  Baseline Victory Rate: ${baseVictoryRate.toFixed(0)}%`);
+  output(`\n  Baseline Victory Rate: ${baseVictoryRate.toFixed(0)}%`);
 }
 
 /**
  * Analyze crisis timeline to understand when problems occur.
  */
 function analyzeCrisisTimeline(results: RunResult[]): void {
-  console.log("\n[Crisis Timeline Analysis]");
-  console.log("-".repeat(40));
+  output("\n[Crisis Timeline Analysis]");
+  output("-".repeat(40));
 
   // Aggregate crisis points
   const crisisByType: Record<string, { warning: number[]; critical: number[] }> = {};
@@ -747,12 +788,12 @@ function analyzeCrisisTimeline(results: RunResult[]): void {
   }
 
   if (Object.keys(crisisByType).length === 0) {
-    console.log("  No crisis events recorded");
+    output("  No crisis events recorded");
     return;
   }
 
-  console.log("  Crisis Events by Type:");
-  console.log("  " + "-".repeat(55));
+  output("  Crisis Events by Type:");
+  output("  " + "-".repeat(55));
 
   for (const [type, data] of Object.entries(crisisByType)) {
     const totalWarnings = data.warning.length;
@@ -761,19 +802,19 @@ function analyzeCrisisTimeline(results: RunResult[]): void {
 
     if (total === 0) continue;
 
-    console.log(`\n  ${type}:`);
-    console.log(`    Total: ${total} events (${totalWarnings} warning, ${totalCritical} critical)`);
+    output(`\n  ${type}:`);
+    output(`    Total: ${total} events (${totalWarnings} warning, ${totalCritical} critical)`);
 
     if (data.warning.length > 0) {
       const sorted = [...data.warning].sort((a, b) => a - b);
       const median = sorted[Math.floor(sorted.length / 2)] ?? 0;
-      console.log(`    Warning - Median Sol: ${median}, Range: ${Math.min(...sorted)}-${Math.max(...sorted)}`);
+      output(`    Warning - Median Sol: ${median}, Range: ${Math.min(...sorted)}-${Math.max(...sorted)}`);
     }
 
     if (data.critical.length > 0) {
       const sorted = [...data.critical].sort((a, b) => a - b);
       const median = sorted[Math.floor(sorted.length / 2)] ?? 0;
-      console.log(`    Critical - Median Sol: ${median}, Range: ${Math.min(...sorted)}-${Math.max(...sorted)}`);
+      output(`    Critical - Median Sol: ${median}, Range: ${Math.min(...sorted)}-${Math.max(...sorted)}`);
     }
   }
 
@@ -789,11 +830,11 @@ function analyzeCrisisTimeline(results: RunResult[]): void {
   if (allCrisisSols.length > 0) {
     const sorted = [...allCrisisSols].sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)] ?? 0;
-    console.log("\n  First Crisis Timing:");
-    console.log(`    Median: Sol ${median}`);
-    console.log(`    Range: Sol ${Math.min(...sorted)} - ${Math.max(...sorted)}`);
+    output("\n  First Crisis Timing:");
+    output(`    Median: Sol ${median}`);
+    output(`    Range: Sol ${Math.min(...sorted)} - ${Math.max(...sorted)}`);
   }
 }
 
 // Run main
-main();
+main().catch(console.error);
