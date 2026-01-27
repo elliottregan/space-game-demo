@@ -34,6 +34,15 @@ export class GameState {
   npcInfluence: NPCInfluenceManager;
 
   private eventLog: GameEvent[] = [];
+  private autoAssignNewColonists: boolean = true;
+
+  getAutoAssignNewColonists(): boolean {
+    return this.autoAssignNewColonists;
+  }
+
+  setAutoAssignNewColonists(value: boolean): void {
+    this.autoAssignNewColonists = value;
+  }
 
   constructor() {
     this.resources = new ResourceManager(STARTING_RESOURCES);
@@ -83,7 +92,17 @@ export class GameState {
       morale: this.operations.getMoraleEffect(),
       health: this.operations.getHealthEffect(),
     };
-    events.push(...this.colony.tick(this.resources, this.buildings, policyEffects));
+    const colonyEvents = this.colony.tick(this.resources, this.buildings, policyEffects);
+    events.push(...colonyEvents);
+
+    // Auto-assign new colonists to understaffed buildings if enabled
+    if (this.autoAssignNewColonists) {
+      const hasNewColonists = colonyEvents.some((e) => e.type === "COLONIST_BORN");
+      if (hasNewColonists) {
+        const assignEvents = this.buildings.autoAssignAllWorkers(this.colony);
+        events.push(...assignEvents);
+      }
+    }
 
     // Assign housing after colony tick
     this.colony.assignHousing(this.buildings);
@@ -218,6 +237,7 @@ export class GameState {
       victory: this.victory.toJSON(),
       operations: this.operations.toJSON(),
       npcInfluence: this.npcInfluence.toJSON(),
+      autoAssignNewColonists: this.autoAssignNewColonists,
     };
   }
 
@@ -245,6 +265,10 @@ export class GameState {
         INITIAL_RELATIONSHIPS,
         PROJECTS,
       );
+    }
+
+    if (data.autoAssignNewColonists !== undefined) {
+      state.autoAssignNewColonists = data.autoAssignNewColonists;
     }
 
     return state;

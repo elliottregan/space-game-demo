@@ -432,6 +432,27 @@ class GameService {
     return this.facade.buildings.repurpose(buildingId, targetDefId as BuildingId).success;
   }
 
+  // Workforce optimization
+  optimizeWorkforce(): { success: boolean; assignmentsChanged: number } {
+    const result = this.facade.colony.optimizeWorkforce();
+    if (result.success) {
+      return { success: true, assignmentsChanged: result.data.assignmentsChanged };
+    }
+    return { success: false, assignmentsChanged: 0 };
+  }
+
+  getUnassignedColonists(): Colonist[] {
+    return [...this.facade.colony.getUnassignedColonists()];
+  }
+
+  getAutoAssignNewColonists(): boolean {
+    return this.facade.colony.getAutoAssignNewColonists();
+  }
+
+  setAutoAssignNewColonists(value: boolean): void {
+    this.facade.colony.setAutoAssignNewColonists(value);
+  }
+
   // Game management
   newGame(): void {
     this.facade.newGame();
