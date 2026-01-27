@@ -14,4 +14,4 @@ export type {
   EventImpactAnalysis,
   CrisisTimelineAnalysis,
   OutlierAnalysis,
-} from "../simulation/types";
+} from "../simulation/types"
