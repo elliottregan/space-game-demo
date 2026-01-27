@@ -10,6 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `bun run preview` - Preview production build
 - `bun run lint` - Lint with oxlint
 - `bun run lint:fix` - Lint and auto-fix with oxlint
+- `bun run format` - Format with oxfmt
+- `bun run format:check` - Check formatting with oxfmt
 - `bun test` - Run all tests
 - `bun test tests/ResourceManager.test.ts` - Run single test file
 - `bun run simulate` - Run game simulation
