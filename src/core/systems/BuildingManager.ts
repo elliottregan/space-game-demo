@@ -7,8 +7,8 @@ import {
   OXYGEN_DEFICIT_EFFICIENCY_PENALTY,
 } from "../balance/BuildingBalance";
 import { BUILDING_MODES, REPAIR_DURATION_SOLS } from "../balance/OperationsBalance";
+import { getSkillById } from "../data/skills";
 import { type Building, type BuildingDefinition, BuildingId } from "../models/Building";
-import type { ColonistRole } from "../models/Colonist";
 import type { GameEvent } from "../models/GameEvent";
 import type { ResourceDelta } from "../models/Resources";
 import {
@@ -94,6 +94,9 @@ export class BuildingManager {
       building.constructionProgress = constructionTime;
       building.repurposeFromDefId = undefined; // Clear repurpose flag
 
+      // Auto-assign workers before applying resource flow (staffing affects efficiency)
+      this.autoAssignWorkers(building, def);
+
       // Add mode-adjusted production/consumption
       this.applyBuildingResourceFlow(building.id, resources, true);
 
@@ -104,6 +107,52 @@ export class BuildingManager {
         severity: "info",
         message: `${def.name} construction complete!`,
       });
+    }
+  }
+
+  /**
+   * Auto-assign available colonists to a newly completed building.
+   * Prioritizes colonists with skill affinities matching the building's worker role.
+   */
+  private autoAssignWorkers(building: Building, def: BuildingDefinition): void {
+    if (!def.workerSlots || !this.colonyManager) return;
+
+    // Get all colonists not already assigned to any building
+    const assignedColonistIds = new Set<string>();
+    for (const b of this.buildings.values()) {
+      for (const colonistId of b.assignedWorkers) {
+        assignedColonistIds.add(colonistId);
+      }
+    }
+
+    const allColonists = this.colonyManager.getColonists();
+    const availableColonists = allColonists.filter((c) => !assignedColonistIds.has(c.id));
+
+    if (availableColonists.length === 0) return;
+
+    // Score colonists by skill affinity to the building's worker role
+    const scoredColonists = availableColonists.map((colonist) => {
+      let score = 0;
+
+      if (def.workerRole) {
+        for (const skillId of colonist.skills) {
+          const skill = getSkillById(skillId);
+          if (skill?.affinity.includes(def.workerRole)) {
+            score += skill.efficiencyBonus;
+          }
+        }
+      }
+
+      return { colonist, score };
+    });
+
+    // Sort by score descending (best matches first)
+    scoredColonists.sort((a, b) => b.score - a.score);
+
+    // Assign up to workerSlots colonists
+    const toAssign = scoredColonists.slice(0, def.workerSlots);
+    for (const { colonist } of toAssign) {
+      building.assignedWorkers.push(colonist.id);
     }
   }
 

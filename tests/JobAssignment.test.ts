@@ -31,16 +31,17 @@ describe("Job Assignment", () => {
       );
       expect(farm).not.toBeNull();
 
-      // Complete construction
+      // Complete construction (workers are auto-assigned)
       for (let i = 0; i < 15; i++) {
         gameState.buildings.tick(gameState.resources);
       }
 
-      const colonist = gameState.colony.getColonists()[0]!;
-      gameState.buildings.assignWorker(farm!.id, colonist.id);
+      // Use the auto-assigned worker
+      const building = gameState.buildings.getBuilding(farm!.id)!;
+      const colonistId = building.assignedWorkers[0]!;
 
       const workplace = gameState.workforce.getColonistWorkplace(
-        colonist.id,
+        colonistId,
         gameState.buildings
       );
       expect(workplace).toBe(farm!.id);
@@ -57,6 +58,12 @@ describe("Job Assignment", () => {
       // Complete construction
       for (let i = 0; i < 15; i++) {
         gameState.buildings.tick(gameState.resources);
+      }
+
+      // Remove auto-assigned workers to test unstaffed state
+      const building = gameState.buildings.getBuilding(farm!.id)!;
+      for (const workerId of [...building.assignedWorkers]) {
+        gameState.buildings.removeWorker(farm!.id, workerId);
       }
 
       const efficiency = gameState.buildings.getStaffingEfficiency(farm!.id);
@@ -89,7 +96,12 @@ describe("Job Assignment", () => {
         gameState.buildings.tick(gameState.resources);
       }
 
-      // Assign 1 of 2 workers (50% staffing)
+      // Remove auto-assigned workers, then assign just 1 of 2 (50% staffing)
+      const building = gameState.buildings.getBuilding(farm!.id)!;
+      for (const workerId of [...building.assignedWorkers]) {
+        gameState.buildings.removeWorker(farm!.id, workerId);
+      }
+
       const colonist = gameState.colony.getColonists()[0]!;
       gameState.buildings.assignWorker(farm!.id, colonist.id);
 
@@ -128,6 +140,12 @@ describe("Job Assignment", () => {
       );
       for (let i = 0; i < 15; i++) {
         gameState.buildings.tick(gameState.resources);
+      }
+
+      // Remove auto-assigned workers to test unstaffed state
+      const building = gameState.buildings.getBuilding(farm!.id)!;
+      for (const workerId of [...building.assignedWorkers]) {
+        gameState.buildings.removeWorker(farm!.id, workerId);
       }
 
       const production = gameState.buildings.getEffectiveProduction(farm!.id);
@@ -186,6 +204,12 @@ describe("Job Assignment", () => {
       );
       for (let i = 0; i < 15; i++) {
         gameState.buildings.tick(gameState.resources);
+      }
+
+      // Remove auto-assigned workers to test empty state
+      const building = gameState.buildings.getBuilding(farm!.id)!;
+      for (const workerId of [...building.assignedWorkers]) {
+        gameState.buildings.removeWorker(farm!.id, workerId);
       }
 
       const efficiency = gameState.buildings.getWorkerEfficiency(farm!.id);
@@ -252,6 +276,16 @@ describe("Job Assignment", () => {
         gameState.buildings.tick(gameState.resources);
       }
 
+      // Clear auto-assigned workers from both buildings
+      const building1 = gameState.buildings.getBuilding(farm1!.id)!;
+      const building2 = gameState.buildings.getBuilding(farm2!.id)!;
+      for (const workerId of [...building1.assignedWorkers]) {
+        gameState.buildings.removeWorker(farm1!.id, workerId);
+      }
+      for (const workerId of [...building2.assignedWorkers]) {
+        gameState.buildings.removeWorker(farm2!.id, workerId);
+      }
+
       const colonist = gameState.colony.getColonists()[0]!;
 
       // Assign to first farm
@@ -275,12 +309,13 @@ describe("Job Assignment", () => {
         gameState.buildings.tick(gameState.resources);
       }
 
-      const colonist = gameState.colony.getColonists()[0]!;
-      gameState.buildings.assignWorker(farm!.id, colonist.id);
+      // Get a colonist that was auto-assigned to the farm
+      const building = gameState.buildings.getBuilding(farm!.id)!;
+      const colonistId = building.assignedWorkers[0]!;
+      const colonist = gameState.colony.getColonist(colonistId)!;
 
       // Verify assignment
-      const building = gameState.buildings.getBuilding(farm!.id);
-      expect(building?.assignedWorkers).toContain(colonist.id);
+      expect(building.assignedWorkers).toContain(colonist.id);
 
       // Kill the colonist (simulate via removeColonist if available, or direct manipulation)
       gameState.colony.removeColonist(colonist.id, gameState.buildings);
@@ -325,6 +360,12 @@ describe("Job Assignment", () => {
       );
       for (let i = 0; i < 15; i++) {
         gameState.buildings.tick(gameState.resources);
+      }
+
+      // Remove auto-assigned workers to test manual workflow
+      const building = gameState.buildings.getBuilding(farm!.id)!;
+      for (const workerId of [...building.assignedWorkers]) {
+        gameState.buildings.removeWorker(farm!.id, workerId);
       }
 
       // Initially no production (no workers)

@@ -331,10 +331,15 @@ describe("ColonyFacade", () => {
         api.game.advanceSol();
       }
 
-      const colonist = api.colony.snapshot().colonists[0]!;
       const activeBuildings = api.buildings.snapshot().active;
       const farm = activeBuildings.find((b) => b.definitionId === BuildingId.BASIC_FARM);
 
+      // Clear auto-assigned workers and find an unassigned colonist
+      for (const workerId of [...farm!.assignedWorkers]) {
+        api.colony.unassignFromBuilding(workerId);
+      }
+
+      const colonist = api.colony.snapshot().colonists[0]!;
       const result = api.colony.assignToBuilding(colonist.id, farm!.id);
       expect(result.success).toBe(true);
     });
@@ -369,13 +374,14 @@ describe("ColonyFacade", () => {
         api.game.advanceSol();
       }
 
-      const colonist = api.colony.snapshot().colonists[0]!;
       const activeBuildings = api.buildings.snapshot().active;
       const farm = activeBuildings.find((b) => b.definitionId === BuildingId.BASIC_FARM);
 
-      api.colony.assignToBuilding(colonist.id, farm!.id);
-      const result = api.colony.unassignFromBuilding(colonist.id);
+      // Use an auto-assigned worker (farm will have workers after construction)
+      const assignedWorkerId = farm!.assignedWorkers[0];
+      expect(assignedWorkerId).toBeDefined();
 
+      const result = api.colony.unassignFromBuilding(assignedWorkerId!);
       expect(result.success).toBe(true);
     });
   });
@@ -390,20 +396,28 @@ describe("ColonyFacade", () => {
         api.game.advanceSol();
       }
 
-      const colonist = api.colony.snapshot().colonists[0]!;
       const activeBuildings = api.buildings.snapshot().active;
       const farm = activeBuildings.find((b) => b.definitionId === BuildingId.BASIC_FARM);
 
-      api.colony.assignToBuilding(colonist.id, farm!.id);
+      // Use an auto-assigned worker (farm will have workers after construction)
+      const assignedWorkerId = farm!.assignedWorkers[0];
+      expect(assignedWorkerId).toBeDefined();
 
-      const workplace = api.colony.getWorkplace(colonist.id);
+      const workplace = api.colony.getWorkplace(assignedWorkerId!);
       expect(workplace).toBe(farm!.id);
     });
 
     it("should return undefined for unassigned colonist", () => {
-      const colonist = api.colony.snapshot().colonists[0]!;
-      const workplace = api.colony.getWorkplace(colonist.id);
-      expect(workplace).toBeUndefined();
+      // Find a colonist not assigned to any building
+      const colonists = api.colony.snapshot().colonists;
+      const buildings = api.buildings.snapshot().active;
+      const assignedIds = new Set(buildings.flatMap((b) => b.assignedWorkers));
+      const unassigned = colonists.find((c) => !assignedIds.has(c.id));
+
+      if (unassigned) {
+        const workplace = api.colony.getWorkplace(unassigned.id);
+        expect(workplace).toBeUndefined();
+      }
     });
   });
 });
