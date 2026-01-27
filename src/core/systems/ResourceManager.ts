@@ -11,6 +11,19 @@ export class ResourceManager {
     this.resources = { ...initial };
   }
 
+  private updateDelta(
+    target: ResourceDelta,
+    delta: ResourceDelta,
+    subtract: boolean = false,
+  ): void {
+    for (const [key, value] of Object.entries(delta)) {
+      const resourceKey = key as keyof Resources;
+      const current = target[resourceKey] || 0;
+      const amount = value || 0;
+      target[resourceKey] = subtract ? Math.max(0, current - amount) : current + amount;
+    }
+  }
+
   tick(): GameEvent[] {
     const events: GameEvent[] = [];
 
@@ -47,37 +60,19 @@ export class ResourceManager {
   }
 
   addProduction(delta: ResourceDelta): void {
-    for (const [key, value] of Object.entries(delta)) {
-      const resourceKey = key as keyof Resources;
-      this.production[resourceKey] = (this.production[resourceKey] || 0) + (value || 0);
-    }
+    this.updateDelta(this.production, delta);
   }
 
   removeProduction(delta: ResourceDelta): void {
-    for (const [key, value] of Object.entries(delta)) {
-      const resourceKey = key as keyof Resources;
-      this.production[resourceKey] = Math.max(
-        0,
-        (this.production[resourceKey] || 0) - (value || 0),
-      );
-    }
+    this.updateDelta(this.production, delta, true);
   }
 
   addConsumption(delta: ResourceDelta): void {
-    for (const [key, value] of Object.entries(delta)) {
-      const resourceKey = key as keyof Resources;
-      this.consumption[resourceKey] = (this.consumption[resourceKey] || 0) + (value || 0);
-    }
+    this.updateDelta(this.consumption, delta);
   }
 
   removeConsumption(delta: ResourceDelta): void {
-    for (const [key, value] of Object.entries(delta)) {
-      const resourceKey = key as keyof Resources;
-      this.consumption[resourceKey] = Math.max(
-        0,
-        (this.consumption[resourceKey] || 0) - (value || 0),
-      );
-    }
+    this.updateDelta(this.consumption, delta, true);
   }
 
   canAfford(cost: ResourceDelta): boolean {
