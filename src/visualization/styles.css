@@ -1,0 +1,222 @@
+/* Force dark mode for visualization tool */
+:root {
+  --g-color-bg-base: oklch(15% 0.01 250);
+  --g-color-bg-surface: oklch(18% 0.01 250);
+  --g-color-bg-elevated: oklch(22% 0.01 250);
+  --g-color-text: oklch(90% 0 0);
+  --g-color-text-muted: oklch(60% 0 0);
+  --g-color-border: oklch(30% 0.01 250);
+
+  /* Chart colors */
+  --chart-batch-a: oklch(65% 0.15 250);
+  --chart-batch-b: oklch(70% 0.18 50);
+  --chart-positive: oklch(65% 0.15 145);
+  --chart-negative: oklch(60% 0.2 25);
+  --chart-warning: oklch(70% 0.18 85);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--g-font-mono, 'JetBrains Mono', monospace);
+  background: var(--g-color-bg-base);
+  color: var(--g-color-text);
+  min-height: 100vh;
+  padding: var(--g-space-md, 16px);
+}
+
+#app {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--g-space-lg, 24px);
+  padding-bottom: var(--g-space-md, 16px);
+  border-bottom: 2px solid var(--g-color-border);
+}
+
+.header h1 {
+  font-size: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--g-accent-cyan, #5f9ea0);
+}
+
+.batch-selectors {
+  display: flex;
+  gap: var(--g-space-md, 16px);
+  align-items: center;
+}
+
+.batch-selector {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-sm, 8px);
+}
+
+.batch-selector label {
+  font-size: 0.875rem;
+  color: var(--g-color-text-muted);
+  text-transform: uppercase;
+}
+
+.batch-selector select {
+  background: var(--g-color-bg-surface);
+  color: var(--g-color-text);
+  border: 1px solid var(--g-color-border);
+  padding: 0.5rem 1rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  min-width: 280px;
+}
+
+.charts-grid {
+  display: grid;
+  gap: var(--g-space-md, 16px);
+}
+
+.chart-panel {
+  background: var(--g-color-bg-surface);
+  border: 1px solid var(--g-color-border);
+  padding: var(--g-space-md, 16px);
+}
+
+.chart-panel h2 {
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--g-space-md, 16px);
+  color: var(--g-accent-amber, #d4a574);
+  border-bottom: 1px solid var(--g-color-border);
+  padding-bottom: var(--g-space-sm, 8px);
+}
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--g-space-md, 16px);
+}
+
+.summary-card {
+  background: var(--g-color-bg-elevated);
+  padding: var(--g-space-md, 16px);
+  text-align: center;
+}
+
+.summary-card .value {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.summary-card .label {
+  font-size: 0.75rem;
+  color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  margin-top: var(--g-space-xs, 4px);
+}
+
+.loading {
+  text-align: center;
+  padding: var(--g-space-xl, 32px);
+  color: var(--g-color-text-muted);
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--g-space-xl, 32px);
+  color: var(--g-color-text-muted);
+}
+
+/* Chart SVG styles */
+.chart-container svg {
+  display: block;
+  width: 100%;
+}
+
+.axis text {
+  fill: var(--g-color-text-muted);
+  font-size: 0.75rem;
+}
+
+.axis line,
+.axis path {
+  stroke: var(--g-color-border);
+}
+
+.grid line {
+  stroke: var(--g-color-border);
+  stroke-opacity: 0.3;
+}
+
+.bar-a {
+  fill: var(--chart-batch-a);
+}
+
+.bar-b {
+  fill: var(--chart-batch-b);
+}
+
+.line-a {
+  stroke: var(--chart-batch-a);
+  fill: none;
+  stroke-width: 2;
+}
+
+.line-b {
+  stroke: var(--chart-batch-b);
+  fill: none;
+  stroke-width: 2;
+  stroke-dasharray: 5,5;
+}
+
+.area-a {
+  fill: var(--chart-batch-a);
+  fill-opacity: 0.2;
+}
+
+.legend {
+  display: flex;
+  gap: var(--g-space-md, 16px);
+  margin-bottom: var(--g-space-sm, 8px);
+  font-size: 0.875rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-xs, 4px);
+}
+
+.legend-swatch {
+  width: 16px;
+  height: 3px;
+}
+
+.legend-swatch.batch-a {
+  background: var(--chart-batch-a);
+}
+
+.legend-swatch.batch-b {
+  background: var(--chart-batch-b);
+}
+
+/* Two-column layout for smaller charts */
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--g-space-md, 16px);
+}
+
+@media (max-width: 1000px) {
+  .charts-row {
+    grid-template-columns: 1fr;
+  }
+}
