@@ -3,6 +3,7 @@ import { ColonyManager } from "../src/core/systems/ColonyManager";
 import { BuildingManager } from "../src/core/systems/BuildingManager";
 import { ResourceManager } from "../src/core/systems/ResourceManager";
 import { BUILDINGS } from "../src/core/data/buildings";
+import { BuildingId } from "../src/core/models/Building";
 
 describe("Housing Assignment", () => {
   let colonyManager: ColonyManager;
@@ -23,7 +24,7 @@ describe("Housing Assignment", () => {
 
   it("assigns new colonist to available habitat", () => {
     // Build a habitat (manually set to active for test)
-    const building = buildingManager.startBuilding("habitat", resources, {
+    const building = buildingManager.startBuilding(BuildingId.HABITAT, resources, {
       isResearched: () => true,
     } as never);
     if (building) {
@@ -52,7 +53,7 @@ describe("Housing Assignment", () => {
 
   it("respects habitat capacity limits", () => {
     // Build a habitat with capacity 4
-    const building = buildingManager.startBuilding("habitat", resources, {
+    const building = buildingManager.startBuilding(BuildingId.HABITAT, resources, {
       isResearched: () => true,
     } as never);
     if (building) {
@@ -75,7 +76,7 @@ describe("Housing Assignment", () => {
   });
 
   it("getHousingAssignments returns colonists grouped by habitat", () => {
-    const building = buildingManager.startBuilding("habitat", resources, {
+    const building = buildingManager.startBuilding(BuildingId.HABITAT, resources, {
       isResearched: () => true,
     } as never);
     if (building) {
@@ -94,7 +95,7 @@ describe("Housing Assignment", () => {
   });
 
   it("does not reassign already housed colonists", () => {
-    const building = buildingManager.startBuilding("habitat", resources, {
+    const building = buildingManager.startBuilding(BuildingId.HABITAT, resources, {
       isResearched: () => true,
     } as never);
     if (building) {
@@ -117,7 +118,7 @@ describe("Housing Assignment", () => {
   });
 
   it("clearHousingAssignment removes housing from colonist", () => {
-    const building = buildingManager.startBuilding("habitat", resources, {
+    const building = buildingManager.startBuilding(BuildingId.HABITAT, resources, {
       isResearched: () => true,
     } as never);
     if (building) {
@@ -136,7 +137,7 @@ describe("Housing Assignment", () => {
 
   it("only assigns to active habitats, not pending", () => {
     // Start building but don't complete
-    buildingManager.startBuilding("habitat", resources, {
+    buildingManager.startBuilding(BuildingId.HABITAT, resources, {
       isResearched: () => true,
     } as never);
 
@@ -149,10 +150,10 @@ describe("Housing Assignment", () => {
 
   it("assigns across multiple habitats", () => {
     // Build two habitats (capacity 4 each = 8 total)
-    const building1 = buildingManager.startBuilding("habitat", resources, {
+    const building1 = buildingManager.startBuilding(BuildingId.HABITAT, resources, {
       isResearched: () => true,
     } as never);
-    const building2 = buildingManager.startBuilding("habitat", resources, {
+    const building2 = buildingManager.startBuilding(BuildingId.HABITAT, resources, {
       isResearched: () => true,
     } as never);
 
@@ -177,7 +178,7 @@ describe("Housing Assignment", () => {
   });
 
   it("clears housing when habitat becomes broken", () => {
-    const building = buildingManager.startBuilding("habitat", resources, {
+    const building = buildingManager.startBuilding(BuildingId.HABITAT, resources, {
       isResearched: () => true,
     } as never);
     // Complete construction

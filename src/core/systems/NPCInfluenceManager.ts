@@ -26,7 +26,9 @@ import {
   type FactionDemand,
   type NPC,
   NPCFaction,
+  NPCId,
   type Project,
+  ProjectId,
   type ProjectType,
 } from "../models/NPCInfluence";
 import type { ResourceDelta } from "../models/Resources";
@@ -38,12 +40,12 @@ export { matrixMultiply, matrixVectorMultiply, updateSupport } from "../utils/ma
 
 export class NPCInfluenceManager {
   private npcs: NPC[];
-  private npcIndex: Map<string, number> = new Map();
-  private projects: Map<string, Project> = new Map();
+  private npcIndex: Map<NPCId, number> = new Map();
+  private projects: Map<ProjectId, Project> = new Map();
   private relationshipMatrix: number[][];
   private councils: Council[] = [];
   private activeProject: ActiveProject | null = null;
-  private npcSupport: Map<string, number> = new Map();
+  private npcSupport: Map<NPCId, number> = new Map();
   private activeDemands: FactionDemand[] = [];
 
   /** Mutable transmission factors (modified by project outcomes) */
@@ -79,8 +81,8 @@ export class NPCInfluenceManager {
     for (const [key, weight] of Object.entries(relationships)) {
       const [fromId, toId] = key.split(":");
       if (!fromId || !toId) continue;
-      const fromIdx = this.npcIndex.get(fromId);
-      const toIdx = this.npcIndex.get(toId);
+      const fromIdx = this.npcIndex.get(fromId as NPCId);
+      const toIdx = this.npcIndex.get(toId as NPCId);
 
       if (fromIdx !== undefined && toIdx !== undefined) {
         // W[i][j] = influence from j to i
@@ -103,7 +105,7 @@ export class NPCInfluenceManager {
     return Array.from(this.projects.values());
   }
 
-  getProject(id: string): Project | undefined {
+  getProject(id: ProjectId): Project | undefined {
     return this.projects.get(id);
   }
 
@@ -140,7 +142,7 @@ export class NPCInfluenceManager {
     return result;
   }
 
-  adjustNPCSupport(npcId: string, amount: number): void {
+  adjustNPCSupport(npcId: NPCId, amount: number): void {
     const current = this.npcSupport.get(npcId) ?? 0;
     this.npcSupport.set(npcId, Math.max(-1, Math.min(1, current + amount)));
   }
@@ -164,7 +166,7 @@ export class NPCInfluenceManager {
    * Propose a project for NPC consideration.
    * @returns true if proposal succeeded, false if cannot afford or project already active
    */
-  proposeProject(projectId: string, resources: ResourceManager): boolean {
+  proposeProject(projectId: ProjectId, resources: ResourceManager): boolean {
     // Cannot propose if project already active
     if (this.activeProject) {
       return false;
@@ -184,7 +186,7 @@ export class NPCInfluenceManager {
     resources.deduct(project.proposalCost);
 
     // Initialize project: faction-aligned NPCs start at full support, others at neutral
-    const supportLevels = new Map<string, number>();
+    const supportLevels = new Map<NPCId, number>();
     for (const npc of this.npcs) {
       supportLevels.set(npc.id, npc.faction === project.type ? 1.0 : 0.0);
     }
@@ -203,7 +205,7 @@ export class NPCInfluenceManager {
   /**
    * Calculate the cost to lobby an NPC for a given support boost.
    */
-  getLobbyCost(npcId: string, supportBoost: number): number {
+  getLobbyCost(npcId: NPCId, supportBoost: number): number {
     const npcIdx = this.npcIndex.get(npcId);
     if (npcIdx === undefined) return Infinity;
 
@@ -217,7 +219,7 @@ export class NPCInfluenceManager {
    * Lobby an NPC to increase their support for the active project.
    * @returns true if lobbying succeeded
    */
-  lobbyNPC(npcId: string, supportBoost: number, resources: ResourceManager): boolean {
+  lobbyNPC(npcId: NPCId, supportBoost: number, resources: ResourceManager): boolean {
     if (!this.activeProject) {
       return false;
     }
@@ -248,7 +250,7 @@ export class NPCInfluenceManager {
    * Create a council that permanently boosts relationships between members.
    * @returns true if council created successfully
    */
-  createCouncil(name: string, memberIds: string[], resources: ResourceManager): boolean {
+  createCouncil(name: string, memberIds: NPCId[], resources: ResourceManager): boolean {
     const cost: ResourceDelta = { materials: COUNCIL_CREATION_COST };
 
     if (!resources.canAfford(cost)) {
@@ -273,8 +275,10 @@ export class NPCInfluenceManager {
           if (idx1 === undefined || idx2 === undefined) continue;
 
           // W[i][j] = influence from j to i
-          const row = this.relationshipMatrix[idx1] as number[];
-          row[idx2] = Math.min(1.0, row[idx2] + COUNCIL_RELATIONSHIP_BOOST);
+          const row = this.relationshipMatrix[idx1];
+          if (row) {
+            row[idx2] = Math.min(1.0, (row[idx2] ?? 0) + COUNCIL_RELATIONSHIP_BOOST);
+          }
         }
       }
     }
@@ -321,6 +325,7 @@ export class NPCInfluenceManager {
 
           events.push({
             type: "FACTION_DEMAND",
+            severity: "warning",
             message: `${this.getFactionDisplayName(faction)} demands you propose one of their projects!`,
           });
         }
@@ -542,7 +547,7 @@ export class NPCInfluenceManager {
       manager.activeProject = {
         projectId: data.activeProject.projectId,
         supportLevels: new Map(
-          Object.entries(data.activeProject.supportLevels).map(([k, v]) => [k, Number(v)]),
+          Object.entries(data.activeProject.supportLevels).map(([k, v]) => [k as NPCId, Number(v)]),
         ),
         solsRemaining: data.activeProject.solsRemaining,
       };
@@ -550,7 +555,9 @@ export class NPCInfluenceManager {
 
     // Restore new state
     if (data.npcSupport) {
-      manager.npcSupport = new Map(Object.entries(data.npcSupport).map(([k, v]) => [k, Number(v)]));
+      manager.npcSupport = new Map(
+        Object.entries(data.npcSupport).map(([k, v]) => [k as NPCId, Number(v)]),
+      );
     }
 
     if (data.activeDemands) {

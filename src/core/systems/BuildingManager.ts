@@ -7,7 +7,7 @@ import {
   OXYGEN_DEFICIT_EFFICIENCY_PENALTY,
 } from "../balance/BuildingBalance";
 import { BUILDING_MODES, REPAIR_DURATION_SOLS } from "../balance/OperationsBalance";
-import type { Building, BuildingDefinition } from "../models/Building";
+import { type Building, type BuildingDefinition, BuildingId } from "../models/Building";
 import type { ColonistRole } from "../models/Colonist";
 import type { GameEvent } from "../models/GameEvent";
 import type { ResourceDelta } from "../models/Resources";
@@ -30,7 +30,7 @@ import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
 
 export class BuildingManager {
-  private definitions: Map<string, BuildingDefinition> = new Map();
+  private definitions: Map<BuildingId, BuildingDefinition> = new Map();
   private buildings: Map<string, Building> = new Map();
   private nextId: number = 1;
   private constructionSpeedBonus: number = 0;
@@ -201,7 +201,7 @@ export class BuildingManager {
     }
   }
 
-  canBuild(defId: string, resources: ResourceManager, technology: TechnologyTree): boolean {
+  canBuild(defId: BuildingId, resources: ResourceManager, technology: TechnologyTree): boolean {
     const def = this.definitions.get(defId);
     if (!def) return false;
 
@@ -213,7 +213,7 @@ export class BuildingManager {
   }
 
   startBuilding(
-    defId: string,
+    defId: BuildingId,
     resources: ResourceManager,
     technology: TechnologyTree,
   ): Building | null {
@@ -408,7 +408,7 @@ export class BuildingManager {
 
   canRepurpose(
     buildingId: string,
-    targetDefId: string,
+    targetDefId: BuildingId,
     resources: ResourceManager,
     technology: TechnologyTree,
   ): boolean {
@@ -434,14 +434,14 @@ export class BuildingManager {
     return cost ? resources.canAfford(cost) : false;
   }
 
-  getRepurposeCost(targetDefId: string): ResourceDelta | undefined {
+  getRepurposeCost(targetDefId: BuildingId): ResourceDelta | undefined {
     const targetDef = this.definitions.get(targetDefId);
     if (!targetDef) return undefined;
 
     return calculateRepurposeCost(targetDef);
   }
 
-  getRepurposeTime(targetDefId: string): number {
+  getRepurposeTime(targetDefId: BuildingId): number {
     const targetDef = this.definitions.get(targetDefId);
     if (!targetDef) return 0;
 
@@ -450,7 +450,7 @@ export class BuildingManager {
 
   startRepurposing(
     buildingId: string,
-    targetDefId: string,
+    targetDefId: BuildingId,
     resources: ResourceManager,
     technology: TechnologyTree,
   ): boolean {
@@ -522,7 +522,10 @@ export class BuildingManager {
     if (!def?.production) return {};
 
     const modeMultiplier = BUILDING_MODES[building.mode].production;
-    const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(buildingId, overrideCondition);
+    const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(
+      buildingId,
+      overrideCondition,
+    );
 
     return applyMultiplier(def.production, modeMultiplier * efficiencyMultiplier);
   }
@@ -535,7 +538,10 @@ export class BuildingManager {
     if (!def?.consumption) return {};
 
     const modeMultiplier = BUILDING_MODES[building.mode].consumption;
-    const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(buildingId, overrideCondition);
+    const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(
+      buildingId,
+      overrideCondition,
+    );
 
     return applyMultiplier(def.consumption, modeMultiplier * efficiencyMultiplier);
   }
@@ -572,7 +578,7 @@ export class BuildingManager {
     }
   }
 
-  getDefinition(defId: string): BuildingDefinition | undefined {
+  getDefinition(defId: BuildingId): BuildingDefinition | undefined {
     return this.definitions.get(defId);
   }
 
@@ -592,7 +598,7 @@ export class BuildingManager {
     return Array.from(this.buildings.values()).filter((b) => b.status === "pending");
   }
 
-  getBuildingsByDefinition(defId: string): Building[] {
+  getBuildingsByDefinition(defId: BuildingId): Building[] {
     return Array.from(this.buildings.values()).filter((b) => b.definitionId === defId);
   }
 

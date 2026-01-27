@@ -14,12 +14,14 @@ export function matrixMultiply(A: number[][], B: number[][]): number[][] {
     .map(() => Array(cols).fill(0));
 
   for (let i = 0; i < rows; i++) {
-    const rowA = A[i] as number[];
-    const rowResult = result[i] as number[];
+    const rowA = A[i];
+    const rowResult = result[i];
+    if (!rowA || !rowResult) continue;
     for (let j = 0; j < cols; j++) {
       for (let k = 0; k < inner; k++) {
-        const rowB = B[k] as number[];
-        rowResult[j] += rowA[k] * rowB[j];
+        const rowB = B[k];
+        if (!rowB) continue;
+        rowResult[j] = (rowResult[j] ?? 0) + (rowA[k] ?? 0) * (rowB[j] ?? 0);
       }
     }
   }
@@ -35,9 +37,10 @@ export function matrixVectorMultiply(M: number[][], v: number[]): number[] {
   const result = new Array(M.length).fill(0);
 
   for (let i = 0; i < M.length; i++) {
-    const row = M[i] as number[];
+    const row = M[i];
+    if (!row) continue;
     for (let j = 0; j < v.length; j++) {
-      result[i] += row[j] * v[j];
+      result[i] = (result[i] ?? 0) + (row[j] ?? 0) * (v[j] ?? 0);
     }
   }
 
@@ -72,11 +75,12 @@ export function updateSupport(
     .map(() => Array(N).fill(0));
 
   for (let i = 0; i < N; i++) {
-    const rowWT = WT[i] as number[];
-    const rowW = W[i] as number[];
-    const rowT = T[i] as number[];
+    const rowWT = WT[i];
+    const rowW = W[i];
+    const rowT = T[i];
+    if (!rowWT || !rowW || !rowT) continue;
     for (let j = 0; j < N; j++) {
-      rowWT[j] = rowW[j] * rowT[j];
+      rowWT[j] = (rowW[j] ?? 0) * (rowT[j] ?? 0);
     }
   }
 

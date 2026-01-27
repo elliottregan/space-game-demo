@@ -19,13 +19,13 @@ import {
   RUSH_RECYCLING_PENALTY,
 } from "../../src/core/balance/OperationsBalance";
 import { MAINTENANCE_COST_MULTIPLIER } from "../../src/core/balance/BuildingBalance";
-import type { Building, BuildingDefinition } from "../../src/core/models/Building";
+import { BuildingId, type Building, type BuildingDefinition } from "../../src/core/models/Building";
 
 function createBuildingDefinition(
   overrides: Partial<BuildingDefinition> = {},
 ): BuildingDefinition {
   return {
-    id: "test-building",
+    id: BuildingId.HABITAT,
     name: "Test Building",
     description: "A test building",
     cost: { materials: 100, power: 50 },
@@ -37,7 +37,7 @@ function createBuildingDefinition(
 function createBuilding(overrides: Partial<Building> = {}): Building {
   return {
     id: "building-1",
-    definitionId: "test-building",
+    definitionId: BuildingId.HABITAT,
     status: "active",
     constructionProgress: 10,
     assignedWorkers: [],

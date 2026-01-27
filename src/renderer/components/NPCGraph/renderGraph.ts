@@ -89,9 +89,7 @@ export function renderGraph(
     const target = nodePositions.get(link.target);
     if (!source || !target) continue;
 
-    const strokeColor = link.inSameCouncil
-      ? colors.positive
-      : colors.border;
+    const strokeColor = link.inSameCouncil ? colors.positive : colors.border;
     const strokeWidth = Math.max(1, link.weight * 4);
 
     edgesGroup
@@ -142,7 +140,7 @@ export function renderGraph(
         .attr("r", NODE_RADIUS + 4)
         .attr("fill", "none")
         .attr("stroke", colors.positive)
-      .attr("stroke-opacity", 0.4)
+        .attr("stroke-opacity", 0.4)
         .attr("stroke-width", 2);
     }
 

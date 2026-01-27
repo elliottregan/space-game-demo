@@ -1,4 +1,4 @@
-import { BuildingId, type BuildingDefinition } from "../models/Building";
+import { type BuildingDefinition, BuildingId } from "../models/Building";
 import { ColonistRole } from "../models/Colonist";
 import { TechnologyId } from "../models/Technology";
 

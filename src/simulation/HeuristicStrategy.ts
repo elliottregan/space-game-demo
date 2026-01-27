@@ -1,7 +1,9 @@
 // src/simulation/HeuristicStrategy.ts
 // Decision-making logic for Monte Carlo playtest simulation
 
+import { BuildingId } from "../core/models/Building";
 import type { EventChoice } from "../core/models/GameEvent";
+import { TechnologyId } from "../core/models/Technology";
 import type { GameAPI } from "../facade/GameAPI";
 import type { BlockedDecision, EventOccurrence } from "./types";
 
@@ -59,7 +61,7 @@ export class HeuristicStrategy {
    * Try to build a building. Returns true if built, records blocked decision if not.
    */
   private tryBuild(
-    buildingId: string,
+    buildingId: BuildingId,
     category: BlockedDecision["category"],
     recordIfBlocked = true,
   ): boolean {
@@ -77,7 +79,7 @@ export class HeuristicStrategy {
   /**
    * Check if any building of the given type exists (active or pending).
    */
-  private hasBuilding(buildingId: string): boolean {
+  private hasBuilding(buildingId: BuildingId): boolean {
     const buildings = this.api.buildings.snapshot();
     return (
       buildings.active.some((b) => b.definitionId === buildingId) ||
@@ -160,7 +162,7 @@ export class HeuristicStrategy {
         if (!colonist) break;
 
         const result = this.api.colony.assignToBuilding(colonist.id, building.id);
-        if (result.ok) {
+        if (result.success) {
           // Remove from unassigned list
           const idx = unassigned.findIndex((c) => c.id === colonist.id);
           if (idx !== -1) unassigned.splice(idx, 1);
@@ -205,21 +207,21 @@ export class HeuristicStrategy {
 
       // Prioritize food slightly since farms also provide oxygen
       if (foodCritical && (!oxygenCritical || currentFood < currentOxygen)) {
-        if (this.tryBuild("basic_farm", "survival", false)) return true;
+        if (this.tryBuild(BuildingId.BASIC_FARM, "survival", false)) return true;
       }
 
       // For oxygen, build hydroponic garden (provides oxygen without needing workers)
       // or farm if we can't build garden
       if (oxygenCritical) {
-        if (this.tryBuild("hydroponic_garden", "survival", false)) return true;
-        if (this.tryBuild("basic_farm", "survival", false)) return true;
+        if (this.tryBuild(BuildingId.HYDROPONIC_GARDEN, "survival", false)) return true;
+        if (this.tryBuild(BuildingId.BASIC_FARM, "survival", false)) return true;
       }
     }
 
     // Maintain positive flow with buffer for both resources
     // Food needs buffer of 2 (population growth)
     if (foodFlow < 2) {
-      if (this.tryBuild("basic_farm", "survival")) return true;
+      if (this.tryBuild(BuildingId.BASIC_FARM, "survival")) return true;
     }
 
     // Oxygen needs positive contribution (oxygenContribution is total from buildings)
@@ -227,9 +229,9 @@ export class HeuristicStrategy {
     // Note: oxygenContribution is from buildings, oxygenFlow is from production/consumption
     if (oxygenFlow < 3 || oxygenContribution < 6) {
       // Hydroponic garden provides oxygen without workers
-      if (this.tryBuild("hydroponic_garden", "survival")) return true;
+      if (this.tryBuild(BuildingId.HYDROPONIC_GARDEN, "survival")) return true;
       // Farm provides food AND oxygen (if workers are assigned)
-      if (this.tryBuild("basic_farm", "survival")) return true;
+      if (this.tryBuild(BuildingId.BASIC_FARM, "survival")) return true;
     }
 
     return false;
@@ -250,7 +252,7 @@ export class HeuristicStrategy {
     if (waterFlow > 0 && currentWater > 30) return false;
 
     // Already have a water extractor and not in crisis
-    if (this.hasBuilding("water_extractor") && waterFlow >= 0) return false;
+    if (this.hasBuilding(BuildingId.WATER_EXTRACTOR) && waterFlow >= 0) return false;
 
     const operations = this.api.operations.snapshot();
     const waterSites = operations.sites.filter((s) => s.resourceType === "water");
@@ -258,9 +260,9 @@ export class HeuristicStrategy {
     // Priority 1: Build water extractor on available developed deposit
     const developedAvailable = waterSites.find((s) => s.developed && !s.linkedBuildingId);
     if (developedAvailable) {
-      const canBuild = this.api.buildings.canBuild("water_extractor");
+      const canBuild = this.api.buildings.canBuild(BuildingId.WATER_EXTRACTOR);
       if (canBuild.allowed) {
-        const result = this.api.buildings.build("water_extractor");
+        const result = this.api.buildings.build(BuildingId.WATER_EXTRACTOR);
         if (result.success && result.data) {
           this.api.buildings.linkToDeposit(result.data.id, developedAvailable.id);
           return true;
@@ -427,12 +429,12 @@ export class HeuristicStrategy {
     const powerProduction = resources.production.power ?? 0;
     const powerConsumption = resources.consumption.power ?? 0;
     if (powerProduction < powerConsumption + 20) {
-      if (this.tryBuild("solar_panel", "infrastructure")) return true;
+      if (this.tryBuild(BuildingId.SOLAR_PANEL, "infrastructure")) return true;
     }
 
     // Build mining station if materials are low (requires asteroid_mining tech)
     if (resources.current.materials < 100) {
-      if (this.tryBuild("mining_station", "infrastructure")) return true;
+      if (this.tryBuild(BuildingId.MINING_STATION, "infrastructure")) return true;
     }
 
     return false;
@@ -455,16 +457,16 @@ export class HeuristicStrategy {
 
     // Need at least 3 oxygen surplus before building habitat
     if (oxygenSurplus < 3) {
-      if (this.tryBuild("oxygen_generator", "growth", false)) return true;
+      if (this.tryBuild(BuildingId.HYDROPONIC_GARDEN, "growth", false)) return true;
     }
 
     // Need at least 2 food surplus before growing
     if (foodSurplus < 2) {
-      if (this.tryBuild("basic_farm", "growth", false)) return true;
+      if (this.tryBuild(BuildingId.BASIC_FARM, "growth", false)) return true;
     }
 
     // Build habitat to grow population
-    if (this.tryBuild("habitat", "growth")) return true;
+    if (this.tryBuild(BuildingId.HABITAT, "growth")) return true;
 
     return false;
   }
@@ -475,14 +477,16 @@ export class HeuristicStrategy {
    */
   private handleVictoryPush(): boolean {
     // IF "generation_ship" available -> research it
-    const canResearchGenShip = this.api.technology.canResearch("generation_ship");
+    const canResearchGenShip = this.api.technology.canResearch(TechnologyId.GENERATION_SHIP);
     if (canResearchGenShip.allowed) {
-      this.api.technology.startResearch("generation_ship");
+      this.api.technology.startResearch(TechnologyId.GENERATION_SHIP);
       return true;
     } else {
       // Only record if generation ship is in the available list (prerequisites met)
       const techSnapshot = this.api.technology.snapshot();
-      const genShipAvailable = techSnapshot.available.some((t) => t.id === "generation_ship");
+      const genShipAvailable = techSnapshot.available.some(
+        (t) => t.id === TechnologyId.GENERATION_SHIP,
+      );
       if (genShipAvailable) {
         this.recordBlockedDecision(
           "victory",

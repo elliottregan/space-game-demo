@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { GameState } from "../src/core/GameState";
+import { BuildingId } from "../src/core/models/Building";
 
 describe("Recreation Buildings", () => {
   let gameState: GameState;
@@ -11,7 +12,7 @@ describe("Recreation Buildings", () => {
   it("should calculate total morale boost from active recreation buildings", () => {
     // Build a common room (moraleBoost: 5)
     gameState.buildings.startBuilding(
-      "common_room",
+      BuildingId.COMMON_ROOM,
       gameState.resources,
       gameState.technology
     );
@@ -23,7 +24,7 @@ describe("Recreation Buildings", () => {
 
     // Verify building is active
     const buildings = gameState.buildings.getActiveBuildings();
-    const commonRoom = buildings.find((b) => b.definitionId === "common_room");
+    const commonRoom = buildings.find((b) => b.definitionId === BuildingId.COMMON_ROOM);
     expect(commonRoom).toBeDefined();
     expect(commonRoom?.status).toBe("active");
 
@@ -35,7 +36,7 @@ describe("Recreation Buildings", () => {
   it("should not include morale boost from broken buildings", () => {
     // Build a common room
     gameState.buildings.startBuilding(
-      "common_room",
+      BuildingId.COMMON_ROOM,
       gameState.resources,
       gameState.technology
     );
@@ -47,7 +48,7 @@ describe("Recreation Buildings", () => {
 
     // Break the building
     const buildings = gameState.buildings.getActiveBuildings();
-    const commonRoom = buildings.find((b) => b.definitionId === "common_room");
+    const commonRoom = buildings.find((b) => b.definitionId === BuildingId.COMMON_ROOM);
     gameState.buildings.breakBuilding(commonRoom!.id, gameState.resources);
 
     // Morale boost should be 0
@@ -61,12 +62,12 @@ describe("Recreation Buildings", () => {
 
     // Build common room (5) and gymnasium (6)
     gameState.buildings.startBuilding(
-      "common_room",
+      BuildingId.COMMON_ROOM,
       gameState.resources,
       gameState.technology
     );
     gameState.buildings.startBuilding(
-      "gymnasium",
+      BuildingId.GYMNASIUM,
       gameState.resources,
       gameState.technology
     );
@@ -86,7 +87,7 @@ describe("Recreation Buildings", () => {
 
     // Build a common room
     gameState.buildings.startBuilding(
-      "common_room",
+      BuildingId.COMMON_ROOM,
       gameState.resources,
       gameState.technology
     );

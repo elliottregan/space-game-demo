@@ -8,7 +8,7 @@ import {
   getBaseProductionForDeposit,
   type WarningLevel,
 } from "../../src/core/utils/depositExtraction";
-import type { Building, BuildingDefinition } from "../../src/core/models/Building";
+import { BuildingId, type Building, type BuildingDefinition } from "../../src/core/models/Building";
 import type { ProspectingSite } from "../../src/core/models/Operation";
 
 function createSite(overrides: Partial<ProspectingSite> = {}): ProspectingSite {
@@ -30,7 +30,7 @@ function createSite(overrides: Partial<ProspectingSite> = {}): ProspectingSite {
 function createBuilding(overrides: Partial<Building> = {}): Building {
   return {
     id: "building-1",
-    definitionId: "water_extractor",
+    definitionId: BuildingId.WATER_EXTRACTOR,
     status: "active",
     constructionProgress: 10,
     assignedWorkers: [],
@@ -47,7 +47,7 @@ function createBuilding(overrides: Partial<Building> = {}): Building {
 
 function createDefinition(overrides: Partial<BuildingDefinition> = {}): BuildingDefinition {
   return {
-    id: "water_extractor",
+    id: BuildingId.WATER_EXTRACTOR,
     name: "Water Extractor",
     description: "Extracts water from deposits",
     cost: { materials: 100 },
@@ -117,19 +117,19 @@ describe("getDepletionEvents", () => {
   it("emits warning event when transitioning from none to warning", () => {
     const events = getDepletionEvents("none", "warning", site, building, buildingName);
     expect(events).toHaveLength(1);
-    expect(events[0].type).toBe("DEPOSIT_WARNING");
+    expect(events[0]!.type).toBe("DEPOSIT_WARNING");
   });
 
   it("emits critical event when transitioning from none to critical", () => {
     const events = getDepletionEvents("none", "critical", site, building, buildingName);
     expect(events).toHaveLength(1);
-    expect(events[0].type).toBe("DEPOSIT_CRITICAL");
+    expect(events[0]!.type).toBe("DEPOSIT_CRITICAL");
   });
 
   it("emits critical event when transitioning from warning to critical", () => {
     const events = getDepletionEvents("warning", "critical", site, building, buildingName);
     expect(events).toHaveLength(1);
-    expect(events[0].type).toBe("DEPOSIT_CRITICAL");
+    expect(events[0]!.type).toBe("DEPOSIT_CRITICAL");
   });
 
   it("emits depleted event when transitioning to depleted from any state", () => {
@@ -138,13 +138,13 @@ describe("getDepletionEvents", () => {
     const fromCritical = getDepletionEvents("critical", "depleted", site, building, buildingName);
 
     expect(fromNone).toHaveLength(1);
-    expect(fromNone[0].type).toBe("DEPOSIT_DEPLETED");
+    expect(fromNone[0]!.type).toBe("DEPOSIT_DEPLETED");
 
     expect(fromWarning).toHaveLength(1);
-    expect(fromWarning[0].type).toBe("DEPOSIT_DEPLETED");
+    expect(fromWarning[0]!.type).toBe("DEPOSIT_DEPLETED");
 
     expect(fromCritical).toHaveLength(1);
-    expect(fromCritical[0].type).toBe("DEPOSIT_DEPLETED");
+    expect(fromCritical[0]!.type).toBe("DEPOSIT_DEPLETED");
   });
 
   it("emits no events when state does not change", () => {

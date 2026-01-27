@@ -66,7 +66,13 @@ describe('Political Pressure Integration', () => {
     expect(demandsBefore.length).toBe(1);
 
     const firstDemand = demandsBefore[0];
+    if (!firstDemand) {
+      throw new Error('Expected at least one demand for earth_loyalists');
+    }
     const projectId = firstDemand.projectIds[0];
+    if (!projectId) {
+      throw new Error('Expected at least one project in demand');
+    }
 
     // Record support before project
     const supportBefore = game.npcInfluence.getFactionSupport().earth_loyalists;

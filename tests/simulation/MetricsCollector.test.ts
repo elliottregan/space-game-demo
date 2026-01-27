@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, spyOn } from "bun:test";
 import { MetricsCollector } from "../../src/simulation/MetricsCollector";
 import type { RunResult } from "../../src/simulation/types";
+import { BuildingId } from "../../src/core/models/Building";
+import { TechnologyId } from "../../src/core/models/Technology";
 
 // Helper to create test run results
 function createVictoryResult(
@@ -12,8 +14,8 @@ function createVictoryResult(
     victoryType: "population",
     finalSol: 250,
     peakPopulation: 100,
-    techsResearched: ["hydroponics"],
-    buildingsBuilt: { habitat: 5 },
+    techsResearched: [TechnologyId.HYDROPONICS],
+    buildingsBuilt: { [BuildingId.HABITAT]: 5 },
     ...overrides,
   };
 }
@@ -28,7 +30,7 @@ function createDefeatResult(
     finalSol: 45,
     peakPopulation: 12,
     techsResearched: [],
-    buildingsBuilt: { habitat: 1 },
+    buildingsBuilt: { [BuildingId.HABITAT]: 1 },
     ...overrides,
   };
 }
@@ -70,9 +72,9 @@ describe("MetricsCollector", () => {
 
       const results = collector.getResults();
       expect(results).toHaveLength(3);
-      expect(results[0].seed).toBe(1);
-      expect(results[1].seed).toBe(2);
-      expect(results[2].seed).toBe(3);
+      expect(results[0]!.seed).toBe(1);
+      expect(results[1]!.seed).toBe(2);
+      expect(results[2]!.seed).toBe(3);
     });
   });
 

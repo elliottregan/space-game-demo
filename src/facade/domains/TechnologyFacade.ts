@@ -2,6 +2,7 @@
 // Technology queries and commands facade
 
 import type { GameState } from "../../core/GameState";
+import { TechnologyId } from "../../core/models/Technology";
 import type {
   EntityLookup,
   Queryable,
@@ -55,35 +56,35 @@ export class TechnologyFacade implements Queryable<TechnologySnapshot>, EntityLo
   /**
    * Get progress for a specific technology.
    */
-  getResearchProgress(techId: string): number {
+  getResearchProgress(techId: TechnologyId): number {
     return this.gameState.technology.getResearchProgress(techId);
   }
 
   /**
    * Get prerequisite chain for a technology.
    */
-  getPrerequisiteChain(techId: string): readonly string[] {
+  getPrerequisiteChain(techId: TechnologyId): readonly TechnologyId[] {
     return Object.freeze([...this.gameState.technology.getPrerequisiteChain(techId)]);
   }
 
   /**
    * Get a specific technology by ID.
    */
-  getById(techId: string): Readonly<Technology> | undefined {
+  getById(techId: TechnologyId): Readonly<Technology> | undefined {
     return this.gameState.technology.getTech(techId);
   }
 
   /**
    * Check if a technology has been researched.
    */
-  isResearched(techId: string): boolean {
+  isResearched(techId: TechnologyId): boolean {
     return this.gameState.technology.isResearched(techId);
   }
 
   /**
    * Check if a technology can be researched.
    */
-  canResearch(techId: string): CanDoResult {
+  canResearch(techId: TechnologyId): CanDoResult {
     const tech = this.gameState.technology.getTech(techId);
     if (!tech) {
       return { allowed: false, reason: `Technology "${techId}" not found` };
@@ -127,7 +128,7 @@ export class TechnologyFacade implements Queryable<TechnologySnapshot>, EntityLo
   /**
    * Start researching a technology.
    */
-  startResearch(techId: string): Result<void> {
+  startResearch(techId: TechnologyId): Result<void> {
     return this.executeCommand(() => {
       const check = this.canResearch(techId);
       if (!check.allowed) {
@@ -175,7 +176,7 @@ export class TechnologyFacade implements Queryable<TechnologySnapshot>, EntityLo
   /**
    * Queue a technology and all its prerequisites.
    */
-  queueResearch(techId: string): Result<void> {
+  queueResearch(techId: TechnologyId): Result<void> {
     return this.executeCommand(() => {
       const success = this.gameState.technology.queueResearch(techId, this.gameState.resources);
 

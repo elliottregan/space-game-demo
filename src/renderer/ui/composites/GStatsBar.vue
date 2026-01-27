@@ -1,13 +1,6 @@
 <script setup lang="ts">
 import GProgress from "../primitives/GProgress.vue";
-
-export interface Stat {
-  label: string;
-  value?: number | string;
-  progress?: number;
-  variant?: "default" | "positive" | "negative" | "warning" | "info";
-  prefix?: string;
-}
+import type { Stat } from "../types";
 
 defineProps<{
   stats: Stat[];

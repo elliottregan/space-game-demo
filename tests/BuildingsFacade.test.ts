@@ -1,5 +1,6 @@
 // tests/BuildingsFacade.test.ts
 import { describe, it, expect, beforeEach } from "bun:test";
+import { BuildingId } from "../src/core/models/Building";
 import { GameAPI } from "../src/facade";
 
 describe("BuildingsFacade", () => {
@@ -10,7 +11,7 @@ describe("BuildingsFacade", () => {
   });
 
   // Helper to build and complete a building
-  const buildAndComplete = (defId: string) => {
+  const buildAndComplete = (defId: BuildingId) => {
     const result = api.buildings.build(defId);
     if (!result.success) return null;
     const def = api.buildings.getDefinition(defId);
@@ -24,7 +25,7 @@ describe("BuildingsFacade", () => {
   // ==========================================================================
   describe("Mode Operations", () => {
     it("canSetMode returns true for valid mode change", () => {
-      const buildingId = buildAndComplete("solar_panel");
+      const buildingId = buildAndComplete(BuildingId.SOLAR_PANEL);
       expect(buildingId).not.toBeNull();
 
       const result = api.buildings.canSetMode(buildingId!, "overdrive");
@@ -39,7 +40,7 @@ describe("BuildingsFacade", () => {
 
     it("canSetMode returns false when not active", () => {
       // Build without completing
-      const buildResult = api.buildings.build("solar_panel");
+      const buildResult = api.buildings.build(BuildingId.SOLAR_PANEL);
       expect(buildResult.success).toBe(true);
 
       if (buildResult.success) {
@@ -50,7 +51,7 @@ describe("BuildingsFacade", () => {
     });
 
     it("canSetMode returns false when same mode", () => {
-      const buildingId = buildAndComplete("solar_panel");
+      const buildingId = buildAndComplete(BuildingId.SOLAR_PANEL);
       expect(buildingId).not.toBeNull();
 
       // Default mode is normal
@@ -60,7 +61,7 @@ describe("BuildingsFacade", () => {
     });
 
     it("setMode changes mode successfully", () => {
-      const buildingId = buildAndComplete("solar_panel");
+      const buildingId = buildAndComplete(BuildingId.SOLAR_PANEL);
       expect(buildingId).not.toBeNull();
 
       const result = api.buildings.setMode(buildingId!, "overdrive");
@@ -84,7 +85,7 @@ describe("BuildingsFacade", () => {
   // ==========================================================================
   describe("Recycling Operations", () => {
     it("canRecycle returns true for active building", () => {
-      const buildingId = buildAndComplete("solar_panel");
+      const buildingId = buildAndComplete(BuildingId.SOLAR_PANEL);
       expect(buildingId).not.toBeNull();
 
       const result = api.buildings.canRecycle(buildingId!);
@@ -98,7 +99,7 @@ describe("BuildingsFacade", () => {
     });
 
     it("canRecycle returns false when already recycling", () => {
-      const buildingId = buildAndComplete("solar_panel");
+      const buildingId = buildAndComplete(BuildingId.SOLAR_PANEL);
       expect(buildingId).not.toBeNull();
 
       // Start recycling
@@ -110,7 +111,7 @@ describe("BuildingsFacade", () => {
     });
 
     it("canRecycle returns false when pending", () => {
-      const buildResult = api.buildings.build("solar_panel");
+      const buildResult = api.buildings.build(BuildingId.SOLAR_PANEL);
       expect(buildResult.success).toBe(true);
 
       if (buildResult.success) {
@@ -121,7 +122,7 @@ describe("BuildingsFacade", () => {
     });
 
     it("recycle starts recycling", () => {
-      const buildingId = buildAndComplete("solar_panel");
+      const buildingId = buildAndComplete(BuildingId.SOLAR_PANEL);
       expect(buildingId).not.toBeNull();
 
       const result = api.buildings.recycle(buildingId!);
@@ -143,7 +144,7 @@ describe("BuildingsFacade", () => {
       // Note: The facade requires status to be "recycling" before calling rushRecycling
       // but the underlying BuildingManager.rushRecycling requires "active" or "idle".
       // This tests the current facade behavior.
-      const buildingId = buildAndComplete("solar_panel");
+      const buildingId = buildAndComplete(BuildingId.SOLAR_PANEL);
       expect(buildingId).not.toBeNull();
 
       // Try to rush without starting recycle
@@ -151,7 +152,9 @@ describe("BuildingsFacade", () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.type).toBe("INVALID_STATE");
-        expect(result.error.expected).toBe("recycling");
+        if (result.error.type === "INVALID_STATE") {
+          expect(result.error.expected).toBe("recycling");
+        }
       }
     });
 
@@ -162,56 +165,56 @@ describe("BuildingsFacade", () => {
   // ==========================================================================
   describe("Repurpose Operations", () => {
     it("canRepurpose returns true for valid target", () => {
-      const buildingId = buildAndComplete("water_extractor");
+      const buildingId = buildAndComplete(BuildingId.WATER_EXTRACTOR);
       expect(buildingId).not.toBeNull();
 
-      const result = api.buildings.canRepurpose(buildingId!, "storage_depot");
+      const result = api.buildings.canRepurpose(buildingId!, BuildingId.STORAGE_DEPOT);
       expect(result.allowed).toBe(true);
     });
 
     it("canRepurpose returns false when not found", () => {
-      const result = api.buildings.canRepurpose("nonexistent_building", "storage_depot");
+      const result = api.buildings.canRepurpose("nonexistent_building", BuildingId.STORAGE_DEPOT);
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain("not found");
     });
 
     it("canRepurpose returns false for invalid target", () => {
-      const buildingId = buildAndComplete("solar_panel");
+      const buildingId = buildAndComplete(BuildingId.SOLAR_PANEL);
       expect(buildingId).not.toBeNull();
 
       // Solar panel cannot be repurposed
-      const result = api.buildings.canRepurpose(buildingId!, "water_extractor");
+      const result = api.buildings.canRepurpose(buildingId!, BuildingId.WATER_EXTRACTOR);
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain("cannot be repurposed");
     });
 
     it("canRepurpose returns false when tech not researched", () => {
-      const buildingId = buildAndComplete("water_extractor");
+      const buildingId = buildAndComplete(BuildingId.WATER_EXTRACTOR);
       expect(buildingId).not.toBeNull();
 
       // Try to repurpose to something requiring tech
       // mining_station requires asteroid_mining tech
-      const result = api.buildings.canRepurpose(buildingId!, "mining_station");
+      const result = api.buildings.canRepurpose(buildingId!, BuildingId.MINING_STATION);
       expect(result.allowed).toBe(false);
     });
 
     it("repurpose starts repurposing", () => {
-      const buildingId = buildAndComplete("water_extractor");
+      const buildingId = buildAndComplete(BuildingId.WATER_EXTRACTOR);
       expect(buildingId).not.toBeNull();
 
-      const result = api.buildings.repurpose(buildingId!, "storage_depot");
+      const result = api.buildings.repurpose(buildingId!, BuildingId.STORAGE_DEPOT);
       expect(result.success).toBe(true);
 
       const building = api.buildings.getById(buildingId!);
-      expect(building?.definitionId).toBe("storage_depot");
+      expect(building?.definitionId).toBe(BuildingId.STORAGE_DEPOT);
       expect(building?.status).toBe("pending");
     });
 
     it("repurpose fails when canRepurpose fails", () => {
-      const buildingId = buildAndComplete("solar_panel");
+      const buildingId = buildAndComplete(BuildingId.SOLAR_PANEL);
       expect(buildingId).not.toBeNull();
 
-      const result = api.buildings.repurpose(buildingId!, "water_extractor");
+      const result = api.buildings.repurpose(buildingId!, BuildingId.WATER_EXTRACTOR);
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.type).toBe("PREREQUISITE_NOT_MET");
@@ -224,7 +227,7 @@ describe("BuildingsFacade", () => {
   // ==========================================================================
   describe("Maintenance Operations", () => {
     it("canPerformMaintenance returns true for degraded building", () => {
-      const buildingId = buildAndComplete("solar_panel");
+      const buildingId = buildAndComplete(BuildingId.SOLAR_PANEL);
       expect(buildingId).not.toBeNull();
 
       // Manually degrade the building
@@ -244,7 +247,7 @@ describe("BuildingsFacade", () => {
     });
 
     it("canPerformMaintenance returns false when not active", () => {
-      const buildResult = api.buildings.build("solar_panel");
+      const buildResult = api.buildings.build(BuildingId.SOLAR_PANEL);
       expect(buildResult.success).toBe(true);
 
       if (buildResult.success) {
@@ -255,7 +258,7 @@ describe("BuildingsFacade", () => {
     });
 
     it("performMaintenance restores condition", () => {
-      const buildingId = buildAndComplete("solar_panel");
+      const buildingId = buildAndComplete(BuildingId.SOLAR_PANEL);
       expect(buildingId).not.toBeNull();
 
       // Manually degrade the building
@@ -272,7 +275,7 @@ describe("BuildingsFacade", () => {
     });
 
     it("performMaintenance fails without resources", () => {
-      const buildingId = buildAndComplete("solar_panel");
+      const buildingId = buildAndComplete(BuildingId.SOLAR_PANEL);
       expect(buildingId).not.toBeNull();
 
       // Manually degrade the building
@@ -283,7 +286,7 @@ describe("BuildingsFacade", () => {
 
       // Deplete resources by building many buildings
       for (let i = 0; i < 30; i++) {
-        api.buildings.build("solar_panel");
+        api.buildings.build(BuildingId.SOLAR_PANEL);
       }
 
       const result = api.buildings.performMaintenance(buildingId!);
@@ -294,7 +297,7 @@ describe("BuildingsFacade", () => {
     });
 
     it("getMaintenanceCost returns cost for active building", () => {
-      const buildingId = buildAndComplete("solar_panel");
+      const buildingId = buildAndComplete(BuildingId.SOLAR_PANEL);
       expect(buildingId).not.toBeNull();
 
       const cost = api.buildings.getMaintenanceCost(buildingId!);
@@ -312,24 +315,28 @@ describe("BuildingsFacade", () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.type).toBe("NOT_FOUND");
-        expect(result.error.entity).toBe("building");
+        if (result.error.type === "NOT_FOUND") {
+          expect(result.error.entity).toBe("building");
+        }
       }
     });
 
     it("returns NOT_FOUND when site missing", () => {
-      const buildingId = buildAndComplete("water_extractor");
+      const buildingId = buildAndComplete(BuildingId.WATER_EXTRACTOR);
       expect(buildingId).not.toBeNull();
 
       const result = api.buildings.linkToDeposit(buildingId!, "nonexistent_site");
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.type).toBe("NOT_FOUND");
-        expect(result.error.entity).toBe("site");
+        if (result.error.type === "NOT_FOUND") {
+          expect(result.error.entity).toBe("site");
+        }
       }
     });
 
     it("returns INVALID_STATE when site not developed", () => {
-      const buildingId = buildAndComplete("water_extractor");
+      const buildingId = buildAndComplete(BuildingId.WATER_EXTRACTOR);
       expect(buildingId).not.toBeNull();
 
       // Get a site that is revealed but not developed
@@ -341,7 +348,9 @@ describe("BuildingsFacade", () => {
         expect(result.success).toBe(false);
         if (!result.success) {
           expect(result.error.type).toBe("INVALID_STATE");
-          expect(result.error.reason).toContain("developed");
+          if (result.error.type === "INVALID_STATE") {
+            expect(result.error.reason).toContain("developed");
+          }
         }
       }
     });
@@ -352,12 +361,12 @@ describe("BuildingsFacade", () => {
   // ==========================================================================
   describe("canDo() ActionChecker", () => {
     it("routes build action to canBuild", () => {
-      const result = api.buildings.canDo({ action: "build", defId: "solar_panel" });
+      const result = api.buildings.canDo({ action: "build", defId: BuildingId.SOLAR_PANEL });
       expect(result.allowed).toBe(true);
     });
 
     it("routes recycle action to canRecycle", () => {
-      const buildingId = buildAndComplete("solar_panel");
+      const buildingId = buildAndComplete(BuildingId.SOLAR_PANEL);
       expect(buildingId).not.toBeNull();
 
       const result = api.buildings.canDo({ action: "recycle", buildingId: buildingId! });
@@ -365,13 +374,13 @@ describe("BuildingsFacade", () => {
     });
 
     it("routes repurpose action to canRepurpose", () => {
-      const buildingId = buildAndComplete("water_extractor");
+      const buildingId = buildAndComplete(BuildingId.WATER_EXTRACTOR);
       expect(buildingId).not.toBeNull();
 
       const result = api.buildings.canDo({
         action: "repurpose",
         buildingId: buildingId!,
-        targetDefId: "storage_depot",
+        targetDefId: BuildingId.STORAGE_DEPOT,
       });
       expect(result.allowed).toBe(true);
     });
@@ -382,7 +391,7 @@ describe("BuildingsFacade", () => {
   // ==========================================================================
   describe("getRecycleValue()", () => {
     it("returns value for active building", () => {
-      const buildingId = buildAndComplete("solar_panel");
+      const buildingId = buildAndComplete(BuildingId.SOLAR_PANEL);
       expect(buildingId).not.toBeNull();
 
       const value = api.buildings.getRecycleValue(buildingId!);
@@ -401,13 +410,13 @@ describe("BuildingsFacade", () => {
   // ==========================================================================
   describe("getRepurposeCost()", () => {
     it("returns cost for valid target", () => {
-      const cost = api.buildings.getRepurposeCost("storage_depot");
+      const cost = api.buildings.getRepurposeCost(BuildingId.STORAGE_DEPOT);
       expect(cost).toBeDefined();
       expect(cost?.materials).toBeGreaterThan(0);
     });
 
     it("returns undefined for non-existent target", () => {
-      const cost = api.buildings.getRepurposeCost("nonexistent_building_type");
+      const cost = api.buildings.getRepurposeCost("nonexistent_building_type" as BuildingId);
       expect(cost).toBeUndefined();
     });
   });
@@ -437,18 +446,18 @@ describe("BuildingsFacade", () => {
     it("includes built buildings in appropriate arrays", () => {
       const initialPending = api.buildings.snapshot().pending.length;
 
-      api.buildings.build("solar_panel");
+      api.buildings.build(BuildingId.SOLAR_PANEL);
       expect(api.buildings.snapshot().pending.length).toBe(initialPending + 1);
 
       // Complete construction
-      const def = api.buildings.getDefinition("solar_panel");
+      const def = api.buildings.getDefinition(BuildingId.SOLAR_PANEL);
       for (let i = 0; i < def!.constructionTime; i++) {
         api.game.advanceSol();
       }
 
       // Should move to active
       const snapshot = api.buildings.snapshot();
-      expect(snapshot.active.some((b) => b.definitionId === "solar_panel")).toBe(true);
+      expect(snapshot.active.some((b) => b.definitionId === BuildingId.SOLAR_PANEL)).toBe(true);
     });
   });
 
@@ -457,7 +466,7 @@ describe("BuildingsFacade", () => {
   // ==========================================================================
   describe("getById()", () => {
     it("returns building when found", () => {
-      const buildResult = api.buildings.build("solar_panel");
+      const buildResult = api.buildings.build(BuildingId.SOLAR_PANEL);
       expect(buildResult.success).toBe(true);
 
       if (buildResult.success) {
@@ -478,14 +487,14 @@ describe("BuildingsFacade", () => {
   // ==========================================================================
   describe("getDefinition()", () => {
     it("returns definition when found", () => {
-      const def = api.buildings.getDefinition("solar_panel");
+      const def = api.buildings.getDefinition(BuildingId.SOLAR_PANEL);
       expect(def).toBeDefined();
-      expect(def?.id).toBe("solar_panel");
+      expect(def?.id).toBe(BuildingId.SOLAR_PANEL);
       expect(def?.name).toBeDefined();
     });
 
     it("returns undefined when not found", () => {
-      const def = api.buildings.getDefinition("nonexistent_type");
+      const def = api.buildings.getDefinition("nonexistent_type" as BuildingId);
       expect(def).toBeUndefined();
     });
   });
@@ -495,19 +504,19 @@ describe("BuildingsFacade", () => {
   // ==========================================================================
   describe("canBuild()", () => {
     it("returns allowed:true for valid building", () => {
-      const result = api.buildings.canBuild("solar_panel");
+      const result = api.buildings.canBuild(BuildingId.SOLAR_PANEL);
       expect(result.allowed).toBe(true);
     });
 
     it("returns allowed:false for non-existent building type", () => {
-      const result = api.buildings.canBuild("nonexistent_type");
+      const result = api.buildings.canBuild("nonexistent_type" as BuildingId);
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain("not found");
     });
 
     it("returns allowed:false when tech not researched", () => {
       // mining_station requires asteroid_mining tech
-      const result = api.buildings.canBuild("mining_station");
+      const result = api.buildings.canBuild(BuildingId.MINING_STATION);
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain("Requires technology");
     });
@@ -515,10 +524,10 @@ describe("BuildingsFacade", () => {
     it("returns allowed:false when cannot afford", () => {
       // Deplete resources
       for (let i = 0; i < 30; i++) {
-        api.buildings.build("solar_panel");
+        api.buildings.build(BuildingId.SOLAR_PANEL);
       }
 
-      const result = api.buildings.canBuild("habitat");
+      const result = api.buildings.canBuild(BuildingId.HABITAT);
       expect(result.allowed).toBe(false);
     });
   });
@@ -528,18 +537,18 @@ describe("BuildingsFacade", () => {
   // ==========================================================================
   describe("build()", () => {
     it("returns success and building data", () => {
-      const result = api.buildings.build("solar_panel");
+      const result = api.buildings.build(BuildingId.SOLAR_PANEL);
       expect(result.success).toBe(true);
 
       if (result.success) {
         expect(result.data.id).toBeDefined();
-        expect(result.data.definitionId).toBe("solar_panel");
+        expect(result.data.definitionId).toBe(BuildingId.SOLAR_PANEL);
         expect(result.data.status).toBe("pending");
       }
     });
 
     it("fails for non-existent type", () => {
-      const result = api.buildings.build("nonexistent_type");
+      const result = api.buildings.build("nonexistent_type" as BuildingId);
       expect(result.success).toBe(false);
 
       if (!result.success) {
@@ -549,10 +558,10 @@ describe("BuildingsFacade", () => {
 
     it("deducts resources on success", () => {
       const resourcesBefore = api.resources.snapshot().current.materials ?? 0;
-      const def = api.buildings.getDefinition("solar_panel");
+      const def = api.buildings.getDefinition(BuildingId.SOLAR_PANEL);
       const cost = def?.cost.materials ?? 0;
 
-      api.buildings.build("solar_panel");
+      api.buildings.build(BuildingId.SOLAR_PANEL);
 
       const resourcesAfter = api.resources.snapshot().current.materials ?? 0;
       expect(resourcesAfter).toBe(resourcesBefore - cost);

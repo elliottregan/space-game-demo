@@ -169,7 +169,7 @@ export class WorkforceManager {
     // Cap skill bonus
     skillBonus = Math.min(skillBonus, MAX_SKILL_EFFICIENCY_BONUS);
 
-    return masteryEfficiency + skillBonus;
+    return (masteryEfficiency ?? 1.0) + skillBonus;
   }
 
   /**

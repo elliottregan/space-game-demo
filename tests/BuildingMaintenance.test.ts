@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach } from "bun:test";
 import { BuildingManager } from "../src/core/systems/BuildingManager";
 import { ResourceManager } from "../src/core/systems/ResourceManager";
 import { TechnologyTree } from "../src/core/systems/TechnologyTree";
-import type { BuildingDefinition } from "../src/core/models/Building";
+import { BuildingId, type BuildingDefinition } from "../src/core/models/Building";
+import { TechnologyId, type Technology } from "../src/core/models/Technology";
 import {
   MAINTENANCE_START_SOL,
   CONDITION_DECAY_INTERVAL,
@@ -13,7 +14,7 @@ import {
 } from "../src/core/balance/BuildingBalance";
 
 const TEST_BUILDING: BuildingDefinition = {
-  id: "test_building",
+  id: BuildingId.SOLAR_PANEL,
   name: "Test Building",
   description: "A building for testing",
   cost: { materials: 100, power: 0 },
@@ -22,13 +23,14 @@ const TEST_BUILDING: BuildingDefinition = {
   consumption: { power: 5 },
 };
 
-const TEST_TECH = {
-  id: "test_tech",
+const TEST_TECH: Technology = {
+  id: TechnologyId.HYDROPONICS,
   name: "Test Tech",
   description: "Test",
-  cost: 100,
+  cost: { sols: 100 },
   effects: [],
   prerequisites: [],
+  unlocks: [],
 };
 
 describe("Building Maintenance System", () => {
@@ -44,7 +46,7 @@ describe("Building Maintenance System", () => {
 
   describe("Building initialization", () => {
     it("should initialize new buildings with full condition", () => {
-      const building = buildingManager.startBuilding("test_building", resources, technology);
+      const building = buildingManager.startBuilding(BuildingId.SOLAR_PANEL, resources, technology);
       expect(building).not.toBeNull();
       expect(building!.condition).toBe(100);
       expect(building!.age).toBe(0);
@@ -54,7 +56,7 @@ describe("Building Maintenance System", () => {
 
   describe("Condition decay", () => {
     it("should not decay condition before MAINTENANCE_START_SOL", () => {
-      const building = buildingManager.startBuilding("test_building", resources, technology);
+      const building = buildingManager.startBuilding(BuildingId.SOLAR_PANEL, resources, technology);
       expect(building).not.toBeNull();
 
       // Complete construction
@@ -71,7 +73,7 @@ describe("Building Maintenance System", () => {
     });
 
     it("should decay condition after MAINTENANCE_START_SOL", () => {
-      const building = buildingManager.startBuilding("test_building", resources, technology);
+      const building = buildingManager.startBuilding(BuildingId.SOLAR_PANEL, resources, technology);
       expect(building).not.toBeNull();
 
       // Complete construction at sol 1
@@ -93,7 +95,7 @@ describe("Building Maintenance System", () => {
     });
 
     it("should decay by CONDITION_DECAY_AMOUNT every CONDITION_DECAY_INTERVAL sols", () => {
-      const building = buildingManager.startBuilding("test_building", resources, technology);
+      const building = buildingManager.startBuilding(BuildingId.SOLAR_PANEL, resources, technology);
       expect(building).not.toBeNull();
 
       // Complete construction
@@ -111,7 +113,7 @@ describe("Building Maintenance System", () => {
 
   describe("Efficiency penalty", () => {
     it("should apply efficiency penalty when condition falls below threshold", () => {
-      const building = buildingManager.startBuilding("test_building", resources, technology);
+      const building = buildingManager.startBuilding(BuildingId.SOLAR_PANEL, resources, technology);
       expect(building).not.toBeNull();
 
       // Complete construction
@@ -130,7 +132,7 @@ describe("Building Maintenance System", () => {
     });
 
     it("should not apply penalty when condition is at or above threshold", () => {
-      const building = buildingManager.startBuilding("test_building", resources, technology);
+      const building = buildingManager.startBuilding(BuildingId.SOLAR_PANEL, resources, technology);
       expect(building).not.toBeNull();
 
       // Complete construction
@@ -143,7 +145,7 @@ describe("Building Maintenance System", () => {
     });
 
     it("should also affect consumption when condition is low", () => {
-      const building = buildingManager.startBuilding("test_building", resources, technology);
+      const building = buildingManager.startBuilding(BuildingId.SOLAR_PANEL, resources, technology);
       expect(building).not.toBeNull();
 
       // Complete construction
@@ -162,7 +164,7 @@ describe("Building Maintenance System", () => {
 
   describe("Maintenance cost", () => {
     it("should calculate maintenance cost as percentage of building cost", () => {
-      const building = buildingManager.startBuilding("test_building", resources, technology);
+      const building = buildingManager.startBuilding(BuildingId.SOLAR_PANEL, resources, technology);
       expect(building).not.toBeNull();
 
       // Complete construction
@@ -174,7 +176,7 @@ describe("Building Maintenance System", () => {
     });
 
     it("should return undefined for non-active buildings", () => {
-      const building = buildingManager.startBuilding("test_building", resources, technology);
+      const building = buildingManager.startBuilding(BuildingId.SOLAR_PANEL, resources, technology);
       expect(building).not.toBeNull();
 
       // Building is still pending
@@ -183,7 +185,7 @@ describe("Building Maintenance System", () => {
     });
 
     it("should return undefined for broken buildings", () => {
-      const building = buildingManager.startBuilding("test_building", resources, technology);
+      const building = buildingManager.startBuilding(BuildingId.SOLAR_PANEL, resources, technology);
       expect(building).not.toBeNull();
 
       // Complete construction
@@ -199,7 +201,7 @@ describe("Building Maintenance System", () => {
 
   describe("Perform maintenance", () => {
     it("should restore condition to 100%", () => {
-      const building = buildingManager.startBuilding("test_building", resources, technology);
+      const building = buildingManager.startBuilding(BuildingId.SOLAR_PANEL, resources, technology);
       expect(building).not.toBeNull();
 
       // Complete construction
@@ -215,7 +217,7 @@ describe("Building Maintenance System", () => {
     });
 
     it("should deduct maintenance cost from resources", () => {
-      const building = buildingManager.startBuilding("test_building", resources, technology);
+      const building = buildingManager.startBuilding(BuildingId.SOLAR_PANEL, resources, technology);
       expect(building).not.toBeNull();
 
       // Complete construction
@@ -227,7 +229,7 @@ describe("Building Maintenance System", () => {
       buildingManager.performMaintenance(building!.id, resources);
 
       const materialsAfter = resources.getResources().materials;
-      expect(materialsBefore - materialsAfter).toBe(cost!.materials);
+      expect(materialsBefore - materialsAfter).toBe(cost!.materials!);
     });
 
     it("should fail if cannot afford maintenance", () => {
@@ -235,7 +237,7 @@ describe("Building Maintenance System", () => {
       const poorResources = new ResourceManager({ materials: 5, power: 100, food: 100, water: 100, oxygen: 100 });
 
       // Manually create a building without paying cost (for testing purposes)
-      const building = buildingManager.startBuilding("test_building", resources, technology);
+      const building = buildingManager.startBuilding(BuildingId.SOLAR_PANEL, resources, technology);
       expect(building).not.toBeNull();
 
       // Complete construction
@@ -249,7 +251,7 @@ describe("Building Maintenance System", () => {
     });
 
     it("should update lastMaintenance timestamp", () => {
-      const building = buildingManager.startBuilding("test_building", resources, technology);
+      const building = buildingManager.startBuilding(BuildingId.SOLAR_PANEL, resources, technology);
       expect(building).not.toBeNull();
 
       // Complete construction at sol 1
@@ -267,7 +269,7 @@ describe("Building Maintenance System", () => {
 
   describe("Serialization", () => {
     it("should serialize and deserialize maintenance fields", () => {
-      const building = buildingManager.startBuilding("test_building", resources, technology);
+      const building = buildingManager.startBuilding(BuildingId.SOLAR_PANEL, resources, technology);
       expect(building).not.toBeNull();
 
       // Complete construction
@@ -297,7 +299,7 @@ describe("Building Maintenance System", () => {
         buildings: [
           {
             id: "building_1",
-            definitionId: "test_building",
+            definitionId: BuildingId.SOLAR_PANEL,
             status: "active" as const,
             constructionProgress: 1,
             assignedWorkers: [],
@@ -323,7 +325,7 @@ describe("Building Maintenance System", () => {
 
   describe("Building degradation event", () => {
     it("should emit BUILDING_DEGRADED event when crossing efficiency threshold", () => {
-      const building = buildingManager.startBuilding("test_building", resources, technology);
+      const building = buildingManager.startBuilding(BuildingId.SOLAR_PANEL, resources, technology);
       expect(building).not.toBeNull();
 
       // Complete construction

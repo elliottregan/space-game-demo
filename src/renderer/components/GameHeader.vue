@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { setTheme, type Theme, useTheme } from "../composables/useTheme";
 import { gameService } from "../services/GameService";
 import { GButton } from "../ui";
-import { useTheme, setTheme, type Theme } from "../composables/useTheme";
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const state = gameService.getState();
@@ -30,6 +30,7 @@ function newGame() {
 
 const { theme } = useTheme();
 
+// biome-ignore lint/correctness/noUnusedVariables: used in template
 const themeLabel = computed(() => {
   switch (theme.value) {
     case "light":

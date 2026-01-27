@@ -7,6 +7,9 @@ import type { TechnologySnapshot } from "../../src/facade/types/technology";
 import type { BuildingSnapshot } from "../../src/facade/types/buildings";
 import type { ActiveEventSnapshot, EventChoice } from "../../src/facade/types/events";
 import type { CanDoResult, Result } from "../../src/facade/types/common";
+import { BuildingId } from "../../src/core/models/Building";
+import { TechnologyId } from "../../src/core/models/Technology";
+import { EventId } from "../../src/core/models/GameEvent";
 
 // Helper to create mock API with defaults
 function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
@@ -23,6 +26,8 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
     morale: 70,
     colonists: [],
     skillDefinitions: [],
+    housingAssignments: {},
+    unhoused: [],
   };
 
   const defaultTechSnapshot: TechnologySnapshot = {
@@ -30,6 +35,7 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
     available: [],
     researched: [],
     currentResearch: null,
+    researchQueue: [],
   };
 
   const allowed: CanDoResult = { allowed: true };
@@ -53,7 +59,7 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
         return successResult({ id: "b1", definitionId: defId, status: "pending" as const, mode: "normal" as const, progress: 0 });
       }),
       snapshot: mock(() => overrides.buildingsSnapshot ?? {
-        active: [{ id: "b0", definitionId: "hydroponic_garden", status: "active" as const, mode: "normal" as const, progress: 100 }],
+        active: [{ id: "b0", definitionId: BuildingId.HYDROPONIC_GARDEN, status: "active" as const, mode: "normal" as const, progress: 100 }],
         pending: [],
         definitions: [],
         moraleBoost: 0,
@@ -172,7 +178,7 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).toContain("basic_farm");
+      expect(buildCalls).toContain(BuildingId.BASIC_FARM);
     });
 
     it("builds oxygen generator when oxygen < 50", () => {
@@ -190,7 +196,7 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).toContain("hydroponic_garden");
+      expect(buildCalls).toContain(BuildingId.HYDROPONIC_GARDEN);
     });
 
     it("builds farm when food production <= consumption", () => {
@@ -208,7 +214,7 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).toContain("basic_farm");
+      expect(buildCalls).toContain(BuildingId.BASIC_FARM);
     });
 
     it("builds oxygen generator when oxygen production <= consumption", () => {
@@ -226,7 +232,7 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).toContain("hydroponic_garden");
+      expect(buildCalls).toContain(BuildingId.HYDROPONIC_GARDEN);
     });
 
     it("does not build if cannot afford", () => {
@@ -260,8 +266,8 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         hasActiveEvent: true,
         activeEvent: {
-          definition: { id: "test", name: "Test", description: "Test", minSol: 0, chance: 1, choices },
-          active: { eventId: "test", triggeredAt: 0, resolved: false },
+          definition: { id: EventId.DUST_STORM, name: "Test", description: "Test", minSol: 0, chance: 1, choices },
+          active: { eventId: EventId.DUST_STORM, triggeredAt: 0, resolved: false },
           choices,
         },
         eventResolveCalled: (choiceId) => resolvedChoices.push(choiceId),
@@ -283,8 +289,8 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         hasActiveEvent: true,
         activeEvent: {
-          definition: { id: "test", name: "Test", description: "Test", minSol: 0, chance: 1, choices },
-          active: { eventId: "test", triggeredAt: 0, resolved: false },
+          definition: { id: EventId.DUST_STORM, name: "Test", description: "Test", minSol: 0, chance: 1, choices },
+          active: { eventId: EventId.DUST_STORM, triggeredAt: 0, resolved: false },
           choices,
         },
         eventResolveCalled: (choiceId) => resolvedChoices.push(choiceId),
@@ -307,8 +313,8 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         hasActiveEvent: true,
         activeEvent: {
-          definition: { id: "test", name: "Test", description: "Test", minSol: 0, chance: 1, choices },
-          active: { eventId: "test", triggeredAt: 0, resolved: false },
+          definition: { id: EventId.DUST_STORM, name: "Test", description: "Test", minSol: 0, chance: 1, choices },
+          active: { eventId: EventId.DUST_STORM, triggeredAt: 0, resolved: false },
           choices,
         },
         eventResolveCalled: (choiceId) => resolvedChoices.push(choiceId),
@@ -330,8 +336,8 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         hasActiveEvent: true,
         activeEvent: {
-          definition: { id: "test", name: "Test", description: "Test", minSol: 0, chance: 1, choices },
-          active: { eventId: "test", triggeredAt: 0, resolved: false },
+          definition: { id: EventId.DUST_STORM, name: "Test", description: "Test", minSol: 0, chance: 1, choices },
+          active: { eventId: EventId.DUST_STORM, triggeredAt: 0, resolved: false },
           choices,
         },
         eventResolveCalled: (choiceId) => resolvedChoices.push(choiceId),
@@ -351,15 +357,16 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         techSnapshot: {
           all: [
-            { id: "expensive", name: "Expensive", description: "", prerequisites: [], cost: { sols: 100 }, unlocks: [] },
-            { id: "cheap", name: "Cheap", description: "", prerequisites: [], cost: { sols: 30 }, unlocks: [] },
+            { id: TechnologyId.NUCLEAR_FISSION, name: "Expensive", description: "", prerequisites: [], cost: { sols: 100 }, unlocks: [] },
+            { id: TechnologyId.HYDROPONICS, name: "Cheap", description: "", prerequisites: [], cost: { sols: 30 }, unlocks: [] },
           ],
           available: [
-            { id: "expensive", name: "Expensive", description: "", prerequisites: [], cost: { sols: 100 }, unlocks: [] },
-            { id: "cheap", name: "Cheap", description: "", prerequisites: [], cost: { sols: 30 }, unlocks: [] },
+            { id: TechnologyId.NUCLEAR_FISSION, name: "Expensive", description: "", prerequisites: [], cost: { sols: 100 }, unlocks: [] },
+            { id: TechnologyId.HYDROPONICS, name: "Cheap", description: "", prerequisites: [], cost: { sols: 30 }, unlocks: [] },
           ],
           researched: [],
           currentResearch: null,
+          researchQueue: [],
         },
         canResearch: () => ({ allowed: true }),
         researchCalled: (techId) => researchCalls.push(techId),
@@ -368,7 +375,7 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(researchCalls).toContain("cheap");
+      expect(researchCalls).toContain(TechnologyId.HYDROPONICS);
     });
 
     it("does not start research if already researching", () => {
@@ -377,10 +384,11 @@ describe("HeuristicStrategy", () => {
         techSnapshot: {
           all: [],
           available: [
-            { id: "available", name: "Available", description: "", prerequisites: [], cost: { sols: 50 }, unlocks: [] },
+            { id: TechnologyId.ROBOTICS, name: "Available", description: "", prerequisites: [], cost: { sols: 50 }, unlocks: [] },
           ],
           researched: [],
-          currentResearch: { techId: "current", progress: 10, totalSols: 50 },
+          currentResearch: { techId: TechnologyId.HYDROPONICS, progress: 10, requiredSols: 50 },
+          researchQueue: [],
         },
         canResearch: () => ({ allowed: true }),
         researchCalled: (techId) => researchCalls.push(techId),
@@ -408,7 +416,7 @@ describe("HeuristicStrategy", () => {
       strategy.executeTick();
 
       // power production (15) < consumption (10) + 20 = 30, so should build
-      expect(buildCalls).toContain("solar_panel");
+      expect(buildCalls).toContain(BuildingId.SOLAR_PANEL);
     });
 
     it("builds mining station when materials < 100 and tech available", () => {
@@ -421,8 +429,8 @@ describe("HeuristicStrategy", () => {
           netFlow: { food: 5, oxygen: 5, power: 40, materials: 0 },
         },
         canBuild: (defId) => {
-          if (defId === "mining_station") return { allowed: true };
-          if (defId === "solar_panel") return { allowed: false, reason: "Not needed" };
+          if (defId === BuildingId.MINING_STATION) return { allowed: true };
+          if (defId === BuildingId.SOLAR_PANEL) return { allowed: false, reason: "Not needed" };
           return { allowed: true };
         },
         buildCalled: (defId) => buildCalls.push(defId),
@@ -431,7 +439,7 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).toContain("mining_station");
+      expect(buildCalls).toContain(BuildingId.MINING_STATION);
     });
   });
 
@@ -445,6 +453,8 @@ describe("HeuristicStrategy", () => {
           morale: 70,
           colonists: [],
           skillDefinitions: [],
+          housingAssignments: {},
+          unhoused: [],
         },
         resourceSnapshot: {
           current: { food: 100, oxygen: 100, water: 100, power: 100, materials: 100 },
@@ -458,7 +468,7 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).toContain("habitat");
+      expect(buildCalls).toContain(BuildingId.HABITAT);
     });
 
     it("does not build habitat when morale <= 60", () => {
@@ -470,6 +480,8 @@ describe("HeuristicStrategy", () => {
           morale: 55,
           colonists: [],
           skillDefinitions: [],
+          housingAssignments: {},
+          unhoused: [],
         },
         resourceSnapshot: {
           current: { food: 100, oxygen: 100, water: 100, power: 100, materials: 100 },
@@ -483,7 +495,7 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).not.toContain("habitat");
+      expect(buildCalls).not.toContain(BuildingId.HABITAT);
     });
 
     it("does not build habitat when population >= 100", () => {
@@ -495,6 +507,8 @@ describe("HeuristicStrategy", () => {
           morale: 80,
           colonists: [],
           skillDefinitions: [],
+          housingAssignments: {},
+          unhoused: [],
         },
         resourceSnapshot: {
           current: { food: 100, oxygen: 100, water: 100, power: 100, materials: 100 },
@@ -508,7 +522,7 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).not.toContain("habitat");
+      expect(buildCalls).not.toContain(BuildingId.HABITAT);
     });
   });
 
@@ -529,15 +543,18 @@ describe("HeuristicStrategy", () => {
           morale: 80,
           colonists: [],
           skillDefinitions: [],
+          housingAssignments: {},
+          unhoused: [],
         },
         techSnapshot: {
           all: [],
           available: [],
           researched: [],
           currentResearch: null,
+          researchQueue: [],
         },
         canResearch: (techId) => {
-          if (techId === "generation_ship") return { allowed: true };
+          if (techId === TechnologyId.GENERATION_SHIP) return { allowed: true };
           return { allowed: false, reason: "Not available" };
         },
         researchCalled: (techId) => researchCalls.push(techId),
@@ -546,7 +563,7 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(researchCalls).toContain("generation_ship");
+      expect(researchCalls).toContain(TechnologyId.GENERATION_SHIP);
     });
   });
 
@@ -564,8 +581,8 @@ describe("HeuristicStrategy", () => {
         },
         hasActiveEvent: true,
         activeEvent: {
-          definition: { id: "test", name: "Test", description: "Test", minSol: 0, chance: 1, choices: [{ id: "choice", text: "Choice", effects: {} }] },
-          active: { eventId: "test", triggeredAt: 0, resolved: false },
+          definition: { id: EventId.DUST_STORM, name: "Test", description: "Test", minSol: 0, chance: 1, choices: [{ id: "choice", text: "Choice", effects: {} }] },
+          active: { eventId: EventId.DUST_STORM, triggeredAt: 0, resolved: false },
           choices: [{ id: "choice", text: "Choice", effects: {} }],
         },
         buildCalled: (defId) => buildCalls.push(defId),
@@ -576,7 +593,7 @@ describe("HeuristicStrategy", () => {
       strategy.executeTick();
 
       // Survival takes precedence, so farm should be built, not event resolved
-      expect(buildCalls).toContain("basic_farm");
+      expect(buildCalls).toContain(BuildingId.BASIC_FARM);
       expect(resolvedChoices).toHaveLength(0);
     });
 
@@ -593,8 +610,8 @@ describe("HeuristicStrategy", () => {
         },
         hasActiveEvent: true,
         activeEvent: {
-          definition: { id: "test", name: "Test", description: "Test", minSol: 0, chance: 1, choices: [{ id: "choice", text: "Choice", effects: {} }] },
-          active: { eventId: "test", triggeredAt: 0, resolved: false },
+          definition: { id: EventId.DUST_STORM, name: "Test", description: "Test", minSol: 0, chance: 1, choices: [{ id: "choice", text: "Choice", effects: {} }] },
+          active: { eventId: EventId.DUST_STORM, triggeredAt: 0, resolved: false },
           choices: [{ id: "choice", text: "Choice", effects: {} }],
         },
         buildCalled: (defId) => buildCalls.push(defId),

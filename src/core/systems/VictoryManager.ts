@@ -1,4 +1,5 @@
 import type { GameEvent } from "../models/GameEvent";
+import { TechnologyId } from "../models/Technology";
 import type { ColonyManager } from "./ColonyManager";
 import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
@@ -29,7 +30,11 @@ export const COLONY_CHARTER_REQUIREMENTS = {
   minPopulation: 30,
   minMorale: 60,
   sustainedSols: 200,
-  requiredTechs: ["hydroponics", "water_recycling", "advanced_materials"],
+  requiredTechs: [
+    TechnologyId.HYDROPONICS,
+    TechnologyId.WATER_RECYCLING,
+    TechnologyId.ADVANCED_MATERIALS,
+  ],
 };
 
 export class VictoryManager {
@@ -72,7 +77,7 @@ export class VictoryManager {
     }
 
     // Generation Ship - extended victory path (~2900 sols)
-    if (technology.isResearched("generation_ship")) {
+    if (technology.isResearched(TechnologyId.GENERATION_SHIP)) {
       this.status = "victory";
       this.reason = "Generation Ship completed! Humanity can now reach the stars!";
       events.push({

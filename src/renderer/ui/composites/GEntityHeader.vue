@@ -2,8 +2,7 @@
 import { computed } from "vue";
 import GBadge from "../primitives/GBadge.vue";
 import GProgress from "../primitives/GProgress.vue";
-
-export type EntityStatus = "active" | "pending" | "disabled" | "idle" | "recycling";
+import type { EntityStatus } from "../types";
 
 const props = withDefaults(
   defineProps<{

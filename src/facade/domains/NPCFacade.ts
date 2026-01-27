@@ -2,6 +2,7 @@
 // NPC influence queries and commands facade
 
 import type { GameState } from "../../core/GameState";
+import { NPCId, ProjectId } from "../../core/models/NPCInfluence";
 import type { NPCInfluenceSnapshot, ResourceDelta } from "../types";
 import { type CanDoResult, err, ok, type Result } from "../types/common";
 
@@ -33,7 +34,9 @@ export class NPCFacade {
       activeProject: activeProject
         ? Object.freeze({
             projectId: activeProject.projectId,
-            supportLevels: Object.freeze(Object.fromEntries(activeProject.supportLevels)),
+            supportLevels: Object.freeze(
+              Object.fromEntries(activeProject.supportLevels) as Record<NPCId, number>,
+            ),
             solsRemaining: activeProject.solsRemaining,
             averageSupport: this.gameState.npcInfluence.getAverageSupport(),
           })
@@ -48,14 +51,14 @@ export class NPCFacade {
   /**
    * Get lobby cost for an NPC.
    */
-  getLobbyCost(npcId: string, supportBoost: number): number {
+  getLobbyCost(npcId: NPCId, supportBoost: number): number {
     return this.gameState.npcInfluence.getLobbyCost(npcId, supportBoost);
   }
 
   /**
    * Check if a project can be proposed.
    */
-  canProposeProject(projectId: string): CanDoResult {
+  canProposeProject(projectId: ProjectId): CanDoResult {
     const project = this.gameState.npcInfluence.getProjects().find((p) => p.id === projectId);
     if (!project) {
       return { allowed: false, reason: "Project not found" };
@@ -77,7 +80,7 @@ export class NPCFacade {
   /**
    * Check if an NPC can be lobbied.
    */
-  canLobbyNPC(npcId: string, supportBoost: number): CanDoResult {
+  canLobbyNPC(npcId: NPCId, supportBoost: number): CanDoResult {
     const npc = this.gameState.npcInfluence.getNPCs().find((n) => n.id === npcId);
     if (!npc) {
       return { allowed: false, reason: "NPC not found" };
@@ -99,7 +102,7 @@ export class NPCFacade {
   /**
    * Propose a project for NPC voting.
    */
-  proposeProject(projectId: string): Result<void> {
+  proposeProject(projectId: ProjectId): Result<void> {
     return this.executeCommand(() => {
       const check = this.canProposeProject(projectId);
       if (!check.allowed) {
@@ -130,7 +133,7 @@ export class NPCFacade {
   /**
    * Lobby an NPC to increase their support.
    */
-  lobbyNPC(npcId: string, supportBoost: number): Result<void> {
+  lobbyNPC(npcId: NPCId, supportBoost: number): Result<void> {
     return this.executeCommand(() => {
       const check = this.canLobbyNPC(npcId, supportBoost);
       if (!check.allowed) {
@@ -162,7 +165,7 @@ export class NPCFacade {
   /**
    * Create a council with selected NPCs.
    */
-  createCouncil(name: string, memberIds: string[]): Result<void> {
+  createCouncil(name: string, memberIds: NPCId[]): Result<void> {
     return this.executeCommand(() => {
       // Validate members exist
       for (const memberId of memberIds) {

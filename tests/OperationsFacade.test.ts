@@ -1,5 +1,6 @@
 // tests/OperationsFacade.test.ts
 import { describe, it, expect, beforeEach } from "bun:test";
+import { BuildingId } from "../src/core/models/Building";
 import { GameAPI } from "../src/facade";
 
 describe("OperationsFacade", () => {
@@ -161,7 +162,9 @@ describe("OperationsFacade", () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.type).toBe("PREREQUISITE_NOT_MET");
-        expect(result.error.reason).toContain("not found");
+        if (result.error.type === "PREREQUISITE_NOT_MET") {
+          expect(result.error.reason).toContain("not found");
+        }
       }
     });
 
@@ -251,10 +254,10 @@ describe("OperationsFacade", () => {
         expect(availableBefore).toBeDefined();
 
         // Build a water extractor and link it
-        const buildResult = api.buildings.build("water_extractor");
+        const buildResult = api.buildings.build(BuildingId.WATER_EXTRACTOR);
         if (buildResult.success) {
           // Complete construction
-          const def = api.buildings.getDefinition("water_extractor");
+          const def = api.buildings.getDefinition(BuildingId.WATER_EXTRACTOR);
           for (let i = 0; i < def!.constructionTime; i++) {
             api.game.advanceSol();
           }
@@ -314,7 +317,7 @@ describe("OperationsFacade", () => {
     });
 
     it("setPolicy succeeds when no cooldown", () => {
-      const result = api.operations.setPolicy("resourcePriority", "growth");
+      const result = api.operations.setPolicy("resourcePriority", "burn");
       expect(result.success).toBe(true);
     });
 
@@ -322,7 +325,7 @@ describe("OperationsFacade", () => {
       api.operations.setPolicy("resourcePriority", "balanced");
       api.game.advanceSol();
 
-      const result = api.operations.setPolicy("resourcePriority", "growth");
+      const result = api.operations.setPolicy("resourcePriority", "burn");
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.type).toBe("COOLDOWN_ACTIVE");
