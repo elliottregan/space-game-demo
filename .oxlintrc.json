@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript"],
+  "globals": {
+    "Bun": "readonly"
+  },
+  "rules": {
+    "no-unused-vars": "warn",
+    "@typescript-eslint/no-non-null-assertion": "warn"
+  }
+}

@@ -8,9 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `bun run dev` - Start Vite dev server with HMR
 - `bun run build` - Production build
 - `bun run preview` - Preview production build
-- `bun run lint` - Lint with Biome
-- `bun run format` - Format with Biome
-- `bun run check` - Run Biome check (lint + format)
+- `bun run lint` - Lint with oxlint
+- `bun run lint:fix` - Lint and auto-fix with oxlint
 - `bun test` - Run all tests
 - `bun test tests/ResourceManager.test.ts` - Run single test file
 - `bun run simulate` - Run game simulation
@@ -69,7 +68,7 @@ Buildings have three resource-related properties:
 
 - When updating `reactive()` object properties, modify in-place (delete then assign) rather than replacing the entire nested object for reliable reactivity
 - Semantic CSS variables defined in `App.vue` `:root`: `--color-positive`, `--color-negative`, `--color-danger`, `--color-warning`, `--color-info`, `--color-muted`
-- Use `// biome-ignore lint/correctness/noUnusedVariables: used in template` for template-only functions
+- Use `// oxlint-disable-next-line no-unused-vars` for template-only functions
 
 ## Testing
 
