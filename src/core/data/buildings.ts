@@ -56,6 +56,20 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerRole: ColonistRole.FARMING,
     oxygenContribution: 2,
   },
+  {
+    id: BuildingId.BASIC_MINE,
+    name: "Basic Mine",
+    description: "Extracts materials from surface mineral deposits",
+    cost: { materials: 50 },
+    constructionTime: 10,
+    production: { materials: 4 },
+    consumption: { power: 3 },
+    workerSlots: 4,
+    workerRole: ColonistRole.ENGINEERING,
+    requiresDeposit: true,
+    repurposeTargets: [BuildingId.STORAGE_DEPOT],
+    oxygenContribution: -2,
+  },
 
   // Tech-gated buildings
   {
