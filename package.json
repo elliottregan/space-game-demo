@@ -15,12 +15,17 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "simulate": "bun run scripts/simulate.ts",
-    "simulate:analyze": "bun run scripts/analyze-simulation.ts"
+    "simulate:analyze": "bun run scripts/analyze-simulation.ts",
+    "visualize": "bun run scripts/visualize.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/d3-array": "^3.2.2",
+    "@types/d3-axis": "^3.0.6",
     "@types/d3-force": "^3.0.10",
+    "@types/d3-scale": "^4.0.9",
     "@types/d3-selection": "^3.0.11",
+    "@types/d3-shape": "^3.1.8",
     "@vitejs/plugin-vue": "^6.0.3",
     "lefthook": "^2.0.16",
     "oxfmt": "^0.1.0",
@@ -31,8 +36,12 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "d3-array": "^3.2.4",
+    "d3-axis": "^3.0.0",
     "d3-force": "^3.0.0",
+    "d3-scale": "^4.0.2",
     "d3-selection": "^3.0.0",
+    "d3-shape": "^3.2.0",
     "vue": "^3.5.27",
     "vue-router": "^4.6.4"
   }
