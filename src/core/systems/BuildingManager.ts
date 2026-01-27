@@ -3,32 +3,28 @@ import {
   CONDITION_DECAY_INTERVAL,
   CONDITION_EFFICIENCY_PENALTY,
   CONDITION_EFFICIENCY_THRESHOLD,
-  MAINTENANCE_COST_MULTIPLIER,
   MAINTENANCE_START_SOL,
   OXYGEN_DEFICIT_EFFICIENCY_PENALTY,
 } from "../balance/BuildingBalance";
-import {
-  BUILDING_MODES,
-  RECYCLING_RECOVERY_RATES,
-  RECYCLING_TIME_MULTIPLIER,
-  REPAIR_COST_MULTIPLIER,
-  REPAIR_DURATION_SOLS,
-  REPURPOSE_COST_MULTIPLIER,
-  REPURPOSE_TIME_MULTIPLIER,
-  RUSH_RECYCLING_PENALTY,
-} from "../balance/OperationsBalance";
-import {
-  MASTERY_EFFICIENCY,
-  MAX_SKILL_EFFICIENCY_BONUS,
-  ROLE_MISMATCH_PENALTY,
-  STAFFING_CURVE_EXPONENT,
-  TRAINING_WORK_PENALTY,
-} from "../balance/WorkforceBalance";
-import { SKILLS } from "../data/skills";
+import { BUILDING_MODES, REPAIR_DURATION_SOLS } from "../balance/OperationsBalance";
 import type { Building, BuildingDefinition } from "../models/Building";
-import type { Colonist, ColonistRole } from "../models/Colonist";
+import type { ColonistRole } from "../models/Colonist";
 import type { GameEvent } from "../models/GameEvent";
 import type { ResourceDelta } from "../models/Resources";
+import {
+  applyRushRecyclingPenalty,
+  calculateMaintenanceCost,
+  calculateRecycleTime,
+  calculateRecycleValue,
+  calculateRepairCost,
+  calculateRepurposeCost,
+  calculateRepurposeTime,
+} from "../utils/buildingCosts";
+import { applyMultiplier, combineMultipliers } from "../utils/resourceFlow";
+import {
+  calculateAverageWorkerEfficiency,
+  calculateStaffingEfficiency,
+} from "../utils/workerEfficiency";
 import type { ColonyManager } from "./ColonyManager";
 import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
@@ -289,11 +285,7 @@ export class BuildingManager {
     const def = this.definitions.get(building.definitionId);
     if (!def) return undefined;
 
-    const cost: ResourceDelta = {};
-    for (const [key, value] of Object.entries(def.cost)) {
-      if (value) cost[key as keyof ResourceDelta] = Math.ceil(value * REPAIR_COST_MULTIPLIER);
-    }
-    return cost;
+    return calculateRepairCost(def);
   }
 
   startRepair(buildingId: string, resources: ResourceManager): boolean {
@@ -321,13 +313,7 @@ export class BuildingManager {
     const def = this.definitions.get(building.definitionId);
     if (!def) return undefined;
 
-    const cost: ResourceDelta = {};
-    for (const [key, value] of Object.entries(def.cost)) {
-      if (value) {
-        cost[key as keyof ResourceDelta] = Math.ceil(value * MAINTENANCE_COST_MULTIPLIER);
-      }
-    }
-    return cost;
+    return calculateMaintenanceCost(def);
   }
 
   canPerformMaintenance(buildingId: string, resources: ResourceManager): boolean {
@@ -372,21 +358,7 @@ export class BuildingManager {
     const def = this.definitions.get(building.definitionId);
     if (!def) return undefined;
 
-    let rate: number = RECYCLING_RECOVERY_RATES.standard;
-
-    if (building.broken) {
-      rate = RECYCLING_RECOVERY_RATES.damaged;
-    } else if (building.status === "idle") {
-      rate = RECYCLING_RECOVERY_RATES.depleted;
-    } else if (building.status === "active" && building.depositId) {
-      rate = RECYCLING_RECOVERY_RATES.active;
-    }
-
-    const result: ResourceDelta = {};
-    for (const [key, value] of Object.entries(def.cost)) {
-      if (value) result[key as keyof ResourceDelta] = Math.floor(value * rate);
-    }
-    return result;
+    return calculateRecycleValue(building, def);
   }
 
   getRecycleTime(buildingId: string): number {
@@ -396,7 +368,7 @@ export class BuildingManager {
     const def = this.definitions.get(building.definitionId);
     if (!def) return 0;
 
-    return Math.ceil(def.constructionTime * RECYCLING_TIME_MULTIPLIER);
+    return calculateRecycleTime(def);
   }
 
   startRecycling(buildingId: string, resources: ResourceManager): boolean {
@@ -427,15 +399,7 @@ export class BuildingManager {
     // Immediate completion with penalty
     const recycleValue = this.getRecycleValue(buildingId);
     if (recycleValue) {
-      const penalizedValue: ResourceDelta = {};
-      for (const [key, value] of Object.entries(recycleValue)) {
-        if (value) {
-          penalizedValue[key as keyof ResourceDelta] = Math.floor(
-            value * (1 - RUSH_RECYCLING_PENALTY),
-          );
-        }
-      }
-      resources.add(penalizedValue);
+      resources.add(applyRushRecyclingPenalty(recycleValue));
     }
 
     this.buildings.delete(buildingId);
@@ -474,17 +438,14 @@ export class BuildingManager {
     const targetDef = this.definitions.get(targetDefId);
     if (!targetDef) return undefined;
 
-    const cost: ResourceDelta = {};
-    for (const [key, value] of Object.entries(targetDef.cost)) {
-      if (value) cost[key as keyof ResourceDelta] = Math.ceil(value * REPURPOSE_COST_MULTIPLIER);
-    }
-    return cost;
+    return calculateRepurposeCost(targetDef);
   }
 
   getRepurposeTime(targetDefId: string): number {
     const targetDef = this.definitions.get(targetDefId);
     if (!targetDef) return 0;
-    return Math.ceil(targetDef.constructionTime * REPURPOSE_TIME_MULTIPLIER);
+
+    return calculateRepurposeTime(targetDef);
   }
 
   startRepurposing(
@@ -528,17 +489,29 @@ export class BuildingManager {
   }
 
   private getConditionMultiplier(condition: number): number {
-    if (condition < CONDITION_EFFICIENCY_THRESHOLD) {
-      return 1 - CONDITION_EFFICIENCY_PENALTY;
-    }
-    return 1;
+    return condition < CONDITION_EFFICIENCY_THRESHOLD ? 1 - CONDITION_EFFICIENCY_PENALTY : 1;
   }
 
   private getOxygenDeficitMultiplier(): number {
-    if (this.getTotalOxygenContribution() < 0) {
-      return 1 - OXYGEN_DEFICIT_EFFICIENCY_PENALTY;
-    }
-    return 1;
+    return this.getTotalOxygenContribution() < 0 ? 1 - OXYGEN_DEFICIT_EFFICIENCY_PENALTY : 1;
+  }
+
+  /**
+   * Calculate the combined efficiency multiplier for a building.
+   * Factors: condition, oxygen, staffing, worker efficiency.
+   */
+  private getBuildingEfficiencyMultiplier(buildingId: string, overrideCondition?: number): number {
+    const building = this.buildings.get(buildingId);
+    if (!building) return 0;
+
+    const condition = overrideCondition ?? building.condition;
+
+    return combineMultipliers(
+      this.getConditionMultiplier(condition),
+      this.getOxygenDeficitMultiplier(),
+      this.getStaffingEfficiency(buildingId),
+      this.getWorkerEfficiency(buildingId),
+    );
   }
 
   getEffectiveProduction(buildingId: string, overrideCondition?: number): ResourceDelta {
@@ -549,25 +522,9 @@ export class BuildingManager {
     if (!def?.production) return {};
 
     const modeMultiplier = BUILDING_MODES[building.mode].production;
-    const condition = overrideCondition ?? building.condition;
-    const conditionMultiplier = this.getConditionMultiplier(condition);
-    const oxygenMultiplier = this.getOxygenDeficitMultiplier();
-    const staffingMultiplier = this.getStaffingEfficiency(buildingId);
-    const workerMultiplier = this.getWorkerEfficiency(buildingId);
-    const result: ResourceDelta = {};
+    const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(buildingId, overrideCondition);
 
-    for (const [key, value] of Object.entries(def.production)) {
-      if (value)
-        result[key as keyof ResourceDelta] =
-          value *
-          modeMultiplier *
-          conditionMultiplier *
-          oxygenMultiplier *
-          staffingMultiplier *
-          workerMultiplier;
-    }
-
-    return result;
+    return applyMultiplier(def.production, modeMultiplier * efficiencyMultiplier);
   }
 
   getEffectiveConsumption(buildingId: string, overrideCondition?: number): ResourceDelta {
@@ -578,25 +535,9 @@ export class BuildingManager {
     if (!def?.consumption) return {};
 
     const modeMultiplier = BUILDING_MODES[building.mode].consumption;
-    const condition = overrideCondition ?? building.condition;
-    const conditionMultiplier = this.getConditionMultiplier(condition);
-    const oxygenMultiplier = this.getOxygenDeficitMultiplier();
-    const staffingMultiplier = this.getStaffingEfficiency(buildingId);
-    const workerMultiplier = this.getWorkerEfficiency(buildingId);
-    const result: ResourceDelta = {};
+    const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(buildingId, overrideCondition);
 
-    for (const [key, value] of Object.entries(def.consumption)) {
-      if (value)
-        result[key as keyof ResourceDelta] =
-          value *
-          modeMultiplier *
-          conditionMultiplier *
-          oxygenMultiplier *
-          staffingMultiplier *
-          workerMultiplier;
-    }
-
-    return result;
+    return applyMultiplier(def.consumption, modeMultiplier * efficiencyMultiplier);
   }
 
   /**
@@ -730,19 +671,13 @@ export class BuildingManager {
   /**
    * Calculate staffing efficiency using diminishing returns curve.
    * Returns 1 for buildings without worker slots.
-   * Formula: 1 - (1 - staffingRatio)^STAFFING_CURVE_EXPONENT
    */
   getStaffingEfficiency(buildingId: string): number {
     const building = this.buildings.get(buildingId);
     if (!building) return 0;
 
     const def = this.definitions.get(building.definitionId);
-    if (!def || !def.workerSlots) return 1; // No worker slots = always full efficiency
-
-    if (building.assignedWorkers.length === 0) return 0;
-
-    const staffingRatio = building.assignedWorkers.length / def.workerSlots;
-    return 1 - (1 - staffingRatio) ** STAFFING_CURVE_EXPONENT;
+    return calculateStaffingEfficiency(building.assignedWorkers.length, def?.workerSlots);
   }
 
   /**
@@ -757,47 +692,13 @@ export class BuildingManager {
     const def = this.definitions.get(building.definitionId);
     if (!def || !def.workerSlots) return 1;
     if (building.assignedWorkers.length === 0) return 1;
-
     if (!this.colonyManager) return 1;
 
-    let totalEfficiency = 0;
-    for (const colonistId of building.assignedWorkers) {
-      const colonist = this.colonyManager.getColonist(colonistId);
-      if (!colonist) continue;
+    const colonists = building.assignedWorkers
+      .map((id) => this.colonyManager?.getColonist(id))
+      .filter((c) => c !== undefined);
 
-      const efficiency = this.calculateSingleWorkerEfficiency(colonist, def.workerRole);
-      totalEfficiency += efficiency;
-    }
-
-    return totalEfficiency / building.assignedWorkers.length;
-  }
-
-  private calculateSingleWorkerEfficiency(colonist: Colonist, requiredRole?: ColonistRole): number {
-    // Base mastery efficiency
-    let efficiency = MASTERY_EFFICIENCY[colonist.masteryLevel] ?? 1;
-
-    // Add skill bonus (capped)
-    let skillBonus = 0;
-    for (const skillId of colonist.skills) {
-      const skill = SKILLS.find((s) => s.id === skillId);
-      if (skill?.affinity.includes(colonist.role)) {
-        skillBonus += skill.efficiencyBonus;
-      }
-    }
-    skillBonus = Math.min(skillBonus, MAX_SKILL_EFFICIENCY_BONUS);
-    efficiency += skillBonus;
-
-    // Role mismatch penalty
-    if (requiredRole && colonist.role !== requiredRole) {
-      efficiency *= 1 - ROLE_MISMATCH_PENALTY;
-    }
-
-    // Training penalty
-    if (colonist.trainingTarget) {
-      efficiency *= 1 - TRAINING_WORK_PENALTY;
-    }
-
-    return efficiency;
+    return calculateAverageWorkerEfficiency(colonists, def.workerRole);
   }
 
   toJSON() {

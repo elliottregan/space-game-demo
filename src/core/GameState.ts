@@ -5,6 +5,11 @@ import { RANDOM_EVENTS } from "./data/events";
 import { INITIAL_RELATIONSHIPS, NPCS, PROJECTS } from "./data/npcs";
 import { TECHNOLOGIES } from "./data/technologies";
 import type { GameEvent } from "./models/GameEvent";
+import {
+  canExtract,
+  getBaseProductionForDeposit,
+  getDepletionEvents,
+} from "./utils/depositExtraction";
 import { BuildingManager } from "./systems/BuildingManager";
 import { ColonyManager } from "./systems/ColonyManager";
 import { EventManager } from "./systems/EventManager";
@@ -146,79 +151,53 @@ export class GameState {
 
   /**
    * Process extraction from deposits for all active mining buildings.
-   * This handles:
-   * - Extracting resources based on deposit quality
-   * - Firing warning events at 25%/10% remaining
-   * - Transitioning buildings to idle when deposits deplete
+   * Handles extraction, warning events, and building state transitions.
    */
   private processDepositExtraction(): GameEvent[] {
     const events: GameEvent[] = [];
 
     for (const building of this.buildings.getActiveBuildings()) {
       const def = this.buildings.getDefinition(building.definitionId);
-      if (!def?.requiresDeposit || !building.depositId) continue;
-      if (building.broken) continue;
+      if (!canExtract(building, def) || !def) continue;
 
       const site = this.operations.getSites().find((s) => s.id === building.depositId);
       if (!site) continue;
 
-      // Check warning level before extraction
-      const warningBefore = this.operations.getDepletionWarningLevel(site.id);
-
-      // Get base production for the resource type this building produces
-      const baseProduction =
-        def.production?.[site.resourceType as keyof typeof def.production] ?? 0;
+      const baseProduction = getBaseProductionForDeposit(def, site.resourceType);
       if (baseProduction === 0) continue;
 
-      // Process extraction
+      const warningBefore = this.operations.getDepletionWarningLevel(site.id);
       this.operations.processExtraction(building.id, baseProduction);
-
-      // Check warning level after extraction
       const warningAfter = this.operations.getDepletionWarningLevel(site.id);
 
-      // Fire events for threshold crossings
-      if (warningBefore === "none" && warningAfter === "warning") {
-        events.push({
-          type: "DEPOSIT_WARNING",
-          depositId: site.id,
-          buildingId: building.id,
-          severity: "warning",
-          message: `${def.name}'s deposit is running low (~${site.estimatedReserves.max} ${site.resourceType} remaining)`,
-        });
-      } else if (warningBefore !== "critical" && warningAfter === "critical") {
-        events.push({
-          type: "DEPOSIT_CRITICAL",
-          depositId: site.id,
-          buildingId: building.id,
-          severity: "critical",
-          message: `${def.name}'s deposit is nearly exhausted (~${site.estimatedReserves.max} ${site.resourceType} remaining)`,
-        });
-      } else if (warningAfter === "depleted") {
-        // Deposit is fully depleted - transition building to idle
-        building.status = "idle";
+      events.push(...getDepletionEvents(warningBefore, warningAfter, site, building, def.name));
 
-        // Remove production/consumption from resource flow
-        const effectiveProd = this.buildings.getEffectiveProduction(building.id);
-        const effectiveCons = this.buildings.getEffectiveConsumption(building.id);
-        if (Object.keys(effectiveProd).length > 0) {
-          this.resources.removeProduction(effectiveProd);
-        }
-        if (Object.keys(effectiveCons).length > 0) {
-          this.resources.removeConsumption(effectiveCons);
-        }
-
-        events.push({
-          type: "DEPOSIT_DEPLETED",
-          depositId: site.id,
-          buildingId: building.id,
-          buildingName: def.name,
-          severity: "critical",
-          message: `${def.name}'s deposit is exhausted. Building is now idle.`,
-        });
+      if (warningAfter === "depleted") {
+        this.transitionBuildingToIdle(building.id);
       }
     }
 
     return events;
+  }
+
+  /**
+   * Transition a building to idle status and remove its resource flow.
+   */
+  private transitionBuildingToIdle(buildingId: string): void {
+    const building = this.buildings.getBuilding(buildingId);
+    if (!building) return;
+
+    building.status = "idle";
+
+    const effectiveProd = this.buildings.getEffectiveProduction(buildingId);
+    const effectiveCons = this.buildings.getEffectiveConsumption(buildingId);
+
+    if (Object.keys(effectiveProd).length > 0) {
+      this.resources.removeProduction(effectiveProd);
+    }
+    if (Object.keys(effectiveCons).length > 0) {
+      this.resources.removeConsumption(effectiveCons);
+    }
   }
 
   toJSON() {

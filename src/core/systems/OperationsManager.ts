@@ -29,6 +29,7 @@ import type {
   ResourcePriority,
   WorkIntensity,
 } from "../models/Operation";
+import type { WarningLevel } from "../utils/depositExtraction";
 import type { ColonyManager } from "./ColonyManager";
 import type { ResourceManager } from "./ResourceManager";
 
@@ -488,7 +489,7 @@ export class OperationsManager {
     return site ? site.remainingReserves <= 0 : true;
   }
 
-  getDepletionWarningLevel(siteId: string): "none" | "warning" | "critical" | "depleted" {
+  getDepletionWarningLevel(siteId: string): WarningLevel {
     const site = this.sites.find((s) => s.id === siteId);
     if (!site) return "depleted";
 
