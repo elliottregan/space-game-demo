@@ -76,7 +76,7 @@ defineEmits<{
   display: flex;
   flex-direction: column;
   gap: var(--g-space-xs);
-  padding: var(--g-space-md);
+  padding: var(--g-space-md) 0;
   margin: var(--g-space-sm) 0;
   border-top: var(--g-border-width) solid var(--g-color-border-strong);
   border-bottom: var(--g-border-width-thin) solid var(--g-color-border-strong);
