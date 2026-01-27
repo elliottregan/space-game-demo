@@ -5,7 +5,7 @@
 import { readdir } from "fs/promises";
 import { join } from "path";
 
-const PORT = 3001;
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 const LOGS_DIR = "logs/simulations";
 
 /**

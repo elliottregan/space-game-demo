@@ -6,4 +6,12 @@ export type {
   ResourceSnapshot,
   CrisisPoint,
   RunResult,
+  VictoryTimeStats,
+  PeakPopulationStats,
+  VictoryDefeatComparison,
+  CorrelationAnalysis,
+  BottleneckAnalysis,
+  EventImpactAnalysis,
+  CrisisTimelineAnalysis,
+  OutlierAnalysis,
 } from "../simulation/types";

@@ -220,3 +220,283 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Heatmap legend styles */
+.heatmap-legend {
+  margin-bottom: var(--g-space-md, 16px);
+  padding: var(--g-space-sm, 8px);
+  background: var(--g-color-bg-elevated);
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.heatmap-legend-title {
+  font-weight: bold;
+  color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--g-space-xs, 4px);
+}
+
+.heatmap-legend-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--g-space-xs, 4px);
+}
+
+.heatmap-legend-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.heatmap-legend-label {
+  color: var(--g-color-text);
+  font-weight: 500;
+}
+
+.heatmap-legend-desc {
+  color: var(--g-color-text-muted);
+  font-size: 0.7rem;
+}
+
+.heatmap-color-legend {
+  margin-top: var(--g-space-sm, 8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--g-space-xs, 4px);
+}
+
+.heatmap-color-bar {
+  width: 200px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.heatmap-color-labels {
+  display: flex;
+  justify-content: space-between;
+  width: 200px;
+  font-size: 0.7rem;
+  color: var(--g-color-text-muted);
+}
+
+/* Page navigation */
+.page-nav {
+  display: flex;
+  gap: var(--g-space-sm, 8px);
+  margin-bottom: var(--g-space-md, 16px);
+}
+
+.nav-btn {
+  background: var(--g-color-bg-surface);
+  color: var(--g-color-text-muted);
+  border: 1px solid var(--g-color-border);
+  padding: 0.5rem 1rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-btn:hover {
+  background: var(--g-color-bg-elevated);
+  color: var(--g-color-text);
+}
+
+.nav-btn.active {
+  background: var(--g-color-bg-elevated);
+  color: var(--g-accent-amber, #d4a574);
+  border-color: var(--g-accent-amber, #d4a574);
+}
+
+/* Stats page styles */
+.stats-table {
+  overflow-x: auto;
+}
+
+.stats-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--g-color-border);
+}
+
+.stats-table th {
+  background: var(--g-color-bg-elevated);
+  color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.stats-table td.positive {
+  color: var(--chart-positive);
+}
+
+.stats-table td.negative {
+  color: var(--chart-negative);
+}
+
+.stats-table code {
+  background: var(--g-color-bg-base);
+  padding: 0.125rem 0.25rem;
+  border-radius: 2px;
+  font-size: 0.8em;
+}
+
+/* Progress bar for tech frequency */
+.progress-bar {
+  position: relative;
+  background: var(--g-color-bg-base);
+  height: 20px;
+  border-radius: 2px;
+  min-width: 100px;
+}
+
+.progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--chart-batch-a);
+  opacity: 0.6;
+  border-radius: 2px;
+}
+
+.progress-label {
+  position: relative;
+  z-index: 1;
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+  line-height: 20px;
+}
+
+/* Stats grid for metrics */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: var(--g-space-md, 16px);
+  margin-bottom: var(--g-space-md, 16px);
+}
+
+.stat-item {
+  background: var(--g-color-bg-elevated);
+  padding: var(--g-space-sm, 8px);
+  text-align: center;
+  border-radius: 4px;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--g-color-text);
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  color: var(--g-color-text-muted);
+  text-transform: uppercase;
+}
+
+.stat-note {
+  font-size: 0.8rem;
+  color: var(--g-color-text-muted);
+  margin-bottom: var(--g-space-sm, 8px);
+}
+
+.stat-note.legend {
+  margin-top: var(--g-space-md, 16px);
+  padding-top: var(--g-space-sm, 8px);
+  border-top: 1px solid var(--g-color-border);
+}
+
+/* Histogram text display */
+.histogram-text {
+  font-family: monospace;
+  font-size: 0.8rem;
+  background: var(--g-color-bg-base);
+  padding: var(--g-space-sm, 8px);
+  border-radius: 4px;
+}
+
+.histogram-row {
+  display: flex;
+  gap: var(--g-space-sm, 8px);
+  line-height: 1.4;
+}
+
+.histogram-range {
+  width: 80px;
+  text-align: right;
+  color: var(--g-color-text-muted);
+}
+
+.histogram-bar {
+  color: var(--chart-batch-a);
+}
+
+.histogram-count {
+  color: var(--g-color-text-muted);
+}
+
+/* Correlation colors */
+.corr-strong {
+  color: var(--chart-positive);
+  font-weight: bold;
+}
+
+.corr-moderate {
+  color: var(--chart-warning);
+}
+
+.corr-weak {
+  color: var(--g-color-text-muted);
+}
+
+.corr-none {
+  color: var(--g-color-text-muted);
+  opacity: 0.6;
+}
+
+/* Category bars for bottlenecks */
+.category-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-xs, 4px);
+}
+
+.category-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem;
+  background: var(--g-color-bg-elevated);
+  border-radius: 2px;
+}
+
+.category-name {
+  text-transform: capitalize;
+}
+
+.category-count {
+  color: var(--g-color-text-muted);
+}
+
+/* Subheadings in stats panels */
+.chart-panel h3 {
+  font-size: 0.875rem;
+  color: var(--g-color-text-muted);
+  margin-top: var(--g-space-md, 16px);
+  margin-bottom: var(--g-space-sm, 8px);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}

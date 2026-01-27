@@ -13,6 +13,14 @@ import type {
   BlockedDecision,
   EventOccurrence,
   AnalysisOutput,
+  VictoryTimeStats,
+  PeakPopulationStats,
+  VictoryDefeatComparison,
+  CorrelationAnalysis,
+  BottleneckAnalysis,
+  EventImpactAnalysis,
+  CrisisTimelineAnalysis,
+  OutlierAnalysis,
 } from "../src/simulation/types";
 
 /**
@@ -327,6 +335,302 @@ async function writeDebugLog(runs: number, seed: number): Promise<string> {
 }
 
 /**
+ * Compute victory time distribution stats.
+ */
+function computeVictoryTimeStats(victoryTimes: number[]): VictoryTimeStats | null {
+  if (victoryTimes.length === 0) return null;
+
+  const sorted = [...victoryTimes].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)] ?? 0;
+  const p90 = sorted[Math.floor(sorted.length * 0.9)] ?? 0;
+  const p95 = sorted[Math.floor(sorted.length * 0.95)] ?? 0;
+  const mean = victoryTimes.reduce((a, b) => a + b, 0) / victoryTimes.length;
+
+  // Histogram buckets
+  const buckets = [486, 490, 500, 550, 600, 700, 1000, 1500, 2000];
+  const histogram: Array<{ range: string; count: number }> = [];
+  let prevBucket = 0;
+  for (const bucket of buckets) {
+    const count = victoryTimes.filter((t) => t > prevBucket && t <= bucket).length;
+    histogram.push({ range: `${prevBucket}-${bucket}`, count });
+    prevBucket = bucket;
+  }
+  // Add overflow bucket
+  const overflow = victoryTimes.filter((t) => t > prevBucket).length;
+  if (overflow > 0) {
+    histogram.push({ range: `${prevBucket}+`, count: overflow });
+  }
+
+  return {
+    min: Math.min(...victoryTimes),
+    median,
+    mean,
+    p90,
+    p95,
+    max: Math.max(...victoryTimes),
+    histogram,
+  };
+}
+
+/**
+ * Compute peak population stats.
+ */
+function computePeakPopulationStats(peakPops: number[]): PeakPopulationStats {
+  return {
+    min: Math.min(...peakPops),
+    mean: peakPops.reduce((a, b) => a + b, 0) / peakPops.length,
+    max: Math.max(...peakPops),
+  };
+}
+
+/**
+ * Compute victory vs defeat comparison.
+ */
+function computeVictoryDefeatComparison(
+  victories: RunResult[],
+  defeats: RunResult[]
+): VictoryDefeatComparison | null {
+  if (victories.length === 0 || defeats.length === 0) return null;
+
+  const avgPeakPopVictory = victories.reduce((a, r) => a + r.peakPopulation, 0) / victories.length;
+  const avgPeakPopDefeat = defeats.reduce((a, r) => a + r.peakPopulation, 0) / defeats.length;
+
+  const avgTechCountVictory =
+    victories.reduce((a, r) => a + r.techsResearched.length, 0) / victories.length;
+  const avgTechCountDefeat =
+    defeats.reduce((a, r) => a + r.techsResearched.length, 0) / defeats.length;
+
+  const avgBuildingCountVictory =
+    victories.reduce((a, r) => a + Object.values(r.buildingsBuilt).reduce((s, c) => s + c, 0), 0) /
+    victories.length;
+  const avgBuildingCountDefeat =
+    defeats.reduce((a, r) => a + Object.values(r.buildingsBuilt).reduce((s, c) => s + c, 0), 0) /
+    defeats.length;
+
+  // First building timing
+  const buildings = ["basic_farm", "oxygen_generator", "solar_panel", "habitat"];
+  const firstBuildingTiming: Record<string, { victory: number | null; defeat: number | null }> = {};
+
+  for (const building of buildings) {
+    const victoryTimes = victories
+      .filter((r) => r.buildingFirstBuiltSol?.[building] !== undefined)
+      .map((r) => r.buildingFirstBuiltSol?.[building] ?? 0);
+    const defeatTimes = defeats
+      .filter((r) => r.buildingFirstBuiltSol?.[building] !== undefined)
+      .map((r) => r.buildingFirstBuiltSol?.[building] ?? 0);
+
+    firstBuildingTiming[building] = {
+      victory: victoryTimes.length > 0
+        ? victoryTimes.reduce((a, b) => a + b, 0) / victoryTimes.length
+        : null,
+      defeat: defeatTimes.length > 0
+        ? defeatTimes.reduce((a, b) => a + b, 0) / defeatTimes.length
+        : null,
+    };
+  }
+
+  // Defeat sol stats
+  let defeatSolStats: { min: number; median: number; max: number } | null = null;
+  if (defeats.length > 0) {
+    const defeatSols = defeats.map((r) => r.defeatSol ?? r.finalSol);
+    const sortedDefeatSols = [...defeatSols].sort((a, b) => a - b);
+    defeatSolStats = {
+      min: Math.min(...defeatSols),
+      median: sortedDefeatSols[Math.floor(sortedDefeatSols.length / 2)] ?? 0,
+      max: Math.max(...defeatSols),
+    };
+  }
+
+  return {
+    avgPeakPopVictory,
+    avgPeakPopDefeat,
+    avgTechCountVictory,
+    avgTechCountDefeat,
+    avgBuildingCountVictory,
+    avgBuildingCountDefeat,
+    firstBuildingTiming,
+    defeatSolStats,
+  };
+}
+
+/**
+ * Compute correlation analysis.
+ */
+function computeCorrelations(results: RunResult[]): CorrelationAnalysis {
+  const outcomes = results.map((r) => (r.outcome === "victory" ? 1 : 0));
+
+  const firstFarmSols = results.map((r) => r.buildingFirstBuiltSol?.["basic_farm"] ?? 100);
+  const techCounts = results.map((r) => r.techsResearched.length);
+  const peakPops = results.map((r) => r.peakPopulation);
+  const popAt100 = results.map((r) => {
+    const snapshot = r.resourceTimeline?.find((s) => s.sol === 100);
+    return snapshot?.population ?? r.peakPopulation;
+  });
+
+  return {
+    firstFarmSol: pearsonCorrelation(firstFarmSols, outcomes),
+    techCount: pearsonCorrelation(techCounts, outcomes),
+    peakPopulation: pearsonCorrelation(peakPops, outcomes),
+    populationAtSol100: pearsonCorrelation(popAt100, outcomes),
+  };
+}
+
+/**
+ * Compute bottleneck analysis.
+ */
+function computeBottlenecks(results: RunResult[]): BottleneckAnalysis {
+  const blockCounts: Record<string, number> = {};
+  const blockReasons: Record<string, Record<string, number>> = {};
+
+  for (const result of results) {
+    if (!result.blockedDecisions) continue;
+    for (const blocked of result.blockedDecisions) {
+      const key = `${blocked.category}:${blocked.action}`;
+      blockCounts[key] = (blockCounts[key] ?? 0) + 1;
+      if (!blockReasons[key]) blockReasons[key] = {};
+      blockReasons[key][blocked.reason] = (blockReasons[key][blocked.reason] ?? 0) + 1;
+    }
+  }
+
+  const sortedBlocks = Object.entries(blockCounts).sort((a, b) => b[1] - a[1]);
+  const topBlocks = sortedBlocks.slice(0, 10).map(([key, count]) => {
+    const reasons = blockReasons[key];
+    const topReason = reasons
+      ? Object.entries(reasons).sort((a, b) => b[1] - a[1])[0]?.[0] ?? ""
+      : "";
+    return { key, count, reason: topReason };
+  });
+
+  const categoryTotals: Record<string, number> = {};
+  for (const [key, count] of sortedBlocks) {
+    const category = key.split(":")[0] ?? "unknown";
+    categoryTotals[category] = (categoryTotals[category] ?? 0) + count;
+  }
+
+  return { topBlocks, categoryTotals };
+}
+
+/**
+ * Compute event impact analysis.
+ */
+function computeEventImpact(results: RunResult[]): EventImpactAnalysis {
+  const eventStats: Record<string, { total: number; victories: number }> = {};
+
+  for (const result of results) {
+    if (!result.eventsOccurred) continue;
+    const eventsSeen = new Set<string>();
+    for (const event of result.eventsOccurred) {
+      eventsSeen.add(event.eventId);
+    }
+    for (const eventId of eventsSeen) {
+      if (!eventStats[eventId]) {
+        eventStats[eventId] = { total: 0, victories: 0 };
+      }
+      eventStats[eventId].total++;
+      if (result.outcome === "victory") {
+        eventStats[eventId].victories++;
+      }
+    }
+  }
+
+  const baselineVictoryRate =
+    (results.filter((r) => r.outcome === "victory").length / results.length) * 100;
+
+  const events = Object.entries(eventStats)
+    .sort((a, b) => b[1].total - a[1].total)
+    .map(([eventId, stats]) => {
+      const victoryRate = stats.total > 0 ? (stats.victories / stats.total) * 100 : 0;
+      return {
+        eventId,
+        count: stats.total,
+        victoryRate,
+        diffFromBaseline: victoryRate - baselineVictoryRate,
+      };
+    });
+
+  return { events, baselineVictoryRate };
+}
+
+/**
+ * Compute crisis timeline analysis.
+ */
+function computeCrisisTimeline(results: RunResult[]): CrisisTimelineAnalysis {
+  const crisisByType: Record<string, { warning: number[]; critical: number[] }> = {};
+
+  for (const result of results) {
+    if (!result.crisisTimeline) continue;
+    for (const crisis of result.crisisTimeline) {
+      let typeData = crisisByType[crisis.type];
+      if (!typeData) {
+        typeData = { warning: [], critical: [] };
+        crisisByType[crisis.type] = typeData;
+      }
+      typeData[crisis.severity].push(crisis.sol);
+    }
+  }
+
+  const byType: CrisisTimelineAnalysis["byType"] = {};
+  for (const [type, data] of Object.entries(crisisByType)) {
+    const sortedWarnings = [...data.warning].sort((a, b) => a - b);
+    const sortedCritical = [...data.critical].sort((a, b) => a - b);
+
+    byType[type] = {
+      total: data.warning.length + data.critical.length,
+      warnings: data.warning.length,
+      critical: data.critical.length,
+      warningMedianSol: sortedWarnings.length > 0
+        ? sortedWarnings[Math.floor(sortedWarnings.length / 2)] ?? null
+        : null,
+      warningRange: sortedWarnings.length > 0
+        ? [Math.min(...sortedWarnings), Math.max(...sortedWarnings)]
+        : null,
+      criticalMedianSol: sortedCritical.length > 0
+        ? sortedCritical[Math.floor(sortedCritical.length / 2)] ?? null
+        : null,
+      criticalRange: sortedCritical.length > 0
+        ? [Math.min(...sortedCritical), Math.max(...sortedCritical)]
+        : null,
+    };
+  }
+
+  // First crisis timing
+  const allCrisisSols: number[] = [];
+  for (const result of results) {
+    if (result.crisisTimeline && result.crisisTimeline.length > 0) {
+      const firstCrisis = Math.min(...result.crisisTimeline.map((c) => c.sol));
+      allCrisisSols.push(firstCrisis);
+    }
+  }
+
+  let firstCrisisTiming: { median: number; min: number; max: number } | null = null;
+  if (allCrisisSols.length > 0) {
+    const sorted = [...allCrisisSols].sort((a, b) => a - b);
+    firstCrisisTiming = {
+      median: sorted[Math.floor(sorted.length / 2)] ?? 0,
+      min: Math.min(...sorted),
+      max: Math.max(...sorted),
+    };
+  }
+
+  return { byType, firstCrisisTiming };
+}
+
+/**
+ * Compute outlier analysis.
+ */
+function computeOutliers(victories: RunResult[]): OutlierAnalysis {
+  const slowRuns = victories.filter((r) => r.finalSol > 550);
+  return {
+    count: slowRuns.length,
+    totalVictories: victories.length,
+    percentage: victories.length > 0 ? (slowRuns.length / victories.length) * 100 : 0,
+    avgTime: slowRuns.length > 0
+      ? slowRuns.reduce((a, r) => a + r.finalSol, 0) / slowRuns.length
+      : null,
+  };
+}
+
+/**
  * Write analysis data as JSON for visualization.
  */
 async function writeJsonOutput(
@@ -409,6 +713,10 @@ async function writeJsonOutput(
     }
   }
 
+  // Compute extended stats
+  const victoryTimes = victories.map((r) => r.finalSol);
+  const peakPops = results.map((r) => r.peakPopulation);
+
   const output: AnalysisOutput = {
     metadata: {
       timestamp: now.toISOString(),
@@ -422,13 +730,23 @@ async function writeJsonOutput(
       victoryTypes,
       defeatReasons,
     },
-    victoryTimes: victories.map((r) => r.finalSol),
-    peakPopulations: results.map((r) => r.peakPopulation),
+    victoryTimes,
+    peakPopulations: peakPops,
     techFrequency,
     buildingCounts,
     resourceTimeline,
     crisisEvents,
     runs: results,
+    stats: {
+      victoryTimeStats: computeVictoryTimeStats(victoryTimes),
+      peakPopulationStats: computePeakPopulationStats(peakPops),
+      victoryDefeatComparison: computeVictoryDefeatComparison(victories, defeats),
+      correlations: computeCorrelations(results),
+      bottlenecks: computeBottlenecks(results),
+      eventImpact: computeEventImpact(results),
+      crisisTimeline: computeCrisisTimeline(results),
+      outliers: computeOutliers(victories),
+    },
   };
 
   await Bun.write(filepath, JSON.stringify(output, null, 2));

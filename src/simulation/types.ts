@@ -177,6 +177,99 @@ export interface CrisisPoint {
 }
 
 /**
+ * Victory vs Defeat comparison stats.
+ */
+export interface VictoryDefeatComparison {
+  avgPeakPopVictory: number;
+  avgPeakPopDefeat: number;
+  avgTechCountVictory: number;
+  avgTechCountDefeat: number;
+  avgBuildingCountVictory: number;
+  avgBuildingCountDefeat: number;
+  firstBuildingTiming: Record<string, { victory: number | null; defeat: number | null }>;
+  defeatSolStats: { min: number; median: number; max: number } | null;
+}
+
+/**
+ * Correlation analysis results.
+ */
+export interface CorrelationAnalysis {
+  firstFarmSol: number;
+  techCount: number;
+  peakPopulation: number;
+  populationAtSol100: number;
+}
+
+/**
+ * Bottleneck analysis results.
+ */
+export interface BottleneckAnalysis {
+  topBlocks: Array<{ key: string; count: number; reason: string }>;
+  categoryTotals: Record<string, number>;
+}
+
+/**
+ * Event impact analysis results.
+ */
+export interface EventImpactAnalysis {
+  events: Array<{
+    eventId: string;
+    count: number;
+    victoryRate: number;
+    diffFromBaseline: number;
+  }>;
+  baselineVictoryRate: number;
+}
+
+/**
+ * Crisis timeline analysis results.
+ */
+export interface CrisisTimelineAnalysis {
+  byType: Record<string, {
+    total: number;
+    warnings: number;
+    critical: number;
+    warningMedianSol: number | null;
+    warningRange: [number, number] | null;
+    criticalMedianSol: number | null;
+    criticalRange: [number, number] | null;
+  }>;
+  firstCrisisTiming: { median: number; min: number; max: number } | null;
+}
+
+/**
+ * Victory time distribution stats.
+ */
+export interface VictoryTimeStats {
+  min: number;
+  median: number;
+  mean: number;
+  p90: number;
+  p95: number;
+  max: number;
+  histogram: Array<{ range: string; count: number }>;
+}
+
+/**
+ * Peak population stats.
+ */
+export interface PeakPopulationStats {
+  min: number;
+  mean: number;
+  max: number;
+}
+
+/**
+ * Outlier analysis results.
+ */
+export interface OutlierAnalysis {
+  count: number;
+  totalVictories: number;
+  percentage: number;
+  avgTime: number | null;
+}
+
+/**
  * Complete analysis output for visualization.
  */
 export interface AnalysisOutput {
@@ -199,4 +292,16 @@ export interface AnalysisOutput {
   resourceTimeline: ResourceSnapshot[];
   crisisEvents: CrisisPoint[];
   runs: RunResult[];
+
+  // Extended stats for visualization
+  stats?: {
+    victoryTimeStats: VictoryTimeStats | null;
+    peakPopulationStats: PeakPopulationStats;
+    victoryDefeatComparison: VictoryDefeatComparison | null;
+    correlations: CorrelationAnalysis;
+    bottlenecks: BottleneckAnalysis;
+    eventImpact: EventImpactAnalysis;
+    crisisTimeline: CrisisTimelineAnalysis;
+    outliers: OutlierAnalysis;
+  };
 }

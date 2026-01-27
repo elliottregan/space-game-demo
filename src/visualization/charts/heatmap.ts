@@ -13,6 +13,14 @@ const CRISIS_LABELS: Record<string, string> = {
   population_drop: "Pop Drop",
 };
 
+const CRISIS_DESCRIPTIONS: Record<string, string> = {
+  low_food: "Food ≤30 (warning) or ≤10 (critical)",
+  low_oxygen: "Oxygen ≤30 (warning) or ≤10 (critical)",
+  low_water: "Water ≤20 (warning) or ≤5 (critical)",
+  low_morale: "Morale ≤40 (warning) or ≤25 (critical)",
+  population_drop: "Population drop ≥3 (warning) or ≥5 (critical)",
+};
+
 export function renderHeatmap(
   containerId: string,
   batchA: AnalysisOutput,
@@ -23,7 +31,26 @@ export function renderHeatmap(
 
   container.innerHTML = "";
 
-  const margin = { top: 20, right: 20, bottom: 60, left: 80 };
+  // Add crisis explanation legend
+  const legend = document.createElement("div");
+  legend.className = "heatmap-legend";
+  legend.innerHTML = `
+    <div class="heatmap-legend-title">Crisis Thresholds</div>
+    <div class="heatmap-legend-items">
+      ${CRISIS_TYPES.map((type) => `
+        <div class="heatmap-legend-item">
+          <div class="heatmap-legend-label">${CRISIS_LABELS[type]}</div>
+          <div class="heatmap-legend-desc">${CRISIS_DESCRIPTIONS[type]}</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+  container.appendChild(legend);
+
+  const chartContainer = document.createElement("div");
+  container.appendChild(chartContainer);
+
+  const margin = { top: 30, right: 30, bottom: 60, left: 80 };
   const width = container.clientWidth - margin.left - margin.right;
   const height = 200 - margin.top - margin.bottom;
 
@@ -61,16 +88,19 @@ export function renderHeatmap(
     }
   }
 
+  // Ensure minimum maxCount for color scaling
+  maxCount = Math.max(maxCount, 1);
+
   // Render single heatmap or side-by-side
   if (!dataB) {
-    renderSingleHeatmap(container, dataA, maxCount, margin, width, height, numBins, binWidth, "A");
+    renderSingleHeatmap(chartContainer, dataA, maxCount, margin, width, height, numBins, binWidth, "");
   } else {
     const halfWidth = (width - 20) / 2;
 
     const wrapper = document.createElement("div");
     wrapper.style.display = "flex";
     wrapper.style.gap = "20px";
-    container.appendChild(wrapper);
+    chartContainer.appendChild(wrapper);
 
     const containerA = document.createElement("div");
     containerA.style.flex = "1";
@@ -83,6 +113,9 @@ export function renderHeatmap(
     renderSingleHeatmap(containerA, dataA, maxCount, margin, halfWidth, height, numBins, binWidth, "Batch A");
     renderSingleHeatmap(containerB, dataB, maxCount, margin, halfWidth, height, numBins, binWidth, "Batch B");
   }
+
+  // Add color legend
+  addColorLegend(container, maxCount);
 }
 
 function renderSingleHeatmap(
@@ -105,22 +138,32 @@ function renderSingleHeatmap(
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
   // Title
-  svg
-    .append("text")
-    .attr("x", width / 2)
-    .attr("y", -5)
-    .attr("text-anchor", "middle")
-    .attr("fill", "var(--g-color-text-muted)")
-    .attr("font-size", "0.75rem")
-    .text(title);
+  if (title) {
+    svg
+      .append("text")
+      .attr("x", width / 2)
+      .attr("y", -10)
+      .attr("text-anchor", "middle")
+      .attr("fill", "var(--g-color-text-muted)")
+      .attr("font-size", "0.75rem")
+      .text(title);
+  }
 
   // Scales
   const x = d3.scaleLinear().domain([0, numBins * binWidth]).range([0, width]);
   const y = d3.scaleBand().domain(CRISIS_TYPES).range([0, height]).padding(0.1);
-  const color = d3
-    .scaleSequential()
-    .domain([0, maxCount])
-    .interpolator(d3.interpolateYlOrRd);
+
+  // Custom color scale that works with dark theme
+  // Uses a purple-to-red gradient that's visible on dark backgrounds
+  const colorScale = (count: number): string => {
+    if (count === 0) return "var(--g-color-bg-elevated)";
+    const t = Math.min(count / maxCount, 1);
+    // Interpolate from dim purple to bright red-orange
+    const h = 280 - t * 250; // Hue: 280 (purple) -> 30 (orange-red)
+    const s = 0.4 + t * 0.4; // Saturation: 40% -> 80%
+    const l = 0.25 + t * 0.35; // Lightness: 25% -> 60%
+    return `oklch(${l * 100}% ${s * 0.3} ${h})`;
+  };
 
   // Cells
   const cellWidth = width / numBins;
@@ -128,15 +171,23 @@ function renderSingleHeatmap(
 
   for (const [type, counts] of data) {
     counts.forEach((count, bin) => {
+      // Always render cells - empty ones get background color
+      svg
+        .append("rect")
+        .attr("x", bin * cellWidth)
+        .attr("y", y(type) ?? 0)
+        .attr("width", cellWidth - 1)
+        .attr("height", cellHeight)
+        .attr("fill", colorScale(count))
+        .attr("rx", 2)
+        .attr("stroke", count > 0 ? "none" : "var(--g-color-border)")
+        .attr("stroke-width", count > 0 ? 0 : 0.5);
+
+      // Add tooltip for non-empty cells
       if (count > 0) {
         svg
-          .append("rect")
-          .attr("x", bin * cellWidth)
-          .attr("y", y(type) ?? 0)
-          .attr("width", cellWidth - 1)
-          .attr("height", cellHeight)
-          .attr("fill", color(count))
-          .attr("rx", 2);
+          .append("title")
+          .text(`${CRISIS_LABELS[type]}: ${count} events (sols ${bin * binWidth}-${(bin + 1) * binWidth})`);
       }
     });
   }
@@ -167,4 +218,29 @@ function renderSingleHeatmap(
     .append("g")
     .attr("class", "axis")
     .call(d3.axisLeft(y).tickFormat((d) => CRISIS_LABELS[d] ?? d));
+}
+
+function addColorLegend(container: HTMLElement, maxCount: number): void {
+  const legendDiv = document.createElement("div");
+  legendDiv.className = "heatmap-color-legend";
+
+  // Create gradient bar
+  const gradientStops: string[] = [];
+  for (let i = 0; i <= 10; i++) {
+    const t = i / 10;
+    const h = 280 - t * 250;
+    const s = 0.4 + t * 0.4;
+    const l = 0.25 + t * 0.35;
+    gradientStops.push(`oklch(${l * 100}% ${s * 0.3} ${h})`);
+  }
+
+  legendDiv.innerHTML = `
+    <div class="heatmap-color-bar" style="background: linear-gradient(to right, ${gradientStops.join(", ")})"></div>
+    <div class="heatmap-color-labels">
+      <span>0</span>
+      <span>Crisis Events</span>
+      <span>${maxCount}</span>
+    </div>
+  `;
+  container.appendChild(legendDiv);
 }
