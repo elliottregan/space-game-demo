@@ -36,7 +36,7 @@ const mockColony = (colonists: Colonist[]) => ({
 });
 
 // Mock BuildingManager for coworker tests
-const mockBuildings = (buildings: { id: string; name: string; active: boolean; assignedWorkers: string[] }[]) => ({
+const mockBuildings = (buildings: { id: string; status: string; assignedWorkers: string[] }[]) => ({
   getBuildings: () => buildings,
 });
 
@@ -643,7 +643,7 @@ describe("WorkforceManager", () => {
           createColonist({ id: "c2", role: ColonistRole.ENGINEERING }),
         ];
         const buildings = mockBuildings([
-          { id: "b1", name: "Lab", active: true, assignedWorkers: ["c1", "c2"] },
+          { id: "b1", status: "active", assignedWorkers: ["c1", "c2"] },
         ]);
 
         const colony = mockColony(colonists);
@@ -666,7 +666,7 @@ describe("WorkforceManager", () => {
           createColonist({ id: "c2", role: ColonistRole.RESEARCH }),
         ];
         const buildings = mockBuildings([
-          { id: "b1", name: "Lab", active: true, assignedWorkers: ["c1", "c2"] },
+          { id: "b1", status: "active", assignedWorkers: ["c1", "c2"] },
         ]);
 
         const colony = mockColony(colonists);
@@ -684,7 +684,7 @@ describe("WorkforceManager", () => {
       it("should not create relationship for solo worker", () => {
         const colonists = [createColonist({ id: "c1", role: ColonistRole.ENGINEERING })];
         const buildings = mockBuildings([
-          { id: "b1", name: "Lab", active: true, assignedWorkers: ["c1"] },
+          { id: "b1", status: "active", assignedWorkers: ["c1"] },
         ]);
 
         const colony = mockColony(colonists);
@@ -700,7 +700,7 @@ describe("WorkforceManager", () => {
           createColonist({ id: "c2", role: ColonistRole.ENGINEERING }),
         ];
         const buildings = mockBuildings([
-          { id: "b1", name: "Lab", active: false, assignedWorkers: ["c1", "c2"] },
+          { id: "b1", status: "disabled", assignedWorkers: ["c1", "c2"] },
         ]);
 
         const colony = mockColony(colonists);
@@ -716,11 +716,11 @@ describe("WorkforceManager", () => {
           createColonist({ id: "c2", role: ColonistRole.ENGINEERING }),
         ];
         const buildingsTogether = mockBuildings([
-          { id: "b1", name: "Lab", active: true, assignedWorkers: ["c1", "c2"] },
+          { id: "b1", status: "active", assignedWorkers: ["c1", "c2"] },
         ]);
         const buildingsSeparate = mockBuildings([
-          { id: "b1", name: "Lab", active: true, assignedWorkers: ["c1"] },
-          { id: "b2", name: "Workshop", active: true, assignedWorkers: ["c2"] },
+          { id: "b1", status: "active", assignedWorkers: ["c1"] },
+          { id: "b2", status: "active", assignedWorkers: ["c2"] },
         ]);
 
         const colony = mockColony(colonists);
@@ -742,7 +742,7 @@ describe("WorkforceManager", () => {
           createColonist({ id: "c2", role: ColonistRole.RESEARCH }),
         ];
         const buildings = mockBuildings([
-          { id: "b1", name: "Lab", active: true, assignedWorkers: ["c1", "c2"] },
+          { id: "b1", status: "active", assignedWorkers: ["c1", "c2"] },
         ]);
 
         const colony = mockColony(colonists);
@@ -763,7 +763,7 @@ describe("WorkforceManager", () => {
           createColonist({ id: "c3", role: ColonistRole.ENGINEERING }),
         ];
         const buildings = mockBuildings([
-          { id: "b1", name: "Workshop", active: true, assignedWorkers: ["c1", "c2", "c3"] },
+          { id: "b1", status: "active", assignedWorkers: ["c1", "c2", "c3"] },
         ]);
 
         const colony = mockColony(colonists);
@@ -790,7 +790,7 @@ describe("WorkforceManager", () => {
           createColonist({ id: "c2", role: ColonistRole.RESEARCH }),
         ];
         const buildings = mockBuildings([
-          { id: "b1", name: "Lab", active: true, assignedWorkers: ["c1", "c2"] },
+          { id: "b1", status: "active", assignedWorkers: ["c1", "c2"] },
         ]);
 
         const colony = mockColony(colonists);
@@ -820,7 +820,7 @@ describe("WorkforceManager", () => {
           createColonist({ id: "c2", role: ColonistRole.RESEARCH }),
         ];
         const buildings = mockBuildings([
-          { id: "b1", name: "Lab", active: true, assignedWorkers: ["c1", "c2"] },
+          { id: "b1", status: "active", assignedWorkers: ["c1", "c2"] },
         ]);
 
         const colony = mockColony(colonists);
@@ -836,7 +836,7 @@ describe("WorkforceManager", () => {
           createColonist({ id: "c2", role: ColonistRole.RESEARCH }),
         ];
         const buildings = mockBuildings([
-          { id: "b1", name: "Lab", active: true, assignedWorkers: ["c1", "c2"] },
+          { id: "b1", status: "active", assignedWorkers: ["c1", "c2"] },
         ]);
 
         const colony = mockColony(colonists);
@@ -962,7 +962,7 @@ describe("WorkforceManager", () => {
           createColonist({ id: "c2", role: ColonistRole.ENGINEERING, housingId: "hab1" }),
         ];
         const buildings = mockBuildings([
-          { id: "b1", name: "Workshop", active: true, assignedWorkers: ["c1", "c2"] },
+          { id: "b1", status: "active", assignedWorkers: ["c1", "c2"] },
         ]);
 
         const colony = mockColony(colonists);
@@ -984,7 +984,7 @@ describe("WorkforceManager", () => {
           createColonist({ id: "c2", role: ColonistRole.ENGINEERING, housingId: "hab1" }),
         ];
         const buildings = mockBuildings([
-          { id: "b1", name: "Workshop", active: true, assignedWorkers: ["c1", "c2"] },
+          { id: "b1", status: "active", assignedWorkers: ["c1", "c2"] },
         ]);
 
         const colony = mockColony(colonists);
@@ -1016,7 +1016,7 @@ describe("WorkforceManager", () => {
         createColonist({ id: "c2", role: ColonistRole.ENGINEERING }),
       ];
       const buildings = mockBuildings([
-        { id: "b1", name: "Lab", active: true, assignedWorkers: ["c1", "c2"] },
+        { id: "b1", status: "active", assignedWorkers: ["c1", "c2"] },
       ]);
 
       const colony = mockColony(colonists);

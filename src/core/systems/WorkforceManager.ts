@@ -253,7 +253,7 @@ export class WorkforceManager {
 
     // For each building, bond colonists who work together
     for (const building of buildings.getBuildings()) {
-      if (!building.active || building.assignedWorkers.length < 2) continue;
+      if (building.status !== "active" || building.assignedWorkers.length < 2) continue;
 
       // Create/strengthen bonds between all pairs of coworkers
       for (let i = 0; i < building.assignedWorkers.length; i++) {
@@ -284,7 +284,7 @@ export class WorkforceManager {
               colonistA,
               colonistB,
               buildingId: building.id,
-              message: `New coworker bond formed at ${building.name}`,
+              message: `New coworker bond formed at ${building.id}`,
             });
           } else {
             // Strengthen existing relationship
