@@ -81,6 +81,12 @@ Tests are in the `tests/` directory using Bun's test runner. Test files cover:
 - Game mechanics (building maintenance, recycling, deposits, expeditions)
 - Political systems (policies, NPC influence, pressure)
 
+## Documentation
+
+- **`MANUAL.md`** - Player-facing game manual with mechanics, strategy guide, and quick reference
+- **`docs/specs/`** - Technical specifications for game systems
+- **`docs/plans/`** - Implementation plans for features
+
 ## Development Workflow
 
 ### Feature Work
