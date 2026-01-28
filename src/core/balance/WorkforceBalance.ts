@@ -67,3 +67,34 @@ export const TRAINING_WORK_PENALTY = 0.5; // 50% efficiency while training
 export const LABOR_POOL_BONUS_PER_COLONIST = 0.02; // +2% construction speed
 export const LABOR_POOL_BONUS_CAP = 0.2; // +20% max
 export const STAFFING_CURVE_EXPONENT = 1.5; // Diminishing returns curve
+
+// ============ Coworker Relationship System ============
+
+/** Amount relationship strength increases per sol when colonists work together */
+export const COWORKER_BONDING_RATE = 0.01;
+
+/** Maximum relationship strength between coworkers */
+export const MAX_COWORKER_RELATIONSHIP = 1.0;
+
+/** Minimum relationship strength (floor for coworkers who have worked together) */
+export const MIN_COWORKER_RELATIONSHIP = 0.05;
+
+/** Decay rate for coworker relationships when not working together */
+export const COWORKER_RELATIONSHIP_DECAY = 0.002;
+
+/** Maximum team cohesion bonus to building efficiency */
+export const MAX_TEAM_COHESION_BONUS = 0.15; // +15% max
+
+/** Minimum average relationship strength needed for any team bonus */
+export const TEAM_COHESION_THRESHOLD = 0.2;
+
+/** Initial relationship strength when colonists first work together */
+export const INITIAL_COWORKER_RELATIONSHIP = 0.1;
+
+// ============ Housemate Relationship System ============
+
+/** Amount relationship strength increases per sol when colonists share housing */
+export const HOUSEMATE_BONDING_RATE = 0.015;
+
+/** Initial relationship strength when colonists first share housing */
+export const INITIAL_HOUSEMATE_RELATIONSHIP = 0.15;

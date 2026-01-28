@@ -669,25 +669,30 @@ describe('NPCInfluenceManager', () => {
       });
 
       it('should decay cross-faction relationships faster than same-faction', () => {
-        // Same-faction: Chen Wei -> Nova Silva (0.7)
-        // Cross-faction: Chen Wei -> Maria Santos (0.3)
-        const initialSameFaction = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.NOVA_SILVA);
-        const initialCrossFaction = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS);
+        // Use fresh relationships to control for triadic closure effects
+        // Set both same-faction and cross-faction to the same initial weight
+        const initialWeight = 0.5;
 
-        // Run many ticks
-        for (let i = 0; i < 50; i++) {
-          manager.tick(POLITICAL_PRESSURE_START_SOL + i);
-        }
+        // Same-faction: Chen Wei -> Nova Silva
+        manager.setRelationship(NPCId.CHEN_WEI, NPCId.NOVA_SILVA, initialWeight);
+        // Cross-faction: Chen Wei -> Maria Santos
+        manager.setRelationship(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS, initialWeight);
+
+        // Mark as recently maintained to avoid unmaintained multiplier
+        manager.recordInteraction(NPCId.CHEN_WEI, NPCId.NOVA_SILVA, 'council_created', POLITICAL_PRESSURE_START_SOL);
+        manager.recordInteraction(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS, 'council_created', POLITICAL_PRESSURE_START_SOL);
+
+        // Run a single tick
+        manager.tick(POLITICAL_PRESSURE_START_SOL + 1);
 
         const newSameFaction = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.NOVA_SILVA);
         const newCrossFaction = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS);
 
-        const sameFactionDecay = initialSameFaction - newSameFaction;
-        const crossFactionDecay = initialCrossFaction - newCrossFaction;
+        const sameFactionDecay = initialWeight - newSameFaction;
+        const crossFactionDecay = initialWeight - newCrossFaction;
 
         // Cross-faction should decay more (CROSS_FACTION_DECAY_MULTIPLIER = 1.5)
-        // But we need to account for the floor on same-faction
-        expect(crossFactionDecay / sameFactionDecay).toBeGreaterThan(1);
+        expect(crossFactionDecay).toBeCloseTo(sameFactionDecay * CROSS_FACTION_DECAY_MULTIPLIER, 6);
       });
 
       it('should not decay same-faction relationships below the floor', () => {

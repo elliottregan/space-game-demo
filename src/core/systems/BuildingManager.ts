@@ -30,6 +30,7 @@ import {
 import type { ColonyManager } from "./ColonyManager";
 import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
+import type { WorkforceManager } from "./WorkforceManager";
 
 export class BuildingManager {
   private definitions: Map<BuildingId, BuildingDefinition> = new Map();
@@ -38,6 +39,7 @@ export class BuildingManager {
   private constructionSpeedBonus: number = 0;
   private colonyManager: ColonyManager | null = null;
   private technologyTree: TechnologyTree | null = null;
+  private workforceManager: WorkforceManager | null = null;
 
   setColonyManager(colony: ColonyManager): void {
     this.colonyManager = colony;
@@ -45,6 +47,10 @@ export class BuildingManager {
 
   setTechnologyTree(tech: TechnologyTree): void {
     this.technologyTree = tech;
+  }
+
+  setWorkforceManager(workforce: WorkforceManager): void {
+    this.workforceManager = workforce;
   }
 
   constructor(defs: BuildingDefinition[]) {
@@ -644,7 +650,7 @@ export class BuildingManager {
 
   /**
    * Calculate the combined efficiency multiplier for a building.
-   * Factors: condition, oxygen, staffing, worker efficiency.
+   * Factors: condition, oxygen, staffing, worker efficiency, team cohesion.
    */
   private getBuildingEfficiencyMultiplier(buildingId: string, overrideCondition?: number): number {
     const building = this.buildings.get(buildingId);
@@ -657,7 +663,23 @@ export class BuildingManager {
       this.getOxygenDeficitMultiplier(),
       this.getStaffingEfficiency(buildingId),
       this.getWorkerEfficiency(buildingId),
+      this.getTeamCohesionMultiplier(buildingId),
     );
+  }
+
+  /**
+   * Calculate the team cohesion multiplier for a building based on worker relationships.
+   * Workers who have worked together longer are more efficient as a team.
+   */
+  private getTeamCohesionMultiplier(buildingId: string): number {
+    if (!this.workforceManager) return 1.0;
+
+    const building = this.buildings.get(buildingId);
+    if (!building || building.assignedWorkers.length < 2) {
+      return 1.0;
+    }
+
+    return this.workforceManager.getTeamCohesionMultiplier(building.assignedWorkers);
   }
 
   getEffectiveProduction(buildingId: string, overrideCondition?: number): ResourceDelta {

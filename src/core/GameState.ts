@@ -52,6 +52,7 @@ export class GameState {
     this.buildings.setColonyManager(this.colony);
     this.buildings.setTechnologyTree(this.technology);
     this.workforce = new WorkforceManager();
+    this.buildings.setWorkforceManager(this.workforce);
     this.events = new EventManager(RANDOM_EVENTS);
     this.victory = new VictoryManager();
     this.operations = new OperationsManager();
@@ -84,8 +85,8 @@ export class GameState {
     // 2. Buildings tick (construction progress, maintenance decay)
     events.push(...this.buildings.tick(this.resources, this.currentSol));
 
-    // 3. Workforce tick (training, experience)
-    events.push(...this.workforce.tick(this.colony));
+    // 3. Workforce tick (training, experience, coworker bonding)
+    events.push(...this.workforce.tick(this.colony, this.buildings, this.currentSol));
 
     // 4. Colony tick (population, health, morale)
     const policyEffects = {
