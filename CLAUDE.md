@@ -81,6 +81,45 @@ Tests are in the `tests/` directory using Bun's test runner. Test files cover:
 - Game mechanics (building maintenance, recycling, deposits, expeditions)
 - Political systems (policies, NPC influence, pressure)
 
+## Simulation & Balance Testing
+
+Monte Carlo simulations test game balance by running automated playthroughs with AI decision-making.
+
+### Running Simulations
+
+```bash
+# Quick simulation (5 runs, fast)
+bun run scripts/simulate.ts --runs 5 --verbose
+
+# Full analysis with detailed output (saves to logs/simulations/)
+bun run scripts/analyze-simulation.ts --runs 20 --seed 42
+
+# Start visualization server for results
+bun run visualize
+```
+
+### Analysis Output
+
+`simulate:analyze` produces reports including:
+- **Victory Time Distribution** - Min/median/mean/P90/max sols to win
+- **Peak Population Analysis** - Population growth statistics
+- **Technology Research Frequency** - Which techs get researched
+- **Building Construction** - Average buildings built per game
+- **Bottleneck Analysis** - What blocks the AI most often
+- **Event Impact Analysis** - Event frequency and effect on outcomes
+- **Crisis Timeline** - When resource/morale crises occur
+
+Results saved to `logs/simulations/` as both `.txt` (human-readable) and `.json` (data).
+
+### Key Metrics to Watch
+
+| Metric | Healthy Range | Concern |
+|--------|---------------|---------|
+| Win Rate | 80-95% | Too easy if 100%, too hard if <70% |
+| Median Victory | 500-1000 sols | Faster = too easy, slower = tedious |
+| Bottleneck % | <50% per category | High % = balance issue |
+| Crisis Frequency | Occasional | Constant crises = resource balance off |
+
 ## Documentation
 
 - **`MANUAL.md`** - Player-facing game manual with mechanics, strategy guide, and quick reference
