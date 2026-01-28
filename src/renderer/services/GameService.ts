@@ -50,7 +50,14 @@ interface GameUIState {
   skillDefinitions: SkillDefinition[];
   housingAssignments: Record<string, Colonist[]>;
   unhoused: Colonist[];
-  coworkerRelationships: Map<string, { strength: number; formedAt: number; lastWorkedTogether: number }>;
+  coworkerRelationships: Map<string, {
+    strength: number;
+    formedAt: number;
+    lastWorkedTogether: number;
+    isCohort?: boolean;
+    sharedGuildIds?: string[];
+  }>;
+  guilds: { id: string; name: string; type: string; memberIds: string[]; foundedSol: number }[];
   buildings: Building[];
   pendingBuildings: Building[];
   buildingDefinitions: BuildingDefinition[];
@@ -162,6 +169,7 @@ class GameService {
       housingAssignments: {},
       unhoused: [],
       coworkerRelationships: new Map(),
+      guilds: [],
       buildings: [],
       pendingBuildings: [],
       buildingDefinitions: [],
@@ -228,6 +236,15 @@ class GameService {
 
     // Coworker relationships - create a new Map to trigger reactivity
     this.state.coworkerRelationships = new Map(colony.coworkerRelationships);
+
+    // Guilds
+    this.state.guilds = colony.guilds.map((g) => ({
+      id: g.id,
+      name: g.name,
+      type: g.type,
+      memberIds: [...g.memberIds],
+      foundedSol: g.foundedSol,
+    }));
 
     // Buildings - deep copy to ensure assignedWorkers arrays trigger reactivity
     const buildings = this.facade.buildings.snapshot();

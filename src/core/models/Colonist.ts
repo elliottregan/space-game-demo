@@ -37,4 +37,6 @@ export interface Colonist {
   trainingProgress?: number;
   skills: SkillId[];
   housingId?: string; // Building ID of assigned habitat
+  arrivalSol?: number; // Sol when colonist arrived (for cohort bonding)
+  guildIds?: string[]; // Guild memberships
 }

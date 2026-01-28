@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Colonist } from "../../../core/models/Colonist";
+import type { Guild } from "../../../core/models/Guild";
+import { WEAK_TIE_THRESHOLD } from "../../../core/balance/WorkforceBalance";
 import type { CoworkerRelationship } from "../../../core/systems/WorkforceManager";
 import { computeColonistForceLayout } from "../../utils/colonistForceLayout";
 import {
@@ -22,6 +24,7 @@ interface Props {
   colonists: Colonist[];
   relationships: Map<string, CoworkerRelationship>;
   buildings: BuildingInfo[];
+  guilds: Guild[];
   selectedColonistId: string | null;
 }
 
@@ -117,6 +120,81 @@ function getColonistBuilding(colonistId: string): { name: string; active: boolea
   return null;
 }
 
+// Count connections per colonist
+const connectionCounts = computed(() => {
+  const counts = new Map<string, number>();
+  for (const colonist of props.colonists) {
+    counts.set(colonist.id, 0);
+  }
+  for (const [key, rel] of props.relationships) {
+    if (rel.strength < 0.05) continue;
+    const [id1, id2] = key.split(":");
+    if (id1) counts.set(id1, (counts.get(id1) ?? 0) + 1);
+    if (id2) counts.set(id2, (counts.get(id2) ?? 0) + 1);
+  }
+  return counts;
+});
+
+// Detect bridge colonists (connect otherwise disconnected groups using weak ties)
+const bridgeColonists = computed(() => {
+  const bridges = new Set<string>();
+
+  // A bridge colonist has at least one weak tie and connects colonists
+  // who don't share other connections
+  for (const [key, rel] of props.relationships) {
+    if (rel.strength >= WEAK_TIE_THRESHOLD) continue; // Only weak ties can be bridges
+    if (rel.strength < 0.05) continue;
+
+    const [id1, id2] = key.split(":");
+    if (!id1 || !id2) continue;
+
+    // Check if these colonists share other strong connections
+    const id1Connections = new Set<string>();
+    const id2Connections = new Set<string>();
+
+    for (const [otherKey, otherRel] of props.relationships) {
+      if (otherRel.strength < WEAK_TIE_THRESHOLD) continue;
+      const [a, b] = otherKey.split(":");
+      if (a === id1) id1Connections.add(b!);
+      if (b === id1) id1Connections.add(a!);
+      if (a === id2) id2Connections.add(b!);
+      if (b === id2) id2Connections.add(a!);
+    }
+
+    // If id1's strong connections don't overlap with id2's, both are bridges
+    const overlap = [...id1Connections].filter((c) => id2Connections.has(c));
+    if (overlap.length === 0) {
+      bridges.add(id1);
+      bridges.add(id2);
+    }
+  }
+
+  return bridges;
+});
+
+// Build guild membership lookup
+const guildMembership = computed(() => {
+  const membership = new Map<string, string[]>();
+  for (const colonist of props.colonists) {
+    membership.set(colonist.id, []);
+  }
+  for (const guild of props.guilds) {
+    for (const memberId of guild.memberIds) {
+      const guilds = membership.get(memberId) ?? [];
+      guilds.push(guild.id);
+      membership.set(memberId, guilds);
+    }
+  }
+  return membership;
+});
+
+// Check if two colonists share a guild
+function getSharedGuildIds(id1: string, id2: string): string[] {
+  const guilds1 = guildMembership.value.get(id1) ?? [];
+  const guilds2 = guildMembership.value.get(id2) ?? [];
+  return guilds1.filter((g) => guilds2.includes(g));
+}
+
 // Build graph data for rendering
 const graphData = computed<ColonistGraphData>(() => {
   const positionMap = new Map(layoutPositions.value.map((p) => [p.id, p]));
@@ -124,6 +202,8 @@ const graphData = computed<ColonistGraphData>(() => {
   const nodes: ColonistGraphNode[] = props.colonists.map((colonist) => {
     const pos = positionMap.get(colonist.id) ?? { x: 0, y: 0 };
     const buildingInfo = getColonistBuilding(colonist.id);
+    const guildCount = guildMembership.value.get(colonist.id)?.length ?? 0;
+
     return {
       id: colonist.id,
       x: pos.x,
@@ -131,33 +211,50 @@ const graphData = computed<ColonistGraphData>(() => {
       colonist,
       isWorking: buildingInfo?.active ?? false,
       buildingName: buildingInfo?.name,
+      guildCount,
+      isBridge: bridgeColonists.value.has(colonist.id),
+      connectionCount: connectionCounts.value.get(colonist.id) ?? 0,
     };
   });
 
   // Determine relationship type for each link
   const links: ColonistGraphLink[] = [];
-  const processedPairs = new Set<string>();
 
   for (const [key, rel] of props.relationships) {
     if (rel.strength < 0.05) continue;
-    processedPairs.add(key);
 
     const [id1, id2] = key.split(":");
+    if (!id1 || !id2) continue;
+
     const isCoworker = coworkerPairs.value.has(key);
     const isHousemate = housematePairs.value.has(key);
+    const sharedGuilds = getSharedGuildIds(id1, id2);
+    const hasSharedGuild = sharedGuilds.length > 0;
+    const isWeakTie = rel.strength < WEAK_TIE_THRESHOLD;
+    const isCohort = rel.isCohort ?? false;
 
-    let type: RelationshipType = "coworker";
+    // Determine relationship type
+    let type: RelationshipType;
     if (isCoworker && isHousemate) {
       type = "both";
     } else if (isHousemate) {
       type = "housemate";
+    } else if (isCoworker) {
+      type = "coworker";
+    } else if (hasSharedGuild) {
+      type = "guild";
+    } else {
+      type = "social";
     }
 
     links.push({
-      source: id1!,
-      target: id2!,
+      source: id1,
+      target: id2,
       weight: rel.strength,
       type,
+      isWeakTie,
+      isCohort,
+      hasSharedGuild,
     });
   }
 
@@ -239,6 +336,26 @@ watch(dimensions, render);
         <div class="legend-item">
           <span class="legend-line both" />
           <span>Both</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-line guild" />
+          <span>Guild</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-line weak" />
+          <span>Weak Tie</span>
+        </div>
+      </div>
+      <div class="legend-divider" />
+      <div class="legend-section">
+        <span class="legend-title">Badges:</span>
+        <div class="legend-item">
+          <span class="legend-badge guild-badge">2</span>
+          <span>Guilds</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-ring bridge" />
+          <span>Bridge</span>
         </div>
       </div>
     </div>
@@ -343,5 +460,50 @@ watch(dimensions, render);
 
 .legend-line.both {
   background: var(--g-color-positive);
+}
+
+.legend-line.guild {
+  background: repeating-linear-gradient(
+    90deg,
+    #9c27b0 0px,
+    #9c27b0 3px,
+    transparent 3px,
+    transparent 5px
+  );
+}
+
+.legend-line.weak {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--g-color-text-muted) 0px,
+    var(--g-color-text-muted) 2px,
+    transparent 2px,
+    transparent 5px
+  );
+  height: 1px;
+}
+
+.legend-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: bold;
+}
+
+.legend-badge.guild-badge {
+  background: #9c27b0;
+  color: white;
+}
+
+.legend-ring {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px dashed #9c27b0;
+  opacity: 0.7;
 }
 </style>

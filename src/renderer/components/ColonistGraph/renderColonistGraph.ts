@@ -6,15 +6,21 @@ export interface ColonistGraphNode extends PositionedColonist {
   colonist: Colonist;
   isWorking: boolean;
   buildingName?: string;
+  guildCount: number;
+  isBridge: boolean;
+  connectionCount: number;
 }
 
-export type RelationshipType = "coworker" | "housemate" | "both";
+export type RelationshipType = "coworker" | "housemate" | "both" | "guild" | "social";
 
 export interface ColonistGraphLink {
   source: string;
   target: string;
   weight: number;
   type: RelationshipType;
+  isWeakTie: boolean;
+  isCohort: boolean;
+  hasSharedGuild: boolean;
 }
 
 export interface ColonistGraphData {
@@ -62,7 +68,16 @@ function getRoleColor(role: ColonistRole, colors: ReturnType<typeof getThemeColo
   }
 }
 
-function getLinkColor(type: RelationshipType, colors: ReturnType<typeof getThemeColors>): string {
+function getLinkColor(
+  type: RelationshipType,
+  hasSharedGuild: boolean,
+  colors: ReturnType<typeof getThemeColors>,
+): string {
+  // Guild connections get a special purple tint
+  if (hasSharedGuild && type !== "both") {
+    return "#9c27b0"; // Purple for guild connections
+  }
+
   switch (type) {
     case "coworker":
       return colors.warning; // Orange for work
@@ -70,6 +85,10 @@ function getLinkColor(type: RelationshipType, colors: ReturnType<typeof getTheme
       return colors.info; // Blue for housing
     case "both":
       return colors.positive; // Green for both
+    case "guild":
+      return "#9c27b0"; // Purple for guild-only
+    case "social":
+      return colors.textMuted; // Gray for social/random connections
     default:
       return colors.border;
   }
@@ -124,10 +143,30 @@ export function renderColonistGraph(
     const target = nodePositions.get(link.target);
     if (!source || !target) continue;
 
-    const strokeColor = getLinkColor(link.type, colors);
-    const strokeWidth = Math.max(1.5, link.weight * 5);
-    const isDashed = link.type === "housemate";
-    const opacity = link.type === "both" ? 0.7 : 0.5;
+    const strokeColor = getLinkColor(link.type, link.hasSharedGuild, colors);
+
+    // Weak ties are thinner
+    const baseWidth = link.isWeakTie ? 1 : 1.5;
+    const strokeWidth = Math.max(baseWidth, link.weight * 5);
+
+    // Determine dash pattern
+    let dashArray = "none";
+    if (link.isWeakTie) {
+      dashArray = "2,3"; // Dotted for weak ties
+    } else if (link.type === "housemate") {
+      dashArray = "6,4"; // Dashed for housemates
+    } else if (link.type === "guild" || link.type === "social") {
+      dashArray = "4,2"; // Short dash for guild/social
+    }
+
+    // Opacity based on relationship strength and type
+    let opacity = link.type === "both" ? 0.7 : 0.5;
+    if (link.isWeakTie) {
+      opacity = 0.3; // More transparent for weak ties
+    }
+    if (link.isCohort) {
+      opacity = Math.min(1, opacity + 0.1); // Slightly more visible for cohort connections
+    }
 
     edgesGroup
       .append("line")
@@ -138,7 +177,7 @@ export function renderColonistGraph(
       .attr("stroke", strokeColor)
       .attr("stroke-opacity", opacity)
       .attr("stroke-width", strokeWidth)
-      .attr("stroke-dasharray", isDashed ? "6,4" : "none");
+      .attr("stroke-dasharray", dashArray);
   }
 
   // Render nodes
@@ -157,6 +196,18 @@ export function renderColonistGraph(
         event.stopPropagation();
         onNodeClick(node.id);
       });
+
+    // Bridge colonist glow (connects different groups)
+    if (node.isBridge) {
+      nodeGroup
+        .append("circle")
+        .attr("r", NODE_RADIUS + 8)
+        .attr("fill", "none")
+        .attr("stroke", "#9c27b0") // Purple for bridges
+        .attr("stroke-opacity", 0.3)
+        .attr("stroke-width", 2)
+        .attr("stroke-dasharray", "4,2");
+    }
 
     // Working glow (if colonist is assigned to active building)
     if (node.isWorking) {
@@ -180,6 +231,29 @@ export function renderColonistGraph(
     // Drop shadow for selected
     if (isSelected) {
       nodeGroup.select("circle").attr("filter", "drop-shadow(0 0 4px rgba(255,255,255,0.5))");
+    }
+
+    // Guild badge (small circle with count)
+    if (node.guildCount > 0) {
+      nodeGroup
+        .append("circle")
+        .attr("cx", NODE_RADIUS - 4)
+        .attr("cy", -NODE_RADIUS + 4)
+        .attr("r", 7)
+        .attr("fill", "#9c27b0")
+        .attr("stroke", colors.bgSurface)
+        .attr("stroke-width", 1);
+
+      nodeGroup
+        .append("text")
+        .attr("x", NODE_RADIUS - 4)
+        .attr("y", -NODE_RADIUS + 4)
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "central")
+        .attr("fill", "white")
+        .attr("font-size", "8px")
+        .attr("font-weight", "bold")
+        .text(node.guildCount);
     }
 
     // Colonist initials

@@ -78,6 +78,7 @@ const buildingsForGraph = computed(() =>
           :colonists="state.colonists"
           :relationships="state.coworkerRelationships"
           :buildings="buildingsForGraph"
+          :guilds="state.guilds"
           :selected-colonist-id="selectedColonistId"
           @select="selectedColonistId = $event"
         />

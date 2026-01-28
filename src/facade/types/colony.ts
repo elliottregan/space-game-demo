@@ -3,6 +3,7 @@
 
 import { type SkillDefinition, SkillId } from "../../core/data/skills";
 import type { Colonist, ColonistRole } from "../../core/models/Colonist";
+import type { Guild } from "../../core/models/Guild";
 import type { CoworkerRelationship } from "../../core/systems/WorkforceManager";
 
 /**
@@ -17,9 +18,10 @@ export interface ColonySnapshot {
   readonly housingAssignments: Readonly<Record<string, readonly Readonly<Colonist>[]>>;
   readonly unhoused: readonly Readonly<Colonist>[];
   readonly coworkerRelationships: ReadonlyMap<string, CoworkerRelationship>;
+  readonly guilds: readonly Readonly<Guild>[];
 }
 
-export type { CoworkerRelationship };
+export type { CoworkerRelationship, Guild };
 
 // Re-export core types
 export { SkillId };

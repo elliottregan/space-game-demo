@@ -38,6 +38,7 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
       housingAssignments: Object.freeze(this.gameState.colony.getHousingAssignments()),
       unhoused: Object.freeze([...this.gameState.colony.getUnhousedColonists()]),
       coworkerRelationships: this.gameState.workforce.getAllCoworkerRelationships(),
+      guilds: Object.freeze([...this.gameState.workforce.getGuilds()]),
     };
   }
 

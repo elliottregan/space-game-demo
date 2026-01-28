@@ -1035,5 +1035,231 @@ describe("WorkforceManager", () => {
       expect(restoredRel?.formedAt).toBe(originalRel?.formedAt);
       expect(restoredRel?.lastWorkedTogether).toBe(originalRel?.lastWorkedTogether);
     });
+
+    it("should serialize and deserialize guilds", () => {
+      const guild = workforce.createGuild("Engineers Union", "professional" as any, ["c1", "c2"], 10);
+      expect(guild).toBeDefined();
+
+      const json = workforce.toJSON();
+      const restored = WorkforceManager.fromJSON(json);
+
+      const restoredGuild = restored.getGuild(guild!.id);
+      expect(restoredGuild).toBeDefined();
+      expect(restoredGuild?.name).toBe("Engineers Union");
+      expect(restoredGuild?.memberIds).toEqual(["c1", "c2"]);
+    });
+  });
+
+  // ==========================================================================
+  // Cohort Effect System tests
+  // ==========================================================================
+  describe("Cohort Effect System", () => {
+    it("should identify colonists in the same cohort", () => {
+      const colonistA = createColonist({ id: "c1", arrivalSol: 10 });
+      const colonistB = createColonist({ id: "c2", arrivalSol: 15 }); // Within 10 sol window
+      const colonistC = createColonist({ id: "c3", arrivalSol: 50 }); // Outside window
+
+      expect(workforce.areInSameCohort(colonistA, colonistB)).toBe(true);
+      expect(workforce.areInSameCohort(colonistA, colonistC)).toBe(false);
+    });
+
+    it("should return false when arrivalSol is undefined", () => {
+      const colonistA = createColonist({ id: "c1", arrivalSol: 10 });
+      const colonistB = createColonist({ id: "c2" }); // No arrivalSol
+
+      expect(workforce.areInSameCohort(colonistA, colonistB)).toBe(false);
+    });
+  });
+
+  // ==========================================================================
+  // Guild System tests
+  // ==========================================================================
+  describe("Guild System", () => {
+    it("should create a guild with founders", () => {
+      const guild = workforce.createGuild("Test Guild", "social" as any, ["c1", "c2"], 10);
+
+      expect(guild).toBeDefined();
+      expect(guild?.name).toBe("Test Guild");
+      expect(guild?.memberIds).toContain("c1");
+      expect(guild?.memberIds).toContain("c2");
+    });
+
+    it("should not create guild with fewer than MIN_GUILD_SIZE members", () => {
+      const guild = workforce.createGuild("Too Small", "social" as any, ["c1"], 10);
+      expect(guild).toBeNull();
+    });
+
+    it("should allow joining a guild", () => {
+      const guild = workforce.createGuild("Test Guild", "social" as any, ["c1", "c2"], 10);
+      const colonist = createColonist({ id: "c3" });
+
+      const result = workforce.joinGuild("c3", guild!.id, colonist);
+
+      expect(result).toBe(true);
+      expect(guild!.memberIds).toContain("c3");
+      expect(colonist.guildIds).toContain(guild!.id);
+    });
+
+    it("should not allow joining when guild is at max capacity", () => {
+      // Create guild at max capacity (8 members)
+      const members = Array.from({ length: 8 }, (_, i) => `m${i}`);
+      const guild = workforce.createGuild("Full Guild", "social" as any, members, 10);
+
+      const colonist = createColonist({ id: "c1" });
+      const result = workforce.joinGuild("c1", guild!.id, colonist);
+
+      expect(result).toBe(false);
+    });
+
+    it("should allow leaving a guild", () => {
+      const guild = workforce.createGuild("Test Guild", "social" as any, ["c1", "c2", "c3"], 10);
+      const colonist = createColonist({ id: "c1", guildIds: [guild!.id] });
+
+      const result = workforce.leaveGuild("c1", guild!.id, colonist);
+
+      expect(result).toBe(true);
+      expect(guild!.memberIds).not.toContain("c1");
+      expect(colonist.guildIds).not.toContain(guild!.id);
+    });
+
+    it("should disband guild when members drop below minimum", () => {
+      const guild = workforce.createGuild("Small Guild", "social" as any, ["c1", "c2"], 10);
+      const colonist = createColonist({ id: "c1", guildIds: [guild!.id] });
+
+      workforce.leaveGuild("c1", guild!.id, colonist);
+
+      expect(workforce.getGuild(guild!.id)).toBeUndefined();
+    });
+
+    it("should detect shared guild membership", () => {
+      const guild = workforce.createGuild("Shared Guild", "social" as any, ["c1", "c2"], 10);
+      const colonistA = createColonist({ id: "c1", guildIds: [guild!.id] });
+      const colonistB = createColonist({ id: "c2", guildIds: [guild!.id] });
+      const colonistC = createColonist({ id: "c3" });
+
+      expect(workforce.shareGuild(colonistA, colonistB)).toBe(true);
+      expect(workforce.shareGuild(colonistA, colonistC)).toBe(false);
+    });
+
+    it("should process guild bonding", () => {
+      const guild = workforce.createGuild("Bonding Guild", "social" as any, ["c1", "c2"], 10);
+      const colonists = [
+        createColonist({ id: "c1", guildIds: [guild!.id] }),
+        createColonist({ id: "c2", guildIds: [guild!.id] }),
+      ];
+
+      const colony = mockColony(colonists);
+      workforce.tick(colony as any, undefined, 11);
+
+      const relationship = workforce.getCoworkerRelationship("c1", "c2");
+      expect(relationship).toBeDefined();
+      expect(relationship!.sharedGuildIds).toContain(guild!.id);
+    });
+  });
+
+  // ==========================================================================
+  // Weak Ties (Granovetter) System tests
+  // ==========================================================================
+  describe("Weak Ties System", () => {
+    it("should identify weak ties based on strength threshold", () => {
+      const colonists = [
+        createColonist({ id: "c1", role: ColonistRole.ENGINEERING }),
+        createColonist({ id: "c2", role: ColonistRole.ENGINEERING }),
+      ];
+      const buildings = mockBuildings([
+        { id: "b1", status: "active", assignedWorkers: ["c1", "c2"] },
+      ]);
+
+      const colony = mockColony(colonists);
+      workforce.tick(colony as any, buildings as any, 1);
+
+      // Initial relationship (0.1) is below WEAK_TIE_THRESHOLD (0.3)
+      expect(workforce.isWeakTie("c1", "c2")).toBe(true);
+    });
+
+    it("should not identify strong ties as weak ties", () => {
+      const colonists = [
+        createColonist({ id: "c1", role: ColonistRole.ENGINEERING }),
+        createColonist({ id: "c2", role: ColonistRole.ENGINEERING }),
+      ];
+      const buildings = mockBuildings([
+        { id: "b1", status: "active", assignedWorkers: ["c1", "c2"] },
+      ]);
+
+      const colony = mockColony(colonists);
+
+      // Tick many times to build strong relationship
+      for (let i = 0; i < 50; i++) {
+        workforce.tick(colony as any, buildings as any, i);
+      }
+
+      // Strong relationship should not be a weak tie
+      const strength = workforce.getCoworkerRelationshipStrength("c1", "c2");
+      expect(strength).toBeGreaterThan(0.3);
+      expect(workforce.isWeakTie("c1", "c2")).toBe(false);
+    });
+
+    it("should get all weak ties for a colonist", () => {
+      const colonists = [
+        createColonist({ id: "c1", role: ColonistRole.ENGINEERING }),
+        createColonist({ id: "c2", role: ColonistRole.ENGINEERING }),
+        createColonist({ id: "c3", role: ColonistRole.ENGINEERING }),
+      ];
+      const buildings = mockBuildings([
+        { id: "b1", status: "active", assignedWorkers: ["c1", "c2", "c3"] },
+      ]);
+
+      const colony = mockColony(colonists);
+      workforce.tick(colony as any, buildings as any, 1);
+
+      const weakTies = workforce.getWeakTies("c1");
+      expect(weakTies).toContain("c2");
+      expect(weakTies).toContain("c3");
+    });
+
+    it("should calculate bridging score", () => {
+      // Create a colonist who connects two groups
+      const colonists = [
+        createColonist({ id: "c1", role: ColonistRole.ENGINEERING }),
+        createColonist({ id: "c2", role: ColonistRole.ENGINEERING }),
+        createColonist({ id: "c3", role: ColonistRole.ENGINEERING }),
+      ];
+
+      // First, c1 and c2 work together
+      const buildings1 = mockBuildings([
+        { id: "b1", status: "active", assignedWorkers: ["c1", "c2"] },
+      ]);
+      workforce.tick(mockColony(colonists) as any, buildings1 as any, 1);
+
+      // Then c1 and c3 work together (c2 and c3 have no relationship)
+      const buildings2 = mockBuildings([
+        { id: "b2", status: "active", assignedWorkers: ["c1", "c3"] },
+      ]);
+      workforce.tick(mockColony(colonists) as any, buildings2 as any, 2);
+
+      // c1 bridges c2 and c3 who are not connected
+      const bridgingScore = workforce.calculateBridgingScore("c1", colonists);
+      expect(bridgingScore).toBeGreaterThan(0);
+    });
+
+    it("should get social network position", () => {
+      const colonists = [
+        createColonist({ id: "c1", role: ColonistRole.ENGINEERING }),
+        createColonist({ id: "c2", role: ColonistRole.ENGINEERING }),
+        createColonist({ id: "c3", role: ColonistRole.ENGINEERING }),
+      ];
+      const buildings = mockBuildings([
+        { id: "b1", status: "active", assignedWorkers: ["c1", "c2", "c3"] },
+      ]);
+
+      const colony = mockColony(colonists);
+      workforce.tick(colony as any, buildings as any, 1);
+
+      const position = workforce.getSocialNetworkPosition("c1", colonists);
+
+      expect(position.connectionCount).toBe(2);
+      expect(position.averageStrength).toBeGreaterThan(0);
+      expect(position.weakTieCount).toBe(2); // Both are weak ties initially
+    });
   });
 });
