@@ -155,3 +155,45 @@ export interface NetworkComponent {
   /** Factions represented in this component */
   factions: NPCFaction[];
 }
+
+/**
+ * Tracks the last interaction between two NPCs for relationship maintenance.
+ */
+export interface RelationshipInteraction {
+  /** Sol when the last meaningful interaction occurred */
+  lastInteractionSol: number;
+  /** Type of the last interaction */
+  interactionType: InteractionType;
+}
+
+/**
+ * Types of interactions that can refresh relationship maintenance.
+ */
+export enum InteractionType {
+  /** NPCs voted on the same side of a project */
+  SHARED_VOTE = "shared_vote",
+  /** NPCs joined the same council */
+  COUNCIL_MEMBERSHIP = "council_membership",
+  /** One NPC lobbied in favor of the other's position */
+  LOBBYING = "lobbying",
+  /** Connection formed through triadic closure */
+  TRIADIC_CLOSURE = "triadic_closure",
+  /** Initial relationship from game start */
+  INITIAL = "initial",
+}
+
+/**
+ * Represents a new connection formed through triadic closure.
+ */
+export interface TriadicClosureEvent {
+  /** NPC A who now has a new connection */
+  npcA: NPCId;
+  /** NPC C who A is now connected to */
+  npcC: NPCId;
+  /** NPC B who bridged the connection */
+  bridgeNpc: NPCId;
+  /** Sol when the closure occurred */
+  occurredAt: number;
+  /** Initial weight of the new connection */
+  initialWeight: number;
+}

@@ -11,6 +11,7 @@ import {
   FACTION_SUPPORT_DECAY_RATE,
   FAILURE_TRANSMISSION_PENALTY,
   IGNORED_DEMAND_DECAY_MULTIPLIER,
+  INTERACTION_REFRESH_AMOUNT,
   LOBBY_BASE_COST,
   LOBBY_SUPPORT_BOOST,
   OPPOSING_VOTE_RELATIONSHIP_PENALTY,
@@ -19,9 +20,16 @@ import {
   PROJECT_PASS_SUPPORT_BOOST,
   PROJECT_VOTE_DELAY,
   RELATIONSHIP_DECAY_RATE,
+  RELATIONSHIP_STALE_THRESHOLD,
+  SAME_FACTION_CLOSURE_MULTIPLIER,
   SAME_FACTION_RELATIONSHIP_FLOOR,
+  SHARED_VOTE_RELATIONSHIP_BOOST,
   SUCCESS_TRANSMISSION_BOOST,
   TRANSMISSION_FACTORS,
+  TRIADIC_CLOSURE_INITIAL_WEIGHT,
+  TRIADIC_CLOSURE_PROBABILITY,
+  TRIADIC_CLOSURE_THRESHOLD,
+  UNMAINTAINED_DECAY_MULTIPLIER,
 } from "../balance/NPCInfluenceBalance";
 import type { GameEvent } from "../models/GameEvent";
 import {
@@ -29,6 +37,7 @@ import {
   ALL_FACTIONS,
   type Council,
   type FactionDemand,
+  InteractionType,
   type NetworkComponent,
   type NetworkDisconnection,
   type NPC,
@@ -37,6 +46,8 @@ import {
   type Project,
   ProjectId,
   type ProjectType,
+  type RelationshipInteraction,
+  type TriadicClosureEvent,
 } from "../models/NPCInfluence";
 import type { ResourceDelta } from "../models/Resources";
 import { updateSupport } from "../utils/matrix";
@@ -55,6 +66,10 @@ export class NPCInfluenceManager {
   private npcSupport: Map<NPCId, number> = new Map();
   private activeDemands: FactionDemand[] = [];
   private disconnectionHistory: NetworkDisconnection[] = [];
+  /** Tracks last interaction time for each relationship edge (key: "sourceId:targetId") */
+  private interactionTracker: Map<string, RelationshipInteraction> = new Map();
+  /** History of triadic closure events */
+  private triadicClosureHistory: TriadicClosureEvent[] = [];
 
   /** Mutable transmission factors (modified by project outcomes) */
   private transmissionFactors: Record<ProjectType, Record<NPCFaction, Record<NPCFaction, number>>>;
@@ -97,6 +112,12 @@ export class NPCInfluenceManager {
         // So if "fromId:toId" means fromId influences toId, we set W[toIdx][fromIdx]
         const row = matrix[toIdx] as number[];
         row[fromIdx] = weight;
+
+        // Initialize interaction tracker for this relationship
+        this.interactionTracker.set(key, {
+          lastInteractionSol: 0, // Initial relationships start fresh
+          interactionType: InteractionType.INITIAL,
+        });
       }
     }
 
@@ -258,7 +279,12 @@ export class NPCInfluenceManager {
    * Create a council that permanently boosts relationships between members.
    * @returns true if council created successfully
    */
-  createCouncil(name: string, memberIds: NPCId[], resources: ResourceManager): boolean {
+  createCouncil(
+    name: string,
+    memberIds: NPCId[],
+    resources: ResourceManager,
+    currentSol: number = 0,
+  ): boolean {
     const cost: ResourceDelta = { materials: COUNCIL_CREATION_COST };
 
     if (!resources.canAfford(cost)) {
@@ -287,6 +313,9 @@ export class NPCInfluenceManager {
           if (row) {
             row[idx2] = Math.min(1.0, (row[idx2] ?? 0) + COUNCIL_RELATIONSHIP_BOOST);
           }
+
+          // Record the interaction for relationship maintenance
+          this.recordInteraction(id2, id1, currentSol, InteractionType.COUNCIL_MEMBERSHIP);
         }
       }
     }
@@ -583,9 +612,10 @@ export class NPCInfluenceManager {
   /**
    * Apply natural relationship decay to all connections.
    * Cross-faction connections decay faster than same-faction connections.
+   * Unmaintained relationships (no recent interaction) decay even faster.
    * @returns Events generated from any disconnections that occurred
    */
-  private applyRelationshipDecay(): GameEvent[] {
+  private applyRelationshipDecay(currentSol: number): GameEvent[] {
     const events: GameEvent[] = [];
     const N = this.npcs.length;
 
@@ -603,11 +633,24 @@ export class NPCInfluenceManager {
         const sourceNpc = this.npcs[sourceIdx];
         if (!sourceNpc) continue;
 
-        // Calculate decay rate based on faction alignment
+        // Calculate base decay rate based on faction alignment
         const isSameFaction = sourceNpc.faction === targetNpc.faction;
-        const decayRate = isSameFaction
+        let decayRate = isSameFaction
           ? RELATIONSHIP_DECAY_RATE
           : RELATIONSHIP_DECAY_RATE * CROSS_FACTION_DECAY_MULTIPLIER;
+
+        // Apply unmaintained relationship multiplier
+        const interactionKey = `${sourceNpc.id}:${targetNpc.id}`;
+        const interaction = this.interactionTracker.get(interactionKey);
+        if (interaction) {
+          const solsSinceInteraction = currentSol - interaction.lastInteractionSol;
+          if (solsSinceInteraction > RELATIONSHIP_STALE_THRESHOLD) {
+            decayRate *= UNMAINTAINED_DECAY_MULTIPLIER;
+          }
+        } else {
+          // No interaction record means it's unmaintained
+          decayRate *= UNMAINTAINED_DECAY_MULTIPLIER;
+        }
 
         // Apply floor for same-faction members
         const floor = isSameFaction ? SAME_FACTION_RELATIONSHIP_FLOOR : 0;
@@ -800,6 +843,206 @@ export class NPCInfluenceManager {
     return components;
   }
 
+  // ============ Triadic Closure System ============
+
+  /**
+   * Get the history of triadic closure events.
+   */
+  getTriadicClosureHistory(): readonly TriadicClosureEvent[] {
+    return this.triadicClosureHistory;
+  }
+
+  /**
+   * Process triadic closure: when A→B and B→C both exist, there's a chance to form A→C.
+   * This models the "friend of a friend becomes a friend" phenomenon.
+   * @returns Events generated from new connections formed
+   */
+  private processTriadicClosure(currentSol: number): GameEvent[] {
+    const events: GameEvent[] = [];
+    const N = this.npcs.length;
+
+    // Find all open triads (A→B, B→C where A→C doesn't exist)
+    for (let aIdx = 0; aIdx < N; aIdx++) {
+      const npcA = this.npcs[aIdx];
+      if (!npcA) continue;
+
+      for (let bIdx = 0; bIdx < N; bIdx++) {
+        if (aIdx === bIdx) continue;
+        const npcB = this.npcs[bIdx];
+        if (!npcB) continue;
+
+        // Check if A→B exists
+        const rowB = this.relationshipMatrix[bIdx];
+        const weightAB = rowB?.[aIdx] ?? 0;
+        if (weightAB <= 0) continue;
+
+        for (let cIdx = 0; cIdx < N; cIdx++) {
+          if (cIdx === aIdx || cIdx === bIdx) continue;
+          const npcC = this.npcs[cIdx];
+          if (!npcC) continue;
+
+          // Check if B→C exists
+          const rowC = this.relationshipMatrix[cIdx];
+          const weightBC = rowC?.[bIdx] ?? 0;
+          if (weightBC <= 0) continue;
+
+          // Check if A→C doesn't exist yet
+          const weightAC = rowC?.[aIdx] ?? 0;
+          if (weightAC > 0) continue;
+
+          // Check if combined strength meets threshold
+          const combinedStrength = weightAB + weightBC;
+          if (combinedStrength < TRIADIC_CLOSURE_THRESHOLD) continue;
+
+          // Calculate closure probability
+          let closureProbability = TRIADIC_CLOSURE_PROBABILITY;
+
+          // Boost probability if A and C are in the same faction
+          if (npcA.faction === npcC.faction) {
+            closureProbability *= SAME_FACTION_CLOSURE_MULTIPLIER;
+          }
+
+          // Random chance to form the connection
+          if (Math.random() < closureProbability) {
+            // Form the new connection A→C
+            rowC[aIdx] = TRIADIC_CLOSURE_INITIAL_WEIGHT;
+
+            // Record the interaction
+            const interactionKey = `${npcA.id}:${npcC.id}`;
+            this.interactionTracker.set(interactionKey, {
+              lastInteractionSol: currentSol,
+              interactionType: InteractionType.TRIADIC_CLOSURE,
+            });
+
+            // Record the closure event
+            const closureEvent: TriadicClosureEvent = {
+              npcA: npcA.id,
+              npcC: npcC.id,
+              bridgeNpc: npcB.id,
+              occurredAt: currentSol,
+              initialWeight: TRIADIC_CLOSURE_INITIAL_WEIGHT,
+            };
+            this.triadicClosureHistory.push(closureEvent);
+
+            // Generate game event
+            events.push({
+              type: "TRIADIC_CLOSURE",
+              severity: "info",
+              npcA: npcA.id,
+              npcAName: npcA.name,
+              npcC: npcC.id,
+              npcCName: npcC.name,
+              bridgeNpc: npcB.id,
+              bridgeNpcName: npcB.name,
+              message: `${npcA.name} formed a connection with ${npcC.name} through ${npcB.name}`,
+            });
+          }
+        }
+      }
+    }
+
+    return events;
+  }
+
+  // ============ Relationship Maintenance System ============
+
+  /**
+   * Record an interaction between two NPCs, refreshing their relationship maintenance timer.
+   */
+  recordInteraction(
+    sourceId: NPCId,
+    targetId: NPCId,
+    currentSol: number,
+    interactionType: InteractionType,
+  ): void {
+    const interactionKey = `${sourceId}:${targetId}`;
+    this.interactionTracker.set(interactionKey, {
+      lastInteractionSol: currentSol,
+      interactionType,
+    });
+  }
+
+  /**
+   * Get the last interaction info for a relationship.
+   */
+  getInteractionInfo(sourceId: NPCId, targetId: NPCId): RelationshipInteraction | undefined {
+    const interactionKey = `${sourceId}:${targetId}`;
+    return this.interactionTracker.get(interactionKey);
+  }
+
+  /**
+   * Check if a relationship is considered "stale" (no recent interaction).
+   */
+  isRelationshipStale(sourceId: NPCId, targetId: NPCId, currentSol: number): boolean {
+    const interaction = this.getInteractionInfo(sourceId, targetId);
+    if (!interaction) return true;
+    return currentSol - interaction.lastInteractionSol > RELATIONSHIP_STALE_THRESHOLD;
+  }
+
+  /**
+   * Process shared votes: when two NPCs vote on the same side, strengthen their relationship.
+   * Called when a project resolves.
+   */
+  private applySharedVoteBonuses(currentSol: number): void {
+    if (!this.activeProject) return;
+
+    const supporters: number[] = [];
+    const opposers: number[] = [];
+
+    // Categorize NPCs by their vote
+    for (let i = 0; i < this.npcs.length; i++) {
+      const npc = this.npcs[i];
+      if (!npc) continue;
+      const support = this.activeProject.supportLevels.get(npc.id) ?? 0;
+      if (support > 0.1) {
+        supporters.push(i);
+      } else if (support < -0.1) {
+        opposers.push(i);
+      }
+    }
+
+    // Strengthen relationships within supporter group
+    this.strengthenGroupRelationships(supporters, currentSol);
+
+    // Strengthen relationships within opposer group
+    this.strengthenGroupRelationships(opposers, currentSol);
+  }
+
+  /**
+   * Strengthen relationships between all members of a group who voted together.
+   */
+  private strengthenGroupRelationships(groupIndices: number[], currentSol: number): void {
+    for (let i = 0; i < groupIndices.length; i++) {
+      const idxA = groupIndices[i];
+      if (idxA === undefined) continue;
+      const npcA = this.npcs[idxA];
+      if (!npcA) continue;
+
+      for (let j = i + 1; j < groupIndices.length; j++) {
+        const idxB = groupIndices[j];
+        if (idxB === undefined) continue;
+        const npcB = this.npcs[idxB];
+        if (!npcB) continue;
+
+        // Strengthen A→B
+        const rowB = this.relationshipMatrix[idxB];
+        if (rowB) {
+          const currentAB = rowB[idxA] ?? 0;
+          rowB[idxA] = Math.min(1, currentAB + SHARED_VOTE_RELATIONSHIP_BOOST);
+          this.recordInteraction(npcA.id, npcB.id, currentSol, InteractionType.SHARED_VOTE);
+        }
+
+        // Strengthen B→A
+        const rowA = this.relationshipMatrix[idxA];
+        if (rowA) {
+          const currentBA = rowA[idxB] ?? 0;
+          rowA[idxB] = Math.min(1, currentBA + SHARED_VOTE_RELATIONSHIP_BOOST);
+          this.recordInteraction(npcB.id, npcA.id, currentSol, InteractionType.SHARED_VOTE);
+        }
+      }
+    }
+  }
+
   // ============ Demand Generation ============
 
   private checkAndGenerateDemands(currentSol: number): GameEvent[] {
@@ -909,8 +1152,11 @@ export class NPCInfluenceManager {
       events.push(...this.checkAndGenerateDemands(currentSol));
 
       // Apply relationship decay and check for disconnections
-      this.applyRelationshipDecay();
+      this.applyRelationshipDecay(currentSol);
       events.push(...this.checkAndApplyDisconnections(currentSol));
+
+      // Process triadic closure (friend of a friend becomes friend)
+      events.push(...this.processTriadicClosure(currentSol));
     }
 
     if (!this.activeProject) {
@@ -973,9 +1219,12 @@ export class NPCInfluenceManager {
     const averageSupport = this.getAverageSupport();
     const passed = averageSupport >= PASS_THRESHOLD;
 
-    // Apply relationship penalties for opposing votes before clearing the project
+    // Apply relationship effects based on voting patterns
     if (currentSol >= POLITICAL_PRESSURE_START_SOL) {
+      // Penalize opposing voters
       this.applyOpposingVotePenalties();
+      // Strengthen bonds between those who voted together
+      this.applySharedVoteBonuses(currentSol);
     }
 
     if (passed) {
@@ -1044,6 +1293,8 @@ export class NPCInfluenceManager {
       npcSupport: Object.fromEntries(this.npcSupport),
       activeDemands: this.activeDemands,
       disconnectionHistory: this.disconnectionHistory,
+      interactionTracker: Object.fromEntries(this.interactionTracker),
+      triadicClosureHistory: this.triadicClosureHistory,
     };
   }
 
@@ -1090,6 +1341,16 @@ export class NPCInfluenceManager {
 
     if (data.disconnectionHistory) {
       manager.disconnectionHistory = data.disconnectionHistory;
+    }
+
+    if (data.interactionTracker) {
+      manager.interactionTracker = new Map(
+        Object.entries(data.interactionTracker).map(([k, v]) => [k, v as RelationshipInteraction]),
+      );
+    }
+
+    if (data.triadicClosureHistory) {
+      manager.triadicClosureHistory = data.triadicClosureHistory;
     }
 
     return manager;
