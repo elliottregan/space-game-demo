@@ -131,3 +131,27 @@ export interface FactionDemand {
   /** Project IDs that would satisfy this demand */
   projectIds: ProjectId[];
 }
+
+/**
+ * Represents a disconnection event between two NPCs in the political network.
+ */
+export interface NetworkDisconnection {
+  /** NPC who lost influence over the other */
+  sourceId: NPCId;
+  /** NPC who is no longer influenced by the source */
+  targetId: NPCId;
+  /** Sol when the disconnection occurred */
+  occurredAt: number;
+  /** The relationship weight before disconnection */
+  previousWeight: number;
+}
+
+/**
+ * Represents a connected component (group) of NPCs in the political network.
+ */
+export interface NetworkComponent {
+  /** NPCs in this connected component */
+  memberIds: NPCId[];
+  /** Factions represented in this component */
+  factions: NPCFaction[];
+}

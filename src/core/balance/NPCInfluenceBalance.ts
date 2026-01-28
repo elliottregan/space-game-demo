@@ -106,3 +106,20 @@ export const PROJECT_PASS_SUPPORT_BOOST = 0.3;
 
 /** Minimum sols before political pressure begins */
 export const POLITICAL_PRESSURE_START_SOL = 100;
+
+// ============ Network Disconnection System ============
+
+/** Rate at which relationship weights decay per sol (applied after POLITICAL_PRESSURE_START_SOL) */
+export const RELATIONSHIP_DECAY_RATE = 0.002;
+
+/** Multiplier for cross-faction relationship decay (cross-faction connections decay faster) */
+export const CROSS_FACTION_DECAY_MULTIPLIER = 1.5;
+
+/** Threshold below which connections are severed (set to 0) */
+export const DISCONNECTION_THRESHOLD = 0.05;
+
+/** Relationship penalty applied to NPCs who voted on opposing sides of a project */
+export const OPPOSING_VOTE_RELATIONSHIP_PENALTY = 0.05;
+
+/** Minimum relationship strength to prevent further decay (floor for same-faction members) */
+export const SAME_FACTION_RELATIONSHIP_FLOOR = 0.1;

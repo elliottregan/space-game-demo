@@ -4,8 +4,17 @@ import { describe, it, expect, beforeEach } from 'bun:test';
 import { NPCInfluenceManager } from '../src/core/systems/NPCInfluenceManager';
 import { ResourceManager } from '../src/core/systems/ResourceManager';
 import { NPCS, INITIAL_RELATIONSHIPS, PROJECTS } from '../src/core/data/npcs';
-import { LOBBY_BASE_COST, COUNCIL_CREATION_COST, COUNCIL_RELATIONSHIP_BOOST } from '../src/core/balance/NPCInfluenceBalance';
-import { NPCFaction, NPCId, ProjectId } from '../src/core/models/NPCInfluence';
+import {
+  LOBBY_BASE_COST,
+  COUNCIL_CREATION_COST,
+  COUNCIL_RELATIONSHIP_BOOST,
+  RELATIONSHIP_DECAY_RATE,
+  CROSS_FACTION_DECAY_MULTIPLIER,
+  DISCONNECTION_THRESHOLD,
+  SAME_FACTION_RELATIONSHIP_FLOOR,
+  POLITICAL_PRESSURE_START_SOL,
+} from '../src/core/balance/NPCInfluenceBalance';
+import { NPCFaction, NPCId, ProjectId, type NPC } from '../src/core/models/NPCInfluence';
 import type { GameEvent } from '../src/core/models/GameEvent';
 
 describe('NPCInfluenceManager', () => {
@@ -580,6 +589,578 @@ describe('NPCInfluenceManager', () => {
       // Support should have decayed faster (3x rate after deadline)
       const support = manager.getFactionSupport().earth_loyalists;
       expect(support).toBeLessThan(0); // Should be significantly negative
+    });
+  });
+
+  describe('network disconnection system', () => {
+    describe('getRelationshipWeight', () => {
+      it('should return the relationship weight between two NPCs', () => {
+        // Chen Wei -> Nova Silva has initial weight 0.7
+        const weight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.NOVA_SILVA);
+        expect(weight).toBe(0.7);
+      });
+
+      it('should return 0 for non-existent connections', () => {
+        // Chen Wei and Elena Volkov have no initial connection
+        const weight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.ELENA_VOLKOV);
+        expect(weight).toBe(0);
+      });
+
+      it('should return asymmetric weights correctly', () => {
+        // Chen Wei -> Nova Silva is 0.7, Nova Silva -> Chen Wei is 0.6
+        const chenToNova = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.NOVA_SILVA);
+        const novaToChen = manager.getRelationshipWeight(NPCId.NOVA_SILVA, NPCId.CHEN_WEI);
+        expect(chenToNova).toBe(0.7);
+        expect(novaToChen).toBe(0.6);
+      });
+    });
+
+    describe('weakenRelationship', () => {
+      it('should reduce the relationship weight between two NPCs', () => {
+        const initialWeight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.NOVA_SILVA);
+
+        manager.weakenRelationship(NPCId.CHEN_WEI, NPCId.NOVA_SILVA, 0.1);
+
+        const newWeight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.NOVA_SILVA);
+        expect(newWeight).toBe(initialWeight - 0.1);
+      });
+
+      it('should respect same-faction floor', () => {
+        // Chen Wei and Nova Silva are both Earth Loyalists
+        // Weaken by a large amount
+        manager.weakenRelationship(NPCId.CHEN_WEI, NPCId.NOVA_SILVA, 1.0);
+
+        const weight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.NOVA_SILVA);
+        expect(weight).toBe(SAME_FACTION_RELATIONSHIP_FLOOR);
+      });
+
+      it('should allow cross-faction relationships to go to zero', () => {
+        // Chen Wei -> Maria Santos is a cross-faction connection (0.3)
+        manager.weakenRelationship(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS, 1.0);
+
+        const weight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS);
+        expect(weight).toBe(0);
+      });
+
+      it('should return false if no connection exists', () => {
+        const result = manager.weakenRelationship(NPCId.CHEN_WEI, NPCId.ELENA_VOLKOV, 0.1);
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('relationship decay', () => {
+      it('should decay relationships over time after political pressure starts', () => {
+        // Cross-faction connection: Chen Wei -> Maria Santos (0.3)
+        const initialWeight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS);
+        expect(initialWeight).toBe(0.3);
+
+        // Run many ticks to cause decay
+        for (let i = 0; i < 50; i++) {
+          manager.tick(POLITICAL_PRESSURE_START_SOL + i);
+        }
+
+        const newWeight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS);
+        expect(newWeight).toBeLessThan(initialWeight);
+      });
+
+      it('should decay cross-faction relationships faster than same-faction', () => {
+        // Same-faction: Chen Wei -> Nova Silva (0.7)
+        // Cross-faction: Chen Wei -> Maria Santos (0.3)
+        const initialSameFaction = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.NOVA_SILVA);
+        const initialCrossFaction = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS);
+
+        // Run many ticks
+        for (let i = 0; i < 50; i++) {
+          manager.tick(POLITICAL_PRESSURE_START_SOL + i);
+        }
+
+        const newSameFaction = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.NOVA_SILVA);
+        const newCrossFaction = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS);
+
+        const sameFactionDecay = initialSameFaction - newSameFaction;
+        const crossFactionDecay = initialCrossFaction - newCrossFaction;
+
+        // Cross-faction should decay more (CROSS_FACTION_DECAY_MULTIPLIER = 1.5)
+        // But we need to account for the floor on same-faction
+        expect(crossFactionDecay / sameFactionDecay).toBeGreaterThan(1);
+      });
+
+      it('should not decay same-faction relationships below the floor', () => {
+        // Run many ticks to try to decay
+        for (let i = 0; i < 500; i++) {
+          manager.tick(POLITICAL_PRESSURE_START_SOL + i);
+        }
+
+        // Same-faction relationship should not go below floor
+        const weight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.NOVA_SILVA);
+        expect(weight).toBeGreaterThanOrEqual(SAME_FACTION_RELATIONSHIP_FLOOR);
+      });
+
+      it('should not decay relationships before political pressure starts', () => {
+        const initialWeight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS);
+
+        // Run ticks before POLITICAL_PRESSURE_START_SOL
+        for (let i = 0; i < 50; i++) {
+          manager.tick(i);
+        }
+
+        const newWeight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS);
+        expect(newWeight).toBe(initialWeight);
+      });
+    });
+
+    describe('disconnection events', () => {
+      it('should disconnect cross-faction relationships that fall below threshold', () => {
+        // Weaken cross-faction connection to just above threshold
+        const initialWeight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS);
+        manager.weakenRelationship(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS, initialWeight - DISCONNECTION_THRESHOLD / 2);
+
+        // Run ticks until disconnection occurs
+        let disconnectionEvent: GameEvent | undefined;
+        for (let i = 0; i < 100; i++) {
+          const events = manager.tick(POLITICAL_PRESSURE_START_SOL + i);
+          const found = events.find(e => e.type === 'NETWORK_DISCONNECTION');
+          if (found) {
+            disconnectionEvent = found;
+            break;
+          }
+        }
+
+        expect(disconnectionEvent).toBeDefined();
+        expect(disconnectionEvent!.sourceNpcId).toBe(NPCId.CHEN_WEI);
+        expect(disconnectionEvent!.targetNpcId).toBe(NPCId.MARIA_SANTOS);
+      });
+
+      it('should record disconnection in history', () => {
+        // Weaken cross-faction connection significantly
+        const initialWeight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS);
+        manager.weakenRelationship(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS, initialWeight - DISCONNECTION_THRESHOLD / 2);
+
+        // Run ticks until disconnection occurs
+        for (let i = 0; i < 100; i++) {
+          manager.tick(POLITICAL_PRESSURE_START_SOL + i);
+        }
+
+        const history = manager.getDisconnectionHistory();
+        const disconnection = history.find(
+          d => d.sourceId === NPCId.CHEN_WEI && d.targetId === NPCId.MARIA_SANTOS
+        );
+        expect(disconnection).toBeDefined();
+        expect(disconnection!.previousWeight).toBeGreaterThan(0);
+        expect(disconnection!.previousWeight).toBeLessThan(DISCONNECTION_THRESHOLD);
+      });
+
+      it('should not disconnect same-faction relationships', () => {
+        // Run many ticks
+        for (let i = 0; i < 500; i++) {
+          manager.tick(POLITICAL_PRESSURE_START_SOL + i);
+        }
+
+        const history = manager.getDisconnectionHistory();
+        const sameFactionDisconnection = history.find(d => {
+          const sourceNpc = manager.getNPCs().find(n => n.id === d.sourceId);
+          const targetNpc = manager.getNPCs().find(n => n.id === d.targetId);
+          return sourceNpc?.faction === targetNpc?.faction;
+        });
+
+        expect(sameFactionDisconnection).toBeUndefined();
+      });
+
+      it('should set relationship to 0 after disconnection', () => {
+        // Weaken cross-faction connection significantly
+        const initialWeight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS);
+        manager.weakenRelationship(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS, initialWeight - DISCONNECTION_THRESHOLD / 2);
+
+        // Run ticks until disconnection occurs
+        for (let i = 0; i < 100; i++) {
+          manager.tick(POLITICAL_PRESSURE_START_SOL + i);
+        }
+
+        const weight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS);
+        expect(weight).toBe(0);
+      });
+    });
+
+    describe('connected components', () => {
+      it('should return one component when all NPCs are connected', () => {
+        const components = manager.getConnectedComponents();
+
+        // Initially all NPCs should be in one connected component
+        expect(components.length).toBe(1);
+        expect(components[0]!.memberIds.length).toBe(10);
+      });
+
+      it('should identify disconnected groups after connections break', () => {
+        // Sever all cross-faction connections manually
+        // Earth Loyalists: chen_wei, nova_silva, alex_okonkwo
+        // Cross-faction connections to sever:
+        // chen_wei -> maria_santos (0.3), maria_santos -> chen_wei (0.2)
+        // nova_silva -> aisha_patel (0.2), aisha_patel -> nova_silva (0.3)
+        // marcus_reed -> david_morrison (0.3), david_morrison -> marcus_reed (0.2)
+        // james_liu -> sarah_chen (0.2), sarah_chen -> james_liu (0.2)
+
+        manager.weakenRelationship(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS, 1.0);
+        manager.weakenRelationship(NPCId.MARIA_SANTOS, NPCId.CHEN_WEI, 1.0);
+        manager.weakenRelationship(NPCId.NOVA_SILVA, NPCId.AISHA_PATEL, 1.0);
+        manager.weakenRelationship(NPCId.AISHA_PATEL, NPCId.NOVA_SILVA, 1.0);
+        manager.weakenRelationship(NPCId.MARCUS_REED, NPCId.DAVID_MORRISON, 1.0);
+        manager.weakenRelationship(NPCId.DAVID_MORRISON, NPCId.MARCUS_REED, 1.0);
+        manager.weakenRelationship(NPCId.JAMES_LIU, NPCId.SARAH_CHEN, 1.0);
+        manager.weakenRelationship(NPCId.SARAH_CHEN, NPCId.JAMES_LIU, 1.0);
+
+        const components = manager.getConnectedComponents();
+
+        // Should have 3 disconnected components (one per faction)
+        expect(components.length).toBe(3);
+
+        // Each component should contain members of the same faction
+        for (const component of components) {
+          expect(component.factions.length).toBe(1);
+        }
+      });
+
+      it('should include faction information in components', () => {
+        const components = manager.getConnectedComponents();
+
+        expect(components[0]!.factions).toContain(NPCFaction.EarthLoyalists);
+        expect(components[0]!.factions).toContain(NPCFaction.MarsIndependence);
+        expect(components[0]!.factions).toContain(NPCFaction.CorporateInterests);
+      });
+    });
+
+    describe('opposing vote penalties', () => {
+      it('should weaken relationships between NPCs who voted on opposite sides', () => {
+        const resources = new ResourceManager({
+          food: 100, oxygen: 100, water: 100, power: 100, materials: 1000,
+        });
+
+        // Get initial cross-faction relationship
+        const initialWeight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS);
+
+        // Propose an Earth Loyalists project
+        manager.proposeProject(ProjectId.GENERATION_SHIP, resources);
+
+        // Lobby Chen Wei to strongly support (+1.0)
+        manager.lobbyNPC(NPCId.CHEN_WEI, 0.9, resources);
+        // Lobby Maria Santos to strongly oppose (-0.5)
+        manager.lobbyNPC(NPCId.MARIA_SANTOS, -0.6, resources);
+
+        // Run ticks until project resolves (with currentSol >= POLITICAL_PRESSURE_START_SOL)
+        for (let i = 0; i < 15; i++) {
+          manager.tick(POLITICAL_PRESSURE_START_SOL + i);
+        }
+
+        const newWeight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS);
+        // Weight should have decreased due to opposing votes and natural decay
+        expect(newWeight).toBeLessThan(initialWeight);
+      });
+    });
+
+    describe('serialization', () => {
+      it('should persist disconnection history through serialization', () => {
+        // Weaken connection to cause disconnection
+        const initialWeight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS);
+        manager.weakenRelationship(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS, initialWeight - DISCONNECTION_THRESHOLD / 2);
+
+        // Run ticks until disconnection
+        for (let i = 0; i < 100; i++) {
+          manager.tick(POLITICAL_PRESSURE_START_SOL + i);
+        }
+
+        // Serialize
+        const json = manager.toJSON();
+
+        // Deserialize
+        const restored = NPCInfluenceManager.fromJSON(json, NPCS, INITIAL_RELATIONSHIPS, PROJECTS);
+
+        // Check that disconnection history was restored
+        const history = restored.getDisconnectionHistory();
+        const disconnection = history.find(
+          d => d.sourceId === NPCId.CHEN_WEI && d.targetId === NPCId.MARIA_SANTOS
+        );
+        expect(disconnection).toBeDefined();
+      });
+
+      it('should persist relationship matrix changes through serialization', () => {
+        // Weaken a relationship
+        manager.weakenRelationship(NPCId.CHEN_WEI, NPCId.NOVA_SILVA, 0.2);
+        const weightBefore = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.NOVA_SILVA);
+
+        // Serialize and restore
+        const json = manager.toJSON();
+        const restored = NPCInfluenceManager.fromJSON(json, NPCS, INITIAL_RELATIONSHIPS, PROJECTS);
+
+        const weightAfter = restored.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.NOVA_SILVA);
+        expect(weightAfter).toBe(weightBefore);
+      });
+    });
+  });
+
+  describe('dynamic network management', () => {
+    describe('addNPC', () => {
+      it('should add a new NPC to the network', () => {
+        const newNpc: NPC = {
+          id: 'new_colonist' as NPCId,
+          name: 'New Colonist',
+          faction: NPCFaction.MarsIndependence,
+          influence: 1.0,
+        };
+
+        const result = manager.addNPC(newNpc);
+
+        expect(result).toBe(true);
+        expect(manager.getNPCs().length).toBe(11);
+        expect(manager.getNPCs().find(n => n.id === 'new_colonist')).toBeDefined();
+      });
+
+      it('should expand the relationship matrix for new NPCs', () => {
+        const newNpc: NPC = {
+          id: 'new_colonist' as NPCId,
+          name: 'New Colonist',
+          faction: NPCFaction.MarsIndependence,
+          influence: 1.0,
+        };
+
+        manager.addNPC(newNpc);
+
+        const matrix = manager.getRelationshipMatrix();
+        expect(matrix.length).toBe(11);
+        expect(matrix[0]!.length).toBe(11);
+      });
+
+      it('should initialize new NPC with provided relationships', () => {
+        const newNpc: NPC = {
+          id: 'new_colonist' as NPCId,
+          name: 'New Colonist',
+          faction: NPCFaction.MarsIndependence,
+          influence: 1.0,
+        };
+
+        const initialRelationships = {
+          [`new_colonist:${NPCId.MARIA_SANTOS}`]: 0.5,
+          [`${NPCId.MARIA_SANTOS}:new_colonist`]: 0.4,
+        };
+
+        manager.addNPC(newNpc, initialRelationships);
+
+        // Check that relationships were established
+        const outWeight = manager.getRelationshipWeight('new_colonist' as NPCId, NPCId.MARIA_SANTOS);
+        const inWeight = manager.getRelationshipWeight(NPCId.MARIA_SANTOS, 'new_colonist' as NPCId);
+
+        expect(outWeight).toBe(0.5);
+        expect(inWeight).toBe(0.4);
+      });
+
+      it('should reject duplicate NPC IDs', () => {
+        const duplicateNpc: NPC = {
+          id: NPCId.CHEN_WEI, // Already exists
+          name: 'Duplicate',
+          faction: NPCFaction.EarthLoyalists,
+          influence: 1.0,
+        };
+
+        const result = manager.addNPC(duplicateNpc);
+
+        expect(result).toBe(false);
+        expect(manager.getNPCs().length).toBe(10);
+      });
+
+      it('should initialize support for new NPCs at 0', () => {
+        const newNpc: NPC = {
+          id: 'new_colonist' as NPCId,
+          name: 'New Colonist',
+          faction: NPCFaction.MarsIndependence,
+          influence: 1.0,
+        };
+
+        manager.addNPC(newNpc);
+
+        // New NPC should be part of Mars Independence faction support calculation
+        const factionSupport = manager.getFactionSupport();
+        // Support calculation includes new NPC with 0 support
+        expect(factionSupport[NPCFaction.MarsIndependence]).toBeDefined();
+      });
+    });
+
+    describe('removeNPC', () => {
+      it('should remove an NPC from the network', () => {
+        const result = manager.removeNPC(NPCId.MARCUS_REED);
+
+        expect(result).toBe(true);
+        expect(manager.getNPCs().length).toBe(9);
+        expect(manager.getNPCs().find(n => n.id === NPCId.MARCUS_REED)).toBeUndefined();
+      });
+
+      it('should shrink the relationship matrix', () => {
+        manager.removeNPC(NPCId.MARCUS_REED);
+
+        const matrix = manager.getRelationshipMatrix();
+        expect(matrix.length).toBe(9);
+        expect(matrix[0]!.length).toBe(9);
+      });
+
+      it('should return false for non-existent NPC', () => {
+        const result = manager.removeNPC('nonexistent' as NPCId);
+        expect(result).toBe(false);
+      });
+
+      it('should remove NPC from councils', () => {
+        const resources = new ResourceManager({
+          food: 100, oxygen: 100, water: 100, power: 100, materials: 500,
+        });
+
+        // Create a council with Marcus Reed
+        manager.createCouncil('Test Council', [NPCId.MARCUS_REED, NPCId.MARIA_SANTOS], resources);
+
+        // Remove Marcus Reed
+        manager.removeNPC(NPCId.MARCUS_REED);
+
+        // Council should still exist but without Marcus Reed
+        const councils = manager.getCouncils();
+        expect(councils[0]!.memberIds).not.toContain(NPCId.MARCUS_REED);
+        expect(councils[0]!.memberIds).toContain(NPCId.MARIA_SANTOS);
+      });
+    });
+
+    describe('setRelationship', () => {
+      it('should create a new relationship between NPCs', () => {
+        // Chen Wei and Elena Volkov have no initial connection
+        const initialWeight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.ELENA_VOLKOV);
+        expect(initialWeight).toBe(0);
+
+        manager.setRelationship(NPCId.CHEN_WEI, NPCId.ELENA_VOLKOV, 0.5);
+
+        const newWeight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.ELENA_VOLKOV);
+        expect(newWeight).toBe(0.5);
+      });
+
+      it('should clamp weight to valid range', () => {
+        manager.setRelationship(NPCId.CHEN_WEI, NPCId.ELENA_VOLKOV, 1.5);
+        expect(manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.ELENA_VOLKOV)).toBe(1);
+
+        manager.setRelationship(NPCId.CHEN_WEI, NPCId.ELENA_VOLKOV, -0.5);
+        expect(manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.ELENA_VOLKOV)).toBe(0);
+      });
+
+      it('should return false for invalid NPCs', () => {
+        const result = manager.setRelationship('invalid' as NPCId, NPCId.CHEN_WEI, 0.5);
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('strengthenRelationship', () => {
+      it('should increase an existing relationship', () => {
+        const initialWeight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.NOVA_SILVA);
+
+        manager.strengthenRelationship(NPCId.CHEN_WEI, NPCId.NOVA_SILVA, 0.2);
+
+        const newWeight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.NOVA_SILVA);
+        expect(newWeight).toBe(Math.min(1, initialWeight + 0.2));
+      });
+
+      it('should create a relationship if none exists', () => {
+        manager.strengthenRelationship(NPCId.CHEN_WEI, NPCId.ELENA_VOLKOV, 0.3);
+
+        const weight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.ELENA_VOLKOV);
+        expect(weight).toBe(0.3);
+      });
+
+      it('should cap at maximum weight of 1', () => {
+        manager.strengthenRelationship(NPCId.CHEN_WEI, NPCId.NOVA_SILVA, 1.0);
+
+        const weight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.NOVA_SILVA);
+        expect(weight).toBe(1);
+      });
+    });
+
+    describe('getNeighbors', () => {
+      it('should return all connected NPCs', () => {
+        const neighbors = manager.getNeighbors(NPCId.CHEN_WEI);
+
+        // Chen Wei has connections to Nova Silva, Alex Okonkwo, and Maria Santos
+        expect(neighbors).toContain(NPCId.NOVA_SILVA);
+        expect(neighbors).toContain(NPCId.ALEX_OKONKWO);
+        expect(neighbors).toContain(NPCId.MARIA_SANTOS);
+      });
+
+      it('should return empty array for isolated NPC', () => {
+        const newNpc: NPC = {
+          id: 'isolated' as NPCId,
+          name: 'Isolated',
+          faction: NPCFaction.MarsIndependence,
+          influence: 1.0,
+        };
+        manager.addNPC(newNpc);
+
+        const neighbors = manager.getNeighbors('isolated' as NPCId);
+        expect(neighbors).toEqual([]);
+      });
+
+      it('should return empty array for invalid NPC ID', () => {
+        const neighbors = manager.getNeighbors('invalid' as NPCId);
+        expect(neighbors).toEqual([]);
+      });
+    });
+
+    describe('getRelationships', () => {
+      it('should return incoming and outgoing relationships', () => {
+        const relationships = manager.getRelationships(NPCId.CHEN_WEI);
+
+        // Chen Wei influences Nova Silva (0.7) and Alex Okonkwo (0.5) and Maria Santos (0.3)
+        expect(relationships.outgoing.get(NPCId.NOVA_SILVA)).toBe(0.7);
+        expect(relationships.outgoing.get(NPCId.ALEX_OKONKWO)).toBe(0.5);
+        expect(relationships.outgoing.get(NPCId.MARIA_SANTOS)).toBe(0.3);
+
+        // Chen Wei is influenced by Nova Silva (0.6) and Alex Okonkwo (0.6) and Maria Santos (0.2)
+        expect(relationships.incoming.get(NPCId.NOVA_SILVA)).toBe(0.6);
+        expect(relationships.incoming.get(NPCId.ALEX_OKONKWO)).toBe(0.6);
+        expect(relationships.incoming.get(NPCId.MARIA_SANTOS)).toBe(0.2);
+      });
+
+      it('should return empty maps for invalid NPC', () => {
+        const relationships = manager.getRelationships('invalid' as NPCId);
+        expect(relationships.incoming.size).toBe(0);
+        expect(relationships.outgoing.size).toBe(0);
+      });
+    });
+
+    describe('serialization with dynamic NPCs', () => {
+      it('should persist added NPCs through serialization', () => {
+        const newNpc: NPC = {
+          id: 'new_colonist' as NPCId,
+          name: 'New Colonist',
+          faction: NPCFaction.MarsIndependence,
+          influence: 1.0,
+        };
+
+        manager.addNPC(newNpc, {
+          [`new_colonist:${NPCId.MARIA_SANTOS}`]: 0.5,
+        });
+
+        // Serialize and restore
+        const json = manager.toJSON();
+        const restored = NPCInfluenceManager.fromJSON(json, NPCS, INITIAL_RELATIONSHIPS, PROJECTS);
+
+        // Check that new NPC was restored
+        expect(restored.getNPCs().length).toBe(11);
+        expect(restored.getNPCs().find(n => n.id === 'new_colonist')).toBeDefined();
+
+        // Check that relationship was restored
+        const weight = restored.getRelationshipWeight('new_colonist' as NPCId, NPCId.MARIA_SANTOS);
+        expect(weight).toBe(0.5);
+      });
+
+      it('should persist removed NPCs through serialization', () => {
+        manager.removeNPC(NPCId.MARCUS_REED);
+
+        // Serialize and restore
+        const json = manager.toJSON();
+        const restored = NPCInfluenceManager.fromJSON(json, NPCS, INITIAL_RELATIONSHIPS, PROJECTS);
+
+        // Check that removed NPC is not present
+        expect(restored.getNPCs().length).toBe(9);
+        expect(restored.getNPCs().find(n => n.id === NPCId.MARCUS_REED)).toBeUndefined();
+      });
     });
   });
 });
