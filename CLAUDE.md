@@ -92,7 +92,7 @@ Monte Carlo simulations test game balance by running automated playthroughs with
 bun run scripts/simulate.ts --runs 5 --verbose
 
 # Full analysis with detailed output (saves to logs/simulations/)
-bun run scripts/analyze-simulation.ts --runs 20 --seed 42
+bun run scripts/analyze-simulation.ts --runs 100 --seed 42
 
 # Start visualization server for results
 bun run visualize
