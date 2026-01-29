@@ -99,7 +99,7 @@ Examples:
 /**
  * Main entry point.
  */
-function main(): void {
+async function main(): Promise<void> {
   const args = parseArgs();
 
   if (args.help) {
@@ -114,17 +114,17 @@ function main(): void {
     verbose: args.verbose,
   };
 
-  console.log(`Starting simulation with ${config.runs} runs...`);
+  console.log(`Starting simulation with ${config.runs} runs (parallel execution)...`);
   if (config.seed !== undefined) {
     console.log(`Using seed: ${config.seed}`);
   }
   console.log("");
 
-  // Run simulation
+  // Run simulation in parallel
   const startTime = Date.now();
   const runner = new SimulationRunner(config);
-  // Use runWithDetails to capture individual runs for JSON export
-  const { stats, runs } = runner.runWithDetails();
+  // Use runParallel for faster execution across multiple cores
+  const { stats, runs } = await runner.runParallel();
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
 
   console.log("");
@@ -201,4 +201,4 @@ function main(): void {
 }
 
 // Run main
-main();
+main().catch(console.error);
