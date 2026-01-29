@@ -159,9 +159,10 @@ export class GameAPI {
 
   /**
    * Reset game state for new game.
+   * @param startingConditionId - Optional starting condition ID
    */
-  private resetGameState = (): void => {
-    this.gameState = new GameState();
+  private resetGameState = (startingConditionId?: string): void => {
+    this.gameState = new GameState(startingConditionId);
     this.lastEvents = [];
     this.initializeFacades();
     this.notifyStateChange();
@@ -315,8 +316,9 @@ export class GameAPI {
 
   /**
    * Start a new game.
+   * @param startingConditionId - Optional starting condition ID
    */
-  newGame(): void {
-    this.resetGameState();
+  newGame(startingConditionId?: string): void {
+    this.resetGameState(startingConditionId);
   }
 }

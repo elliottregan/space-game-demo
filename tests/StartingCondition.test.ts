@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { GameState } from "../src/core/GameState";
 import { STARTING_CONDITIONS, StartingConditionId } from "../src/core/data/startingConditions";
 import { BuildingId } from "../src/core/models/Building";
+import { GameAPI } from "../src/facade/GameAPI";
 
 describe("StartingConditions", () => {
   it("should have a default condition with no pre-built buildings", () => {
@@ -53,5 +54,21 @@ describe("GameState with StartingConditions", () => {
     expect(production.power).toBeGreaterThan(0);
     // Farms consume water and power
     expect(consumption.water).toBeGreaterThan(0);
+  });
+});
+
+describe("GameAPI with StartingConditions", () => {
+  it("should start new game with default condition", () => {
+    const api = new GameAPI();
+    api.newGame();
+    expect(api.colony.snapshot().population).toBe(14);
+    expect(api.buildings.snapshot().active.length).toBe(0);
+  });
+
+  it("should start new game with specified condition", () => {
+    const api = new GameAPI();
+    api.newGame(StartingConditionId.ESTABLISHED_BASE);
+    expect(api.colony.snapshot().population).toBe(14);
+    expect(api.buildings.snapshot().active.length).toBe(7);
   });
 });

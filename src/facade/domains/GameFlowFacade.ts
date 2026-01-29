@@ -6,7 +6,7 @@ import type { AdvanceSolsResult, GameEvent, VictoryState } from "../types";
 import { err, ok, type Result } from "../types/common";
 
 type CommandExecutor = <T>(fn: () => Result<T>) => Result<T>;
-type ResetGameState = () => void;
+type ResetGameState = (startingConditionId?: string) => void;
 type AddEvents = (events: GameEvent[]) => void;
 
 /**
@@ -124,9 +124,10 @@ export class GameFlowFacade {
 
   /**
    * Start a new game, resetting all state.
+   * @param startingConditionId - Optional starting condition ID
    */
-  newGame(): void {
-    this.resetGameState();
+  newGame(startingConditionId?: string): void {
+    this.resetGameState(startingConditionId);
   }
 
   /**
