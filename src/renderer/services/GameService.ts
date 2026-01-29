@@ -51,13 +51,16 @@ interface GameUIState {
   skillDefinitions: SkillDefinition[];
   housingAssignments: Record<string, Colonist[]>;
   unhoused: Colonist[];
-  coworkerRelationships: Map<string, {
-    strength: number;
-    formedAt: number;
-    lastWorkedTogether: number;
-    isCohort?: boolean;
-    sharedGuildIds?: string[];
-  }>;
+  coworkerRelationships: Map<
+    string,
+    {
+      strength: number;
+      formedAt: number;
+      lastWorkedTogether: number;
+      isCohort?: boolean;
+      sharedGuildIds?: string[];
+    }
+  >;
   guilds: { id: string; name: string; type: string; memberIds: string[]; foundedSol: number }[];
   buildings: Building[];
   pendingBuildings: Building[];
@@ -479,9 +482,13 @@ class GameService {
   }
 
   // Game management
-  newGame(): void {
-    this.facade.newGame();
+  newGame(startingConditionId?: string): void {
+    this.facade.newGame(startingConditionId);
     this.state.recentEvents = [];
+  }
+
+  getStartingConditions() {
+    return this.facade.game.getStartingConditions();
   }
 
   saveGame(): string {
