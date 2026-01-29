@@ -4,6 +4,7 @@ import { RelationshipManager } from "../src/core/systems/RelationshipManager";
 import {
   INITIAL_COWORKER_RELATIONSHIP,
   COWORKER_BONDING_RATE,
+  COWORKER_RELATIONSHIP_DECAY,
 } from "../src/core/balance/WorkforceBalance";
 
 describe("RelationshipManager", () => {
@@ -64,6 +65,24 @@ describe("RelationshipManager", () => {
 
       manager.createRelationship("a", "c", 1);
       expect(manager.getConnectionCount("a")).toBe(2);
+    });
+  });
+
+  describe("decayRelationships", () => {
+    it("should decay inactive relationships", () => {
+      manager.createRelationship("a", "b", 1);
+      manager.createRelationship("a", "c", 1);
+
+      // Only a:c is active
+      const activeKeys = new Set(["a:c"]);
+      manager.decayRelationships(activeKeys);
+
+      // a:b should be decayed, a:c should be unchanged
+      const relAB = manager.getRelationship("a", "b");
+      const relAC = manager.getRelationship("a", "c");
+
+      expect(relAB?.strength).toBe(INITIAL_COWORKER_RELATIONSHIP - COWORKER_RELATIONSHIP_DECAY);
+      expect(relAC?.strength).toBe(INITIAL_COWORKER_RELATIONSHIP);
     });
   });
 
