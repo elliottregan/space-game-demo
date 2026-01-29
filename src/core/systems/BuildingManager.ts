@@ -411,6 +411,19 @@ export class BuildingManager {
     return building;
   }
 
+  /**
+   * Add a pre-built building directly (used for starting conditions).
+   * Does not deduct costs or go through construction.
+   */
+  addBuilding(buildingWithoutId: Omit<Building, "id">): Building {
+    const building: Building = {
+      ...buildingWithoutId,
+      id: `building_${this.nextId++}`,
+    };
+    this.buildings.set(building.id, building);
+    return building;
+  }
+
   getBuilding(id: string): Building | undefined {
     return this.buildings.get(id);
   }
