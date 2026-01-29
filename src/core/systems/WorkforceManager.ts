@@ -12,6 +12,7 @@ import {
   HOUSEMATE_BONDING_RATE,
   INITIAL_COWORKER_RELATIONSHIP,
   INITIAL_HOUSEMATE_RELATIONSHIP,
+  INITIAL_SOCIAL_RELATIONSHIP,
   MASTER_EVENT_CHANCE,
   MASTERY_EFFICIENCY,
   MASTERY_THRESHOLDS,
@@ -26,6 +27,9 @@ import {
   PREFERENTIAL_ATTACHMENT_FACTOR,
   PREFERENTIAL_ATTACHMENT_THRESHOLD,
   ROLE_AFFINITY,
+  SOCIAL_BONDING_RATE,
+  SOCIAL_BONDS_PER_TICK,
+  SOCIAL_RELATIONSHIP_DECAY,
   TEAM_COHESION_THRESHOLD,
   WEAK_TIE_THRESHOLD,
 } from "../balance/WorkforceBalance";
@@ -141,6 +145,9 @@ export class WorkforceManager {
 
     // Process guild bonding
     events.push(...this.processGuildBonding(colonists, currentSol));
+
+    // Process social building bonding (third spaces)
+    events.push(...this.processSocialBonding(colonists, buildings, currentSol));
 
     // Process preferential attachment (random new connections)
     events.push(...this.processPreferentialAttachment(colonists, currentSol));
@@ -327,7 +334,10 @@ export class WorkforceManager {
    * Get the relationship between two colonists.
    * Returns undefined if they have never worked together.
    */
-  getCoworkerRelationship(colonistId1: string, colonistId2: string): CoworkerRelationship | undefined {
+  getCoworkerRelationship(
+    colonistId1: string,
+    colonistId2: string,
+  ): CoworkerRelationship | undefined {
     const key = this.getRelationshipKey(colonistId1, colonistId2);
     return this.coworkerRelationships.get(key);
   }
@@ -476,6 +486,114 @@ export class WorkforceManager {
             relationship.lastWorkedTogether = currentSol;
           }
         }
+      }
+    }
+
+    return events;
+  }
+
+  /**
+   * Process social bonding at social buildings (third spaces).
+   * Each colonist bonds with 1-2 random others at their assigned social buildings.
+   * Relationships decay when colonists no longer share a social building.
+   */
+  private processSocialBonding(
+    colonists: readonly Colonist[],
+    buildings: BuildingManager | undefined,
+    currentSol: number,
+  ): GameEvent[] {
+    const events: GameEvent[] = [];
+    const currentSocialPairs = new Set<string>();
+
+    // Group colonists by social building
+    const socialGroups = new Map<string, Colonist[]>();
+    for (const colonist of colonists) {
+      if (!colonist.socialBuildingIds?.length) continue;
+      for (const buildingId of colonist.socialBuildingIds) {
+        const group = socialGroups.get(buildingId) || [];
+        group.push(colonist);
+        socialGroups.set(buildingId, group);
+      }
+    }
+
+    // Process each social building
+    for (const [buildingId, members] of socialGroups) {
+      if (members.length < 2) continue;
+
+      // Get bonding strength multiplier from building definition
+      let bondingMultiplier = 1.0;
+      if (buildings) {
+        const building = buildings.getBuildings().find((b) => b.id === buildingId);
+        if (building) {
+          const def = buildings.getDefinition(building.definitionId);
+          bondingMultiplier = def?.bondingStrength ?? 1.0;
+        }
+      }
+
+      // Each colonist bonds with random subset
+      for (const colonist of members) {
+        const others = members.filter((c) => c.id !== colonist.id);
+        if (others.length === 0) continue;
+
+        // Pick random colonists to bond with (up to SOCIAL_BONDS_PER_TICK)
+        const shuffled = [...others].sort(() => Math.random() - 0.5);
+        const bondingPartners = shuffled.slice(0, SOCIAL_BONDS_PER_TICK);
+
+        for (const partner of bondingPartners) {
+          const key = this.getRelationshipKey(colonist.id, partner.id);
+          currentSocialPairs.add(key);
+
+          let relationship = this.coworkerRelationships.get(key);
+
+          if (!relationship) {
+            // First time meeting at social building
+            relationship = {
+              strength: INITIAL_SOCIAL_RELATIONSHIP,
+              formedAt: currentSol,
+              lastWorkedTogether: currentSol,
+            };
+            this.coworkerRelationships.set(key, relationship);
+            this.addToAdjacencyList(colonist.id, partner.id);
+
+            events.push({
+              type: "SOCIAL_BOND_FORMED",
+              severity: "info",
+              colonistA: colonist.id,
+              colonistB: partner.id,
+              buildingId,
+              message: `${colonist.name} and ${partner.name} connected at a social space`,
+            });
+          } else {
+            // Strengthen existing relationship
+            const bondingRate = SOCIAL_BONDING_RATE * bondingMultiplier;
+            relationship.strength = Math.min(
+              MAX_COWORKER_RELATIONSHIP,
+              relationship.strength + bondingRate,
+            );
+            relationship.lastWorkedTogether = currentSol;
+          }
+        }
+      }
+    }
+
+    // Decay relationships for colonists who have social buildings but don't share any
+    const colonistsWithSocialBuildings = new Set<string>();
+    for (const colonist of colonists) {
+      if (colonist.socialBuildingIds?.length) {
+        colonistsWithSocialBuildings.add(colonist.id);
+      }
+    }
+
+    for (const [key, relationship] of this.coworkerRelationships.entries()) {
+      if (currentSocialPairs.has(key)) continue; // Currently socializing, skip
+
+      const [id1, id2] = key.split(":");
+      // Only decay if both colonists have social building assignments (social relationship)
+      if (colonistsWithSocialBuildings.has(id1!) && colonistsWithSocialBuildings.has(id2!)) {
+        relationship.strength = Math.max(
+          MIN_COWORKER_RELATIONSHIP,
+          relationship.strength - SOCIAL_RELATIONSHIP_DECAY,
+        );
       }
     }
 
@@ -717,7 +835,8 @@ export class WorkforceManager {
 
           if (!relationship) {
             // Guild members meeting for first time
-            const initialStrength = INITIAL_COWORKER_RELATIONSHIP + GUILD_INITIAL_RELATIONSHIP_BONUS;
+            const initialStrength =
+              INITIAL_COWORKER_RELATIONSHIP + GUILD_INITIAL_RELATIONSHIP_BONUS;
             relationship = {
               strength: Math.min(MAX_COWORKER_RELATIONSHIP, initialStrength),
               formedAt: currentSol,
@@ -1018,7 +1137,10 @@ export class WorkforceManager {
   /**
    * Get the social network position information for a colonist. O(degree) via adjacency list.
    */
-  getSocialNetworkPosition(colonistId: string, colonists: readonly Colonist[]): SocialNetworkPosition {
+  getSocialNetworkPosition(
+    colonistId: string,
+    colonists: readonly Colonist[],
+  ): SocialNetworkPosition {
     const neighbors = this.getNeighbors(colonistId);
     let totalStrength = 0;
     let weakTieCount = 0;
@@ -1046,7 +1168,9 @@ export class WorkforceManager {
    * Get colonists who are bridge connectors (high bridging score).
    */
   getBridgeColonists(colonists: readonly Colonist[], minBridgingScore: number = 0.3): Colonist[] {
-    return colonists.filter((c) => this.calculateBridgingScore(c.id, colonists) >= minBridgingScore);
+    return colonists.filter(
+      (c) => this.calculateBridgingScore(c.id, colonists) >= minBridgingScore,
+    );
   }
 
   // ============ Community Detection (Label Propagation) ============
@@ -1292,9 +1416,7 @@ export class WorkforceManager {
     }
 
     if (data.guilds) {
-      manager.guilds = new Map(
-        Object.entries(data.guilds).map(([k, v]) => [k, v as Guild]),
-      );
+      manager.guilds = new Map(Object.entries(data.guilds).map(([k, v]) => [k, v as Guild]));
     }
 
     if (data.nextGuildId) {

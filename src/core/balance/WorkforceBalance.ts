@@ -180,3 +180,17 @@ export const SOCIAL_COHESION = {
   /** Sols an isolated colonist must remain isolated before event triggers */
   ISOLATION_WARNING_DELAY: 10,
 } as const;
+
+// ============ Social Building (Third Space) System ============
+
+/** Initial relationship strength when colonists first meet at a social building */
+export const INITIAL_SOCIAL_RELATIONSHIP = 0.12;
+
+/** Base bonding rate per sol at social buildings (before multiplier) */
+export const SOCIAL_BONDING_RATE = 0.012;
+
+/** Decay rate for social relationships when no longer sharing a social building */
+export const SOCIAL_RELATIONSHIP_DECAY = 0.003;
+
+/** Number of random colonists to bond with per tick at each social building */
+export const SOCIAL_BONDS_PER_TICK = 2;

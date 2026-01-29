@@ -1,4 +1,4 @@
-import { type BuildingDefinition, BuildingId } from "../models/Building";
+import { type BuildingDefinition, BuildingId, BuildingPurpose } from "../models/Building";
 import { ColonistRole } from "../models/Colonist";
 import { TechnologyId } from "../models/Technology";
 
@@ -13,6 +13,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     consumption: { power: 2, oxygen: 1 },
     capacity: 4, // Houses 4 colonists
     oxygenContribution: 2,
+    purpose: BuildingPurpose.Residential,
   },
   {
     id: BuildingId.SOLAR_PANEL,
@@ -22,6 +23,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 5,
     production: { power: 10 },
     oxygenContribution: 0,
+    purpose: BuildingPurpose.Industrial,
   },
   {
     id: BuildingId.WATER_EXTRACTOR,
@@ -34,6 +36,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     requiresDeposit: true,
     repurposeTargets: [BuildingId.STORAGE_DEPOT, BuildingId.MINING_STATION],
     oxygenContribution: 0,
+    purpose: BuildingPurpose.Industrial,
   },
   {
     id: BuildingId.STORAGE_DEPOT,
@@ -43,6 +46,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 8,
     consumption: { power: 1 },
     oxygenContribution: 0,
+    purpose: BuildingPurpose.Industrial,
   },
   {
     id: BuildingId.BASIC_FARM,
@@ -55,6 +59,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 2,
     workerRole: ColonistRole.FARMING,
     oxygenContribution: 2,
+    purpose: BuildingPurpose.Industrial,
   },
   {
     id: BuildingId.BASIC_MINE,
@@ -69,6 +74,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     requiresDeposit: true,
     repurposeTargets: [BuildingId.STORAGE_DEPOT],
     oxygenContribution: -2,
+    purpose: BuildingPurpose.Industrial,
   },
   {
     id: BuildingId.OXYGEN_GENERATOR,
@@ -79,6 +85,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     production: { oxygen: 5 },
     consumption: { water: 2, power: 3 },
     oxygenContribution: 0,
+    purpose: BuildingPurpose.Industrial,
   },
 
   // Tech-gated buildings
@@ -94,6 +101,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerRole: ColonistRole.FARMING,
     requiredTech: TechnologyId.HYDROPONICS,
     oxygenContribution: 2,
+    purpose: BuildingPurpose.Industrial,
   },
   {
     id: BuildingId.WATER_RECLAIMER,
@@ -105,6 +113,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     consumption: { power: 4 },
     requiredTech: TechnologyId.WATER_RECYCLING,
     oxygenContribution: 0,
+    purpose: BuildingPurpose.Industrial,
   },
   {
     id: BuildingId.RESEARCH_LAB,
@@ -117,6 +126,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerRole: ColonistRole.RESEARCH,
     requiredTech: TechnologyId.ADVANCED_MATERIALS,
     oxygenContribution: -1,
+    purpose: BuildingPurpose.Industrial,
   },
   {
     id: BuildingId.ADVANCED_HABITAT,
@@ -128,6 +138,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     requiredTech: TechnologyId.ADVANCED_MATERIALS,
     capacity: 8, // Houses 8 colonists
     oxygenContribution: 2,
+    purpose: BuildingPurpose.Residential,
   },
   {
     id: BuildingId.AUTOMATED_FACTORY,
@@ -139,6 +150,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     consumption: { power: 15 },
     requiredTech: TechnologyId.ROBOTICS,
     oxygenContribution: -1,
+    purpose: BuildingPurpose.Industrial,
   },
   {
     id: BuildingId.MINING_STATION,
@@ -154,6 +166,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     requiresDeposit: true,
     repurposeTargets: [BuildingId.STORAGE_DEPOT, BuildingId.WATER_EXTRACTOR],
     oxygenContribution: -1,
+    purpose: BuildingPurpose.Industrial,
   },
   {
     id: BuildingId.NUCLEAR_REACTOR,
@@ -166,6 +179,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerRole: ColonistRole.ENGINEERING,
     requiredTech: TechnologyId.NUCLEAR_FISSION,
     oxygenContribution: 0,
+    purpose: BuildingPurpose.Industrial,
   },
   {
     id: BuildingId.BIOLAB,
@@ -178,6 +192,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerRole: ColonistRole.RESEARCH,
     requiredTech: TechnologyId.GENETICS,
     oxygenContribution: -1,
+    purpose: BuildingPurpose.Industrial,
   },
   {
     id: BuildingId.MEDICAL_CENTER,
@@ -190,6 +205,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerRole: ColonistRole.CIVIL_SCIENCE,
     requiredTech: TechnologyId.ADVANCED_MEDICINE,
     oxygenContribution: 0,
+    purpose: BuildingPurpose.Industrial,
   },
   {
     id: BuildingId.CRYO_FACILITY,
@@ -200,6 +216,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     consumption: { power: 15 },
     requiredTech: TechnologyId.CRYOSLEEP,
     oxygenContribution: 0,
+    purpose: BuildingPurpose.Industrial,
   },
 
   // Recreation buildings (morale boost, no production)
@@ -212,6 +229,9 @@ export const BUILDINGS: BuildingDefinition[] = [
     consumption: { power: 3 },
     moraleBoost: 5,
     oxygenContribution: 0,
+    purpose: BuildingPurpose.Social,
+    capacity: 8,
+    bondingStrength: 1.0,
   },
   {
     id: BuildingId.GYMNASIUM,
@@ -222,6 +242,9 @@ export const BUILDINGS: BuildingDefinition[] = [
     consumption: { power: 4 },
     moraleBoost: 6,
     oxygenContribution: 0,
+    purpose: BuildingPurpose.Social,
+    capacity: 6,
+    bondingStrength: 1.2,
   },
   {
     id: BuildingId.HYDROPONIC_GARDEN,
@@ -232,6 +255,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     consumption: { power: 2, water: 1 },
     moraleBoost: 4,
     oxygenContribution: 2,
+    purpose: BuildingPurpose.Industrial,
   },
   {
     id: BuildingId.OBSERVATORY_DOME,
@@ -243,5 +267,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     moraleBoost: 8,
     requiredTech: TechnologyId.ADVANCED_MATERIALS,
     oxygenContribution: 0,
+    purpose: BuildingPurpose.Industrial,
   },
 ];
