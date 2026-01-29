@@ -17,6 +17,10 @@ export const FACTION_SUPPORT_NORMALIZED_WARNING = 0;
 export const OXYGEN_POSITIVE_THRESHOLD = 3; // Green: comfortable surplus
 export const OXYGEN_WARNING_THRESHOLD = 0; // Yellow: marginal (0-2), Red: deficit (<0)
 
+/** Social cohesion thresholds (0-1 scale) */
+export const COHESION_POSITIVE_THRESHOLD = 0.4; // Green: high cohesion
+export const COHESION_WARNING_THRESHOLD = 0.15; // Yellow: low, Red: critical
+
 export type StatusVariant = "positive" | "warning" | "negative";
 
 /** Get variant for a value using thresholds */
@@ -52,4 +56,9 @@ export function getFactionSupportNormalizedVariant(support: number): StatusVaria
 /** Get oxygen contribution variant */
 export function getOxygenVariant(contribution: number): StatusVariant {
   return getStatusVariant(contribution, OXYGEN_POSITIVE_THRESHOLD, OXYGEN_WARNING_THRESHOLD);
+}
+
+/** Get social cohesion variant (0-1 scale) */
+export function getCohesionVariant(cohesion: number): StatusVariant {
+  return getStatusVariant(cohesion, COHESION_POSITIVE_THRESHOLD, COHESION_WARNING_THRESHOLD);
 }
