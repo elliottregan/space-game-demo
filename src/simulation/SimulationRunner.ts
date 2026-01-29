@@ -1,6 +1,7 @@
 // src/simulation/SimulationRunner.ts
 // Orchestrates Monte Carlo simulation runs for playtest analysis
 
+import { rng } from "../core/utils/random";
 import { GameAPI } from "../facade/GameAPI";
 import { HeuristicStrategy } from "./HeuristicStrategy";
 import { MetricsCollector } from "./MetricsCollector";
@@ -120,10 +121,13 @@ export class SimulationRunner {
 
   /**
    * Run a single game to completion.
-   * @param seed Seed for this run (for future RNG seeding)
+   * @param seed Seed for this run - seeds the global RNG for deterministic results
    * @returns Result of the completed run
    */
   private runSingleGame(seed: number): RunResult {
+    // Seed the global RNG for deterministic results
+    rng.seed(seed);
+
     // Create fresh GameAPI instance
     const api = new GameAPI();
 

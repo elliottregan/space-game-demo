@@ -1,3 +1,5 @@
+import { rng } from "./random";
+
 /**
  * Pick k random elements from an array using partial Fisher-Yates shuffle.
  * O(k) time complexity instead of O(n log n) for full shuffle + slice.
@@ -16,7 +18,7 @@ export function pickRandomSubset<T>(array: T[], k: number): T[] {
 
   for (let i = 0; i < k; i++) {
     // Pick random index from remaining elements
-    const randomIndex = i + Math.floor(Math.random() * (n - i));
+    const randomIndex = i + rng.int(i, n - 1);
     // Swap with current position
     [copy[i], copy[randomIndex]] = [copy[randomIndex]!, copy[i]!];
     result.push(copy[i]!);

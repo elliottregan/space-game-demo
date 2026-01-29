@@ -6,6 +6,7 @@ import type {
   RandomEventDefinition,
 } from "../models/GameEvent";
 import type { NPCFaction } from "../models/NPCInfluence";
+import { rng } from "../utils/random";
 import type { ColonyManager } from "./ColonyManager";
 import type { NPCInfluenceManager } from "./NPCInfluenceManager";
 import type { ResourceManager } from "./ResourceManager";
@@ -32,9 +33,9 @@ export class EventManager {
 
     // Check for random event
     const eventChance = EVENT_TIMING.getEventChance(currentSol);
-    if (Math.random() < eventChance) {
+    if (rng.chance(eventChance)) {
       const eligibleEvents = this.getEligibleEvents(currentSol);
-      const selected = eligibleEvents[Math.floor(Math.random() * eligibleEvents.length)];
+      const selected = rng.pick(eligibleEvents);
       if (selected) {
         this.activeEvent = {
           eventId: selected.id,

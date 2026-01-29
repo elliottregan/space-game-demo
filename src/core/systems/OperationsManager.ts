@@ -29,6 +29,7 @@ import type {
   WorkIntensity,
 } from "../models/Operation";
 import type { WarningLevel } from "../utils/depositExtraction";
+import { rng } from "../utils/random";
 import type { ColonyManager } from "./ColonyManager";
 import type { ResourceManager } from "./ResourceManager";
 
@@ -61,8 +62,7 @@ export class OperationsManager {
     quality: "poor" | "moderate" | "rich",
   ): { reserves: number; estimatedReserves: { min: number; max: number } } {
     const reserveRange = DEPOSIT_RESERVES[resourceType][quality];
-    const reserves =
-      reserveRange.min + Math.floor(Math.random() * (reserveRange.max - reserveRange.min));
+    const reserves = rng.int(reserveRange.min, reserveRange.max - 1);
 
     const uncertainty = ESTIMATE_UNCERTAINTY.initial;
     const estimatedMin = Math.floor(reserves * (1 - uncertainty));
@@ -280,7 +280,7 @@ export class OperationsManager {
       this.getExpeditionSuccessModifier() +
       Math.min(this.expeditionExperience, EXPEDITION_EXPERIENCE_CAP);
 
-    const success = Math.random() < successChance;
+    const success = rng.chance(successChance);
     this.expeditionExperience = Math.min(
       this.expeditionExperience + EXPEDITION_EXPERIENCE_BONUS,
       EXPEDITION_EXPERIENCE_CAP,
@@ -307,7 +307,7 @@ export class OperationsManager {
         return {
           success: true,
           type,
-          rewards: { materials: 50 + Math.floor(Math.random() * 100) },
+          rewards: { materials: rng.int(50, 149) },
         };
       case "science":
         return {
@@ -319,7 +319,7 @@ export class OperationsManager {
         return {
           success: true,
           type,
-          rewards: { discovery: "rare_minerals", materials: 100 + Math.floor(Math.random() * 150) },
+          rewards: { discovery: "rare_minerals", materials: rng.int(100, 249) },
         };
     }
   }
@@ -330,7 +330,7 @@ export class OperationsManager {
 
     if (type === "salvage" || type === "deep") {
       // Lose 1-2 crew on dangerous expeditions
-      const lossCount = type === "deep" ? 1 + Math.floor(Math.random() * 2) : 1;
+      const lossCount = type === "deep" ? rng.int(1, 2) : 1;
       for (let i = 0; i < lossCount && i < expedition.assignedCrew.length; i++) {
         const crewId = expedition.assignedCrew[i];
         if (crewId) crewLost.push(crewId);
@@ -356,12 +356,12 @@ export class OperationsManager {
     const types: Array<"water" | "materials" | "research"> = ["water", "materials", "research"];
     const qualities: Array<"poor" | "moderate" | "rich"> = ["poor", "moderate", "rich"];
 
-    const resourceType = types[Math.floor(Math.random() * types.length)] ?? "water";
-    const quality = qualities[Math.floor(Math.random() * qualities.length)] ?? "moderate";
+    const resourceType = rng.pick(types) ?? "water";
+    const quality = rng.pick(qualities) ?? "moderate";
     const { reserves, estimatedReserves } = this.calculateReserves(resourceType, quality);
 
     return {
-      id: `site_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `site_${this.nextSiteId++}`,
       resourceType,
       quality,
       revealed: false,

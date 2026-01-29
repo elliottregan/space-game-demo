@@ -32,6 +32,7 @@ import {
   UNMAINTAINED_DECAY_MULTIPLIER,
 } from "../balance/NPCInfluenceBalance";
 import type { GameEvent } from "../models/GameEvent";
+import { rng } from "../utils/random";
 import {
   type ActiveProject,
   ALL_FACTIONS,
@@ -903,7 +904,7 @@ export class NPCInfluenceManager {
           }
 
           // Random chance to form the connection
-          if (Math.random() < closureProbability) {
+          if (rng.chance(closureProbability)) {
             // Form the new connection A→C
             rowC[aIdx] = TRIADIC_CLOSURE_INITIAL_WEIGHT;
 
