@@ -844,6 +844,28 @@ export class WorkforceManager {
   }
 
   /**
+   * Get all connections for a colonist (public wrapper).
+   * Returns array of {colonistId, strength} for each connection.
+   */
+  getColonistConnections(colonistId: string): Array<{ colonistId: string; strength: number }> {
+    const neighbors = this.relationshipManager.getNeighbors(colonistId);
+    return [...neighbors].map((neighborId) => ({
+      colonistId: neighborId,
+      strength: this.relationshipManager.getRelationshipStrength(colonistId, neighborId),
+    }));
+  }
+
+  /**
+   * Create an initial relationship between two colonists.
+   * Used for establishing bonds between starting colonists who trained together.
+   */
+  createInitialRelationship(colonistId1: string, colonistId2: string, strength: number): void {
+    this.relationshipManager.createRelationship(colonistId1, colonistId2, 0, {
+      initialStrength: strength,
+    });
+  }
+
+  /**
    * Get the social network position information for a colonist.
    * Delegates to RelationshipManager.
    */

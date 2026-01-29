@@ -1,4 +1,5 @@
 import { getStartingCondition, StartingConditionId } from "./data/startingConditions";
+import { INITIAL_COLONIST_RELATIONSHIP } from "./balance/WorkforceBalance";
 import { BUILDINGS } from "./data/buildings";
 import { RANDOM_EVENTS } from "./data/events";
 import { INITIAL_RELATIONSHIPS, NPCS, PROJECTS } from "./data/npcs";
@@ -67,11 +68,54 @@ export class GameState {
     // Initialize tick runner
     this.tickRunner = createStandardTickRunner();
 
+    // Create initial relationships between starting colonists (they trained together)
+    this.initializeColonistRelationships();
+
     // Create pre-built buildings
     this.createPreBuiltBuildings(condition.preBuiltBuildings);
 
     // Initialize colonist consumption
     this.colony.tick(this.resources, this.buildings, { morale: 0, health: 0 });
+  }
+
+  /**
+   * Create initial relationships between starting colonists.
+   * These colonists trained together before the mission, so they have existing bonds.
+   * Creates a sparse network where each colonist knows ~3-4 others.
+   */
+  private initializeColonistRelationships(): void {
+    const colonists = this.colony.getColonists();
+    if (colonists.length < 2) return;
+
+    // Create a sparse initial network:
+    // - Each colonist gets connected to 2-4 random others
+    // - This creates enough edges for some triangles to form
+    const targetConnectionsPerColonist = Math.min(3, Math.floor(colonists.length / 3));
+
+    for (const colonist of colonists) {
+      const currentConnections = this.workforce.getColonistConnections(colonist.id);
+      const neededConnections = targetConnectionsPerColonist - currentConnections.length;
+
+      if (neededConnections <= 0) continue;
+
+      // Find colonists we're not yet connected to
+      const candidates = colonists.filter(
+        (c) => c.id !== colonist.id && !currentConnections.some((conn) => conn.colonistId === c.id),
+      );
+
+      // Connect to random candidates
+      for (let i = 0; i < neededConnections && candidates.length > 0; i++) {
+        const randomIndex = Math.floor(Math.random() * candidates.length);
+        const target = candidates.splice(randomIndex, 1)[0];
+        if (target) {
+          this.workforce.createInitialRelationship(
+            colonist.id,
+            target.id,
+            INITIAL_COLONIST_RELATIONSHIP,
+          );
+        }
+      }
+    }
   }
 
   private createPreBuiltBuildings(buildingIds: BuildingId[]): void {

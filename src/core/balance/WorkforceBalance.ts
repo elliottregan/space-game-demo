@@ -181,6 +181,9 @@ export const SOCIAL_COHESION = {
   ISOLATION_WARNING_DELAY: 10,
 } as const;
 
+/** Initial relationship strength between starting colonists (they trained together) */
+export const INITIAL_COLONIST_RELATIONSHIP = 0.15;
+
 // ============ Social Building (Third Space) System ============
 
 /** Initial relationship strength when colonists first meet at a social building */
