@@ -67,6 +67,20 @@ export interface SocialNetworkPosition {
   bridgingScore: number;
 }
 
+/**
+ * A detected social community (emergent group) in the colonist network.
+ */
+export interface SocialCommunity {
+  /** Unique identifier for this community */
+  id: string;
+  /** IDs of colonists in this community */
+  memberIds: string[];
+  /** Average internal relationship strength */
+  cohesion: number;
+  /** Number of connections to other communities */
+  externalConnections: number;
+}
+
 export class WorkforceManager {
   /** Tracks relationships between colonists (key: "colonistId1:colonistId2" sorted alphabetically) */
   private coworkerRelationships: Map<string, CoworkerRelationship> = new Map();
@@ -928,6 +942,227 @@ export class WorkforceManager {
    */
   getBridgeColonists(colonists: readonly Colonist[], minBridgingScore: number = 0.3): Colonist[] {
     return colonists.filter((c) => this.calculateBridgingScore(c.id, colonists) >= minBridgingScore);
+  }
+
+  // ============ Community Detection (Label Propagation) ============
+
+  /**
+   * Detect communities in the social network using weighted label propagation.
+   * Each colonist adopts the most common label among their neighbors,
+   * weighted by relationship strength.
+   *
+   * Time complexity: O(iterations * edges)
+   * Typically converges in 5-15 iterations for social networks.
+   *
+   * @param colonistIds - IDs of colonists to partition into communities
+   * @param maxIterations - Maximum iterations before stopping (default 20)
+   * @param minCommunitySize - Minimum size for a community (smaller ones merged)
+   * @returns Array of detected communities
+   */
+  detectCommunities(
+    colonistIds: string[],
+    maxIterations: number = 20,
+    minCommunitySize: number = 2,
+  ): SocialCommunity[] {
+    if (colonistIds.length === 0) return [];
+
+    // Initialize: each colonist starts in their own community (their ID is their label)
+    const labels = new Map<string, string>();
+    for (const id of colonistIds) {
+      labels.set(id, id);
+    }
+
+    const colonistSet = new Set(colonistIds);
+
+    // Iterate until convergence or max iterations
+    for (let iteration = 0; iteration < maxIterations; iteration++) {
+      let changed = false;
+
+      // Process nodes in random order to avoid oscillation
+      const shuffled = [...colonistIds].sort(() => Math.random() - 0.5);
+
+      for (const colonistId of shuffled) {
+        const neighbors = this.getNeighbors(colonistId);
+        if (neighbors.size === 0) continue;
+
+        // Count weighted votes for each label among neighbors
+        const labelVotes = new Map<string, number>();
+
+        for (const neighborId of neighbors) {
+          // Only consider neighbors in the input set
+          if (!colonistSet.has(neighborId)) continue;
+
+          const neighborLabel = labels.get(neighborId);
+          if (!neighborLabel) continue;
+
+          // Weight by relationship strength
+          const relationship = this.getCoworkerRelationship(colonistId, neighborId);
+          const weight = relationship?.strength ?? 0;
+
+          labelVotes.set(neighborLabel, (labelVotes.get(neighborLabel) ?? 0) + weight);
+        }
+
+        // Find label with highest weighted vote
+        let maxVotes = 0;
+        let bestLabel = labels.get(colonistId)!;
+
+        for (const [label, votes] of labelVotes) {
+          if (votes > maxVotes) {
+            maxVotes = votes;
+            bestLabel = label;
+          }
+        }
+
+        // Update label if changed
+        const currentLabel = labels.get(colonistId);
+        if (currentLabel !== bestLabel) {
+          labels.set(colonistId, bestLabel);
+          changed = true;
+        }
+      }
+
+      // Converged if no labels changed
+      if (!changed) break;
+    }
+
+    // Group colonists by their final labels
+    const communities = new Map<string, string[]>();
+    for (const [colonistId, label] of labels) {
+      if (!communities.has(label)) {
+        communities.set(label, []);
+      }
+      communities.get(label)!.push(colonistId);
+    }
+
+    // Build community objects, merging small communities
+    const result: SocialCommunity[] = [];
+    let communityCounter = 1;
+    const smallCommunityMembers: string[] = [];
+
+    for (const [, memberIds] of communities) {
+      if (memberIds.length < minCommunitySize) {
+        // Collect small communities to merge later
+        smallCommunityMembers.push(...memberIds);
+      } else {
+        result.push({
+          id: `community_${communityCounter++}`,
+          memberIds,
+          cohesion: this.calculateCommunityCohesion(memberIds),
+          externalConnections: this.countExternalConnections(memberIds, colonistSet),
+        });
+      }
+    }
+
+    // Add small community members as a "misc" community if any
+    if (smallCommunityMembers.length > 0) {
+      result.push({
+        id: `community_misc`,
+        memberIds: smallCommunityMembers,
+        cohesion: this.calculateCommunityCohesion(smallCommunityMembers),
+        externalConnections: this.countExternalConnections(smallCommunityMembers, colonistSet),
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * Calculate the internal cohesion of a community.
+   * Returns average relationship strength between community members.
+   */
+  private calculateCommunityCohesion(memberIds: string[]): number {
+    if (memberIds.length < 2) return 0;
+
+    let totalStrength = 0;
+    let pairCount = 0;
+
+    for (let i = 0; i < memberIds.length; i++) {
+      for (let j = i + 1; j < memberIds.length; j++) {
+        const strength = this.getCoworkerRelationshipStrength(memberIds[i]!, memberIds[j]!);
+        totalStrength += strength;
+        pairCount++;
+      }
+    }
+
+    return pairCount > 0 ? totalStrength / pairCount : 0;
+  }
+
+  /**
+   * Count connections from community members to colonists outside the community.
+   */
+  private countExternalConnections(memberIds: string[], allColonists: Set<string>): number {
+    const memberSet = new Set(memberIds);
+    let externalCount = 0;
+
+    for (const memberId of memberIds) {
+      for (const neighborId of this.getNeighbors(memberId)) {
+        // Count if neighbor is in the colonist set but not in this community
+        if (allColonists.has(neighborId) && !memberSet.has(neighborId)) {
+          externalCount++;
+        }
+      }
+    }
+
+    // Each external edge is counted once (from the community member's perspective)
+    return externalCount;
+  }
+
+  /**
+   * Get community statistics for the entire network.
+   */
+  getCommunityStats(colonistIds: string[]): {
+    communityCount: number;
+    averageSize: number;
+    averageCohesion: number;
+    modularity: number;
+  } {
+    const communities = this.detectCommunities(colonistIds);
+
+    if (communities.length === 0) {
+      return { communityCount: 0, averageSize: 0, averageCohesion: 0, modularity: 0 };
+    }
+
+    const totalSize = communities.reduce((sum, c) => sum + c.memberIds.length, 0);
+    const totalCohesion = communities.reduce((sum, c) => sum + c.cohesion, 0);
+
+    // Calculate modularity (quality of community partition)
+    // Q = Σ[(internal edges / total edges) - (expected internal edges)]
+    const totalEdges = this.coworkerRelationships.size;
+    let modularity = 0;
+
+    if (totalEdges > 0) {
+      for (const community of communities) {
+        const memberSet = new Set(community.memberIds);
+        let internalEdges = 0;
+        let communityDegree = 0;
+
+        for (const memberId of community.memberIds) {
+          const neighbors = this.getNeighbors(memberId);
+          communityDegree += neighbors.size;
+
+          for (const neighborId of neighbors) {
+            if (memberSet.has(neighborId)) {
+              internalEdges++;
+            }
+          }
+        }
+
+        // Internal edges counted twice (once from each end)
+        internalEdges /= 2;
+
+        // Expected internal edges if random
+        const expected = (communityDegree / (2 * totalEdges)) ** 2 * totalEdges;
+
+        modularity += internalEdges / totalEdges - expected / totalEdges;
+      }
+    }
+
+    return {
+      communityCount: communities.length,
+      averageSize: totalSize / communities.length,
+      averageCohesion: totalCohesion / communities.length,
+      modularity: Math.max(0, Math.min(1, modularity)), // Clamp to [0, 1]
+    };
   }
 
   // ============ Serialization ============

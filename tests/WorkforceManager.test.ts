@@ -1262,4 +1262,220 @@ describe("WorkforceManager", () => {
       expect(position.weakTieCount).toBe(2); // Both are weak ties initially
     });
   });
+
+  // ==========================================================================
+  // Community Detection tests
+  // ==========================================================================
+  describe("Community Detection", () => {
+    it("should return empty array for no colonists", () => {
+      const communities = workforce.detectCommunities([]);
+      expect(communities).toEqual([]);
+    });
+
+    it("should detect single community for fully connected group", () => {
+      const colonists = [
+        createColonist({ id: "c1" }),
+        createColonist({ id: "c2" }),
+        createColonist({ id: "c3" }),
+      ];
+
+      // All work together - forming a tight community
+      const buildings = mockBuildings([
+        { id: "b1", status: "active", assignedWorkers: ["c1", "c2", "c3"] },
+      ]);
+      workforce.tick(mockColony(colonists) as any, buildings as any, 1);
+
+      // Strengthen bonds over time
+      for (let i = 2; i <= 10; i++) {
+        workforce.tick(mockColony(colonists) as any, buildings as any, i);
+      }
+
+      const communities = workforce.detectCommunities(["c1", "c2", "c3"]);
+
+      // Should be one community with all three
+      expect(communities.length).toBe(1);
+      expect(communities[0]!.memberIds.sort()).toEqual(["c1", "c2", "c3"]);
+    });
+
+    it("should detect two separate communities", () => {
+      const colonists = [
+        createColonist({ id: "a1" }),
+        createColonist({ id: "a2" }),
+        createColonist({ id: "a3" }),
+        createColonist({ id: "b1" }),
+        createColonist({ id: "b2" }),
+        createColonist({ id: "b3" }),
+      ];
+
+      // Group A works together
+      const buildingsA = mockBuildings([
+        { id: "buildingA", status: "active", assignedWorkers: ["a1", "a2", "a3"] },
+      ]);
+
+      // Group B works together (different building)
+      const buildingsB = mockBuildings([
+        { id: "buildingB", status: "active", assignedWorkers: ["b1", "b2", "b3"] },
+      ]);
+
+      // Alternate so both groups build strong bonds
+      for (let i = 1; i <= 20; i++) {
+        workforce.tick(mockColony(colonists) as any, buildingsA as any, i * 2 - 1);
+        workforce.tick(mockColony(colonists) as any, buildingsB as any, i * 2);
+      }
+
+      const communities = workforce.detectCommunities(
+        ["a1", "a2", "a3", "b1", "b2", "b3"],
+        20, // max iterations
+        2, // min community size
+      );
+
+      // Should detect two communities
+      expect(communities.length).toBe(2);
+
+      // Each community should have 3 members
+      const sizes = communities.map((c) => c.memberIds.length).sort();
+      expect(sizes).toEqual([3, 3]);
+
+      // Check that a1, a2, a3 are in the same community
+      const communityA = communities.find((c) => c.memberIds.includes("a1"));
+      expect(communityA?.memberIds.sort()).toEqual(["a1", "a2", "a3"]);
+
+      // Check that b1, b2, b3 are in the same community
+      const communityB = communities.find((c) => c.memberIds.includes("b1"));
+      expect(communityB?.memberIds.sort()).toEqual(["b1", "b2", "b3"]);
+    });
+
+    it("should calculate community cohesion", () => {
+      const colonists = [
+        createColonist({ id: "c1" }),
+        createColonist({ id: "c2" }),
+        createColonist({ id: "c3" }),
+      ];
+
+      // Work together to build bonds
+      const buildings = mockBuildings([
+        { id: "b1", status: "active", assignedWorkers: ["c1", "c2", "c3"] },
+      ]);
+
+      for (let i = 1; i <= 10; i++) {
+        workforce.tick(mockColony(colonists) as any, buildings as any, i);
+      }
+
+      const communities = workforce.detectCommunities(["c1", "c2", "c3"]);
+
+      expect(communities.length).toBe(1);
+      expect(communities[0]!.cohesion).toBeGreaterThan(0);
+    });
+
+    it("should count external connections correctly", () => {
+      const colonists = [
+        createColonist({ id: "a1" }),
+        createColonist({ id: "a2" }),
+        createColonist({ id: "b1" }),
+        createColonist({ id: "b2" }),
+      ];
+
+      // Group A bonds
+      const buildingsA = mockBuildings([
+        { id: "bA", status: "active", assignedWorkers: ["a1", "a2"] },
+      ]);
+
+      // Group B bonds
+      const buildingsB = mockBuildings([
+        { id: "bB", status: "active", assignedWorkers: ["b1", "b2"] },
+      ]);
+
+      // Create a bridge: a1 and b1 also work together briefly
+      const buildingsBridge = mockBuildings([
+        { id: "bridge", status: "active", assignedWorkers: ["a1", "b1"] },
+      ]);
+
+      // Build strong internal bonds
+      for (let i = 1; i <= 10; i++) {
+        workforce.tick(mockColony(colonists) as any, buildingsA as any, i * 3 - 2);
+        workforce.tick(mockColony(colonists) as any, buildingsB as any, i * 3 - 1);
+      }
+
+      // Add weak bridge
+      workforce.tick(mockColony(colonists) as any, buildingsBridge as any, 31);
+
+      const communities = workforce.detectCommunities(["a1", "a2", "b1", "b2"], 20, 2);
+
+      // Should have 2 communities
+      expect(communities.length).toBe(2);
+
+      // At least one community should have external connections (the bridge)
+      const totalExternal = communities.reduce((sum, c) => sum + c.externalConnections, 0);
+      expect(totalExternal).toBeGreaterThan(0);
+    });
+
+    it("should merge small communities into misc", () => {
+      const colonists = [
+        createColonist({ id: "loner1" }),
+        createColonist({ id: "loner2" }),
+        createColonist({ id: "group1" }),
+        createColonist({ id: "group2" }),
+        createColonist({ id: "group3" }),
+      ];
+
+      // Only group1-3 work together
+      const buildings = mockBuildings([
+        { id: "b1", status: "active", assignedWorkers: ["group1", "group2", "group3"] },
+      ]);
+
+      for (let i = 1; i <= 10; i++) {
+        workforce.tick(mockColony(colonists) as any, buildings as any, i);
+      }
+
+      // Include loners who have no connections
+      const communities = workforce.detectCommunities(
+        ["loner1", "loner2", "group1", "group2", "group3"],
+        20,
+        3, // Min community size of 3
+      );
+
+      // Should have main community + misc for loners
+      expect(communities.length).toBe(2);
+
+      const mainCommunity = communities.find((c) => c.memberIds.length === 3);
+      const miscCommunity = communities.find((c) => c.id === "community_misc");
+
+      expect(mainCommunity?.memberIds.sort()).toEqual(["group1", "group2", "group3"]);
+      expect(miscCommunity?.memberIds.sort()).toEqual(["loner1", "loner2"]);
+    });
+
+    it("should get community stats", () => {
+      const colonists = [
+        createColonist({ id: "c1" }),
+        createColonist({ id: "c2" }),
+        createColonist({ id: "c3" }),
+        createColonist({ id: "c4" }),
+      ];
+
+      const buildings = mockBuildings([
+        { id: "b1", status: "active", assignedWorkers: ["c1", "c2", "c3", "c4"] },
+      ]);
+
+      for (let i = 1; i <= 10; i++) {
+        workforce.tick(mockColony(colonists) as any, buildings as any, i);
+      }
+
+      const stats = workforce.getCommunityStats(["c1", "c2", "c3", "c4"]);
+
+      expect(stats.communityCount).toBeGreaterThanOrEqual(1);
+      expect(stats.averageSize).toBeGreaterThan(0);
+      expect(stats.averageCohesion).toBeGreaterThan(0);
+      expect(stats.modularity).toBeGreaterThanOrEqual(0);
+      expect(stats.modularity).toBeLessThanOrEqual(1);
+    });
+
+    it("should handle isolated colonists", () => {
+      // No relationships formed
+      const communities = workforce.detectCommunities(["lonely1", "lonely2", "lonely3"]);
+
+      // All isolated colonists should end up somewhere
+      const allMembers = communities.flatMap((c) => c.memberIds);
+      expect(allMembers.sort()).toEqual(["lonely1", "lonely2", "lonely3"]);
+    });
+  });
 });
