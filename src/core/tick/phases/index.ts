@@ -1,5 +1,8 @@
 import { TickRunner } from "../TickRunner";
 
+// Import all phases
+export { processNPCInfluence } from "./politics";
+
 /**
  * Create a TickRunner with all standard game phases registered.
  * Phases are added incrementally as they are extracted from managers.
