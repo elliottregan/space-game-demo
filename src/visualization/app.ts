@@ -162,6 +162,7 @@ function renderStatsContent(): string {
     ${renderVictoryTimeStats()}
     ${renderVictoryDefeatComparison()}
     ${renderCorrelations()}
+    ${renderSocialCohesion()}
     ${renderBottlenecks()}
     ${renderEventImpact()}
     ${renderCrisisTimeline()}
@@ -709,9 +710,67 @@ function formatCrisisType(type: string): string {
     low_oxygen: "Low Oxygen",
     low_water: "Low Water",
     low_morale: "Low Morale",
+    low_cohesion: "Low Cohesion",
     population_drop: "Population Drop",
   };
   return labels[type] ?? type;
+}
+
+/**
+ * Render social cohesion analysis.
+ */
+function renderSocialCohesion(): string {
+  if (!batchA?.stats?.socialCohesion) return "";
+
+  const sc = batchA.stats.socialCohesion;
+
+  const formatCorr = (r: number): string => {
+    const strength =
+      Math.abs(r) > 0.5
+        ? "strong"
+        : Math.abs(r) > 0.3
+          ? "moderate"
+          : Math.abs(r) > 0.1
+            ? "weak"
+            : "none";
+    return `<span class="corr-${strength}">${r.toFixed(3)}</span>`;
+  };
+
+  return `
+    <div class="chart-panel">
+      <h2>Social Cohesion Analysis</h2>
+      <p class="stat-note">Cohesion measures how well-connected the social network is (0-1 scale, displayed as %)</p>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-value">${(sc.avgFinalCohesion * 100).toFixed(1)}%</div>
+          <div class="stat-label">Avg Final Cohesion</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${(sc.minCohesion * 100).toFixed(1)}%</div>
+          <div class="stat-label">Min Observed</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${(sc.maxCohesion * 100).toFixed(1)}%</div>
+          <div class="stat-label">Max Observed</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${sc.avgIsolatedColonists.toFixed(1)}</div>
+          <div class="stat-label">Avg Isolated Colonists</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${sc.lowCohesionRuns}</div>
+          <div class="stat-label">Runs with Low Cohesion</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${formatCorr(sc.cohesionVictoryCorrelation)}</div>
+          <div class="stat-label">Victory Correlation</div>
+        </div>
+      </div>
+      <p class="stat-note">
+        ${sc.cohesionVictoryCorrelation > 0.1 ? "Higher cohesion is associated with more victories." : sc.cohesionVictoryCorrelation < -0.1 ? "Lower cohesion is associated with more victories (unexpected)." : "Cohesion has weak correlation with victory outcome."}
+      </p>
+    </div>
+  `;
 }
 
 /**

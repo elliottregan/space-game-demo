@@ -21,6 +21,7 @@ import type {
   EventImpactAnalysis,
   CrisisTimelineAnalysis,
   OutlierAnalysis,
+  SocialCohesionAnalysis,
 } from "../src/simulation/types";
 
 /**
@@ -71,6 +72,7 @@ const CRISIS_THRESHOLDS = {
   oxygen: { warning: 30, critical: 10 },
   water: { warning: 20, critical: 5 },
   morale: { warning: 40, critical: 25 },
+  cohesion: { warning: 0.15, critical: 0.08 },
 } as const;
 
 /**
@@ -132,6 +134,14 @@ function runSingleGame(seed: number): RunResult {
     // Detect and record crisis conditions
     detectCrisis(currentSol, resources.current, colony.morale, crisisTimeline);
 
+    // Detect social cohesion crisis
+    detectCohesionCrisis(currentSol, colony.socialCohesion, crisisTimeline);
+
+    // Count isolated colonists
+    const isolatedCount = colony.colonists.filter(
+      (c) => !colony.coworkerRelationships.has(c.id),
+    ).length;
+
     // Take periodic snapshots
     if (currentSol % SNAPSHOT_INTERVAL === 0) {
       resourceTimeline.push({
@@ -144,6 +154,8 @@ function runSingleGame(seed: number): RunResult {
         population: currentPop,
         morale: colony.morale,
         health: colony.health,
+        socialCohesion: colony.socialCohesion,
+        isolatedColonists: isolatedCount,
       });
 
       flowTimeline.push({
@@ -224,6 +236,9 @@ function runSingleGame(seed: number): RunResult {
     defeatSol = finalSol;
     const resources = api.resources.snapshot();
     const colony = api.colony.snapshot();
+    const isolatedCount = colony.colonists.filter(
+      (c) => !colony.coworkerRelationships.has(c.id),
+    ).length;
     resourcesAtDeath = {
       sol: finalSol,
       food: resources.current.food,
@@ -234,6 +249,8 @@ function runSingleGame(seed: number): RunResult {
       population: colony.population,
       morale: colony.morale,
       health: colony.health,
+      socialCohesion: colony.socialCohesion,
+      isolatedColonists: isolatedCount,
     };
   }
 
@@ -307,6 +324,43 @@ function detectCrisis(
   checkResource("low_oxygen", resources.oxygen, CRISIS_THRESHOLDS.oxygen);
   checkResource("low_water", resources.water, CRISIS_THRESHOLDS.water);
   checkResource("low_morale", morale, CRISIS_THRESHOLDS.morale);
+}
+
+/**
+ * Detect social cohesion crisis conditions.
+ */
+function detectCohesionCrisis(
+  sol: number,
+  cohesion: number,
+  crisisTimeline: CrisisPoint[],
+): void {
+  let severity: CrisisPoint["severity"] | null = null;
+  let threshold = 0;
+
+  if (cohesion <= CRISIS_THRESHOLDS.cohesion.critical) {
+    severity = "critical";
+    threshold = CRISIS_THRESHOLDS.cohesion.critical;
+  } else if (cohesion <= CRISIS_THRESHOLDS.cohesion.warning) {
+    severity = "warning";
+    threshold = CRISIS_THRESHOLDS.cohesion.warning;
+  }
+
+  if (severity) {
+    const lastCrisis = crisisTimeline.filter((c) => c.type === "low_cohesion").pop();
+    if (
+      !lastCrisis ||
+      lastCrisis.sol < sol - 10 ||
+      (lastCrisis.severity === "warning" && severity === "critical")
+    ) {
+      crisisTimeline.push({
+        sol,
+        type: "low_cohesion",
+        severity,
+        value: cohesion,
+        threshold,
+      });
+    }
+  }
 }
 
 // Module-level output capture for logging
@@ -642,6 +696,58 @@ function computeOutliers(victories: RunResult[]): OutlierAnalysis {
 }
 
 /**
+ * Compute social cohesion analysis.
+ */
+function computeSocialCohesion(results: RunResult[]): SocialCohesionAnalysis {
+  const victories = results.filter((r) => r.outcome === "victory");
+
+  // Get final cohesion values from the last resource snapshot of each run
+  const finalCohesions: number[] = [];
+  const allCohesions: number[] = [];
+  const finalIsolated: number[] = [];
+
+  for (const result of results) {
+    if (result.resourceTimeline && result.resourceTimeline.length > 0) {
+      const lastSnapshot = result.resourceTimeline[result.resourceTimeline.length - 1];
+      if (lastSnapshot) {
+        finalCohesions.push(lastSnapshot.socialCohesion);
+        finalIsolated.push(lastSnapshot.isolatedColonists);
+      }
+      // Collect all cohesion values for min/max
+      for (const snapshot of result.resourceTimeline) {
+        allCohesions.push(snapshot.socialCohesion);
+      }
+    }
+  }
+
+  // Count runs with low cohesion (ever dropped below critical)
+  let lowCohesionRuns = 0;
+  for (const result of results) {
+    if (result.crisisTimeline) {
+      const hasCohesionCrisis = result.crisisTimeline.some((c) => c.type === "low_cohesion");
+      if (hasCohesionCrisis) lowCohesionRuns++;
+    }
+  }
+
+  // Correlation between cohesion and victory
+  const outcomes = results.map((r) => (r.outcome === "victory" ? 1 : 0));
+  const cohesionVictoryCorrelation = pearsonCorrelation(finalCohesions, outcomes);
+
+  return {
+    avgFinalCohesion:
+      finalCohesions.length > 0
+        ? finalCohesions.reduce((a, b) => a + b, 0) / finalCohesions.length
+        : 0,
+    minCohesion: allCohesions.length > 0 ? Math.min(...allCohesions) : 0,
+    maxCohesion: allCohesions.length > 0 ? Math.max(...allCohesions) : 0,
+    avgIsolatedColonists:
+      finalIsolated.length > 0 ? finalIsolated.reduce((a, b) => a + b, 0) / finalIsolated.length : 0,
+    lowCohesionRuns,
+    cohesionVictoryCorrelation,
+  };
+}
+
+/**
  * Write analysis data as JSON for visualization.
  */
 async function writeJsonOutput(results: RunResult[], runs: number, seed: number): Promise<string> {
@@ -709,6 +815,8 @@ async function writeJsonOutput(results: RunResult[], runs: number, seed: number)
       population: avg(snapshots.map((s) => s.population)),
       morale: avg(snapshots.map((s) => s.morale)),
       health: avg(snapshots.map((s) => s.health)),
+      socialCohesion: avg(snapshots.map((s) => s.socialCohesion)),
+      isolatedColonists: avg(snapshots.map((s) => s.isolatedColonists)),
     });
   }
 
@@ -753,6 +861,7 @@ async function writeJsonOutput(results: RunResult[], runs: number, seed: number)
       eventImpact: computeEventImpact(results),
       crisisTimeline: computeCrisisTimeline(results),
       outliers: computeOutliers(victories),
+      socialCohesion: computeSocialCohesion(results),
     },
   };
 
@@ -938,6 +1047,9 @@ async function main(): Promise<void> {
 
   // 12. Crisis Timeline Analysis
   analyzeCrisisTimeline(results);
+
+  // 13. Social Cohesion Analysis
+  analyzeSocialCohesion(results);
 
   output("\n" + "=".repeat(60));
 
@@ -1296,6 +1408,100 @@ function analyzeCrisisTimeline(results: RunResult[]): void {
     output("\n  First Crisis Timing:");
     output(`    Median: Sol ${median}`);
     output(`    Range: Sol ${Math.min(...sorted)} - ${Math.max(...sorted)}`);
+  }
+}
+
+/**
+ * Analyze social cohesion patterns across runs.
+ */
+function analyzeSocialCohesion(results: RunResult[]): void {
+  output("\n[Social Cohesion Analysis]");
+  output("-".repeat(40));
+
+  const victories = results.filter((r) => r.outcome === "victory");
+  const defeats = results.filter((r) => r.outcome === "defeat");
+
+  // Get final cohesion values from the last resource snapshot
+  const victoryCohesions: number[] = [];
+  const defeatCohesions: number[] = [];
+  const allCohesions: number[] = [];
+  const finalIsolated: number[] = [];
+
+  for (const result of results) {
+    if (result.resourceTimeline && result.resourceTimeline.length > 0) {
+      const lastSnapshot = result.resourceTimeline[result.resourceTimeline.length - 1];
+      if (lastSnapshot) {
+        if (result.outcome === "victory") {
+          victoryCohesions.push(lastSnapshot.socialCohesion);
+        } else {
+          defeatCohesions.push(lastSnapshot.socialCohesion);
+        }
+        finalIsolated.push(lastSnapshot.isolatedColonists);
+      }
+      // Collect all cohesion values for min/max
+      for (const snapshot of result.resourceTimeline) {
+        allCohesions.push(snapshot.socialCohesion);
+      }
+    }
+  }
+
+  if (allCohesions.length === 0) {
+    output("  No cohesion data available");
+    return;
+  }
+
+  // Overall stats
+  const avgCohesion = allCohesions.reduce((a, b) => a + b, 0) / allCohesions.length;
+  output(`  Average Cohesion: ${avgCohesion.toFixed(3)}`);
+  output(`  Min Cohesion: ${Math.min(...allCohesions).toFixed(3)}`);
+  output(`  Max Cohesion: ${Math.max(...allCohesions).toFixed(3)}`);
+
+  // Victory vs defeat comparison
+  if (victoryCohesions.length > 0 && defeatCohesions.length > 0) {
+    const avgVictoryCohesion =
+      victoryCohesions.reduce((a, b) => a + b, 0) / victoryCohesions.length;
+    const avgDefeatCohesion =
+      defeatCohesions.reduce((a, b) => a + b, 0) / defeatCohesions.length;
+    output("\n  Final Cohesion by Outcome:");
+    output(`    Victory: ${avgVictoryCohesion.toFixed(3)}`);
+    output(`    Defeat:  ${avgDefeatCohesion.toFixed(3)}`);
+  }
+
+  // Isolated colonists stats
+  if (finalIsolated.length > 0) {
+    const avgIsolated = finalIsolated.reduce((a, b) => a + b, 0) / finalIsolated.length;
+    output(`\n  Avg Isolated Colonists at End: ${avgIsolated.toFixed(1)}`);
+  }
+
+  // Cohesion crisis stats
+  let lowCohesionRuns = 0;
+  let criticalCohesionRuns = 0;
+  for (const result of results) {
+    if (result.crisisTimeline) {
+      const hasWarning = result.crisisTimeline.some(
+        (c) => c.type === "low_cohesion" && c.severity === "warning",
+      );
+      const hasCritical = result.crisisTimeline.some(
+        (c) => c.type === "low_cohesion" && c.severity === "critical",
+      );
+      if (hasWarning || hasCritical) lowCohesionRuns++;
+      if (hasCritical) criticalCohesionRuns++;
+    }
+  }
+
+  output(
+    `\n  Runs with Low Cohesion: ${lowCohesionRuns}/${results.length} (${((lowCohesionRuns / results.length) * 100).toFixed(0)}%)`,
+  );
+  output(
+    `  Runs with Critical Cohesion: ${criticalCohesionRuns}/${results.length} (${((criticalCohesionRuns / results.length) * 100).toFixed(0)}%)`,
+  );
+
+  // Correlation with victory
+  const allFinalCohesions = [...victoryCohesions, ...defeatCohesions];
+  const outcomes = [...victoryCohesions.map(() => 1), ...defeatCohesions.map(() => 0)];
+  if (allFinalCohesions.length > 0) {
+    const corr = pearsonCorrelation(allFinalCohesions, outcomes);
+    output(`\n  Cohesion-Victory Correlation: ${corr.toFixed(3)}`);
   }
 }
 
