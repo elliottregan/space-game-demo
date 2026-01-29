@@ -11,6 +11,7 @@ export {
   processRecycling,
   processMaintenanceDecay,
 } from "./buildings";
+export { processWorkforceTick } from "./workforce";
 
 /**
  * Create a TickRunner with all standard game phases registered.
