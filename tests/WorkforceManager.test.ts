@@ -1495,14 +1495,12 @@ describe("WorkforceManager", () => {
       );
       expect(connectedGroup).toBeDefined();
 
-      // Small communities (loners) should be merged into misc or grouped together
-      // They will either be in community_misc or stay as individual small communities
-      // that get merged because they're below minCommunitySize
-      const miscCommunity = communities.find((c) => c.id === "community_misc");
-      if (miscCommunity) {
-        // Loners should be in misc
-        expect(miscCommunity.memberIds).toContain("loner1");
-        expect(miscCommunity.memberIds).toContain("loner2");
+      // Loners should either be in misc community or pulled into another community
+      // via random preferential attachment. The key invariant is that no community
+      // (except misc) should have fewer than minCommunitySize members.
+      const nonMiscCommunities = communities.filter((c) => c.id !== "community_misc");
+      for (const community of nonMiscCommunities) {
+        expect(community.memberIds.length).toBeGreaterThanOrEqual(3);
       }
     });
 
