@@ -38,6 +38,7 @@ import type { Colonist } from "../models/Colonist";
 import { ColonistRole, MasteryLevel } from "../models/Colonist";
 import type { GameEvent } from "../models/GameEvent";
 import { type Guild, GuildType } from "../models/Guild";
+import { pickRandomSubset } from "../utils/randomSubset";
 import type { BuildingManager } from "./BuildingManager";
 import type { ColonyManager } from "./ColonyManager";
 
@@ -118,29 +119,6 @@ export class WorkforceManager {
     this.networkDirty = true;
     this.clusteringCache.clear();
     this.colonyCohesionCache = null;
-  }
-
-  /**
-   * Pick k random elements from array using partial Fisher-Yates shuffle.
-   * O(k) instead of O(n log n) for full shuffle + slice.
-   */
-  private pickRandomSubset<T>(array: T[], k: number): T[] {
-    const n = array.length;
-    if (k >= n) return array;
-
-    // Work on a copy to avoid mutating input
-    const copy = [...array];
-    const result: T[] = [];
-
-    for (let i = 0; i < k; i++) {
-      // Pick random index from remaining elements
-      const randomIndex = i + Math.floor(Math.random() * (n - i));
-      // Swap with current position
-      [copy[i], copy[randomIndex]] = [copy[randomIndex]!, copy[i]!];
-      result.push(copy[i]!);
-    }
-
-    return result;
   }
 
   // ============ Adjacency List Helpers ============
@@ -590,7 +568,7 @@ export class WorkforceManager {
 
         // Pick random colonists to bond with using partial Fisher-Yates shuffle
         // Only shuffles SOCIAL_BONDS_PER_TICK elements instead of entire array
-        const bondingPartners = this.pickRandomSubset(others, SOCIAL_BONDS_PER_TICK);
+        const bondingPartners = pickRandomSubset(others, SOCIAL_BONDS_PER_TICK);
 
         for (const partner of bondingPartners) {
           const key = this.getRelationshipKey(colonist.id, partner.id);
