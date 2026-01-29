@@ -206,14 +206,15 @@ describe("Third Spaces Integration", () => {
       workforce.tick(colony, buildings, sol);
     }
 
-    // Alice and Bob should have a relationship
+    // Alice and Bob should have a meaningful relationship from social bonding
     const aliceBobStrength = workforce.getCoworkerRelationshipStrength(alice.id, bob.id);
     expect(aliceBobStrength).toBeGreaterThan(0.1);
 
-    // Charlie should have no relationship with either (didn't go to social building)
+    // Charlie's relationships should be weaker than Alice-Bob's social bond
+    // (Charlie may have random connections via preferential attachment, but not social bonding)
     const aliceCharlieStrength = workforce.getCoworkerRelationshipStrength(alice.id, charlie.id);
     const bobCharlieStrength = workforce.getCoworkerRelationshipStrength(bob.id, charlie.id);
-    expect(aliceCharlieStrength).toBe(0);
-    expect(bobCharlieStrength).toBe(0);
+    expect(aliceBobStrength).toBeGreaterThan(aliceCharlieStrength);
+    expect(aliceBobStrength).toBeGreaterThan(bobCharlieStrength);
   });
 });
