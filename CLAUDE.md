@@ -129,10 +129,7 @@ Results saved to `logs/simulations/` as both `.txt` (human-readable) and `.json`
 ## Development Workflow
 
 ### Feature Work
-For significant features, use git worktrees to isolate work from the main branch.
-
-### Pull Requests
-All changes should go through pull requests. Use `/commit-push-pr` or create PRs manually.
+For significant features, use git worktrees to isolate work from the main branch. When finishing worktree-based work, always create a pull request (option 2) rather than merging locally. This ensures code review and maintains a clear history of changes.
 
 ### Subagent-Driven Development
 When executing implementation plans, use `superpowers:subagent-driven-development` to parallelize independent tasks.
