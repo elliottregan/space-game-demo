@@ -6,6 +6,7 @@ import { ColonistRole, MasteryLevel } from "../src/core/models/Colonist";
 import { ColonyManager } from "../src/core/systems/ColonyManager";
 import { BuildingManager } from "../src/core/systems/BuildingManager";
 import { ResourceManager } from "../src/core/systems/ResourceManager";
+import { WorkforceManager } from "../src/core/systems/WorkforceManager";
 
 // Helper to create a fully constructed building
 function buildBuilding(
@@ -172,5 +173,47 @@ describe("Social Building Assignment", () => {
     const assignments = colony.getSocialBuildingAssignments();
     expect(assignments[commonRoomId]?.length).toBe(1);
     expect(assignments[gymId]?.length).toBe(2);
+  });
+});
+
+describe("Third Spaces Integration", () => {
+  test("full flow: assign colonists to social building, bonds form over time", () => {
+    const colony = new ColonyManager(0);
+    const buildings = new BuildingManager(BUILDINGS);
+    const workforce = new WorkforceManager();
+    const resources = new ResourceManager({
+      food: 500,
+      oxygen: 500,
+      water: 500,
+      power: 500,
+      materials: 500,
+    });
+
+    // Build a common room
+    const commonRoomId = buildBuilding(buildings, resources, BuildingId.COMMON_ROOM);
+
+    // Add colonists
+    const alice = colony.addColonist("Alice");
+    const bob = colony.addColonist("Bob");
+    const charlie = colony.addColonist("Charlie");
+
+    // Assign Alice and Bob to common room (Charlie stays home)
+    expect(colony.assignToSocialBuilding(alice.id, commonRoomId, buildings)).toBe(true);
+    expect(colony.assignToSocialBuilding(bob.id, commonRoomId, buildings)).toBe(true);
+
+    // Run simulation for 20 sols
+    for (let sol = 0; sol < 20; sol++) {
+      workforce.tick(colony, buildings, sol);
+    }
+
+    // Alice and Bob should have a relationship
+    const aliceBobStrength = workforce.getCoworkerRelationshipStrength(alice.id, bob.id);
+    expect(aliceBobStrength).toBeGreaterThan(0.1);
+
+    // Charlie should have no relationship with either (didn't go to social building)
+    const aliceCharlieStrength = workforce.getCoworkerRelationshipStrength(alice.id, charlie.id);
+    const bobCharlieStrength = workforce.getCoworkerRelationshipStrength(bob.id, charlie.id);
+    expect(aliceCharlieStrength).toBe(0);
+    expect(bobCharlieStrength).toBe(0);
   });
 });
