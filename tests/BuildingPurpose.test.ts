@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { BuildingPurpose } from "../src/core/models/Building";
 import { BUILDINGS } from "../src/core/data/buildings";
+import type { Colonist } from "../src/core/models/Colonist";
+import { ColonistRole, MasteryLevel } from "../src/core/models/Colonist";
 
 describe("BuildingPurpose", () => {
   test("enum has all three purpose types", () => {
@@ -22,5 +24,32 @@ describe("BuildingPurpose", () => {
   test("Basic Mine has Industrial purpose", () => {
     const mine = BUILDINGS.find((b) => b.id === "basic_mine");
     expect(mine?.purpose).toBe(BuildingPurpose.Industrial);
+  });
+});
+
+describe("Colonist socialBuildingIds", () => {
+  test("colonist can have socialBuildingIds array", () => {
+    const colonist: Colonist = {
+      id: "c1",
+      name: "Test Colonist",
+      role: ColonistRole.UNASSIGNED,
+      experience: 0,
+      masteryLevel: MasteryLevel.NOVICE,
+      skills: [],
+      socialBuildingIds: ["building_1", "building_2"],
+    };
+    expect(colonist.socialBuildingIds).toEqual(["building_1", "building_2"]);
+  });
+
+  test("socialBuildingIds is optional", () => {
+    const colonist: Colonist = {
+      id: "c1",
+      name: "Test Colonist",
+      role: ColonistRole.UNASSIGNED,
+      experience: 0,
+      masteryLevel: MasteryLevel.NOVICE,
+      skills: [],
+    };
+    expect(colonist.socialBuildingIds).toBeUndefined();
   });
 });

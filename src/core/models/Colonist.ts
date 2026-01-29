@@ -39,4 +39,5 @@ export interface Colonist {
   housingId?: string; // Building ID of assigned habitat
   arrivalSol?: number; // Sol when colonist arrived (for cohort bonding)
   guildIds?: string[]; // Guild memberships
+  socialBuildingIds?: string[]; // Assigned social buildings (third spaces)
 }
