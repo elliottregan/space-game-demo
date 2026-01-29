@@ -26,6 +26,7 @@ import { ColonistRole, MasteryLevel } from "../models/Colonist";
 import type { GameEvent } from "../models/GameEvent";
 import { GuildType } from "../models/Guild";
 import type { Guild } from "../models/Guild";
+import { rng } from "../utils/random";
 import { pickRandomSubset } from "../utils/randomSubset";
 import type { BuildingManager } from "./BuildingManager";
 import type { ColonyManager } from "./ColonyManager";
@@ -119,7 +120,7 @@ export class WorkforceManager {
         }
 
         // Master event chance
-        if (colonist.masteryLevel === MasteryLevel.MASTER && Math.random() < MASTER_EVENT_CHANCE) {
+        if (colonist.masteryLevel === MasteryLevel.MASTER && rng.chance(MASTER_EVENT_CHANCE)) {
           events.push({
             type: "MASTER_BREAKTHROUGH",
             colonistId: colonist.id,
@@ -715,7 +716,7 @@ export class WorkforceManager {
     for (const colonistA of colonists) {
       const probability = this.calculateConnectionProbability(colonistA);
 
-      if (Math.random() < probability) {
+      if (rng.chance(probability)) {
         // Pick a random colonist they don't have a strong connection with
         const candidates = colonists.filter((c) => {
           if (c.id === colonistA.id) return false;
@@ -725,22 +726,11 @@ export class WorkforceManager {
 
         if (candidates.length === 0) continue;
 
-        // Prefer connecting to popular colonists (rich get richer)
-        const weights = candidates.map(
+        // Prefer connecting to popular colonists (rich get richer) using weighted pick
+        const selectedColonist = rng.weightedPick(
+          candidates,
           (c) => 1 + this.relationshipManager.getConnectionCount(c.id),
         );
-        const totalWeight = weights.reduce((a, b) => a + b, 0);
-
-        let random = Math.random() * totalWeight;
-        let selectedColonist: Colonist | null = null;
-
-        for (let i = 0; i < candidates.length; i++) {
-          random -= weights[i]!;
-          if (random <= 0) {
-            selectedColonist = candidates[i]!;
-            break;
-          }
-        }
 
         if (!selectedColonist) continue;
 

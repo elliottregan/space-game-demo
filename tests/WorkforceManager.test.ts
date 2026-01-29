@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { SkillId } from "../src/core/data/skills";
 import { ColonistRole, MasteryLevel, type Colonist } from "../src/core/models/Colonist";
+import { rng } from "../src/core/utils/random";
 import { WorkforceManager } from "../src/core/systems/WorkforceManager";
 import {
   MASTERY_THRESHOLDS,
@@ -386,18 +387,10 @@ describe("WorkforceManager", () => {
   // Master Breakthrough tests
   // ==========================================================================
   describe("Master Breakthrough", () => {
-    let originalRandom: typeof Math.random;
-
-    beforeEach(() => {
-      originalRandom = Math.random;
-    });
-
-    afterEach(() => {
-      Math.random = originalRandom;
-    });
-
     it("should not trigger breakthrough for non-MASTER colonists", () => {
-      Math.random = () => 0.001; // Would trigger if colonist was MASTER
+      // Seed 307 produces 0.002243..., which is below 0.01 threshold
+      // but breakthrough should still not trigger for non-MASTER colonists
+      rng.seed(307);
 
       const colonist = createColonist({
         role: ColonistRole.ENGINEERING,
@@ -412,8 +405,9 @@ describe("WorkforceManager", () => {
       expect(breakthroughEvent).toBeUndefined();
     });
 
-    it("should trigger breakthrough when Math.random is below MASTER_EVENT_CHANCE", () => {
-      Math.random = () => 0.001; // Below 0.01 threshold
+    it("should trigger breakthrough when rng produces value below MASTER_EVENT_CHANCE", () => {
+      // Seed 307 produces 0.002243..., which is below 0.01 threshold
+      rng.seed(307);
 
       const colonist = createColonist({
         role: ColonistRole.RESEARCH,
@@ -429,7 +423,8 @@ describe("WorkforceManager", () => {
     });
 
     it("should include correct colonist info in breakthrough event", () => {
-      Math.random = () => 0.005;
+      // Seed 307 produces 0.002243..., which is below 0.01 threshold
+      rng.seed(307);
 
       const colonist = createColonist({
         id: "master_1",

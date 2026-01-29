@@ -14,6 +14,7 @@ import type { GameEvent } from "../models/GameEvent";
 import { BuildingPurpose } from "../models/Building";
 import type { BuildingManager } from "./BuildingManager";
 import type { ResourceManager } from "./ResourceManager";
+import { rng } from "../utils/random";
 
 const FIRST_NAMES = [
   "Alex",
@@ -135,11 +136,8 @@ export class ColonyManager {
   }
 
   private assignRandomSkills(): SkillId[] {
-    const skillCount =
-      Math.floor(Math.random() * (COLONIST_SKILL_COUNT.max - COLONIST_SKILL_COUNT.min + 1)) +
-      COLONIST_SKILL_COUNT.min;
-
-    const shuffled = [...SKILLS].sort(() => Math.random() - 0.5);
+    const skillCount = rng.int(COLONIST_SKILL_COUNT.min, COLONIST_SKILL_COUNT.max);
+    const shuffled = rng.shuffled(SKILLS);
     return shuffled.slice(0, skillCount).map((s) => s.id);
   }
 
@@ -173,7 +171,7 @@ export class ColonyManager {
       this.health > COLONY_HEALTH.GROWTH_REQUIREMENT &&
       this.morale > COLONY_MORALE.GROWTH_REQUIREMENT;
 
-    if (canGrow && Math.random() < POPULATION_GROWTH_RATE) {
+    if (canGrow && rng.chance(POPULATION_GROWTH_RATE)) {
       const newColonist = this.addColonist();
       events.push({
         type: "COLONIST_BORN",
@@ -341,12 +339,12 @@ export class ColonyManager {
     const deathConditionsMet =
       this.health < COLONY_HEALTH.DEATH_RISK_THRESHOLD &&
       population > COLONY_HEALTH.MIN_POPULATION_FOR_DEATH &&
-      Math.random() < COLONY_HEALTH.DEATH_CHANCE;
+      rng.chance(COLONY_HEALTH.DEATH_CHANCE);
 
     if (!deathConditionsMet) return;
 
     const colonistArray = Array.from(this.colonists.values());
-    const victim = colonistArray[Math.floor(Math.random() * colonistArray.length)];
+    const victim = rng.pick(colonistArray);
 
     if (victim) {
       this.removeColonist(victim.id, buildings);
@@ -380,8 +378,8 @@ export class ColonyManager {
   }
 
   addColonist(name?: string): Colonist {
-    const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
-    const lastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+    const firstName = rng.pick(FIRST_NAMES) ?? "Unknown";
+    const lastName = rng.pick(LAST_NAMES) ?? "Colonist";
 
     const colonist: Colonist = {
       id: `colonist_${this.nextId++}`,
@@ -460,7 +458,7 @@ export class ColonyManager {
       const toRemove = Math.min(Math.abs(delta), this.colonists.size - 1);
       const colonistArray = Array.from(this.colonists.values());
       for (let i = 0; i < toRemove && colonistArray.length > 0; i++) {
-        const index = Math.floor(Math.random() * colonistArray.length);
+        const index = rng.below(colonistArray.length);
         const colonist = colonistArray[index];
         if (colonist) {
           this.removeColonist(colonist.id);

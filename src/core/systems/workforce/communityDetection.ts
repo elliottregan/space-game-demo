@@ -1,4 +1,5 @@
 // src/core/systems/workforce/communityDetection.ts
+import { rng } from "../../utils/random";
 import type { SocialCommunity, CoworkerRelationship } from "./types";
 import { getRelationshipKey } from "./socialGraph";
 
@@ -90,7 +91,7 @@ export function detectCommunities(
     let changed = false;
 
     // Process nodes in random order to avoid oscillation
-    const shuffled = [...colonistIds].sort(() => Math.random() - 0.5);
+    const shuffled = rng.shuffled(colonistIds);
 
     for (const colonistId of shuffled) {
       const neighbors = adjacencyList.get(colonistId);
