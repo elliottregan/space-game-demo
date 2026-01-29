@@ -46,8 +46,7 @@ const housingInfo = computed(() => {
 const coworkers = computed(() => {
   if (!buildingAssignment.value) return [];
   return props.colonists.filter(
-    (c) =>
-      c.id !== props.colonist.id && buildingAssignment.value!.assignedWorkers.includes(c.id),
+    (c) => c.id !== props.colonist.id && buildingAssignment.value!.assignedWorkers.includes(c.id),
   );
 });
 
@@ -61,7 +60,12 @@ const housemates = computed(() => {
 
 // Get all relationships for this colonist
 const colonistRelationships = computed(() => {
-  const results: { colonist: Colonist; strength: number; isCoworker: boolean; isHousemate: boolean }[] = [];
+  const results: {
+    colonist: Colonist;
+    strength: number;
+    isCoworker: boolean;
+    isHousemate: boolean;
+  }[] = [];
 
   for (const [key, rel] of props.relationships) {
     const [id1, id2] = key.split(":");
@@ -158,11 +162,7 @@ function formatStrength(strength: number): string {
     <div v-if="colonistRelationships.length > 0" class="panel-section">
       <div class="section-title">Relationships</div>
       <div class="relationships-list">
-        <div
-          v-for="rel in colonistRelationships"
-          :key="rel.colonist.id"
-          class="relationship-row"
-        >
+        <div v-for="rel in colonistRelationships" :key="rel.colonist.id" class="relationship-row">
           <div class="rel-info">
             <span :class="['rel-name', getRoleClass(rel.colonist.role)]">
               {{ rel.colonist.name.split(" ").pop() }}
@@ -176,7 +176,7 @@ function formatStrength(strength: number): string {
             <div class="strength-bar-bg">
               <div
                 class="strength-bar"
-                :style="{ width: (rel.strength * 100) + '%' }"
+                :style="{ width: rel.strength * 100 + '%' }"
                 :class="{ strong: rel.strength > 0.5 }"
               />
             </div>
