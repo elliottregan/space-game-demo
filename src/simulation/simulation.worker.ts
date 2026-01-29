@@ -298,7 +298,8 @@ function runSingleGame(seed: number): RunResult {
         netOxygen: (resources.production.oxygen ?? 0) - (resources.consumption.oxygen ?? 0),
         netWater: (resources.production.water ?? 0) - (resources.consumption.water ?? 0),
         netPower: (resources.production.power ?? 0) - (resources.consumption.power ?? 0),
-        netMaterials: (resources.production.materials ?? 0) - (resources.consumption.materials ?? 0),
+        netMaterials:
+          (resources.production.materials ?? 0) - (resources.consumption.materials ?? 0),
       });
     }
 
