@@ -11,6 +11,7 @@ import { type SkillId, SKILLS } from "../data/skills";
 import type { Colonist } from "../models/Colonist";
 import { ColonistRole, MasteryLevel } from "../models/Colonist";
 import type { GameEvent } from "../models/GameEvent";
+import { BuildingPurpose } from "../models/Building";
 import type { BuildingManager } from "./BuildingManager";
 import type { ResourceManager } from "./ResourceManager";
 
@@ -556,6 +557,83 @@ export class ColonyManager {
     if (colonist) {
       colonist.housingId = undefined;
     }
+  }
+
+  /**
+   * Assign a colonist to a social building.
+   * Returns false if building is at capacity or colonist already assigned.
+   */
+  assignToSocialBuilding(
+    colonistId: string,
+    buildingId: string,
+    buildings: BuildingManager,
+  ): boolean {
+    const colonist = this.colonists.get(colonistId);
+    if (!colonist) return false;
+
+    // Check if already assigned to this building
+    if (colonist.socialBuildingIds?.includes(buildingId)) return false;
+
+    // Verify building exists and is a social building
+    const building = buildings.getBuildings().find((b) => b.id === buildingId);
+    if (!building) return false;
+
+    const def = buildings.getDefinition(building.definitionId);
+    if (!def || def.purpose !== BuildingPurpose.Social) return false;
+
+    // Check capacity
+    if (def.capacity) {
+      const currentCount = this.getSocialBuildingCount(buildingId);
+      if (currentCount >= def.capacity) return false;
+    }
+
+    // Add assignment
+    if (!colonist.socialBuildingIds) {
+      colonist.socialBuildingIds = [];
+    }
+    colonist.socialBuildingIds.push(buildingId);
+    return true;
+  }
+
+  /**
+   * Remove a colonist from a social building.
+   */
+  removeFromSocialBuilding(colonistId: string, buildingId: string): void {
+    const colonist = this.colonists.get(colonistId);
+    if (!colonist?.socialBuildingIds) return;
+
+    const index = colonist.socialBuildingIds.indexOf(buildingId);
+    if (index !== -1) {
+      colonist.socialBuildingIds.splice(index, 1);
+    }
+  }
+
+  /**
+   * Get count of colonists assigned to a social building.
+   */
+  getSocialBuildingCount(buildingId: string): number {
+    let count = 0;
+    for (const colonist of this.colonists.values()) {
+      if (colonist.socialBuildingIds?.includes(buildingId)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
+   * Returns colonists grouped by their social building assignments.
+   */
+  getSocialBuildingAssignments(): Record<string, Colonist[]> {
+    const assignments: Record<string, Colonist[]> = {};
+    for (const colonist of this.colonists.values()) {
+      if (colonist.socialBuildingIds) {
+        for (const buildingId of colonist.socialBuildingIds) {
+          (assignments[buildingId] ??= []).push(colonist);
+        }
+      }
+    }
+    return assignments;
   }
 
   static fromJSON(data: {
