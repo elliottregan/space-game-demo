@@ -1,5 +1,4 @@
 import { getStartingCondition, StartingConditionId } from "./data/startingConditions";
-import { LABOR_POOL_BONUS_CAP, LABOR_POOL_BONUS_PER_COLONIST } from "./balance/WorkforceBalance";
 import { BUILDINGS } from "./data/buildings";
 import { RANDOM_EVENTS } from "./data/events";
 import { INITIAL_RELATIONSHIPS, NPCS, PROJECTS } from "./data/npcs";
@@ -15,11 +14,8 @@ import { ResourceManager } from "./systems/ResourceManager";
 import { TechnologyTree } from "./systems/TechnologyTree";
 import { VictoryManager } from "./systems/VictoryManager";
 import { WorkforceManager } from "./systems/WorkforceManager";
-import {
-  canExtract,
-  getBaseProductionForDeposit,
-  getDepletionEvents,
-} from "./utils/depositExtraction";
+import { TickRunner, createTickContext } from "./tick";
+import { createStandardTickRunner } from "./tick/phases";
 
 export class GameState {
   currentSol: number = 0;
@@ -34,6 +30,7 @@ export class GameState {
   operations: OperationsManager;
   npcInfluence: NPCInfluenceManager;
 
+  private tickRunner: TickRunner;
   private eventLog: GameEvent[] = [];
   private autoAssignNewColonists: boolean = true;
 
@@ -66,6 +63,9 @@ export class GameState {
     this.victory = new VictoryManager();
     this.operations = new OperationsManager();
     this.npcInfluence = new NPCInfluenceManager(NPCS, INITIAL_RELATIONSHIPS, PROJECTS);
+
+    // Initialize tick runner
+    this.tickRunner = createStandardTickRunner();
 
     // Create pre-built buildings
     this.createPreBuiltBuildings(condition.preBuiltBuildings);
@@ -109,81 +109,39 @@ export class GameState {
     }
 
     this.currentSol++;
-    const events: GameEvent[] = [];
 
-    // Update labor pool bonus before other systems
-    this.updateLaborPoolBonus();
-
-    // Add oxygen from building contributions before resource tick
-    const oxygenContribution = this.buildings.getTotalOxygenContribution();
-    if (oxygenContribution !== 0) {
-      this.resources.add({ oxygen: oxygenContribution });
-    }
-
-    // 1. Resources tick (production/consumption)
-    events.push(...this.resources.tick());
-
-    // 2. Buildings tick (construction progress, maintenance decay)
-    events.push(...this.buildings.tick(this.resources, this.currentSol));
-
-    // 3. Workforce tick (training, experience, coworker bonding)
-    events.push(...this.workforce.tick(this.colony, this.buildings, this.currentSol));
-
-    // 4. Colony tick (population, health, morale, social cohesion)
-    const policyEffects = {
-      morale: this.operations.getMoraleEffect(),
-      health: this.operations.getHealthEffect(),
-    };
-
-    // Calculate social cohesion from workforce relationships
-    const colonistIds = this.colony.getColonists().map((c) => c.id);
-    const socialCohesionData = {
-      cohesion: this.workforce.getColonySocialCohesion(colonistIds),
-      isolatedColonists: this.workforce.getIsolatedColonists(colonistIds),
-    };
-
-    const colonyEvents = this.colony.tick(
-      this.resources,
-      this.buildings,
-      policyEffects,
-      socialCohesionData,
+    // Create context for phase execution
+    const ctx = createTickContext(
+      this.currentSol,
+      {
+        resources: this.resources,
+        buildings: this.buildings,
+        colony: this.colony,
+        workforce: this.workforce,
+        technology: this.technology,
+        operations: this.operations,
+        npcInfluence: this.npcInfluence,
+        events: this.events,
+        victory: this.victory,
+      },
+      { autoAssignNewColonists: this.autoAssignNewColonists },
     );
-    events.push(...colonyEvents);
 
-    // Auto-assign new colonists to understaffed buildings if enabled
-    if (this.autoAssignNewColonists) {
-      const hasNewColonists = colonyEvents.some((e) => e.type === "COLONIST_BORN");
-      if (hasNewColonists) {
-        const assignEvents = this.buildings.autoAssignAllWorkers(this.colony);
-        events.push(...assignEvents);
-      }
-    }
-
-    // Assign housing after colony tick
-    this.colony.assignHousing(this.buildings);
-
-    // 5. Technology tick (research progress)
-    events.push(...this.technology.tick(this.resources));
-
-    // 6. NPC Influence tick
-    events.push(...this.npcInfluence.tick(this.currentSol));
-
-    // 7. Operations tick
-    events.push(...this.operations.tick(this.currentSol, this.resources, this.colony));
-
-    // 8. Deposit extraction tick
-    events.push(...this.processDepositExtraction());
-
-    // 9. Random events tick
-    events.push(...this.events.tick(this.currentSol));
-
-    // 10. Victory check
-    events.push(...this.victory.tick(this.technology, this.colony, this.resources));
+    // Execute all phases through the runner
+    const events = this.tickRunner.tick(ctx);
 
     // Log events
     this.eventLog.push(...events);
 
     return events;
+  }
+
+  /**
+   * Get the list of tick phases in execution order.
+   * Useful for debugging and visibility into the tick system.
+   */
+  getTickPhases(): Array<{ id: string; name: string }> {
+    return this.tickRunner.getExecutionOrder();
   }
 
   advanceTurn(sols: number = 10): GameEvent[] {
@@ -212,73 +170,6 @@ export class GameState {
 
   getConstructionSpeedBonus(): number {
     return this.buildings.getConstructionSpeedBonus();
-  }
-
-  private updateLaborPoolBonus(): void {
-    const colonists = this.colony.getColonists();
-    const assignedIds = new Set<string>();
-
-    for (const building of this.buildings.getBuildings()) {
-      for (const id of building.assignedWorkers) {
-        assignedIds.add(id);
-      }
-    }
-
-    const unassignedCount = colonists.filter((c) => !assignedIds.has(c.id)).length;
-    const bonus = Math.min(unassignedCount * LABOR_POOL_BONUS_PER_COLONIST, LABOR_POOL_BONUS_CAP);
-
-    this.buildings.setConstructionSpeedBonus(bonus);
-  }
-
-  /**
-   * Process extraction from deposits for all active mining buildings.
-   * Handles extraction, warning events, and building state transitions.
-   */
-  private processDepositExtraction(): GameEvent[] {
-    const events: GameEvent[] = [];
-
-    for (const building of this.buildings.getActiveBuildings()) {
-      const def = this.buildings.getDefinition(building.definitionId);
-      if (!canExtract(building, def) || !def) continue;
-
-      const site = this.operations.getSites().find((s) => s.id === building.depositId);
-      if (!site) continue;
-
-      const baseProduction = getBaseProductionForDeposit(def, site.resourceType);
-      if (baseProduction === 0) continue;
-
-      const warningBefore = this.operations.getDepletionWarningLevel(site.id);
-      this.operations.processExtraction(building.id, baseProduction);
-      const warningAfter = this.operations.getDepletionWarningLevel(site.id);
-
-      events.push(...getDepletionEvents(warningBefore, warningAfter, site, building, def.name));
-
-      if (warningAfter === "depleted") {
-        this.transitionBuildingToIdle(building.id);
-      }
-    }
-
-    return events;
-  }
-
-  /**
-   * Transition a building to idle status and remove its resource flow.
-   */
-  private transitionBuildingToIdle(buildingId: string): void {
-    const building = this.buildings.getBuilding(buildingId);
-    if (!building) return;
-
-    building.status = "idle";
-
-    const effectiveProd = this.buildings.getEffectiveProduction(buildingId);
-    const effectiveCons = this.buildings.getEffectiveConsumption(buildingId);
-
-    if (Object.keys(effectiveProd).length > 0) {
-      this.resources.removeProduction(effectiveProd);
-    }
-    if (Object.keys(effectiveCons).length > 0) {
-      this.resources.removeConsumption(effectiveCons);
-    }
   }
 
   toJSON() {
