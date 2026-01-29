@@ -256,11 +256,14 @@ export class SimulationRunner {
       // Track buildings - count current buildings of each type
       // Since buildings can be recycled, we track the max count seen for each type
       const buildingSnapshot = api.buildings.snapshot();
-      const allBuildings = [...buildingSnapshot.active, ...buildingSnapshot.pending];
 
-      // Count buildings by definition ID
+      // Count buildings by definition ID (iterate directly, avoid spread allocation)
       const currentCounts = new Map<string, number>();
-      for (const building of allBuildings) {
+      for (const building of buildingSnapshot.active) {
+        const count = currentCounts.get(building.definitionId) ?? 0;
+        currentCounts.set(building.definitionId, count + 1);
+      }
+      for (const building of buildingSnapshot.pending) {
         const count = currentCounts.get(building.definitionId) ?? 0;
         currentCounts.set(building.definitionId, count + 1);
       }

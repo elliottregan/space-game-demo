@@ -23,6 +23,9 @@ export class HeuristicStrategy {
   private blockedDecisions: BlockedDecision[] = [];
   private eventsOccurred: EventOccurrence[] = [];
 
+  // Per-tick cache for hasBuilding() - avoids repeated snapshot() and O(n) searches
+  private cachedBuildingIds: Set<BuildingId> | null = null;
+
   constructor(private api: GameAPI) {}
 
   /**
@@ -79,13 +82,21 @@ export class HeuristicStrategy {
 
   /**
    * Check if any building of the given type exists (active or pending).
+   * Uses per-tick cache to avoid repeated snapshot() calls and O(n) searches.
    */
   private hasBuilding(buildingId: BuildingId): boolean {
-    const buildings = this.api.buildings.snapshot();
-    return (
-      buildings.active.some((b) => b.definitionId === buildingId) ||
-      buildings.pending.some((b) => b.definitionId === buildingId)
-    );
+    // Build cache on first access per tick
+    if (!this.cachedBuildingIds) {
+      const buildings = this.api.buildings.snapshot();
+      this.cachedBuildingIds = new Set<BuildingId>();
+      for (const b of buildings.active) {
+        this.cachedBuildingIds.add(b.definitionId as BuildingId);
+      }
+      for (const b of buildings.pending) {
+        this.cachedBuildingIds.add(b.definitionId as BuildingId);
+      }
+    }
+    return this.cachedBuildingIds.has(buildingId);
   }
 
   /**
@@ -93,6 +104,9 @@ export class HeuristicStrategy {
    * Executes priority handlers in order until one takes action.
    */
   executeTick(): void {
+    // Invalidate per-tick caches
+    this.cachedBuildingIds = null;
+
     // First, ensure workers are assigned to buildings
     this.handleWorkerAssignment();
 
@@ -116,9 +130,12 @@ export class HeuristicStrategy {
     const buildings = this.api.buildings.snapshot();
     const colony = this.api.colony.snapshot({ lightweight: true });
 
+    // Build definition lookup map once - O(n) instead of O(n²) with repeated .find()
+    const defMap = new Map(buildings.definitions.map((d) => [d.id, d]));
+
     // Get buildings that need workers (active, have worker slots, not fully staffed)
     const needsWorkers = buildings.active.filter((b) => {
-      const def = buildings.definitions.find((d) => d.id === b.definitionId);
+      const def = defMap.get(b.definitionId);
       if (!def?.workerSlots) return false;
       return b.assignedWorkers.length < def.workerSlots;
     });
@@ -127,8 +144,8 @@ export class HeuristicStrategy {
 
     // Sort buildings by priority: farms first (food production), then others
     needsWorkers.sort((a, b) => {
-      const defA = buildings.definitions.find((d) => d.id === a.definitionId);
-      const defB = buildings.definitions.find((d) => d.id === b.definitionId);
+      const defA = defMap.get(a.definitionId);
+      const defB = defMap.get(b.definitionId);
       const aIsFood = defA?.production?.food ? 1 : 0;
       const bIsFood = defB?.production?.food ? 1 : 0;
       return bIsFood - aIsFood; // Food producers first
@@ -147,7 +164,7 @@ export class HeuristicStrategy {
 
     // Assign colonists to buildings
     for (const building of needsWorkers) {
-      const def = buildings.definitions.find((d) => d.id === building.definitionId);
+      const def = defMap.get(building.definitionId);
       if (!def?.workerSlots) continue;
 
       const slotsNeeded = def.workerSlots - building.assignedWorkers.length;
@@ -259,10 +276,28 @@ export class HeuristicStrategy {
     if (this.hasBuilding(BuildingId.WATER_EXTRACTOR) && waterFlow >= 0) return false;
 
     const operations = this.api.operations.snapshot();
-    const waterSites = operations.sites.filter((s) => s.resourceType === "water");
+
+    // Single pass to categorize water sites instead of multiple .find() calls
+    let developedAvailable: (typeof operations.sites)[0] | null = null;
+    let revealedUndeveloped: (typeof operations.sites)[0] | null = null;
+    let unrevealed: (typeof operations.sites)[0] | null = null;
+
+    for (const site of operations.sites) {
+      if (site.resourceType !== "water") continue;
+
+      if (site.developed && !site.linkedBuildingId && !developedAvailable) {
+        developedAvailable = site;
+      } else if (site.revealed && !site.developed && !revealedUndeveloped) {
+        revealedUndeveloped = site;
+      } else if (!site.revealed && !unrevealed) {
+        unrevealed = site;
+      }
+
+      // Early exit if we found all categories
+      if (developedAvailable && revealedUndeveloped && unrevealed) break;
+    }
 
     // Priority 1: Build water extractor on available developed deposit
-    const developedAvailable = waterSites.find((s) => s.developed && !s.linkedBuildingId);
     if (developedAvailable) {
       const canBuild = this.api.buildings.canBuild(BuildingId.WATER_EXTRACTOR);
       if (canBuild.allowed) {
@@ -275,7 +310,6 @@ export class HeuristicStrategy {
     }
 
     // Priority 2: Develop a revealed water site
-    const revealedUndeveloped = waterSites.find((s) => s.revealed && !s.developed);
     if (revealedUndeveloped) {
       const canDevelop = this.api.operations.canDevelopSite(revealedUndeveloped.id);
       if (canDevelop.allowed) {
@@ -285,7 +319,6 @@ export class HeuristicStrategy {
     }
 
     // Priority 3: Reveal an unrevealed water site
-    const unrevealed = waterSites.find((s) => !s.revealed);
     if (unrevealed) {
       const canReveal = this.api.operations.canRevealSite(unrevealed.id);
       if (canReveal.allowed) {
@@ -349,15 +382,29 @@ export class HeuristicStrategy {
 
   /**
    * Select the best event choice based on heuristics.
+   * Scores each choice once (O(n)) instead of re-scoring on each comparison (O(n²)).
    */
   private selectBestEventChoice(choices: readonly Readonly<EventChoice>[]): Readonly<EventChoice> {
-    // Score each choice and find the best one
-    // Use reduce to avoid non-null assertions
-    return choices.reduce((best, current) => {
-      const currentScore = this.scoreEventChoice(current);
-      const bestScore = this.scoreEventChoice(best);
-      return currentScore > bestScore ? current : best;
-    });
+    // Score each choice once upfront
+    // Safety: caller guarantees choices.length > 0, but we satisfy the linter
+    const firstChoice = choices[0];
+    if (!firstChoice) {
+      throw new Error("selectBestEventChoice called with empty choices array");
+    }
+    let bestChoice = firstChoice;
+    let bestScore = this.scoreEventChoice(bestChoice);
+
+    for (let i = 1; i < choices.length; i++) {
+      const choice = choices[i];
+      if (!choice) continue;
+      const score = this.scoreEventChoice(choice);
+      if (score > bestScore) {
+        bestChoice = choice;
+        bestScore = score;
+      }
+    }
+
+    return bestChoice;
   }
 
   /**
