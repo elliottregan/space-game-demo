@@ -26,6 +26,12 @@ export enum BuildingId {
   OBSERVATORY_DOME = "observatory_dome",
 }
 
+export enum BuildingPurpose {
+  Residential = "residential",
+  Industrial = "industrial",
+  Social = "social",
+}
+
 export type BuildingStatus = "pending" | "active" | "disabled" | "idle" | "recycling";
 
 export interface BuildingDefinition {
@@ -44,6 +50,8 @@ export interface BuildingDefinition {
   moraleBoost?: number; // Passive morale boost when active
   capacity?: number; // Housing capacity for habitats
   oxygenContribution?: number; // Oxygen units contributed per sol when active
+  purpose?: BuildingPurpose;
+  bondingStrength?: number; // Multiplier for relationship growth rate (default 1.0)
 }
 
 export interface Building {
