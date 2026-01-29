@@ -20,6 +20,15 @@ describe("BuildingsFacade", () => {
     return result.data.id;
   };
 
+  // Helper to unassign all workers from a building
+  const unassignAllWorkers = (buildingId: string) => {
+    const building = api.buildings.getById(buildingId);
+    if (!building) return;
+    for (const colonistId of [...building.assignedWorkers]) {
+      api.colony.unassignFromBuilding(colonistId);
+    }
+  };
+
   // ==========================================================================
   // Mode Operations tests
   // ==========================================================================
@@ -157,7 +166,6 @@ describe("BuildingsFacade", () => {
         }
       }
     });
-
   });
 
   // ==========================================================================
@@ -167,6 +175,9 @@ describe("BuildingsFacade", () => {
     it("canRepurpose returns true for valid target", () => {
       const buildingId = buildAndComplete(BuildingId.WATER_EXTRACTOR);
       expect(buildingId).not.toBeNull();
+
+      // Must unassign workers before repurposing
+      unassignAllWorkers(buildingId!);
 
       const result = api.buildings.canRepurpose(buildingId!, BuildingId.STORAGE_DEPOT);
       expect(result.allowed).toBe(true);
@@ -201,6 +212,9 @@ describe("BuildingsFacade", () => {
     it("repurpose starts repurposing", () => {
       const buildingId = buildAndComplete(BuildingId.WATER_EXTRACTOR);
       expect(buildingId).not.toBeNull();
+
+      // Must unassign workers before repurposing
+      unassignAllWorkers(buildingId!);
 
       const result = api.buildings.repurpose(buildingId!, BuildingId.STORAGE_DEPOT);
       expect(result.success).toBe(true);
@@ -376,6 +390,9 @@ describe("BuildingsFacade", () => {
     it("routes repurpose action to canRepurpose", () => {
       const buildingId = buildAndComplete(BuildingId.WATER_EXTRACTOR);
       expect(buildingId).not.toBeNull();
+
+      // Must unassign workers before repurposing
+      unassignAllWorkers(buildingId!);
 
       const result = api.buildings.canDo({
         action: "repurpose",

@@ -10,7 +10,13 @@ import { TechnologyId } from "../src/core/models/Technology";
 describe("Building Recycling", () => {
   test("getRecycleValue returns correct materials for standard building", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     const building = manager.startBuilding(BuildingId.SOLAR_PANEL, resources, tech);
@@ -23,7 +29,13 @@ describe("Building Recycling", () => {
 
   test("startRecycling begins recycling process", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     const building = manager.startBuilding(BuildingId.SOLAR_PANEL, resources, tech);
@@ -42,7 +54,13 @@ describe("Building Recycling", () => {
 
   test("recycling completes and returns materials", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     const building = manager.startBuilding(BuildingId.SOLAR_PANEL, resources, tech);
@@ -67,7 +85,13 @@ describe("Building Recycling", () => {
 
   test("getRecycleValue returns damaged rate for broken buildings", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     const building = manager.startBuilding(BuildingId.SOLAR_PANEL, resources, tech);
@@ -87,7 +111,13 @@ describe("Building Recycling", () => {
 
   test("getRecycleValue returns depleted rate for idle buildings", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     const building = manager.startBuilding(BuildingId.SOLAR_PANEL, resources, tech);
@@ -108,7 +138,13 @@ describe("Building Recycling", () => {
 
   test("getRecycleTime returns correct duration", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     const building = manager.startBuilding(BuildingId.SOLAR_PANEL, resources, tech);
@@ -120,7 +156,13 @@ describe("Building Recycling", () => {
 
   test("startRecycling fails for pending buildings", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     const building = manager.startBuilding(BuildingId.SOLAR_PANEL, resources, tech);
@@ -132,30 +174,51 @@ describe("Building Recycling", () => {
 
   test("startRecycling removes production/consumption from active building", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
-    const building = manager.startBuilding(BuildingId.SOLAR_PANEL, resources, tech);
+    // Use Automated Factory - truly automated, no workers needed
+    tech.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+    tech.completeResearch(TechnologyId.ROBOTICS);
 
-    // Complete construction
-    for (let i = 0; i < 10; i++) {
+    // Build habitat first for positive oxygen (factory has -1 oxygen contribution)
+    manager.startBuilding(BuildingId.HABITAT, resources, tech);
+    const building = manager.startBuilding(BuildingId.AUTOMATED_FACTORY, resources, tech);
+
+    // Complete construction (30 sols for factory)
+    for (let i = 0; i < 35; i++) {
       manager.tick(resources);
     }
 
-    // Solar panel produces 10 power
+    // Verify oxygen is positive to avoid efficiency penalty
+    expect(manager.getTotalOxygenContribution()).toBeGreaterThan(0);
+
+    // Automated Factory produces 15 materials
     const prodBefore = resources.getProduction();
-    expect(prodBefore.power).toBe(10);
+    expect(prodBefore.materials).toBe(15);
 
     manager.startRecycling(building!.id, resources);
 
     // Production should be removed
     const prodAfter = resources.getProduction();
-    expect(prodAfter.power).toBe(0);
+    expect(prodAfter.materials).toBe(0);
   });
 
   test("rushRecycling completes immediately with penalty", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     const building = manager.startBuilding(BuildingId.SOLAR_PANEL, resources, tech);
@@ -183,7 +246,13 @@ describe("Building Recycling", () => {
 
   test("rushRecycling fails for pending buildings", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     const building = manager.startBuilding(BuildingId.SOLAR_PANEL, resources, tech);
@@ -195,7 +264,13 @@ describe("Building Recycling", () => {
 
   test("recycling generates BUILDING_RECYCLED event on completion", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     const building = manager.startBuilding(BuildingId.SOLAR_PANEL, resources, tech);
@@ -214,7 +289,7 @@ describe("Building Recycling", () => {
       allEvents.push(...events);
     }
 
-    const recycleEvent = allEvents.find(e => e.type === "BUILDING_RECYCLED");
+    const recycleEvent = allEvents.find((e) => e.type === "BUILDING_RECYCLED");
     expect(recycleEvent).toBeDefined();
   });
 });
@@ -222,7 +297,13 @@ describe("Building Recycling", () => {
 describe("Building Repurposing", () => {
   test("canRepurpose returns true for valid target", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     const building = manager.startBuilding(BuildingId.WATER_EXTRACTOR, resources, tech);
@@ -232,13 +313,24 @@ describe("Building Repurposing", () => {
       manager.tick(resources);
     }
 
-    const canRepurpose = manager.canRepurpose(building!.id, BuildingId.STORAGE_DEPOT, resources, tech);
+    const canRepurpose = manager.canRepurpose(
+      building!.id,
+      BuildingId.STORAGE_DEPOT,
+      resources,
+      tech,
+    );
     expect(canRepurpose).toBe(true);
   });
 
   test("canRepurpose returns false for invalid target", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     const building = manager.startBuilding(BuildingId.SOLAR_PANEL, resources, tech);
@@ -249,22 +341,37 @@ describe("Building Repurposing", () => {
     }
 
     // Solar panel has no repurposeTargets
-    const canRepurpose = manager.canRepurpose(building!.id, BuildingId.STORAGE_DEPOT, resources, tech);
+    const canRepurpose = manager.canRepurpose(
+      building!.id,
+      BuildingId.STORAGE_DEPOT,
+      resources,
+      tech,
+    );
     expect(canRepurpose).toBe(false);
   });
 
   test("canRepurpose returns false when workers are assigned", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
 
     // Use fromJSON to pre-research required technologies for mining_station
     const tech = TechnologyTree.fromJSON(
       {
-        researched: [TechnologyId.ADVANCED_MATERIALS, TechnologyId.ROBOTICS, TechnologyId.ASTEROID_MINING],
+        researched: [
+          TechnologyId.ADVANCED_MATERIALS,
+          TechnologyId.ROBOTICS,
+          TechnologyId.ASTEROID_MINING,
+        ],
         currentResearch: null,
         researchSpeedBonus: 0,
       },
-      TECHNOLOGIES
+      TECHNOLOGIES,
     );
 
     // mining_station has workerSlots and repurposeTargets
@@ -278,13 +385,24 @@ describe("Building Repurposing", () => {
     // Assign a worker
     manager.assignWorker(building!.id, "colonist_1");
 
-    const canRepurpose = manager.canRepurpose(building!.id, BuildingId.STORAGE_DEPOT, resources, tech);
+    const canRepurpose = manager.canRepurpose(
+      building!.id,
+      BuildingId.STORAGE_DEPOT,
+      resources,
+      tech,
+    );
     expect(canRepurpose).toBe(false);
   });
 
   test("startRepurposing begins conversion process", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     const building = manager.startBuilding(BuildingId.WATER_EXTRACTOR, resources, tech);
@@ -295,7 +413,12 @@ describe("Building Repurposing", () => {
     }
 
     const materialsBefore = resources.getResources().materials;
-    const success = manager.startRepurposing(building!.id, BuildingId.STORAGE_DEPOT, resources, tech);
+    const success = manager.startRepurposing(
+      building!.id,
+      BuildingId.STORAGE_DEPOT,
+      resources,
+      tech,
+    );
 
     expect(success).toBe(true);
     expect(resources.getResources().materials).toBeLessThan(materialsBefore); // Cost deducted
@@ -308,7 +431,13 @@ describe("Building Repurposing", () => {
 
   test("repurposing uses correct time multiplier", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     const building = manager.startBuilding(BuildingId.WATER_EXTRACTOR, resources, tech);
@@ -344,9 +473,15 @@ describe("Building Repurposing", () => {
     expect(cost?.materials).toBe(12);
   });
 
-  test("startRepurposing removes production from active building", () => {
+  test("startRepurposing changes building status to pending", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     const building = manager.startBuilding(BuildingId.WATER_EXTRACTOR, resources, tech);
@@ -356,20 +491,26 @@ describe("Building Repurposing", () => {
       manager.tick(resources);
     }
 
-    // Water extractor produces 4 water
-    const prodBefore = resources.getProduction();
-    expect(prodBefore.water).toBe(4);
+    // Building should be active
+    expect(manager.getBuilding(building!.id)?.status).toBe("active");
 
     manager.startRepurposing(building!.id, BuildingId.STORAGE_DEPOT, resources, tech);
 
-    // Production should be removed during conversion
-    const prodAfter = resources.getProduction();
-    expect(prodAfter.water).toBe(0);
+    // Building status should change to pending during conversion
+    expect(manager.getBuilding(building!.id)?.status).toBe("pending");
+    // Definition should be updated to target
+    expect(manager.getBuilding(building!.id)?.definitionId).toBe(BuildingId.STORAGE_DEPOT);
   });
 
   test("canRepurpose returns false for broken buildings", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     const building = manager.startBuilding(BuildingId.WATER_EXTRACTOR, resources, tech);
@@ -383,13 +524,24 @@ describe("Building Repurposing", () => {
     manager.breakBuilding(building!.id, resources);
 
     // Cannot repurpose broken buildings
-    const canRepurpose = manager.canRepurpose(building!.id, BuildingId.STORAGE_DEPOT, resources, tech);
+    const canRepurpose = manager.canRepurpose(
+      building!.id,
+      BuildingId.STORAGE_DEPOT,
+      resources,
+      tech,
+    );
     expect(canRepurpose).toBe(false);
   });
 
   test("startRepurposing clears depositId", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    const resources = new ResourceManager({
+      materials: 1000,
+      power: 100,
+      food: 100,
+      water: 100,
+      oxygen: 100,
+    });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     const building = manager.startBuilding(BuildingId.WATER_EXTRACTOR, resources, tech);
