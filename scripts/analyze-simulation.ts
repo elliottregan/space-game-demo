@@ -2,8 +2,10 @@
 // scripts/analyze-simulation.ts
 // Detailed simulation analysis tool for extracting insights from Monte Carlo runs
 
+import { availableParallelism } from "node:os";
 import { GameAPI } from "../src/facade/GameAPI";
 import { HeuristicStrategy } from "../src/simulation/HeuristicStrategy";
+import type { WorkerInput, WorkerOutput } from "../src/simulation/simulation.worker";
 import type {
   SimulationConfig,
   RunResult,
@@ -357,6 +359,115 @@ function detectCohesionCrisis(sol: number, cohesion: number, crisisTimeline: Cri
       });
     }
   }
+}
+
+/**
+ * Get the number of worker threads to use.
+ */
+function getWorkerCount(): number {
+  const cpus = availableParallelism();
+  return Math.max(1, cpus);
+}
+
+/**
+ * Distribute seeds across workers as evenly as possible.
+ */
+function distributeSeedsToWorkers(seeds: number[], workerCount: number): number[][] {
+  const batches: number[][] = Array.from({ length: workerCount }, () => []);
+  for (let i = 0; i < seeds.length; i++) {
+    batches[i % workerCount]!.push(seeds[i]!);
+  }
+  return batches.filter((batch) => batch.length > 0);
+}
+
+/**
+ * Run simulations in parallel using worker threads.
+ */
+async function runSimulationsParallel(
+  runs: number,
+  seed: number,
+  onProgress?: (completed: number, total: number) => void,
+): Promise<RunResult[]> {
+  const workerCount = getWorkerCount();
+
+  // Generate all seeds
+  const seeds: number[] = [];
+  for (let i = 0; i < runs; i++) {
+    seeds.push(seed + i);
+  }
+
+  // For very small runs, use sequential execution
+  if (runs <= 4 || workerCount === 1) {
+    const results: RunResult[] = [];
+    for (let i = 0; i < runs; i++) {
+      results.push(runSingleGame(seed + i));
+      if (onProgress && (i + 1) % 10 === 0) {
+        onProgress(i + 1, runs);
+      }
+    }
+    return results;
+  }
+
+  // Distribute seeds across workers
+  const seedBatches = distributeSeedsToWorkers(seeds, workerCount);
+
+  // Track progress across all workers
+  const progressByWorker = new Map<number, { completed: number; total: number }>();
+
+  // Create and run workers
+  const workerPromises = seedBatches.map((batch, index) => {
+    return new Promise<RunResult[]>((resolve, reject) => {
+      const worker = new Worker(
+        new URL("../src/simulation/simulation.worker.ts", import.meta.url).href,
+      );
+
+      worker.onmessage = (event: MessageEvent<WorkerOutput>) => {
+        const data = event.data;
+
+        if (data.type === "progress" && onProgress) {
+          progressByWorker.set(data.workerId!, {
+            completed: data.completed!,
+            total: data.total!,
+          });
+
+          // Calculate total progress
+          let totalCompleted = 0;
+          for (const progress of progressByWorker.values()) {
+            totalCompleted += progress.completed;
+          }
+
+          onProgress(totalCompleted, runs);
+        }
+
+        if (data.type === "results") {
+          worker.terminate();
+          resolve(data.results!);
+        }
+      };
+
+      worker.onerror = (error) => {
+        worker.terminate();
+        reject(error);
+      };
+
+      // Send work to worker
+      const input: WorkerInput = {
+        type: "run",
+        seeds: batch,
+        workerId: index,
+      };
+      worker.postMessage(input);
+    });
+  });
+
+  // Wait for all workers to complete
+  const resultBatches = await Promise.all(workerPromises);
+
+  // Flatten results while preserving seed order
+  const allResults = resultBatches.flat();
+  allResults.sort((a, b) => a.seed - b.seed);
+
+  return allResults;
 }
 
 // Module-level output capture for logging
@@ -877,16 +988,19 @@ async function main(): Promise<void> {
     quietMode = true;
   }
 
+  const workerCount = getWorkerCount();
   output(`Running ${runs} simulations for detailed analysis (seed: ${seed})...`);
+  output(`Using ${workerCount} parallel workers`);
   output();
 
-  const results: RunResult[] = [];
-  for (let i = 0; i < runs; i++) {
-    results.push(runSingleGame(seed + i));
-    if ((i + 1) % 50 === 0) {
-      output(`  Progress: ${i + 1}/${runs}`);
+  let lastReportedProgress = 0;
+  const results = await runSimulationsParallel(runs, seed, (completed, total) => {
+    // Report progress every 50 runs
+    if (completed - lastReportedProgress >= 50 || completed === total) {
+      output(`  Progress: ${completed}/${total}`);
+      lastReportedProgress = completed;
     }
-  }
+  });
 
   // === ANALYSIS ===
   output("\n" + "=".repeat(60));

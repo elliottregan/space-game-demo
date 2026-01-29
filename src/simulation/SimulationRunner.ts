@@ -1,10 +1,12 @@
 // src/simulation/SimulationRunner.ts
 // Orchestrates Monte Carlo simulation runs for playtest analysis
 
+import { availableParallelism } from "node:os";
 import { rng } from "../core/utils/random";
 import { GameAPI } from "../facade/GameAPI";
 import { HeuristicStrategy } from "./HeuristicStrategy";
 import { MetricsCollector } from "./MetricsCollector";
+import type { WorkerInput, WorkerOutput } from "./simulation.worker";
 import type {
   AggregateStats,
   CrisisPoint,
@@ -57,6 +59,27 @@ function mapToRecord<V>(map: Map<string, V>): Record<string, V> {
 export interface SimulationResults {
   stats: AggregateStats;
   runs: RunResult[];
+}
+
+/**
+ * Get the number of worker threads to use.
+ * Uses available parallelism minus 1 to leave headroom, with a minimum of 1.
+ */
+function getWorkerCount(): number {
+  const cpus = availableParallelism();
+  // Use all available CPUs for simulation workloads
+  return Math.max(1, cpus);
+}
+
+/**
+ * Distribute seeds across workers as evenly as possible.
+ */
+function distributeSeedsToWorkers(seeds: number[], workerCount: number): number[][] {
+  const batches: number[][] = Array.from({ length: workerCount }, () => []);
+  for (let i = 0; i < seeds.length; i++) {
+    batches[i % workerCount]!.push(seeds[i]!);
+  }
+  return batches.filter((batch) => batch.length > 0);
 }
 
 /**
@@ -117,6 +140,103 @@ export class SimulationRunner {
    */
   getRunResults(): readonly RunResult[] {
     return this.collector?.getResults() ?? [];
+  }
+
+  /**
+   * Run all simulations in parallel using worker threads.
+   * This is significantly faster for large numbers of runs.
+   * @returns Promise resolving to full simulation results including stats and all run data
+   */
+  async runParallel(): Promise<SimulationResults> {
+    const workerCount = getWorkerCount();
+
+    // For small runs or single worker, use sequential execution
+    if (this.config.runs <= 4 || workerCount === 1) {
+      return this.runWithDetails();
+    }
+
+    // Generate all seeds
+    const seeds: number[] = [];
+    for (let i = 0; i < this.config.runs; i++) {
+      seeds.push(this.config.seed !== undefined ? this.config.seed + i : i);
+    }
+
+    // Distribute seeds across workers
+    const seedBatches = distributeSeedsToWorkers(seeds, workerCount);
+    const actualWorkerCount = seedBatches.length;
+
+    if (this.config.verbose) {
+      console.log(`Running ${this.config.runs} simulations across ${actualWorkerCount} workers...`);
+    }
+
+    // Track progress across all workers
+    const progressByWorker = new Map<number, { completed: number; total: number }>();
+
+    // Create and run workers
+    const workerPromises = seedBatches.map((batch, index) => {
+      return new Promise<RunResult[]>((resolve, reject) => {
+        const worker = new Worker(new URL("./simulation.worker.ts", import.meta.url).href);
+
+        worker.onmessage = (event: MessageEvent<WorkerOutput>) => {
+          const data = event.data;
+
+          if (data.type === "progress" && this.config.verbose) {
+            progressByWorker.set(data.workerId!, {
+              completed: data.completed!,
+              total: data.total!,
+            });
+
+            // Calculate total progress
+            let totalCompleted = 0;
+            let totalTotal = 0;
+            for (const progress of progressByWorker.values()) {
+              totalCompleted += progress.completed;
+              totalTotal += progress.total;
+            }
+
+            const pct = ((totalCompleted / this.config.runs) * 100).toFixed(0);
+            console.log(`[${pct}%] ${totalCompleted}/${this.config.runs} runs completed`);
+          }
+
+          if (data.type === "results") {
+            worker.terminate();
+            resolve(data.results!);
+          }
+        };
+
+        worker.onerror = (error) => {
+          worker.terminate();
+          reject(error);
+        };
+
+        // Send work to worker
+        const input: WorkerInput = {
+          type: "run",
+          seeds: batch,
+          workerId: index,
+        };
+        worker.postMessage(input);
+      });
+    });
+
+    // Wait for all workers to complete
+    const resultBatches = await Promise.all(workerPromises);
+
+    // Flatten results while preserving seed order
+    const allResults = resultBatches.flat();
+    // Sort by seed to maintain deterministic order
+    allResults.sort((a, b) => a.seed - b.seed);
+
+    // Aggregate stats
+    this.collector = new MetricsCollector();
+    for (const result of allResults) {
+      this.collector.recordRun(result);
+    }
+
+    return {
+      stats: this.collector.getStats(),
+      runs: allResults,
+    };
   }
 
   /**
