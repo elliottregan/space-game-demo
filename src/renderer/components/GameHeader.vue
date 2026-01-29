@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { setTheme, type Theme, useTheme } from "../composables/useTheme";
 import { gameService } from "../services/GameService";
 import { GButton } from "../ui";
+import NewGameModal from "./NewGameModal.vue";
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const state = gameService.getState();
@@ -23,9 +24,16 @@ function advanceOneSol() {
   gameService.advanceTurn(1);
 }
 
+const showNewGameModal = ref(false);
+
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-function newGame() {
-  gameService.newGame();
+function openNewGameModal() {
+  showNewGameModal.value = true;
+}
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function closeNewGameModal() {
+  showNewGameModal.value = false;
 }
 
 const { theme } = useTheme();
@@ -73,9 +81,10 @@ function cycleTheme() {
       >
         +10 Sols
       </GButton>
-      <GButton variant="secondary" @click="newGame">New Game</GButton>
+      <GButton variant="secondary" @click="openNewGameModal">New Game</GButton>
     </div>
   </header>
+  <NewGameModal v-if="showNewGameModal" @close="closeNewGameModal" />
 </template>
 
 <style scoped>
