@@ -130,8 +130,8 @@ export class SimulationRunner {
     // Create strategy for decision making
     const strategy = new HeuristicStrategy(api);
 
-    // Initialize tracking
-    let peakPopulation = api.colony.snapshot().population;
+    // Initialize tracking - use lightweight snapshots to skip expensive calculations
+    let peakPopulation = api.colony.snapshot({ lightweight: true }).population;
     const buildingsBuiltMap = new Map<string, number>();
     const techsResearchedSet = new Set<string>();
 
@@ -141,7 +141,10 @@ export class SimulationRunner {
     const crisisTimeline: CrisisPoint[] = [];
     const buildingFirstBuiltSol = new Map<string, number>();
     const techCompletedSol = new Map<string, number>();
-    let previousPopulation = api.colony.snapshot().population;
+    let previousPopulation = api.colony.snapshot({ lightweight: true }).population;
+
+    // Track last crisis of each type for O(1) lookup (optimization)
+    const lastCrisisOfType = new Map<CrisisType, CrisisPoint>();
 
     // Track initial researched techs (should be none at start)
     for (const tech of api.technology.snapshot().researched) {
@@ -169,7 +172,7 @@ export class SimulationRunner {
       solsRun++;
 
       const currentSol = api.game.currentSol();
-      const colony = api.colony.snapshot();
+      const colony = api.colony.snapshot({ lightweight: true });
       const resources = api.resources.snapshot();
 
       // Update peak population tracking
@@ -194,10 +197,21 @@ export class SimulationRunner {
       previousPopulation = currentPop;
 
       // Detect and record crisis conditions
-      this.detectCrisis(currentSol, resources.current, colony.morale, crisisTimeline);
+      this.detectCrisis(
+        currentSol,
+        resources.current,
+        colony.morale,
+        crisisTimeline,
+        lastCrisisOfType,
+      );
 
       // Detect social cohesion crisis
-      this.detectCohesionCrisis(currentSol, colony.socialCohesion, crisisTimeline);
+      this.detectCohesionCrisis(
+        currentSol,
+        colony.socialCohesion,
+        crisisTimeline,
+        lastCrisisOfType,
+      );
 
       // Take periodic snapshots
       if (currentSol % SNAPSHOT_INTERVAL === 0) {
@@ -275,7 +289,7 @@ export class SimulationRunner {
     if (victoryState.status !== "victory") {
       defeatSol = finalSol;
       const resources = api.resources.snapshot();
-      const colony = api.colony.snapshot();
+      const colony = api.colony.snapshot({ lightweight: true });
       const isolatedCount = colony.colonists.filter(
         (c) => !colony.coworkerRelationships.has(c.id),
       ).length;
@@ -322,12 +336,14 @@ export class SimulationRunner {
 
   /**
    * Detect crisis conditions and record them.
+   * Uses lastCrisisOfType map for O(1) lookup instead of filtering array.
    */
   private detectCrisis(
     sol: number,
     resources: { food: number; oxygen: number; water: number },
     morale: number,
     crisisTimeline: CrisisPoint[],
+    lastCrisisOfType: Map<CrisisType, CrisisPoint>,
   ): void {
     const checkResource = (
       type: CrisisType,
@@ -346,14 +362,16 @@ export class SimulationRunner {
       }
 
       if (severity) {
-        // Only record if this is a new crisis or escalation
-        const lastCrisis = crisisTimeline.filter((c) => c.type === type).pop();
+        // Only record if this is a new crisis or escalation (O(1) lookup)
+        const lastCrisis = lastCrisisOfType.get(type);
         if (
           !lastCrisis ||
           lastCrisis.sol < sol - 10 ||
           (lastCrisis.severity === "warning" && severity === "critical")
         ) {
-          crisisTimeline.push({ sol, type, severity, value, threshold });
+          const crisis: CrisisPoint = { sol, type, severity, value, threshold };
+          crisisTimeline.push(crisis);
+          lastCrisisOfType.set(type, crisis);
         }
       }
     };
@@ -366,11 +384,13 @@ export class SimulationRunner {
 
   /**
    * Detect social cohesion crisis conditions.
+   * Uses lastCrisisOfType map for O(1) lookup instead of filtering array.
    */
   private detectCohesionCrisis(
     sol: number,
     cohesion: number,
     crisisTimeline: CrisisPoint[],
+    lastCrisisOfType: Map<CrisisType, CrisisPoint>,
   ): void {
     let severity: CrisisSeverity | null = null;
     let threshold = 0;
@@ -384,19 +404,21 @@ export class SimulationRunner {
     }
 
     if (severity) {
-      const lastCrisis = crisisTimeline.filter((c) => c.type === "low_cohesion").pop();
+      const lastCrisis = lastCrisisOfType.get("low_cohesion");
       if (
         !lastCrisis ||
         lastCrisis.sol < sol - 10 ||
         (lastCrisis.severity === "warning" && severity === "critical")
       ) {
-        crisisTimeline.push({
+        const crisis: CrisisPoint = {
           sol,
           type: "low_cohesion",
           severity,
           value: cohesion,
           threshold,
-        });
+        };
+        crisisTimeline.push(crisis);
+        lastCrisisOfType.set("low_cohesion", crisis);
       }
     }
   }
