@@ -228,6 +228,79 @@ Colonists spawn with 1-2 random skills:
 | **Calm Under Pressure** | +10% | Engineering, Research |
 | **Homebody** | +10% | Farming, Civil Science |
 
+### Social Networks
+
+Colonists form social bonds through shared experiences. These relationships affect morale, information flow, and colony cohesion.
+
+#### Relationship Types
+
+| Relationship | How Formed | Bonding Rate |
+|--------------|------------|--------------|
+| **Coworkers** | Same workplace | Base rate |
+| **Housemates** | Same housing | Base rate |
+| **Guild Members** | Same guild | +25% faster |
+| **Cohort** | Arrived within 10 sols | +50% faster |
+
+Relationships strengthen over time through interaction. Colonists who work together or live together develop bonds that boost morale and productivity.
+
+#### Cohort Effect
+
+Colonists who arrive at the colony within the same 10-sol window form a **cohort**. Cohort members:
+- Bond 50% faster with each other
+- Start with a 5% initial relationship bonus
+- Tend to form tight-knit social groups
+
+Immigration events bring colonists who share this cohort bond, making integration easier.
+
+#### Preferential Attachment
+
+Popular colonists attract more connections. This "rich get richer" dynamic means:
+- Colonists with many connections are more likely to form new ones
+- Social hubs emerge naturally in your colony
+- New colonists are drawn to well-connected individuals
+
+This creates natural social leaders who can influence colony morale.
+
+#### Weak Ties & Bridge Colonists
+
+Not all relationships are equally strong. **Weak ties** (relationships below 30% strength) serve a special purpose:
+
+- Weak ties connect otherwise separate social groups
+- **Bridge colonists** span different cliques, spreading information
+- Bridge colonists receive small morale bonuses for their social role
+
+Granovetter's "strength of weak ties" theory: weak connections often provide more novel information than strong ones, as they connect you to different social circles.
+
+#### Guilds
+
+Colonists can join formal groups called **guilds**:
+
+| Guild Type | Purpose |
+|------------|---------|
+| **Professional** | Work-related expertise sharing |
+| **Social** | Recreation and friendship |
+| **Research** | Scientific collaboration |
+| **Civic** | Colony governance and policy |
+
+Guild mechanics:
+- Maximum 3 guild memberships per colonist
+- Guilds require 2-8 members
+- Guild members bond 25% faster
+- Shared guild membership provides 8% initial relationship bonus
+
+Guilds create cross-workplace connections, helping information and morale spread across your colony.
+
+#### Viewing Social Networks
+
+The **Colony View** includes a social network graph showing:
+- **Nodes**: Colonists (colored by role)
+- **Links**: Relationships (colored by type)
+- **Badges**: Guild membership count
+- **Rings**: Bridge colonist indicator (dashed purple)
+- **Line styles**: Solid = strong, dotted = weak tie
+
+Use this visualization to identify social hubs, isolated colonists, and bridge individuals who connect different groups.
+
 ---
 
 ## Technology

@@ -131,3 +131,69 @@ export interface FactionDemand {
   /** Project IDs that would satisfy this demand */
   projectIds: ProjectId[];
 }
+
+/**
+ * Represents a disconnection event between two NPCs in the political network.
+ */
+export interface NetworkDisconnection {
+  /** NPC who lost influence over the other */
+  sourceId: NPCId;
+  /** NPC who is no longer influenced by the source */
+  targetId: NPCId;
+  /** Sol when the disconnection occurred */
+  occurredAt: number;
+  /** The relationship weight before disconnection */
+  previousWeight: number;
+}
+
+/**
+ * Represents a connected component (group) of NPCs in the political network.
+ */
+export interface NetworkComponent {
+  /** NPCs in this connected component */
+  memberIds: NPCId[];
+  /** Factions represented in this component */
+  factions: NPCFaction[];
+}
+
+/**
+ * Tracks the last interaction between two NPCs for relationship maintenance.
+ */
+export interface RelationshipInteraction {
+  /** Sol when the last meaningful interaction occurred */
+  lastInteractionSol: number;
+  /** Type of the last interaction */
+  interactionType: InteractionType;
+}
+
+/**
+ * Types of interactions that can refresh relationship maintenance.
+ */
+export enum InteractionType {
+  /** NPCs voted on the same side of a project */
+  SHARED_VOTE = "shared_vote",
+  /** NPCs joined the same council */
+  COUNCIL_MEMBERSHIP = "council_membership",
+  /** One NPC lobbied in favor of the other's position */
+  LOBBYING = "lobbying",
+  /** Connection formed through triadic closure */
+  TRIADIC_CLOSURE = "triadic_closure",
+  /** Initial relationship from game start */
+  INITIAL = "initial",
+}
+
+/**
+ * Represents a new connection formed through triadic closure.
+ */
+export interface TriadicClosureEvent {
+  /** NPC A who now has a new connection */
+  npcA: NPCId;
+  /** NPC C who A is now connected to */
+  npcC: NPCId;
+  /** NPC B who bridged the connection */
+  bridgeNpc: NPCId;
+  /** Sol when the closure occurred */
+  occurredAt: number;
+  /** Initial weight of the new connection */
+  initialWeight: number;
+}

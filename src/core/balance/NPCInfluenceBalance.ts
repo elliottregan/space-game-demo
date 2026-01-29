@@ -106,3 +106,48 @@ export const PROJECT_PASS_SUPPORT_BOOST = 0.3;
 
 /** Minimum sols before political pressure begins */
 export const POLITICAL_PRESSURE_START_SOL = 100;
+
+// ============ Network Disconnection System ============
+
+/** Rate at which relationship weights decay per sol (applied after POLITICAL_PRESSURE_START_SOL) */
+export const RELATIONSHIP_DECAY_RATE = 0.002;
+
+/** Multiplier for cross-faction relationship decay (cross-faction connections decay faster) */
+export const CROSS_FACTION_DECAY_MULTIPLIER = 1.5;
+
+/** Threshold below which connections are severed (set to 0) */
+export const DISCONNECTION_THRESHOLD = 0.05;
+
+/** Relationship penalty applied to NPCs who voted on opposing sides of a project */
+export const OPPOSING_VOTE_RELATIONSHIP_PENALTY = 0.05;
+
+/** Minimum relationship strength to prevent further decay (floor for same-faction members) */
+export const SAME_FACTION_RELATIONSHIP_FLOOR = 0.1;
+
+// ============ Triadic Closure System ============
+
+/** Probability per tick that an open triad will close (A→B, B→C creates A→C) */
+export const TRIADIC_CLOSURE_PROBABILITY = 0.02;
+
+/** Initial weight for newly formed triadic connections */
+export const TRIADIC_CLOSURE_INITIAL_WEIGHT = 0.15;
+
+/** Minimum combined weight of A→B and B→C for triadic closure to occur */
+export const TRIADIC_CLOSURE_THRESHOLD = 0.4;
+
+/** Multiplier for triadic closure probability when NPCs share a faction */
+export const SAME_FACTION_CLOSURE_MULTIPLIER = 2.0;
+
+// ============ Relationship Maintenance System ============
+
+/** Sols after which a relationship is considered "unmaintained" */
+export const RELATIONSHIP_STALE_THRESHOLD = 30;
+
+/** Multiplier for decay rate on unmaintained relationships */
+export const UNMAINTAINED_DECAY_MULTIPLIER = 2.0;
+
+/** Relationship boost when NPCs vote on the same side of a project */
+export const SHARED_VOTE_RELATIONSHIP_BOOST = 0.03;
+
+/** How much interaction refreshes the maintenance timer (in sols) */
+export const INTERACTION_REFRESH_AMOUNT = 30;

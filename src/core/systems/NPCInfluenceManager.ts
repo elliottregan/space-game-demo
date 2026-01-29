@@ -3,20 +3,33 @@
 import {
   COUNCIL_CREATION_COST,
   COUNCIL_RELATIONSHIP_BOOST,
+  CROSS_FACTION_DECAY_MULTIPLIER,
   DEMAND_DEADLINE,
   DEMAND_THRESHOLD,
+  DISCONNECTION_THRESHOLD,
   DRIFT_RATE,
   FACTION_SUPPORT_DECAY_RATE,
   FAILURE_TRANSMISSION_PENALTY,
   IGNORED_DEMAND_DECAY_MULTIPLIER,
+  INTERACTION_REFRESH_AMOUNT,
   LOBBY_BASE_COST,
   LOBBY_SUPPORT_BOOST,
+  OPPOSING_VOTE_RELATIONSHIP_PENALTY,
   PASS_THRESHOLD,
   POLITICAL_PRESSURE_START_SOL,
   PROJECT_PASS_SUPPORT_BOOST,
   PROJECT_VOTE_DELAY,
+  RELATIONSHIP_DECAY_RATE,
+  RELATIONSHIP_STALE_THRESHOLD,
+  SAME_FACTION_CLOSURE_MULTIPLIER,
+  SAME_FACTION_RELATIONSHIP_FLOOR,
+  SHARED_VOTE_RELATIONSHIP_BOOST,
   SUCCESS_TRANSMISSION_BOOST,
   TRANSMISSION_FACTORS,
+  TRIADIC_CLOSURE_INITIAL_WEIGHT,
+  TRIADIC_CLOSURE_PROBABILITY,
+  TRIADIC_CLOSURE_THRESHOLD,
+  UNMAINTAINED_DECAY_MULTIPLIER,
 } from "../balance/NPCInfluenceBalance";
 import type { GameEvent } from "../models/GameEvent";
 import {
@@ -24,12 +37,17 @@ import {
   ALL_FACTIONS,
   type Council,
   type FactionDemand,
+  InteractionType,
+  type NetworkComponent,
+  type NetworkDisconnection,
   type NPC,
   NPCFaction,
   NPCId,
   type Project,
   ProjectId,
   type ProjectType,
+  type RelationshipInteraction,
+  type TriadicClosureEvent,
 } from "../models/NPCInfluence";
 import type { ResourceDelta } from "../models/Resources";
 import { updateSupport } from "../utils/matrix";
@@ -47,6 +65,11 @@ export class NPCInfluenceManager {
   private activeProject: ActiveProject | null = null;
   private npcSupport: Map<NPCId, number> = new Map();
   private activeDemands: FactionDemand[] = [];
+  private disconnectionHistory: NetworkDisconnection[] = [];
+  /** Tracks last interaction time for each relationship edge (key: "sourceId:targetId") */
+  private interactionTracker: Map<string, RelationshipInteraction> = new Map();
+  /** History of triadic closure events */
+  private triadicClosureHistory: TriadicClosureEvent[] = [];
 
   /** Mutable transmission factors (modified by project outcomes) */
   private transmissionFactors: Record<ProjectType, Record<NPCFaction, Record<NPCFaction, number>>>;
@@ -89,6 +112,12 @@ export class NPCInfluenceManager {
         // So if "fromId:toId" means fromId influences toId, we set W[toIdx][fromIdx]
         const row = matrix[toIdx] as number[];
         row[fromIdx] = weight;
+
+        // Initialize interaction tracker for this relationship
+        this.interactionTracker.set(key, {
+          lastInteractionSol: 0, // Initial relationships start fresh
+          interactionType: InteractionType.INITIAL,
+        });
       }
     }
 
@@ -250,7 +279,12 @@ export class NPCInfluenceManager {
    * Create a council that permanently boosts relationships between members.
    * @returns true if council created successfully
    */
-  createCouncil(name: string, memberIds: NPCId[], resources: ResourceManager): boolean {
+  createCouncil(
+    name: string,
+    memberIds: NPCId[],
+    resources: ResourceManager,
+    currentSol: number = 0,
+  ): boolean {
     const cost: ResourceDelta = { materials: COUNCIL_CREATION_COST };
 
     if (!resources.canAfford(cost)) {
@@ -279,6 +313,9 @@ export class NPCInfluenceManager {
           if (row) {
             row[idx2] = Math.min(1.0, (row[idx2] ?? 0) + COUNCIL_RELATIONSHIP_BOOST);
           }
+
+          // Record the interaction for relationship maintenance
+          this.recordInteraction(id2, id1, currentSol, InteractionType.COUNCIL_MEMBERSHIP);
         }
       }
     }
@@ -293,6 +330,717 @@ export class NPCInfluenceManager {
     this.councils.push(council);
 
     return true;
+  }
+
+  // ============ Dynamic Network Management ============
+
+  /**
+   * Add a new NPC to the political network.
+   * The new NPC starts with no connections unless initialRelationships are provided.
+   * @param npc The NPC to add
+   * @param initialRelationships Optional relationships in format "fromId:toId" -> weight
+   * @returns true if NPC was added, false if NPC ID already exists
+   */
+  addNPC(npc: NPC, initialRelationships?: Record<string, number>): boolean {
+    // Check if NPC ID already exists
+    if (this.npcIndex.has(npc.id)) {
+      return false;
+    }
+
+    const newIndex = this.npcs.length;
+
+    // Add to NPC list and index
+    this.npcs.push(npc);
+    this.npcIndex.set(npc.id, newIndex);
+
+    // Initialize support for the new NPC
+    this.npcSupport.set(npc.id, 0);
+
+    // Expand relationship matrix: add a new row and extend all existing rows
+    const N = this.npcs.length;
+
+    // Add new column to all existing rows
+    for (let i = 0; i < N - 1; i++) {
+      const row = this.relationshipMatrix[i];
+      if (row) {
+        row.push(0);
+      }
+    }
+
+    // Add new row for the new NPC
+    this.relationshipMatrix.push(new Array(N).fill(0));
+
+    // Apply initial relationships if provided
+    if (initialRelationships) {
+      for (const [key, weight] of Object.entries(initialRelationships)) {
+        const [fromId, toId] = key.split(":");
+        if (!fromId || !toId) continue;
+
+        const fromIdx = this.npcIndex.get(fromId as NPCId);
+        const toIdx = this.npcIndex.get(toId as NPCId);
+
+        if (fromIdx !== undefined && toIdx !== undefined) {
+          // W[i][j] = influence from j to i
+          const row = this.relationshipMatrix[toIdx];
+          if (row) {
+            row[fromIdx] = weight;
+          }
+        }
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Remove an NPC from the political network.
+   * This will also remove all their relationships and update the matrix.
+   * @param npcId The ID of the NPC to remove
+   * @returns true if NPC was removed, false if NPC not found
+   */
+  removeNPC(npcId: NPCId): boolean {
+    const idx = this.npcIndex.get(npcId);
+    if (idx === undefined) {
+      return false;
+    }
+
+    // Remove from NPC list
+    this.npcs.splice(idx, 1);
+
+    // Remove from support tracking
+    this.npcSupport.delete(npcId);
+
+    // Remove row from relationship matrix
+    this.relationshipMatrix.splice(idx, 1);
+
+    // Remove column from all remaining rows
+    for (const row of this.relationshipMatrix) {
+      row.splice(idx, 1);
+    }
+
+    // Rebuild the index map
+    this.npcIndex.clear();
+    this.npcs.forEach((npc, i) => this.npcIndex.set(npc.id, i));
+
+    // Update any active project support levels
+    if (this.activeProject) {
+      this.activeProject.supportLevels.delete(npcId);
+    }
+
+    // Remove from councils
+    for (const council of this.councils) {
+      const memberIdx = council.memberIds.indexOf(npcId);
+      if (memberIdx !== -1) {
+        council.memberIds.splice(memberIdx, 1);
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Establish or strengthen a connection between two NPCs.
+   * @param sourceId The NPC providing influence
+   * @param targetId The NPC receiving influence
+   * @param weight The connection weight (0-1)
+   * @returns true if connection was established, false if either NPC not found
+   */
+  setRelationship(sourceId: NPCId, targetId: NPCId, weight: number): boolean {
+    const sourceIdx = this.npcIndex.get(sourceId);
+    const targetIdx = this.npcIndex.get(targetId);
+
+    if (sourceIdx === undefined || targetIdx === undefined) {
+      return false;
+    }
+
+    // W[i][j] = influence from j to i
+    const row = this.relationshipMatrix[targetIdx];
+    if (!row) return false;
+
+    row[sourceIdx] = Math.max(0, Math.min(1, weight));
+    return true;
+  }
+
+  /**
+   * Strengthen an existing relationship between two NPCs.
+   * @param sourceId The NPC providing influence
+   * @param targetId The NPC receiving influence
+   * @param amount The amount to increase the weight by
+   * @returns true if relationship was strengthened, false if either NPC not found
+   */
+  strengthenRelationship(sourceId: NPCId, targetId: NPCId, amount: number): boolean {
+    const sourceIdx = this.npcIndex.get(sourceId);
+    const targetIdx = this.npcIndex.get(targetId);
+
+    if (sourceIdx === undefined || targetIdx === undefined) {
+      return false;
+    }
+
+    const row = this.relationshipMatrix[targetIdx];
+    if (!row) return false;
+
+    const currentWeight = row[sourceIdx] ?? 0;
+    row[sourceIdx] = Math.min(1, currentWeight + amount);
+    return true;
+  }
+
+  /**
+   * Get all NPCs that have a connection to or from the specified NPC.
+   * @param npcId The NPC to find neighbors for
+   * @returns Array of NPC IDs that are connected to the specified NPC
+   */
+  getNeighbors(npcId: NPCId): NPCId[] {
+    const idx = this.npcIndex.get(npcId);
+    if (idx === undefined) return [];
+
+    const neighbors = new Set<NPCId>();
+    const N = this.npcs.length;
+
+    for (let i = 0; i < N; i++) {
+      if (i === idx) continue;
+
+      const npc = this.npcs[i];
+      if (!npc) continue;
+
+      // Check if idx influences i (row i, column idx)
+      const rowI = this.relationshipMatrix[i];
+      if (rowI && (rowI[idx] ?? 0) > 0) {
+        neighbors.add(npc.id);
+      }
+
+      // Check if i influences idx (row idx, column i)
+      const rowIdx = this.relationshipMatrix[idx];
+      if (rowIdx && (rowIdx[i] ?? 0) > 0) {
+        neighbors.add(npc.id);
+      }
+    }
+
+    return Array.from(neighbors);
+  }
+
+  /**
+   * Get all relationships for a specific NPC.
+   * @param npcId The NPC to get relationships for
+   * @returns Object with incoming and outgoing relationship maps
+   */
+  getRelationships(npcId: NPCId): {
+    incoming: Map<NPCId, number>;
+    outgoing: Map<NPCId, number>;
+  } {
+    const idx = this.npcIndex.get(npcId);
+    const incoming = new Map<NPCId, number>();
+    const outgoing = new Map<NPCId, number>();
+
+    if (idx === undefined) {
+      return { incoming, outgoing };
+    }
+
+    const N = this.npcs.length;
+
+    for (let i = 0; i < N; i++) {
+      if (i === idx) continue;
+
+      const npc = this.npcs[i];
+      if (!npc) continue;
+
+      // Incoming: influence from npc to npcId (row idx, column i)
+      const rowIdx = this.relationshipMatrix[idx];
+      const inWeight = rowIdx?.[i] ?? 0;
+      if (inWeight > 0) {
+        incoming.set(npc.id, inWeight);
+      }
+
+      // Outgoing: influence from npcId to npc (row i, column idx)
+      const rowI = this.relationshipMatrix[i];
+      const outWeight = rowI?.[idx] ?? 0;
+      if (outWeight > 0) {
+        outgoing.set(npc.id, outWeight);
+      }
+    }
+
+    return { incoming, outgoing };
+  }
+
+  // ============ Network Disconnection System ============
+
+  /**
+   * Get the relationship weight between two NPCs.
+   * @returns The weight of influence from sourceId to targetId, or 0 if no connection
+   */
+  getRelationshipWeight(sourceId: NPCId, targetId: NPCId): number {
+    const sourceIdx = this.npcIndex.get(sourceId);
+    const targetIdx = this.npcIndex.get(targetId);
+    if (sourceIdx === undefined || targetIdx === undefined) return 0;
+
+    // W[i][j] = influence from j to i, so W[targetIdx][sourceIdx]
+    const row = this.relationshipMatrix[targetIdx];
+    return row?.[sourceIdx] ?? 0;
+  }
+
+  /**
+   * Get all disconnection events that have occurred.
+   */
+  getDisconnectionHistory(): readonly NetworkDisconnection[] {
+    return this.disconnectionHistory;
+  }
+
+  /**
+   * Weaken a specific relationship between two NPCs.
+   * @returns true if the relationship was weakened, false if no connection exists
+   */
+  weakenRelationship(sourceId: NPCId, targetId: NPCId, amount: number): boolean {
+    const sourceIdx = this.npcIndex.get(sourceId);
+    const targetIdx = this.npcIndex.get(targetId);
+    if (sourceIdx === undefined || targetIdx === undefined) return false;
+
+    const row = this.relationshipMatrix[targetIdx];
+    if (!row) return false;
+
+    const currentWeight = row[sourceIdx] ?? 0;
+    if (currentWeight <= 0) return false;
+
+    // Check faction floor for same-faction members
+    const sourceNpc = this.npcs[sourceIdx];
+    const targetNpc = this.npcs[targetIdx];
+    const isSameFaction = sourceNpc && targetNpc && sourceNpc.faction === targetNpc.faction;
+    const floor = isSameFaction ? SAME_FACTION_RELATIONSHIP_FLOOR : 0;
+
+    row[sourceIdx] = Math.max(floor, currentWeight - amount);
+    return true;
+  }
+
+  /**
+   * Apply natural relationship decay to all connections.
+   * Cross-faction connections decay faster than same-faction connections.
+   * Unmaintained relationships (no recent interaction) decay even faster.
+   * @returns Events generated from any disconnections that occurred
+   */
+  private applyRelationshipDecay(currentSol: number): GameEvent[] {
+    const events: GameEvent[] = [];
+    const N = this.npcs.length;
+
+    for (let targetIdx = 0; targetIdx < N; targetIdx++) {
+      const targetNpc = this.npcs[targetIdx];
+      const row = this.relationshipMatrix[targetIdx];
+      if (!targetNpc || !row) continue;
+
+      for (let sourceIdx = 0; sourceIdx < N; sourceIdx++) {
+        if (targetIdx === sourceIdx) continue;
+
+        const currentWeight = row[sourceIdx] ?? 0;
+        if (currentWeight <= 0) continue;
+
+        const sourceNpc = this.npcs[sourceIdx];
+        if (!sourceNpc) continue;
+
+        // Calculate base decay rate based on faction alignment
+        const isSameFaction = sourceNpc.faction === targetNpc.faction;
+        let decayRate = isSameFaction
+          ? RELATIONSHIP_DECAY_RATE
+          : RELATIONSHIP_DECAY_RATE * CROSS_FACTION_DECAY_MULTIPLIER;
+
+        // Apply unmaintained relationship multiplier
+        const interactionKey = `${sourceNpc.id}:${targetNpc.id}`;
+        const interaction = this.interactionTracker.get(interactionKey);
+        if (interaction) {
+          const solsSinceInteraction = currentSol - interaction.lastInteractionSol;
+          if (solsSinceInteraction > RELATIONSHIP_STALE_THRESHOLD) {
+            decayRate *= UNMAINTAINED_DECAY_MULTIPLIER;
+          }
+        } else {
+          // No interaction record means it's unmaintained
+          decayRate *= UNMAINTAINED_DECAY_MULTIPLIER;
+        }
+
+        // Apply floor for same-faction members
+        const floor = isSameFaction ? SAME_FACTION_RELATIONSHIP_FLOOR : 0;
+        const newWeight = Math.max(floor, currentWeight - decayRate);
+
+        row[sourceIdx] = newWeight;
+      }
+    }
+
+    return events;
+  }
+
+  /**
+   * Check all relationships and disconnect any that fall below the threshold.
+   * @returns Events generated from disconnections
+   */
+  private checkAndApplyDisconnections(currentSol: number): GameEvent[] {
+    const events: GameEvent[] = [];
+    const N = this.npcs.length;
+
+    for (let targetIdx = 0; targetIdx < N; targetIdx++) {
+      const targetNpc = this.npcs[targetIdx];
+      const row = this.relationshipMatrix[targetIdx];
+      if (!targetNpc || !row) continue;
+
+      for (let sourceIdx = 0; sourceIdx < N; sourceIdx++) {
+        if (targetIdx === sourceIdx) continue;
+
+        const sourceNpc = this.npcs[sourceIdx];
+        if (!sourceNpc) continue;
+
+        const currentWeight = row[sourceIdx] ?? 0;
+
+        // Skip if already disconnected or above threshold
+        if (currentWeight <= 0 || currentWeight >= DISCONNECTION_THRESHOLD) continue;
+
+        // Same-faction members have a floor, so they won't disconnect
+        if (sourceNpc.faction === targetNpc.faction) continue;
+
+        // Record the disconnection
+        const disconnection: NetworkDisconnection = {
+          sourceId: sourceNpc.id,
+          targetId: targetNpc.id,
+          occurredAt: currentSol,
+          previousWeight: currentWeight,
+        };
+        this.disconnectionHistory.push(disconnection);
+
+        // Sever the connection
+        row[sourceIdx] = 0;
+
+        // Generate event
+        events.push({
+          type: "NETWORK_DISCONNECTION",
+          severity: "warning",
+          sourceNpcId: sourceNpc.id,
+          sourceNpcName: sourceNpc.name,
+          targetNpcId: targetNpc.id,
+          targetNpcName: targetNpc.name,
+          message: `${sourceNpc.name} has lost influence over ${targetNpc.name}`,
+        });
+      }
+    }
+
+    return events;
+  }
+
+  /**
+   * Apply relationship penalties to NPCs who voted on opposing sides of a resolved project.
+   * NPCs with support > 0 are considered supporters, those with support < 0 are opposers.
+   */
+  private applyOpposingVotePenalties(): void {
+    if (!this.activeProject) return;
+
+    const supporters: number[] = [];
+    const opposers: number[] = [];
+
+    // Categorize NPCs by their vote
+    for (let i = 0; i < this.npcs.length; i++) {
+      const npc = this.npcs[i];
+      if (!npc) continue;
+      const support = this.activeProject.supportLevels.get(npc.id) ?? 0;
+      if (support > 0.1) {
+        supporters.push(i);
+      } else if (support < -0.1) {
+        opposers.push(i);
+      }
+    }
+
+    // Weaken relationships between opposing sides (both directions)
+    for (const supporterIdx of supporters) {
+      const supporterRow = this.relationshipMatrix[supporterIdx];
+      if (!supporterRow) continue;
+
+      for (const opposerIdx of opposers) {
+        const opposerRow = this.relationshipMatrix[opposerIdx];
+        if (!opposerRow) continue;
+
+        // Weaken supporter's influence on opposer
+        if ((supporterRow[opposerIdx] ?? 0) > 0) {
+          const supporterNpc = this.npcs[supporterIdx];
+          const opposerNpc = this.npcs[opposerIdx];
+          const isSameFaction =
+            supporterNpc && opposerNpc && supporterNpc.faction === opposerNpc.faction;
+          const floor = isSameFaction ? SAME_FACTION_RELATIONSHIP_FLOOR : 0;
+          supporterRow[opposerIdx] = Math.max(
+            floor,
+            (supporterRow[opposerIdx] ?? 0) - OPPOSING_VOTE_RELATIONSHIP_PENALTY,
+          );
+        }
+
+        // Weaken opposer's influence on supporter
+        if ((opposerRow[supporterIdx] ?? 0) > 0) {
+          const supporterNpc = this.npcs[supporterIdx];
+          const opposerNpc = this.npcs[opposerIdx];
+          const isSameFaction =
+            supporterNpc && opposerNpc && supporterNpc.faction === opposerNpc.faction;
+          const floor = isSameFaction ? SAME_FACTION_RELATIONSHIP_FLOOR : 0;
+          opposerRow[supporterIdx] = Math.max(
+            floor,
+            (opposerRow[supporterIdx] ?? 0) - OPPOSING_VOTE_RELATIONSHIP_PENALTY,
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Find all connected components in the political network.
+   * Uses bidirectional connections (A connects to B if A influences B OR B influences A).
+   * @returns Array of NetworkComponent objects representing disconnected groups
+   */
+  getConnectedComponents(): NetworkComponent[] {
+    const N = this.npcs.length;
+    const visited = new Array(N).fill(false);
+    const components: NetworkComponent[] = [];
+
+    // Build undirected adjacency from directed relationship matrix
+    const hasConnection = (i: number, j: number): boolean => {
+      const rowI = this.relationshipMatrix[i];
+      const rowJ = this.relationshipMatrix[j];
+      const iToJ = rowJ?.[i] ?? 0;
+      const jToI = rowI?.[j] ?? 0;
+      return iToJ > 0 || jToI > 0;
+    };
+
+    // BFS to find all nodes in a component
+    const bfs = (startIdx: number): number[] => {
+      const component: number[] = [];
+      const queue: number[] = [startIdx];
+      visited[startIdx] = true;
+
+      while (queue.length > 0) {
+        const current = queue.shift()!;
+        component.push(current);
+
+        for (let neighbor = 0; neighbor < N; neighbor++) {
+          if (!visited[neighbor] && hasConnection(current, neighbor)) {
+            visited[neighbor] = true;
+            queue.push(neighbor);
+          }
+        }
+      }
+
+      return component;
+    };
+
+    // Find all components
+    for (let i = 0; i < N; i++) {
+      if (!visited[i]) {
+        const componentIndices = bfs(i);
+        const memberIds: NPCId[] = [];
+        const factions = new Set<NPCFaction>();
+
+        for (const idx of componentIndices) {
+          const npc = this.npcs[idx];
+          if (npc) {
+            memberIds.push(npc.id);
+            factions.add(npc.faction);
+          }
+        }
+
+        components.push({
+          memberIds,
+          factions: Array.from(factions),
+        });
+      }
+    }
+
+    return components;
+  }
+
+  // ============ Triadic Closure System ============
+
+  /**
+   * Get the history of triadic closure events.
+   */
+  getTriadicClosureHistory(): readonly TriadicClosureEvent[] {
+    return this.triadicClosureHistory;
+  }
+
+  /**
+   * Process triadic closure: when A→B and B→C both exist, there's a chance to form A→C.
+   * This models the "friend of a friend becomes a friend" phenomenon.
+   * @returns Events generated from new connections formed
+   */
+  private processTriadicClosure(currentSol: number): GameEvent[] {
+    const events: GameEvent[] = [];
+    const N = this.npcs.length;
+
+    // Find all open triads (A→B, B→C where A→C doesn't exist)
+    for (let aIdx = 0; aIdx < N; aIdx++) {
+      const npcA = this.npcs[aIdx];
+      if (!npcA) continue;
+
+      for (let bIdx = 0; bIdx < N; bIdx++) {
+        if (aIdx === bIdx) continue;
+        const npcB = this.npcs[bIdx];
+        if (!npcB) continue;
+
+        // Check if A→B exists
+        const rowB = this.relationshipMatrix[bIdx];
+        const weightAB = rowB?.[aIdx] ?? 0;
+        if (weightAB <= 0) continue;
+
+        for (let cIdx = 0; cIdx < N; cIdx++) {
+          if (cIdx === aIdx || cIdx === bIdx) continue;
+          const npcC = this.npcs[cIdx];
+          if (!npcC) continue;
+
+          // Check if B→C exists
+          const rowC = this.relationshipMatrix[cIdx];
+          const weightBC = rowC?.[bIdx] ?? 0;
+          if (weightBC <= 0) continue;
+
+          // Check if A→C doesn't exist yet
+          const weightAC = rowC?.[aIdx] ?? 0;
+          if (weightAC > 0) continue;
+
+          // Check if combined strength meets threshold
+          const combinedStrength = weightAB + weightBC;
+          if (combinedStrength < TRIADIC_CLOSURE_THRESHOLD) continue;
+
+          // Calculate closure probability
+          let closureProbability = TRIADIC_CLOSURE_PROBABILITY;
+
+          // Boost probability if A and C are in the same faction
+          if (npcA.faction === npcC.faction) {
+            closureProbability *= SAME_FACTION_CLOSURE_MULTIPLIER;
+          }
+
+          // Random chance to form the connection
+          if (Math.random() < closureProbability) {
+            // Form the new connection A→C
+            rowC[aIdx] = TRIADIC_CLOSURE_INITIAL_WEIGHT;
+
+            // Record the interaction
+            const interactionKey = `${npcA.id}:${npcC.id}`;
+            this.interactionTracker.set(interactionKey, {
+              lastInteractionSol: currentSol,
+              interactionType: InteractionType.TRIADIC_CLOSURE,
+            });
+
+            // Record the closure event
+            const closureEvent: TriadicClosureEvent = {
+              npcA: npcA.id,
+              npcC: npcC.id,
+              bridgeNpc: npcB.id,
+              occurredAt: currentSol,
+              initialWeight: TRIADIC_CLOSURE_INITIAL_WEIGHT,
+            };
+            this.triadicClosureHistory.push(closureEvent);
+
+            // Generate game event
+            events.push({
+              type: "TRIADIC_CLOSURE",
+              severity: "info",
+              npcA: npcA.id,
+              npcAName: npcA.name,
+              npcC: npcC.id,
+              npcCName: npcC.name,
+              bridgeNpc: npcB.id,
+              bridgeNpcName: npcB.name,
+              message: `${npcA.name} formed a connection with ${npcC.name} through ${npcB.name}`,
+            });
+          }
+        }
+      }
+    }
+
+    return events;
+  }
+
+  // ============ Relationship Maintenance System ============
+
+  /**
+   * Record an interaction between two NPCs, refreshing their relationship maintenance timer.
+   */
+  recordInteraction(
+    sourceId: NPCId,
+    targetId: NPCId,
+    currentSol: number,
+    interactionType: InteractionType,
+  ): void {
+    const interactionKey = `${sourceId}:${targetId}`;
+    this.interactionTracker.set(interactionKey, {
+      lastInteractionSol: currentSol,
+      interactionType,
+    });
+  }
+
+  /**
+   * Get the last interaction info for a relationship.
+   */
+  getInteractionInfo(sourceId: NPCId, targetId: NPCId): RelationshipInteraction | undefined {
+    const interactionKey = `${sourceId}:${targetId}`;
+    return this.interactionTracker.get(interactionKey);
+  }
+
+  /**
+   * Check if a relationship is considered "stale" (no recent interaction).
+   */
+  isRelationshipStale(sourceId: NPCId, targetId: NPCId, currentSol: number): boolean {
+    const interaction = this.getInteractionInfo(sourceId, targetId);
+    if (!interaction) return true;
+    return currentSol - interaction.lastInteractionSol > RELATIONSHIP_STALE_THRESHOLD;
+  }
+
+  /**
+   * Process shared votes: when two NPCs vote on the same side, strengthen their relationship.
+   * Called when a project resolves.
+   */
+  private applySharedVoteBonuses(currentSol: number): void {
+    if (!this.activeProject) return;
+
+    const supporters: number[] = [];
+    const opposers: number[] = [];
+
+    // Categorize NPCs by their vote
+    for (let i = 0; i < this.npcs.length; i++) {
+      const npc = this.npcs[i];
+      if (!npc) continue;
+      const support = this.activeProject.supportLevels.get(npc.id) ?? 0;
+      if (support > 0.1) {
+        supporters.push(i);
+      } else if (support < -0.1) {
+        opposers.push(i);
+      }
+    }
+
+    // Strengthen relationships within supporter group
+    this.strengthenGroupRelationships(supporters, currentSol);
+
+    // Strengthen relationships within opposer group
+    this.strengthenGroupRelationships(opposers, currentSol);
+  }
+
+  /**
+   * Strengthen relationships between all members of a group who voted together.
+   */
+  private strengthenGroupRelationships(groupIndices: number[], currentSol: number): void {
+    for (let i = 0; i < groupIndices.length; i++) {
+      const idxA = groupIndices[i];
+      if (idxA === undefined) continue;
+      const npcA = this.npcs[idxA];
+      if (!npcA) continue;
+
+      for (let j = i + 1; j < groupIndices.length; j++) {
+        const idxB = groupIndices[j];
+        if (idxB === undefined) continue;
+        const npcB = this.npcs[idxB];
+        if (!npcB) continue;
+
+        // Strengthen A→B
+        const rowB = this.relationshipMatrix[idxB];
+        if (rowB) {
+          const currentAB = rowB[idxA] ?? 0;
+          rowB[idxA] = Math.min(1, currentAB + SHARED_VOTE_RELATIONSHIP_BOOST);
+          this.recordInteraction(npcA.id, npcB.id, currentSol, InteractionType.SHARED_VOTE);
+        }
+
+        // Strengthen B→A
+        const rowA = this.relationshipMatrix[idxA];
+        if (rowA) {
+          const currentBA = rowA[idxB] ?? 0;
+          rowA[idxB] = Math.min(1, currentBA + SHARED_VOTE_RELATIONSHIP_BOOST);
+          this.recordInteraction(npcB.id, npcA.id, currentSol, InteractionType.SHARED_VOTE);
+        }
+      }
+    }
   }
 
   // ============ Demand Generation ============
@@ -402,6 +1150,13 @@ export class NPCInfluenceManager {
       this.decrementDemandDeadlines();
       this.applySupportDecay();
       events.push(...this.checkAndGenerateDemands(currentSol));
+
+      // Apply relationship decay and check for disconnections
+      this.applyRelationshipDecay(currentSol);
+      events.push(...this.checkAndApplyDisconnections(currentSol));
+
+      // Process triadic closure (friend of a friend becomes friend)
+      events.push(...this.processTriadicClosure(currentSol));
     }
 
     if (!this.activeProject) {
@@ -417,7 +1172,7 @@ export class NPCInfluenceManager {
     this.activeProject.solsRemaining--;
 
     if (this.activeProject.solsRemaining <= 0) {
-      events.push(...this.resolveProject(project));
+      events.push(...this.resolveProject(project, currentSol));
     }
 
     return events;
@@ -459,10 +1214,18 @@ export class NPCInfluenceManager {
     }
   }
 
-  private resolveProject(project: Project): GameEvent[] {
+  private resolveProject(project: Project, currentSol: number = 0): GameEvent[] {
     const events: GameEvent[] = [];
     const averageSupport = this.getAverageSupport();
     const passed = averageSupport >= PASS_THRESHOLD;
+
+    // Apply relationship effects based on voting patterns
+    if (currentSol >= POLITICAL_PRESSURE_START_SOL) {
+      // Penalize opposing voters
+      this.applyOpposingVotePenalties();
+      // Strengthen bonds between those who voted together
+      this.applySharedVoteBonuses(currentSol);
+    }
 
     if (passed) {
       events.push(this.createProjectPassedEvent(project, averageSupport));
@@ -516,6 +1279,7 @@ export class NPCInfluenceManager {
 
   toJSON() {
     return {
+      npcs: this.npcs,
       relationshipMatrix: this.relationshipMatrix,
       councils: this.councils,
       activeProject: this.activeProject
@@ -528,6 +1292,9 @@ export class NPCInfluenceManager {
       transmissionFactors: this.transmissionFactors,
       npcSupport: Object.fromEntries(this.npcSupport),
       activeDemands: this.activeDemands,
+      disconnectionHistory: this.disconnectionHistory,
+      interactionTracker: Object.fromEntries(this.interactionTracker),
+      triadicClosureHistory: this.triadicClosureHistory,
     };
   }
 
@@ -537,11 +1304,19 @@ export class NPCInfluenceManager {
     relationships: Record<string, number>,
     projects: Project[],
   ): NPCInfluenceManager {
-    const manager = new NPCInfluenceManager(npcs, relationships, projects);
+    // Use saved NPCs if available, otherwise use provided defaults
+    const npcList = data.npcs ?? npcs;
+    const manager = new NPCInfluenceManager(npcList, relationships, projects);
 
     manager.relationshipMatrix = data.relationshipMatrix;
     manager.councils = data.councils;
     manager.transmissionFactors = data.transmissionFactors;
+
+    // Rebuild NPC index from saved NPCs
+    if (data.npcs) {
+      manager.npcIndex.clear();
+      data.npcs.forEach((npc, i) => manager.npcIndex.set(npc.id, i));
+    }
 
     if (data.activeProject) {
       manager.activeProject = {
@@ -562,6 +1337,20 @@ export class NPCInfluenceManager {
 
     if (data.activeDemands) {
       manager.activeDemands = data.activeDemands;
+    }
+
+    if (data.disconnectionHistory) {
+      manager.disconnectionHistory = data.disconnectionHistory;
+    }
+
+    if (data.interactionTracker) {
+      manager.interactionTracker = new Map(
+        Object.entries(data.interactionTracker).map(([k, v]) => [k, v as RelationshipInteraction]),
+      );
+    }
+
+    if (data.triadicClosureHistory) {
+      manager.triadicClosureHistory = data.triadicClosureHistory;
     }
 
     return manager;
