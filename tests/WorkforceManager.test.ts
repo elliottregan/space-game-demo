@@ -17,6 +17,8 @@ import {
   COWORKER_RELATIONSHIP_DECAY,
   TEAM_COHESION_THRESHOLD,
   MAX_TEAM_COHESION_BONUS,
+  SOCIAL_RELATIONSHIP_DECAY,
+  INITIAL_SOCIAL_RELATIONSHIP,
 } from "../src/core/balance/WorkforceBalance";
 
 // Helper to create test colonists
@@ -1845,6 +1847,92 @@ describe("WorkforceManager", () => {
       // They share both social buildings, so the relationship should form
       const relationship = workforce.getCoworkerRelationshipStrength("c1", "c2");
       expect(relationship).toBeGreaterThan(0);
+    });
+
+    it("should decay relationships when colonists no longer share social buildings", () => {
+      // Create colonists sharing a social building
+      const colonistsSharing = [
+        createColonist({
+          id: "c1",
+          name: "Alice",
+          role: ColonistRole.UNASSIGNED,
+          socialBuildingIds: ["common_room_1"],
+        }),
+        createColonist({
+          id: "c2",
+          name: "Bob",
+          role: ColonistRole.UNASSIGNED,
+          socialBuildingIds: ["common_room_1"],
+        }),
+      ];
+
+      const colonySharing = mockColony(colonistsSharing);
+
+      // First tick to form relationship
+      workforce.tick(colonySharing as any, undefined, 0);
+
+      const initialStrength = workforce.getCoworkerRelationshipStrength("c1", "c2");
+      // Initial relationship may be higher than INITIAL_SOCIAL_RELATIONSHIP due to
+      // social bonding strengthening on subsequent ticks within the same tick
+      expect(initialStrength).toBeGreaterThanOrEqual(INITIAL_SOCIAL_RELATIONSHIP);
+
+      // Now they are assigned to different social buildings
+      const colonistsSeparated = [
+        createColonist({
+          id: "c1",
+          name: "Alice",
+          role: ColonistRole.UNASSIGNED,
+          socialBuildingIds: ["common_room_1"], // Still at common room
+        }),
+        createColonist({
+          id: "c2",
+          name: "Bob",
+          role: ColonistRole.UNASSIGNED,
+          socialBuildingIds: ["gym_1"], // Now at gym instead
+        }),
+      ];
+
+      const colonySeparated = mockColony(colonistsSeparated);
+
+      // Tick with separated colonists - relationship should decay
+      workforce.tick(colonySeparated as any, undefined, 1);
+
+      const decayedStrength = workforce.getCoworkerRelationshipStrength("c1", "c2");
+      expect(decayedStrength).toBeLessThan(initialStrength);
+      // Should have decayed by SOCIAL_RELATIONSHIP_DECAY
+      // (social decay applies because both have social buildings but no longer share any)
+      // COWORKER_RELATIONSHIP_DECAY only applies to coworker bonds, not social-only bonds
+      expect(decayedStrength).toBeCloseTo(initialStrength - SOCIAL_RELATIONSHIP_DECAY, 6);
+    });
+
+    it("should not decay relationships for colonists without social buildings", () => {
+      // First, form a relationship via coworker bonding
+      const colonists = [
+        createColonist({ id: "c1", role: ColonistRole.ENGINEERING }),
+        createColonist({ id: "c2", role: ColonistRole.ENGINEERING }),
+      ];
+      const buildings = mockBuildings([
+        { id: "b1", status: "active", assignedWorkers: ["c1", "c2"] },
+      ]);
+
+      const colony = mockColony(colonists);
+      workforce.tick(colony as any, buildings as any, 0);
+
+      const initialStrength = workforce.getCoworkerRelationshipStrength("c1", "c2");
+      expect(initialStrength).toBe(INITIAL_COWORKER_RELATIONSHIP);
+
+      // Now stop working together (but they have no social building assignments)
+      const buildingsSeparate = mockBuildings([
+        { id: "b1", status: "active", assignedWorkers: ["c1"] },
+        { id: "b2", status: "active", assignedWorkers: ["c2"] },
+      ]);
+
+      workforce.tick(colony as any, buildingsSeparate as any, 1);
+
+      const decayedStrength = workforce.getCoworkerRelationshipStrength("c1", "c2");
+      // Should only have normal coworker decay, NOT social decay
+      // (since neither has socialBuildingIds)
+      expect(decayedStrength).toBeCloseTo(initialStrength - COWORKER_RELATIONSHIP_DECAY, 6);
     });
   });
 });

@@ -29,6 +29,7 @@ import {
   ROLE_AFFINITY,
   SOCIAL_BONDING_RATE,
   SOCIAL_BONDS_PER_TICK,
+  SOCIAL_RELATIONSHIP_DECAY,
   TEAM_COHESION_THRESHOLD,
   WEAK_TIE_THRESHOLD,
 } from "../balance/WorkforceBalance";
@@ -494,6 +495,7 @@ export class WorkforceManager {
   /**
    * Process social bonding at social buildings (third spaces).
    * Each colonist bonds with 1-2 random others at their assigned social buildings.
+   * Relationships decay when colonists no longer share a social building.
    */
   private processSocialBonding(
     colonists: readonly Colonist[],
@@ -501,6 +503,7 @@ export class WorkforceManager {
     currentSol: number,
   ): GameEvent[] {
     const events: GameEvent[] = [];
+    const currentSocialPairs = new Set<string>();
 
     // Group colonists by social building
     const socialGroups = new Map<string, Colonist[]>();
@@ -538,6 +541,7 @@ export class WorkforceManager {
 
         for (const partner of bondingPartners) {
           const key = this.getRelationshipKey(colonist.id, partner.id);
+          currentSocialPairs.add(key);
 
           let relationship = this.coworkerRelationships.get(key);
 
@@ -569,6 +573,27 @@ export class WorkforceManager {
             relationship.lastWorkedTogether = currentSol;
           }
         }
+      }
+    }
+
+    // Decay relationships for colonists who have social buildings but don't share any
+    const colonistsWithSocialBuildings = new Set<string>();
+    for (const colonist of colonists) {
+      if (colonist.socialBuildingIds?.length) {
+        colonistsWithSocialBuildings.add(colonist.id);
+      }
+    }
+
+    for (const [key, relationship] of this.coworkerRelationships.entries()) {
+      if (currentSocialPairs.has(key)) continue; // Currently socializing, skip
+
+      const [id1, id2] = key.split(":");
+      // Only decay if both colonists have social building assignments (social relationship)
+      if (colonistsWithSocialBuildings.has(id1!) && colonistsWithSocialBuildings.has(id2!)) {
+        relationship.strength = Math.max(
+          MIN_COWORKER_RELATIONSHIP,
+          relationship.strength - SOCIAL_RELATIONSHIP_DECAY,
+        );
       }
     }
 
