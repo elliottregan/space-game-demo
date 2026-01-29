@@ -72,3 +72,13 @@ describe("GameAPI with StartingConditions", () => {
     expect(api.buildings.snapshot().active.length).toBe(7);
   });
 });
+
+describe("GameAPI Starting Conditions Query", () => {
+  it("should return all available starting conditions", () => {
+    const api = new GameAPI();
+    const conditions = api.game.getStartingConditions();
+    expect(conditions.length).toBeGreaterThanOrEqual(2);
+    expect(conditions.find((c) => c.id === StartingConditionId.DEFAULT)).toBeDefined();
+    expect(conditions.find((c) => c.id === StartingConditionId.ESTABLISHED_BASE)).toBeDefined();
+  });
+});

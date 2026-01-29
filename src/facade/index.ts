@@ -17,3 +17,6 @@ export {
 export { GameAPI, type StateChangeListener } from "./GameAPI";
 // All types
 export * from "./types";
+// Starting conditions
+export type { StartingCondition } from "../core/models/StartingCondition";
+export { StartingConditionId, STARTING_CONDITIONS } from "../core/data/startingConditions";
