@@ -44,6 +44,7 @@ interface GameUIState {
   population: number;
   health: number;
   morale: number;
+  socialCohesion: number;
   moraleBoost: number;
   totalOxygenContribution: number;
   colonists: Colonist[];
@@ -162,6 +163,7 @@ class GameService {
       population: 0,
       health: 100,
       morale: 100,
+      socialCohesion: 0,
       moraleBoost: 0,
       totalOxygenContribution: 0,
       colonists: [],
@@ -225,6 +227,7 @@ class GameService {
     this.state.population = colony.population;
     this.state.health = colony.health;
     this.state.morale = colony.morale;
+    this.state.socialCohesion = colony.socialCohesion;
     this.state.colonists = [...colony.colonists];
     this.state.skillDefinitions = [...colony.skillDefinitions];
 

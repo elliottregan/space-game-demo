@@ -903,6 +903,111 @@ export class WorkforceManager {
     return totalPairs > 0 ? bridgingPairs / totalPairs : 0;
   }
 
+  // ============ Social Cohesion System ============
+
+  /**
+   * Calculate the clustering coefficient for a colonist.
+   * Measures how connected their neighbors are to each other.
+   *
+   * Formula: C = 2 * actual_triangles / (degree * (degree - 1))
+   * Range: 0 (no triangles) to 1 (all neighbors connected)
+   *
+   * High clustering = tight-knit social circle
+   * Low clustering = scattered/isolated connections
+   *
+   * @param colonistId - The colonist to calculate clustering for
+   * @returns Clustering coefficient (0-1), or 0 if < 2 neighbors
+   */
+  getClusteringCoefficient(colonistId: string): number {
+    const neighbors = [...this.getNeighbors(colonistId)];
+    const degree = neighbors.length;
+
+    // Need at least 2 neighbors to form triangles
+    if (degree < 2) return 0;
+
+    // Count edges between neighbors (triangles)
+    let triangleEdges = 0;
+    for (let i = 0; i < neighbors.length; i++) {
+      for (let j = i + 1; j < neighbors.length; j++) {
+        const strength = this.getCoworkerRelationshipStrength(neighbors[i]!, neighbors[j]!);
+        if (strength > 0) {
+          triangleEdges++;
+        }
+      }
+    }
+
+    // Maximum possible edges between neighbors
+    const maxPossibleEdges = (degree * (degree - 1)) / 2;
+
+    return triangleEdges / maxPossibleEdges;
+  }
+
+  /**
+   * Calculate colony-wide social cohesion score.
+   * Weighted average of individual clustering coefficients,
+   * weighted by connection count (more connected colonists matter more).
+   *
+   * @param colonistIds - IDs of colonists to include
+   * @returns Social cohesion score (0-1)
+   */
+  getColonySocialCohesion(colonistIds: string[]): number {
+    if (colonistIds.length === 0) return 0;
+
+    let totalWeightedCohesion = 0;
+    let totalWeight = 0;
+
+    for (const colonistId of colonistIds) {
+      const clustering = this.getClusteringCoefficient(colonistId);
+      const connections = this.getConnectionCount(colonistId);
+
+      // Weight by connection count (minimum weight of 1)
+      const weight = Math.max(1, connections);
+      totalWeightedCohesion += clustering * weight;
+      totalWeight += weight;
+    }
+
+    return totalWeight > 0 ? totalWeightedCohesion / totalWeight : 0;
+  }
+
+  /**
+   * Identify isolated colonists (no connections or very low clustering).
+   *
+   * @param colonistIds - IDs of colonists to check
+   * @param minConnections - Minimum connections to not be isolated (default 1)
+   * @returns Array of isolated colonist IDs
+   */
+  getIsolatedColonists(colonistIds: string[], minConnections: number = 1): string[] {
+    return colonistIds.filter((id) => this.getConnectionCount(id) < minConnections);
+  }
+
+  /**
+   * Get detailed social cohesion info for a colonist.
+   */
+  getColonistSocialCohesion(colonistId: string): {
+    clusteringCoefficient: number;
+    connectionCount: number;
+    isIsolated: boolean;
+    communityStrength: number;
+  } {
+    const connectionCount = this.getConnectionCount(colonistId);
+    const clusteringCoefficient = this.getClusteringCoefficient(colonistId);
+
+    // Calculate average strength of connections
+    let totalStrength = 0;
+    const neighbors = this.getNeighbors(colonistId);
+    for (const neighborId of neighbors) {
+      totalStrength += this.getCoworkerRelationshipStrength(colonistId, neighborId);
+    }
+    const communityStrength = connectionCount > 0 ? totalStrength / connectionCount : 0;
+
+    return {
+      clusteringCoefficient,
+      connectionCount,
+      isIsolated: connectionCount === 0,
+      communityStrength,
+    };
+  }
+
   /**
    * Get all colonist IDs connected to a given colonist. O(1) via adjacency list.
    */

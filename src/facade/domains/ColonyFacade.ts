@@ -29,16 +29,19 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
    * Get complete colony state snapshot.
    */
   snapshot(): ColonySnapshot {
+    const colonistIds = this.gameState.colony.getColonists().map((c) => c.id);
     return {
       population: this.gameState.colony.getPopulation(),
       health: this.gameState.colony.getHealth(),
       morale: this.gameState.colony.getMorale(),
+      socialCohesion: this.gameState.colony.getSocialCohesion(),
       colonists: Object.freeze([...this.gameState.colony.getColonists()]),
       skillDefinitions: Object.freeze([...SKILLS]),
       housingAssignments: Object.freeze(this.gameState.colony.getHousingAssignments()),
       unhoused: Object.freeze([...this.gameState.colony.getUnhousedColonists()]),
       coworkerRelationships: this.gameState.workforce.getAllCoworkerRelationships(),
       guilds: Object.freeze([...this.gameState.workforce.getGuilds()]),
+      communities: Object.freeze(this.gameState.workforce.detectCommunities(colonistIds)),
     };
   }
 

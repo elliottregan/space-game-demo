@@ -88,12 +88,25 @@ export class GameState {
     // 3. Workforce tick (training, experience, coworker bonding)
     events.push(...this.workforce.tick(this.colony, this.buildings, this.currentSol));
 
-    // 4. Colony tick (population, health, morale)
+    // 4. Colony tick (population, health, morale, social cohesion)
     const policyEffects = {
       morale: this.operations.getMoraleEffect(),
       health: this.operations.getHealthEffect(),
     };
-    const colonyEvents = this.colony.tick(this.resources, this.buildings, policyEffects);
+
+    // Calculate social cohesion from workforce relationships
+    const colonistIds = this.colony.getColonists().map((c) => c.id);
+    const socialCohesionData = {
+      cohesion: this.workforce.getColonySocialCohesion(colonistIds),
+      isolatedColonists: this.workforce.getIsolatedColonists(colonistIds),
+    };
+
+    const colonyEvents = this.colony.tick(
+      this.resources,
+      this.buildings,
+      policyEffects,
+      socialCohesionData,
+    );
     events.push(...colonyEvents);
 
     // Auto-assign new colonists to understaffed buildings if enabled
