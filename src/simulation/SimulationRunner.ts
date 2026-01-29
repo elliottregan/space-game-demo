@@ -36,6 +36,7 @@ const CRISIS_THRESHOLDS = {
   oxygen: { warning: 30, critical: 10 },
   water: { warning: 20, critical: 5 },
   morale: { warning: 40, critical: 25 },
+  cohesion: { warning: 0.15, critical: 0.08 },
 } as const;
 
 /**
@@ -195,8 +196,16 @@ export class SimulationRunner {
       // Detect and record crisis conditions
       this.detectCrisis(currentSol, resources.current, colony.morale, crisisTimeline);
 
+      // Detect social cohesion crisis
+      this.detectCohesionCrisis(currentSol, colony.socialCohesion, crisisTimeline);
+
       // Take periodic snapshots
       if (currentSol % SNAPSHOT_INTERVAL === 0) {
+        // Count isolated colonists
+        const isolatedCount = colony.colonists.filter(
+          (c) => !colony.coworkerRelationships.has(c.id),
+        ).length;
+
         resourceTimeline.push({
           sol: currentSol,
           food: resources.current.food,
@@ -207,6 +216,8 @@ export class SimulationRunner {
           population: currentPop,
           morale: colony.morale,
           health: colony.health,
+          socialCohesion: colony.socialCohesion,
+          isolatedColonists: isolatedCount,
         });
 
         flowTimeline.push({
@@ -265,6 +276,9 @@ export class SimulationRunner {
       defeatSol = finalSol;
       const resources = api.resources.snapshot();
       const colony = api.colony.snapshot();
+      const isolatedCount = colony.colonists.filter(
+        (c) => !colony.coworkerRelationships.has(c.id),
+      ).length;
       resourcesAtDeath = {
         sol: finalSol,
         food: resources.current.food,
@@ -275,6 +289,8 @@ export class SimulationRunner {
         population: colony.population,
         morale: colony.morale,
         health: colony.health,
+        socialCohesion: colony.socialCohesion,
+        isolatedColonists: isolatedCount,
       };
     }
 
@@ -346,6 +362,43 @@ export class SimulationRunner {
     checkResource("low_oxygen", resources.oxygen, CRISIS_THRESHOLDS.oxygen);
     checkResource("low_water", resources.water, CRISIS_THRESHOLDS.water);
     checkResource("low_morale", morale, CRISIS_THRESHOLDS.morale);
+  }
+
+  /**
+   * Detect social cohesion crisis conditions.
+   */
+  private detectCohesionCrisis(
+    sol: number,
+    cohesion: number,
+    crisisTimeline: CrisisPoint[],
+  ): void {
+    let severity: CrisisSeverity | null = null;
+    let threshold = 0;
+
+    if (cohesion <= CRISIS_THRESHOLDS.cohesion.critical) {
+      severity = "critical";
+      threshold = CRISIS_THRESHOLDS.cohesion.critical;
+    } else if (cohesion <= CRISIS_THRESHOLDS.cohesion.warning) {
+      severity = "warning";
+      threshold = CRISIS_THRESHOLDS.cohesion.warning;
+    }
+
+    if (severity) {
+      const lastCrisis = crisisTimeline.filter((c) => c.type === "low_cohesion").pop();
+      if (
+        !lastCrisis ||
+        lastCrisis.sol < sol - 10 ||
+        (lastCrisis.severity === "warning" && severity === "critical")
+      ) {
+        crisisTimeline.push({
+          sol,
+          type: "low_cohesion",
+          severity,
+          value: cohesion,
+          threshold,
+        });
+      }
+    }
   }
 
   /**

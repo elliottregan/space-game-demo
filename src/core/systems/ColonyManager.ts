@@ -6,7 +6,7 @@ import {
   POPULATION_GROWTH_RATE,
   SHORTAGE_THRESHOLDS,
 } from "../balance/EconomyBaseline";
-import { COLONIST_SKILL_COUNT } from "../balance/WorkforceBalance";
+import { COLONIST_SKILL_COUNT, SOCIAL_COHESION } from "../balance/WorkforceBalance";
 import { type SkillId, SKILLS } from "../data/skills";
 import type { Colonist } from "../models/Colonist";
 import { ColonistRole, MasteryLevel } from "../models/Colonist";
@@ -124,6 +124,8 @@ export class ColonyManager {
   private nextId: number = 1;
   private health: number = 100;
   private morale: number = 80;
+  private socialCohesion: number = 0;
+  private isolatedColonistSols: Map<string, number> = new Map(); // colonistId -> sols isolated
 
   constructor(initialPopulation: number) {
     for (let i = 0; i < initialPopulation; i++) {
@@ -144,6 +146,7 @@ export class ColonyManager {
     resources: ResourceManager,
     buildings?: BuildingManager,
     policyEffects?: { morale: number; health: number },
+    socialCohesionData?: { cohesion: number; isolatedColonists: string[] },
   ): GameEvent[] {
     const events: GameEvent[] = [];
 
@@ -153,6 +156,7 @@ export class ColonyManager {
     this.applyPolicyEffects(policyEffects);
     this.applyResourceShortageEffects(resources);
     this.applyPositiveConditionEffects(resources, buildings);
+    this.applySocialCohesionEffects(socialCohesionData, events);
     this.checkLowMoraleWarning(events);
     this.checkLowHealthWarning(events);
     this.checkColonistDeath(buildings, events);
@@ -226,6 +230,86 @@ export class ColonyManager {
 
     this.morale = Math.min(100, this.morale + moraleRecovery);
     this.health = Math.min(100, this.health + COLONY_MORALE.HEALTH_RECOVERY);
+  }
+
+  private applySocialCohesionEffects(
+    data?: { cohesion: number; isolatedColonists: string[] },
+    events?: GameEvent[],
+  ): void {
+    if (!data || !events) return;
+
+    const { cohesion, isolatedColonists } = data;
+    this.socialCohesion = cohesion;
+
+    // Apply morale effects based on cohesion level
+    if (cohesion >= SOCIAL_COHESION.HIGH_THRESHOLD) {
+      // High cohesion provides morale bonus
+      const bonusRatio =
+        (cohesion - SOCIAL_COHESION.HIGH_THRESHOLD) / (1 - SOCIAL_COHESION.HIGH_THRESHOLD);
+      const moraleBonus = bonusRatio * SOCIAL_COHESION.MAX_MORALE_BONUS;
+      this.morale = Math.min(100, this.morale + moraleBonus);
+    } else if (cohesion < SOCIAL_COHESION.LOW_THRESHOLD) {
+      // Low cohesion causes morale penalty
+      const penaltyRatio =
+        (SOCIAL_COHESION.LOW_THRESHOLD - cohesion) / SOCIAL_COHESION.LOW_THRESHOLD;
+      const moralePenalty = penaltyRatio * SOCIAL_COHESION.MAX_MORALE_PENALTY;
+      this.morale = Math.max(0, this.morale - moralePenalty);
+    }
+
+    // Check for low cohesion warning (only if we have colonists)
+    if (this.colonists.size >= 5) {
+      if (cohesion < SOCIAL_COHESION.CRITICAL_THRESHOLD) {
+        events.push({
+          type: "SOCIAL_COHESION_CRITICAL",
+          cohesion,
+          severity: "critical",
+          message: `Colony social bonds are fracturing! Cohesion: ${Math.round(cohesion * 100)}%`,
+        });
+      } else if (cohesion < SOCIAL_COHESION.LOW_THRESHOLD) {
+        events.push({
+          type: "SOCIAL_COHESION_LOW",
+          cohesion,
+          severity: "warning",
+          message: `Colony social cohesion is weakening: ${Math.round(cohesion * 100)}%`,
+        });
+      }
+    }
+
+    // Track isolated colonists and generate warnings
+    const currentColonists = new Set(this.colonists.keys());
+
+    // Clean up tracking for colonists that no longer exist
+    for (const colonistId of this.isolatedColonistSols.keys()) {
+      if (!currentColonists.has(colonistId)) {
+        this.isolatedColonistSols.delete(colonistId);
+      }
+    }
+
+    // Update isolation tracking
+    for (const colonistId of currentColonists) {
+      if (isolatedColonists.includes(colonistId)) {
+        const solsIsolated = (this.isolatedColonistSols.get(colonistId) ?? 0) + 1;
+        this.isolatedColonistSols.set(colonistId, solsIsolated);
+
+        // Generate warning if isolated for too long
+        if (solsIsolated === SOCIAL_COHESION.ISOLATION_WARNING_DELAY) {
+          const colonist = this.colonists.get(colonistId);
+          if (colonist) {
+            events.push({
+              type: "COLONIST_ISOLATED",
+              colonistId,
+              colonistName: colonist.name,
+              solsIsolated,
+              severity: "warning",
+              message: `${colonist.name} has no social connections and may be struggling.`,
+            });
+          }
+        }
+      } else {
+        // No longer isolated - reset counter
+        this.isolatedColonistSols.delete(colonistId);
+      }
+    }
   }
 
   private checkLowMoraleWarning(events: GameEvent[]): void {
@@ -354,6 +438,10 @@ export class ColonyManager {
     return this.morale;
   }
 
+  getSocialCohesion(): number {
+    return this.socialCohesion;
+  }
+
   setHealth(value: number): void {
     this.health = Math.max(0, Math.min(100, value));
   }
@@ -387,6 +475,7 @@ export class ColonyManager {
       nextId: this.nextId,
       health: this.health,
       morale: this.morale,
+      socialCohesion: this.socialCohesion,
     };
   }
 
@@ -474,6 +563,7 @@ export class ColonyManager {
     nextId: number;
     health: number;
     morale: number;
+    socialCohesion?: number;
   }): ColonyManager {
     const manager = new ColonyManager(0);
     data.colonists.forEach((c) => {
@@ -486,6 +576,7 @@ export class ColonyManager {
     manager.nextId = data.nextId;
     manager.health = data.health;
     manager.morale = data.morale;
+    manager.socialCohesion = data.socialCohesion ?? 0;
     return manager;
   }
 }

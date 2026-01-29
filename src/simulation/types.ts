@@ -114,6 +114,8 @@ export interface ResourceSnapshot {
   population: number;
   morale: number;
   health: number;
+  socialCohesion: number;
+  isolatedColonists: number;
 }
 
 /**
@@ -158,7 +160,13 @@ export interface EventOccurrence {
 /**
  * Crisis point types.
  */
-export type CrisisType = "low_food" | "low_oxygen" | "low_water" | "low_morale" | "population_drop";
+export type CrisisType =
+  | "low_food"
+  | "low_oxygen"
+  | "low_water"
+  | "low_morale"
+  | "low_cohesion"
+  | "population_drop";
 
 /**
  * Crisis severity levels.
@@ -279,6 +287,24 @@ export interface OutlierAnalysis {
 }
 
 /**
+ * Social cohesion analysis results.
+ */
+export interface SocialCohesionAnalysis {
+  /** Average cohesion at game end */
+  avgFinalCohesion: number;
+  /** Min cohesion observed across all runs */
+  minCohesion: number;
+  /** Max cohesion observed across all runs */
+  maxCohesion: number;
+  /** Average number of isolated colonists at game end */
+  avgIsolatedColonists: number;
+  /** Runs where cohesion dropped below critical threshold */
+  lowCohesionRuns: number;
+  /** Correlation between cohesion and victory */
+  cohesionVictoryCorrelation: number;
+}
+
+/**
  * Complete analysis output for visualization.
  */
 export interface AnalysisOutput {
@@ -312,5 +338,6 @@ export interface AnalysisOutput {
     eventImpact: EventImpactAnalysis;
     crisisTimeline: CrisisTimelineAnalysis;
     outliers: OutlierAnalysis;
+    socialCohesion: SocialCohesionAnalysis;
   };
 }

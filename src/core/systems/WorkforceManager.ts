@@ -67,15 +67,67 @@ export interface SocialNetworkPosition {
   bridgingScore: number;
 }
 
+/**
+ * A detected social community (emergent group) in the colonist network.
+ */
+export interface SocialCommunity {
+  /** Unique identifier for this community */
+  id: string;
+  /** IDs of colonists in this community */
+  memberIds: string[];
+  /** Average internal relationship strength */
+  cohesion: number;
+  /** Number of connections to other communities */
+  externalConnections: number;
+}
+
 export class WorkforceManager {
   /** Tracks relationships between colonists (key: "colonistId1:colonistId2" sorted alphabetically) */
   private coworkerRelationships: Map<string, CoworkerRelationship> = new Map();
+
+  /**
+   * Adjacency list for O(1) neighbor lookups.
+   * Maps colonistId -> Set of connected colonistIds.
+   * Maintained in sync with coworkerRelationships.
+   */
+  private adjacencyList: Map<string, Set<string>> = new Map();
 
   /** Guilds in the colony */
   private guilds: Map<string, Guild> = new Map();
 
   /** Counter for generating guild IDs */
   private nextGuildId: number = 1;
+
+  // ============ Adjacency List Helpers ============
+
+  /**
+   * Add an edge to the adjacency list (both directions).
+   */
+  private addToAdjacencyList(colonistId1: string, colonistId2: string): void {
+    if (!this.adjacencyList.has(colonistId1)) {
+      this.adjacencyList.set(colonistId1, new Set());
+    }
+    if (!this.adjacencyList.has(colonistId2)) {
+      this.adjacencyList.set(colonistId2, new Set());
+    }
+    this.adjacencyList.get(colonistId1)!.add(colonistId2);
+    this.adjacencyList.get(colonistId2)!.add(colonistId1);
+  }
+
+  /**
+   * Remove an edge from the adjacency list (both directions).
+   */
+  private removeFromAdjacencyList(colonistId1: string, colonistId2: string): void {
+    this.adjacencyList.get(colonistId1)?.delete(colonistId2);
+    this.adjacencyList.get(colonistId2)?.delete(colonistId1);
+  }
+
+  /**
+   * Get neighbors of a colonist from adjacency list. O(1) lookup.
+   */
+  private getNeighbors(colonistId: string): Set<string> {
+    return this.adjacencyList.get(colonistId) ?? new Set();
+  }
 
   tick(colony: ColonyManager, buildings?: BuildingManager, currentSol: number = 0): GameEvent[] {
     const events: GameEvent[] = [];
@@ -322,6 +374,7 @@ export class WorkforceManager {
               lastWorkedTogether: currentSol,
             };
             this.coworkerRelationships.set(key, relationship);
+            this.addToAdjacencyList(colonistA, colonistB);
 
             events.push({
               type: "COWORKER_BOND_FORMED",
@@ -404,6 +457,7 @@ export class WorkforceManager {
               lastWorkedTogether: currentSol,
             };
             this.coworkerRelationships.set(key, relationship);
+            this.addToAdjacencyList(colonistA.id, colonistB.id);
 
             events.push({
               type: "HOUSEMATE_BOND_FORMED",
@@ -671,6 +725,7 @@ export class WorkforceManager {
               sharedGuildIds: [guild.id],
             };
             this.coworkerRelationships.set(key, relationship);
+            this.addToAdjacencyList(colonistAId!, colonistBId!);
 
             events.push({
               type: "GUILD_BOND_FORMED",
@@ -702,16 +757,10 @@ export class WorkforceManager {
   // ============ Preferential Attachment System ============
 
   /**
-   * Get the number of connections a colonist has.
+   * Get the number of connections a colonist has. O(1) via adjacency list.
    */
   getConnectionCount(colonistId: string): number {
-    let count = 0;
-    for (const key of this.coworkerRelationships.keys()) {
-      if (key.includes(colonistId)) {
-        count++;
-      }
-    }
-    return count;
+    return this.getNeighbors(colonistId).size;
   }
 
   /**
@@ -788,6 +837,7 @@ export class WorkforceManager {
             isCohort,
           };
           this.coworkerRelationships.set(key, relationship);
+          this.addToAdjacencyList(colonistA.id, selectedColonist.id);
 
           events.push({
             type: "SOCIAL_BOND_FORMED",
@@ -815,22 +865,16 @@ export class WorkforceManager {
   }
 
   /**
-   * Get all weak ties for a colonist.
+   * Get all weak ties for a colonist. O(degree) via adjacency list.
    */
   getWeakTies(colonistId: string): string[] {
     const weakTies: string[] = [];
-
-    for (const [key, rel] of this.coworkerRelationships) {
-      if (rel.strength > 0 && rel.strength < WEAK_TIE_THRESHOLD) {
-        const [id1, id2] = key.split(":");
-        if (id1 === colonistId) {
-          weakTies.push(id2!);
-        } else if (id2 === colonistId) {
-          weakTies.push(id1!);
-        }
+    for (const neighborId of this.getNeighbors(colonistId)) {
+      const strength = this.getCoworkerRelationshipStrength(colonistId, neighborId);
+      if (strength > 0 && strength < WEAK_TIE_THRESHOLD) {
+        weakTies.push(neighborId);
       }
     }
-
     return weakTies;
   }
 
@@ -859,35 +903,129 @@ export class WorkforceManager {
     return totalPairs > 0 ? bridgingPairs / totalPairs : 0;
   }
 
-  /**
-   * Get all colonist IDs connected to a given colonist.
-   */
-  private getConnectedColonistIds(colonistId: string): string[] {
-    const connected: string[] = [];
+  // ============ Social Cohesion System ============
 
-    for (const key of this.coworkerRelationships.keys()) {
-      const [id1, id2] = key.split(":");
-      if (id1 === colonistId && id2) {
-        connected.push(id2);
-      } else if (id2 === colonistId && id1) {
-        connected.push(id1);
+  /**
+   * Calculate the clustering coefficient for a colonist.
+   * Measures how connected their neighbors are to each other.
+   *
+   * Formula: C = 2 * actual_triangles / (degree * (degree - 1))
+   * Range: 0 (no triangles) to 1 (all neighbors connected)
+   *
+   * High clustering = tight-knit social circle
+   * Low clustering = scattered/isolated connections
+   *
+   * @param colonistId - The colonist to calculate clustering for
+   * @returns Clustering coefficient (0-1), or 0 if < 2 neighbors
+   */
+  getClusteringCoefficient(colonistId: string): number {
+    const neighbors = [...this.getNeighbors(colonistId)];
+    const degree = neighbors.length;
+
+    // Need at least 2 neighbors to form triangles
+    if (degree < 2) return 0;
+
+    // Count edges between neighbors (triangles)
+    let triangleEdges = 0;
+    for (let i = 0; i < neighbors.length; i++) {
+      for (let j = i + 1; j < neighbors.length; j++) {
+        const strength = this.getCoworkerRelationshipStrength(neighbors[i]!, neighbors[j]!);
+        if (strength > 0) {
+          triangleEdges++;
+        }
       }
     }
 
-    return connected;
+    // Maximum possible edges between neighbors
+    const maxPossibleEdges = (degree * (degree - 1)) / 2;
+
+    return triangleEdges / maxPossibleEdges;
   }
 
   /**
-   * Get the social network position information for a colonist.
+   * Calculate colony-wide social cohesion score.
+   * Weighted average of individual clustering coefficients,
+   * weighted by connection count (more connected colonists matter more).
+   *
+   * @param colonistIds - IDs of colonists to include
+   * @returns Social cohesion score (0-1)
+   */
+  getColonySocialCohesion(colonistIds: string[]): number {
+    if (colonistIds.length === 0) return 0;
+
+    let totalWeightedCohesion = 0;
+    let totalWeight = 0;
+
+    for (const colonistId of colonistIds) {
+      const clustering = this.getClusteringCoefficient(colonistId);
+      const connections = this.getConnectionCount(colonistId);
+
+      // Weight by connection count (minimum weight of 1)
+      const weight = Math.max(1, connections);
+      totalWeightedCohesion += clustering * weight;
+      totalWeight += weight;
+    }
+
+    return totalWeight > 0 ? totalWeightedCohesion / totalWeight : 0;
+  }
+
+  /**
+   * Identify isolated colonists (no connections or very low clustering).
+   *
+   * @param colonistIds - IDs of colonists to check
+   * @param minConnections - Minimum connections to not be isolated (default 1)
+   * @returns Array of isolated colonist IDs
+   */
+  getIsolatedColonists(colonistIds: string[], minConnections: number = 1): string[] {
+    return colonistIds.filter((id) => this.getConnectionCount(id) < minConnections);
+  }
+
+  /**
+   * Get detailed social cohesion info for a colonist.
+   */
+  getColonistSocialCohesion(colonistId: string): {
+    clusteringCoefficient: number;
+    connectionCount: number;
+    isIsolated: boolean;
+    communityStrength: number;
+  } {
+    const connectionCount = this.getConnectionCount(colonistId);
+    const clusteringCoefficient = this.getClusteringCoefficient(colonistId);
+
+    // Calculate average strength of connections
+    let totalStrength = 0;
+    const neighbors = this.getNeighbors(colonistId);
+    for (const neighborId of neighbors) {
+      totalStrength += this.getCoworkerRelationshipStrength(colonistId, neighborId);
+    }
+    const communityStrength = connectionCount > 0 ? totalStrength / connectionCount : 0;
+
+    return {
+      clusteringCoefficient,
+      connectionCount,
+      isIsolated: connectionCount === 0,
+      communityStrength,
+    };
+  }
+
+  /**
+   * Get all colonist IDs connected to a given colonist. O(1) via adjacency list.
+   */
+  private getConnectedColonistIds(colonistId: string): string[] {
+    return [...this.getNeighbors(colonistId)];
+  }
+
+  /**
+   * Get the social network position information for a colonist. O(degree) via adjacency list.
    */
   getSocialNetworkPosition(colonistId: string, colonists: readonly Colonist[]): SocialNetworkPosition {
+    const neighbors = this.getNeighbors(colonistId);
     let totalStrength = 0;
-    let connectionCount = 0;
     let weakTieCount = 0;
 
-    for (const [key, rel] of this.coworkerRelationships) {
-      if (key.includes(colonistId)) {
-        connectionCount++;
+    for (const neighborId of neighbors) {
+      const rel = this.getCoworkerRelationship(colonistId, neighborId);
+      if (rel) {
         totalStrength += rel.strength;
         if (rel.strength < WEAK_TIE_THRESHOLD) {
           weakTieCount++;
@@ -895,6 +1033,7 @@ export class WorkforceManager {
       }
     }
 
+    const connectionCount = neighbors.size;
     return {
       connectionCount,
       averageStrength: connectionCount > 0 ? totalStrength / connectionCount : 0,
@@ -908,6 +1047,227 @@ export class WorkforceManager {
    */
   getBridgeColonists(colonists: readonly Colonist[], minBridgingScore: number = 0.3): Colonist[] {
     return colonists.filter((c) => this.calculateBridgingScore(c.id, colonists) >= minBridgingScore);
+  }
+
+  // ============ Community Detection (Label Propagation) ============
+
+  /**
+   * Detect communities in the social network using weighted label propagation.
+   * Each colonist adopts the most common label among their neighbors,
+   * weighted by relationship strength.
+   *
+   * Time complexity: O(iterations * edges)
+   * Typically converges in 5-15 iterations for social networks.
+   *
+   * @param colonistIds - IDs of colonists to partition into communities
+   * @param maxIterations - Maximum iterations before stopping (default 20)
+   * @param minCommunitySize - Minimum size for a community (smaller ones merged)
+   * @returns Array of detected communities
+   */
+  detectCommunities(
+    colonistIds: string[],
+    maxIterations: number = 20,
+    minCommunitySize: number = 2,
+  ): SocialCommunity[] {
+    if (colonistIds.length === 0) return [];
+
+    // Initialize: each colonist starts in their own community (their ID is their label)
+    const labels = new Map<string, string>();
+    for (const id of colonistIds) {
+      labels.set(id, id);
+    }
+
+    const colonistSet = new Set(colonistIds);
+
+    // Iterate until convergence or max iterations
+    for (let iteration = 0; iteration < maxIterations; iteration++) {
+      let changed = false;
+
+      // Process nodes in random order to avoid oscillation
+      const shuffled = [...colonistIds].sort(() => Math.random() - 0.5);
+
+      for (const colonistId of shuffled) {
+        const neighbors = this.getNeighbors(colonistId);
+        if (neighbors.size === 0) continue;
+
+        // Count weighted votes for each label among neighbors
+        const labelVotes = new Map<string, number>();
+
+        for (const neighborId of neighbors) {
+          // Only consider neighbors in the input set
+          if (!colonistSet.has(neighborId)) continue;
+
+          const neighborLabel = labels.get(neighborId);
+          if (!neighborLabel) continue;
+
+          // Weight by relationship strength
+          const relationship = this.getCoworkerRelationship(colonistId, neighborId);
+          const weight = relationship?.strength ?? 0;
+
+          labelVotes.set(neighborLabel, (labelVotes.get(neighborLabel) ?? 0) + weight);
+        }
+
+        // Find label with highest weighted vote
+        let maxVotes = 0;
+        let bestLabel = labels.get(colonistId)!;
+
+        for (const [label, votes] of labelVotes) {
+          if (votes > maxVotes) {
+            maxVotes = votes;
+            bestLabel = label;
+          }
+        }
+
+        // Update label if changed
+        const currentLabel = labels.get(colonistId);
+        if (currentLabel !== bestLabel) {
+          labels.set(colonistId, bestLabel);
+          changed = true;
+        }
+      }
+
+      // Converged if no labels changed
+      if (!changed) break;
+    }
+
+    // Group colonists by their final labels
+    const communities = new Map<string, string[]>();
+    for (const [colonistId, label] of labels) {
+      if (!communities.has(label)) {
+        communities.set(label, []);
+      }
+      communities.get(label)!.push(colonistId);
+    }
+
+    // Build community objects, merging small communities
+    const result: SocialCommunity[] = [];
+    let communityCounter = 1;
+    const smallCommunityMembers: string[] = [];
+
+    for (const [, memberIds] of communities) {
+      if (memberIds.length < minCommunitySize) {
+        // Collect small communities to merge later
+        smallCommunityMembers.push(...memberIds);
+      } else {
+        result.push({
+          id: `community_${communityCounter++}`,
+          memberIds,
+          cohesion: this.calculateCommunityCohesion(memberIds),
+          externalConnections: this.countExternalConnections(memberIds, colonistSet),
+        });
+      }
+    }
+
+    // Add small community members as a "misc" community if any
+    if (smallCommunityMembers.length > 0) {
+      result.push({
+        id: `community_misc`,
+        memberIds: smallCommunityMembers,
+        cohesion: this.calculateCommunityCohesion(smallCommunityMembers),
+        externalConnections: this.countExternalConnections(smallCommunityMembers, colonistSet),
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * Calculate the internal cohesion of a community.
+   * Returns average relationship strength between community members.
+   */
+  private calculateCommunityCohesion(memberIds: string[]): number {
+    if (memberIds.length < 2) return 0;
+
+    let totalStrength = 0;
+    let pairCount = 0;
+
+    for (let i = 0; i < memberIds.length; i++) {
+      for (let j = i + 1; j < memberIds.length; j++) {
+        const strength = this.getCoworkerRelationshipStrength(memberIds[i]!, memberIds[j]!);
+        totalStrength += strength;
+        pairCount++;
+      }
+    }
+
+    return pairCount > 0 ? totalStrength / pairCount : 0;
+  }
+
+  /**
+   * Count connections from community members to colonists outside the community.
+   */
+  private countExternalConnections(memberIds: string[], allColonists: Set<string>): number {
+    const memberSet = new Set(memberIds);
+    let externalCount = 0;
+
+    for (const memberId of memberIds) {
+      for (const neighborId of this.getNeighbors(memberId)) {
+        // Count if neighbor is in the colonist set but not in this community
+        if (allColonists.has(neighborId) && !memberSet.has(neighborId)) {
+          externalCount++;
+        }
+      }
+    }
+
+    // Each external edge is counted once (from the community member's perspective)
+    return externalCount;
+  }
+
+  /**
+   * Get community statistics for the entire network.
+   */
+  getCommunityStats(colonistIds: string[]): {
+    communityCount: number;
+    averageSize: number;
+    averageCohesion: number;
+    modularity: number;
+  } {
+    const communities = this.detectCommunities(colonistIds);
+
+    if (communities.length === 0) {
+      return { communityCount: 0, averageSize: 0, averageCohesion: 0, modularity: 0 };
+    }
+
+    const totalSize = communities.reduce((sum, c) => sum + c.memberIds.length, 0);
+    const totalCohesion = communities.reduce((sum, c) => sum + c.cohesion, 0);
+
+    // Calculate modularity (quality of community partition)
+    // Q = Σ[(internal edges / total edges) - (expected internal edges)]
+    const totalEdges = this.coworkerRelationships.size;
+    let modularity = 0;
+
+    if (totalEdges > 0) {
+      for (const community of communities) {
+        const memberSet = new Set(community.memberIds);
+        let internalEdges = 0;
+        let communityDegree = 0;
+
+        for (const memberId of community.memberIds) {
+          const neighbors = this.getNeighbors(memberId);
+          communityDegree += neighbors.size;
+
+          for (const neighborId of neighbors) {
+            if (memberSet.has(neighborId)) {
+              internalEdges++;
+            }
+          }
+        }
+
+        // Internal edges counted twice (once from each end)
+        internalEdges /= 2;
+
+        // Expected internal edges if random
+        const expected = (communityDegree / (2 * totalEdges)) ** 2 * totalEdges;
+
+        modularity += internalEdges / totalEdges - expected / totalEdges;
+      }
+    }
+
+    return {
+      communityCount: communities.length,
+      averageSize: totalSize / communities.length,
+      averageCohesion: totalCohesion / communities.length,
+      modularity: Math.max(0, Math.min(1, modularity)), // Clamp to [0, 1]
+    };
   }
 
   // ============ Serialization ============
@@ -927,6 +1287,8 @@ export class WorkforceManager {
       manager.coworkerRelationships = new Map(
         Object.entries(data.coworkerRelationships).map(([k, v]) => [k, v as CoworkerRelationship]),
       );
+      // Rebuild adjacency list from relationships
+      manager.rebuildAdjacencyList();
     }
 
     if (data.guilds) {
@@ -940,5 +1302,19 @@ export class WorkforceManager {
     }
 
     return manager;
+  }
+
+  /**
+   * Rebuild the adjacency list from the coworker relationships map.
+   * Called after deserialization to restore the O(1) neighbor lookup structure.
+   */
+  private rebuildAdjacencyList(): void {
+    this.adjacencyList.clear();
+    for (const key of this.coworkerRelationships.keys()) {
+      const [id1, id2] = key.split(":");
+      if (id1 && id2) {
+        this.addToAdjacencyList(id1, id2);
+      }
+    }
   }
 }

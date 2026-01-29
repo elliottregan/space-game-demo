@@ -157,3 +157,26 @@ export const GUILD_INITIAL_RELATIONSHIP_BONUS = 0.08;
 
 /** Morale bonus per guild membership */
 export const GUILD_MORALE_BONUS = 2;
+
+// ============ Social Cohesion System ============
+
+/**
+ * Morale modifier based on colony social cohesion.
+ * Applied per sol based on colony-wide clustering coefficient.
+ */
+export const SOCIAL_COHESION = {
+  /** Cohesion above this provides morale bonus */
+  HIGH_THRESHOLD: 0.4,
+  /** Cohesion below this triggers morale penalty and warning */
+  LOW_THRESHOLD: 0.15,
+  /** Cohesion below this triggers critical warning */
+  CRITICAL_THRESHOLD: 0.08,
+  /** Maximum morale bonus per sol from high cohesion */
+  MAX_MORALE_BONUS: 0.3,
+  /** Maximum morale penalty per sol from low cohesion */
+  MAX_MORALE_PENALTY: 0.5,
+  /** Minimum connections before a colonist is considered isolated */
+  ISOLATION_CONNECTION_THRESHOLD: 1,
+  /** Sols an isolated colonist must remain isolated before event triggers */
+  ISOLATION_WARNING_DELAY: 10,
+} as const;

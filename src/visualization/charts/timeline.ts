@@ -11,6 +11,7 @@ const RESOURCE_COLORS: Record<string, string> = {
   power: "#ffc107",
   population: "#9c27b0",
   morale: "#ff5722",
+  socialCohesion: "#e91e63", // Pink - distinct from morale's orange
 };
 
 export function renderTimeline(
@@ -51,9 +52,19 @@ export function renderTimeline(
   const x = d3.scaleLinear().domain([0, maxSol]).range([0, width]);
 
   // Y scale - calculate max from all displayed resources
-  const resources: keyof ResourceSnapshot[] = ["food", "oxygen", "water", "population", "morale"];
+  // Note: socialCohesion is 0-1, we'll scale it to 0-100 for display
+  const resources: (keyof ResourceSnapshot)[] = [
+    "food",
+    "oxygen",
+    "water",
+    "population",
+    "morale",
+    "socialCohesion",
+  ];
   let maxValue = 0;
   for (const resource of resources) {
+    // Skip cohesion for max calc since we'll scale it to 100
+    if (resource === "socialCohesion") continue;
     const maxA = d3.max(timelineA, (d) => d[resource] as number) ?? 0;
     const maxB = d3.max(timelineB, (d) => d[resource] as number) ?? 0;
     maxValue = Math.max(maxValue, maxA, maxB);
@@ -61,6 +72,13 @@ export function renderTimeline(
   // Add 10% padding to the top
   maxValue = Math.ceil(maxValue * 1.1);
   const y = d3.scaleLinear().domain([0, maxValue]).range([height, 0]);
+
+  // Value getter that scales cohesion to 0-100
+  const getValue = (d: ResourceSnapshot, key: keyof ResourceSnapshot): number => {
+    const value = d[key] as number;
+    // Scale cohesion (0-1) to percentage (0-100) for display
+    return key === "socialCohesion" ? value * 100 : value;
+  };
 
   // Grid
   svg
@@ -73,12 +91,12 @@ export function renderTimeline(
         .tickFormat(() => ""),
     );
 
-  // Line generator
+  // Line generator (uses getValue to scale cohesion)
   const line = (key: keyof ResourceSnapshot) =>
     d3
       .line<ResourceSnapshot>()
       .x((d) => x(d.sol))
-      .y((d) => y(d[key] as number))
+      .y((d) => y(getValue(d, key)))
       .curve(d3.curveMonotoneX);
 
   // Draw lines for each resource
@@ -124,7 +142,16 @@ export function renderTimeline(
   // Y axis
   svg.append("g").attr("class", "axis").call(d3.axisLeft(y));
 
-  // Legend
+  // Legend with display names
+  const displayNames: Record<string, string> = {
+    food: "Food",
+    oxygen: "Oxygen",
+    water: "Water",
+    population: "Population",
+    morale: "Morale",
+    socialCohesion: "Cohesion (%)",
+  };
+
   const legend = svg.append("g").attr("transform", `translate(${width + 10}, 0)`);
 
   resources.forEach((resource, i) => {
@@ -143,6 +170,6 @@ export function renderTimeline(
       .attr("y", 14)
       .attr("fill", "var(--g-color-text)")
       .attr("font-size", "0.75rem")
-      .text(resource.charAt(0).toUpperCase() + resource.slice(1));
+      .text(displayNames[resource] ?? resource);
   });
 }
