@@ -12,6 +12,13 @@ export {
   processMaintenanceDecay,
 } from "./buildings";
 export { processWorkforceTick } from "./workforce";
+export {
+  calculateSocialCohesion,
+  calculatePolicyEffects,
+  processColonyTick,
+  autoAssignWorkers,
+  assignHousing,
+} from "./colony";
 
 /**
  * Create a TickRunner with all standard game phases registered.
