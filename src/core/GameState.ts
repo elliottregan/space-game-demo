@@ -1,9 +1,10 @@
-import { STARTING_POPULATION, STARTING_RESOURCES } from "./balance/EconomyBaseline";
+import { getStartingCondition, StartingConditionId } from "./data/startingConditions";
 import { LABOR_POOL_BONUS_CAP, LABOR_POOL_BONUS_PER_COLONIST } from "./balance/WorkforceBalance";
 import { BUILDINGS } from "./data/buildings";
 import { RANDOM_EVENTS } from "./data/events";
 import { INITIAL_RELATIONSHIPS, NPCS, PROJECTS } from "./data/npcs";
 import { TECHNOLOGIES } from "./data/technologies";
+import { BuildingId } from "./models/Building";
 import type { GameEvent } from "./models/GameEvent";
 import { BuildingManager } from "./systems/BuildingManager";
 import { ColonyManager } from "./systems/ColonyManager";
@@ -44,11 +45,19 @@ export class GameState {
     this.autoAssignNewColonists = value;
   }
 
-  constructor() {
-    this.resources = new ResourceManager(STARTING_RESOURCES);
+  constructor(startingConditionId?: string) {
+    const condition = startingConditionId
+      ? getStartingCondition(startingConditionId)
+      : getStartingCondition(StartingConditionId.DEFAULT);
+
+    if (!condition) {
+      throw new Error(`Unknown starting condition: ${startingConditionId}`);
+    }
+
+    this.resources = new ResourceManager(condition.resources);
     this.technology = new TechnologyTree(TECHNOLOGIES);
     this.buildings = new BuildingManager(BUILDINGS);
-    this.colony = new ColonyManager(STARTING_POPULATION);
+    this.colony = new ColonyManager(condition.population);
     this.buildings.setColonyManager(this.colony);
     this.buildings.setTechnologyTree(this.technology);
     this.workforce = new WorkforceManager();
@@ -58,8 +67,40 @@ export class GameState {
     this.operations = new OperationsManager();
     this.npcInfluence = new NPCInfluenceManager(NPCS, INITIAL_RELATIONSHIPS, PROJECTS);
 
+    // Create pre-built buildings
+    this.createPreBuiltBuildings(condition.preBuiltBuildings);
+
     // Initialize colonist consumption
     this.colony.tick(this.resources, this.buildings, { morale: 0, health: 0 });
+  }
+
+  private createPreBuiltBuildings(buildingIds: BuildingId[]): void {
+    for (const defId of buildingIds) {
+      const def = this.buildings.getDefinition(defId);
+      if (!def) continue;
+
+      // Create building directly as active (skip construction)
+      const _building = this.buildings.addBuilding({
+        definitionId: defId,
+        status: "active",
+        constructionProgress: def.constructionTime,
+        assignedWorkers: [],
+        mode: "normal",
+        broken: false,
+        repairProgress: 0,
+        condition: 100,
+        age: 0,
+        lastMaintenance: 0,
+      });
+
+      // Register production/consumption
+      if (def.production) {
+        this.resources.addProduction(def.production);
+      }
+      if (def.consumption) {
+        this.resources.addConsumption(def.consumption);
+      }
+    }
   }
 
   tick(): GameEvent[] {

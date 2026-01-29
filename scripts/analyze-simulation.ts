@@ -329,11 +329,7 @@ function detectCrisis(
 /**
  * Detect social cohesion crisis conditions.
  */
-function detectCohesionCrisis(
-  sol: number,
-  cohesion: number,
-  crisisTimeline: CrisisPoint[],
-): void {
+function detectCohesionCrisis(sol: number, cohesion: number, crisisTimeline: CrisisPoint[]): void {
   let severity: CrisisPoint["severity"] | null = null;
   let threshold = 0;
 
@@ -741,7 +737,9 @@ function computeSocialCohesion(results: RunResult[]): SocialCohesionAnalysis {
     minCohesion: allCohesions.length > 0 ? Math.min(...allCohesions) : 0,
     maxCohesion: allCohesions.length > 0 ? Math.max(...allCohesions) : 0,
     avgIsolatedColonists:
-      finalIsolated.length > 0 ? finalIsolated.reduce((a, b) => a + b, 0) / finalIsolated.length : 0,
+      finalIsolated.length > 0
+        ? finalIsolated.reduce((a, b) => a + b, 0) / finalIsolated.length
+        : 0,
     lowCohesionRuns,
     cohesionVictoryCorrelation,
   };
@@ -1460,8 +1458,7 @@ function analyzeSocialCohesion(results: RunResult[]): void {
   if (victoryCohesions.length > 0 && defeatCohesions.length > 0) {
     const avgVictoryCohesion =
       victoryCohesions.reduce((a, b) => a + b, 0) / victoryCohesions.length;
-    const avgDefeatCohesion =
-      defeatCohesions.reduce((a, b) => a + b, 0) / defeatCohesions.length;
+    const avgDefeatCohesion = defeatCohesions.reduce((a, b) => a + b, 0) / defeatCohesions.length;
     output("\n  Final Cohesion by Outcome:");
     output(`    Victory: ${avgVictoryCohesion.toFixed(3)}`);
     output(`    Defeat:  ${avgDefeatCohesion.toFixed(3)}`);

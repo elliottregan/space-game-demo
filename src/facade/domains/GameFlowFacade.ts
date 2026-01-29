@@ -2,11 +2,13 @@
 // Game flow queries and commands facade
 
 import { GameState } from "../../core/GameState";
+import { STARTING_CONDITIONS } from "../../core/data/startingConditions";
+import type { StartingCondition } from "../../core/models/StartingCondition";
 import type { AdvanceSolsResult, GameEvent, VictoryState } from "../types";
 import { err, ok, type Result } from "../types/common";
 
 type CommandExecutor = <T>(fn: () => Result<T>) => Result<T>;
-type ResetGameState = () => void;
+type ResetGameState = (startingConditionId?: string) => void;
 type AddEvents = (events: GameEvent[]) => void;
 
 /**
@@ -47,6 +49,13 @@ export class GameFlowFacade {
    */
   isGameOver(): boolean {
     return this.gameState.victory.isGameOver();
+  }
+
+  /**
+   * Get all available starting conditions.
+   */
+  getStartingConditions(): readonly StartingCondition[] {
+    return STARTING_CONDITIONS;
   }
 
   // ==========================================================================
@@ -124,9 +133,10 @@ export class GameFlowFacade {
 
   /**
    * Start a new game, resetting all state.
+   * @param startingConditionId - Optional starting condition ID
    */
-  newGame(): void {
-    this.resetGameState();
+  newGame(startingConditionId?: string): void {
+    this.resetGameState(startingConditionId);
   }
 
   /**

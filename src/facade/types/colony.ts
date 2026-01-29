@@ -4,10 +4,7 @@
 import { type SkillDefinition, SkillId } from "../../core/data/skills";
 import type { Colonist, ColonistRole } from "../../core/models/Colonist";
 import type { Guild } from "../../core/models/Guild";
-import type {
-  CoworkerRelationship,
-  SocialCommunity,
-} from "../../core/systems/WorkforceManager";
+import type { CoworkerRelationship, SocialCommunity } from "../../core/systems/WorkforceManager";
 
 /**
  * Immutable snapshot of colony state.
