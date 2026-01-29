@@ -4,6 +4,13 @@ import { TickRunner } from "../TickRunner";
 export { processNPCInfluence } from "./politics";
 export { processRandomEvents } from "./events";
 export { processOperations, processDepositExtraction } from "./operations";
+export {
+  processBuildingsTick,
+  processConstruction,
+  processRepairs,
+  processRecycling,
+  processMaintenanceDecay,
+} from "./buildings";
 
 /**
  * Create a TickRunner with all standard game phases registered.
