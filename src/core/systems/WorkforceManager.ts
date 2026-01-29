@@ -1,11 +1,7 @@
 import {
   BASE_CONNECTION_PROBABILITY,
-  BRIDGE_COLONIST_BONUS,
-  COHORT_BONDING_MULTIPLIER,
   COHORT_INITIAL_BONUS,
-  COHORT_WINDOW_SOLS,
   COWORKER_BONDING_RATE,
-  COWORKER_RELATIONSHIP_DECAY,
   EXPERIENCE_GAIN_RATE,
   GUILD_BONDING_MULTIPLIER,
   GUILD_INITIAL_RELATIONSHIP_BONUS,
@@ -14,155 +10,49 @@ import {
   INITIAL_HOUSEMATE_RELATIONSHIP,
   INITIAL_SOCIAL_RELATIONSHIP,
   MASTER_EVENT_CHANCE,
-  MASTERY_EFFICIENCY,
-  MASTERY_THRESHOLDS,
   MAX_CONNECTION_PROBABILITY,
   MAX_COWORKER_RELATIONSHIP,
-  MAX_GUILD_MEMBERSHIPS,
-  MAX_GUILD_SIZE,
   MAX_SKILL_EFFICIENCY_BONUS,
-  MAX_TEAM_COHESION_BONUS,
-  MIN_COWORKER_RELATIONSHIP,
-  MIN_GUILD_SIZE,
   PREFERENTIAL_ATTACHMENT_FACTOR,
   PREFERENTIAL_ATTACHMENT_THRESHOLD,
-  ROLE_AFFINITY,
   SOCIAL_BONDING_RATE,
   SOCIAL_BONDS_PER_TICK,
   SOCIAL_RELATIONSHIP_DECAY,
-  TEAM_COHESION_THRESHOLD,
   WEAK_TIE_THRESHOLD,
 } from "../balance/WorkforceBalance";
 import { SKILLS } from "../data/skills";
 import type { Colonist } from "../models/Colonist";
 import { ColonistRole, MasteryLevel } from "../models/Colonist";
 import type { GameEvent } from "../models/GameEvent";
-import { type Guild, GuildType } from "../models/Guild";
+import { GuildType } from "../models/Guild";
+import type { Guild } from "../models/Guild";
 import { pickRandomSubset } from "../utils/randomSubset";
 import type { BuildingManager } from "./BuildingManager";
 import type { ColonyManager } from "./ColonyManager";
 
-/**
- * Tracks a relationship between two colonists.
- */
-export interface CoworkerRelationship {
-  /** Strength of the relationship (0-1) */
-  strength: number;
-  /** Sol when they first worked together */
-  formedAt: number;
-  /** Sol when they last worked together */
-  lastWorkedTogether: number;
-  /** Whether this is a cohort relationship (arrived together) */
-  isCohort?: boolean;
-  /** Whether they share a guild */
-  sharedGuildIds?: string[];
-}
+// Import composed managers
+import { RelationshipManager } from "./RelationshipManager";
+import { GuildManager } from "./GuildManager";
 
-/**
- * Information about a colonist's social position in the network.
- */
-export interface SocialNetworkPosition {
-  /** Number of connections this colonist has */
-  connectionCount: number;
-  /** Average strength of their connections */
-  averageStrength: number;
-  /** Number of weak ties (bridges to other groups) */
-  weakTieCount: number;
-  /** Bridging score - how much they connect otherwise separate groups */
-  bridgingScore: number;
-}
+// Import pure functions from workforce/ modules
+import { areInSameCohort } from "./workforce/cohort";
+import { calculateMasteryLevel, getMasteryEfficiency, getMasteryName } from "./workforce/mastery";
+import { getTrainingTime } from "./workforce/training";
+import { getRelationshipKey } from "./workforce/socialGraph";
 
-/**
- * A detected social community (emergent group) in the colonist network.
- */
-export interface SocialCommunity {
-  /** Unique identifier for this community */
-  id: string;
-  /** IDs of colonists in this community */
-  memberIds: string[];
-  /** Average internal relationship strength */
-  cohesion: number;
-  /** Number of connections to other communities */
-  externalConnections: number;
-}
+// Re-export types for backward compatibility
+export type {
+  CoworkerRelationship,
+  SocialNetworkPosition,
+  SocialCommunity,
+} from "./workforce/types";
 
 export class WorkforceManager {
-  /** Tracks relationships between colonists (key: "colonistId1:colonistId2" sorted alphabetically) */
-  private coworkerRelationships: Map<string, CoworkerRelationship> = new Map();
+  /** Manages colonist relationships - delegated to RelationshipManager */
+  private relationshipManager: RelationshipManager = new RelationshipManager();
 
-  /**
-   * Adjacency list for O(1) neighbor lookups.
-   * Maps colonistId -> Set of connected colonistIds.
-   * Maintained in sync with coworkerRelationships.
-   */
-  private adjacencyList: Map<string, Set<string>> = new Map();
-
-  /** Guilds in the colony */
-  private guilds: Map<string, Guild> = new Map();
-
-  /** Counter for generating guild IDs */
-  private nextGuildId: number = 1;
-
-  // ============ Caching for expensive calculations ============
-
-  /** Cached clustering coefficients per colonist */
-  private clusteringCache: Map<string, number> = new Map();
-
-  /** Cached colony-wide social cohesion */
-  private colonyCohesionCache: number | null = null;
-
-  /** Flag indicating cache is dirty and needs recalculation */
-  private networkDirty: boolean = true;
-
-  /** Invalidate caches when network topology changes */
-  private invalidateCache(): void {
-    this.networkDirty = true;
-    this.clusteringCache.clear();
-    this.colonyCohesionCache = null;
-  }
-
-  // ============ Adjacency List Helpers ============
-
-  /**
-   * Add an edge to the adjacency list (both directions).
-   */
-  private addToAdjacencyList(colonistId1: string, colonistId2: string): void {
-    if (!this.adjacencyList.has(colonistId1)) {
-      this.adjacencyList.set(colonistId1, new Set());
-    }
-    if (!this.adjacencyList.has(colonistId2)) {
-      this.adjacencyList.set(colonistId2, new Set());
-    }
-    const wasNew1 = !this.adjacencyList.get(colonistId1)!.has(colonistId2);
-    this.adjacencyList.get(colonistId1)!.add(colonistId2);
-    this.adjacencyList.get(colonistId2)!.add(colonistId1);
-
-    // Invalidate cache if this is a new edge
-    if (wasNew1) {
-      this.invalidateCache();
-    }
-  }
-
-  /**
-   * Remove an edge from the adjacency list (both directions).
-   */
-  private removeFromAdjacencyList(colonistId1: string, colonistId2: string): void {
-    const hadEdge = this.adjacencyList.get(colonistId1)?.has(colonistId2) ?? false;
-    this.adjacencyList.get(colonistId1)?.delete(colonistId2);
-    this.adjacencyList.get(colonistId2)?.delete(colonistId1);
-
-    // Invalidate cache if edge was removed
-    if (hadEdge) {
-      this.invalidateCache();
-    }
-  }
-
-  /**
-   * Get neighbors of a colonist from adjacency list. O(1) lookup.
-   */
-  private getNeighbors(colonistId: string): Set<string> {
-    return this.adjacencyList.get(colonistId) ?? new Set();
-  }
+  /** Manages guilds - delegated to GuildManager */
+  private guildManager: GuildManager = new GuildManager();
 
   tick(colony: ColonyManager, buildings?: BuildingManager, currentSol: number = 0): GameEvent[] {
     const events: GameEvent[] = [];
@@ -213,8 +103,8 @@ export class WorkforceManager {
       if (colonist.role !== ColonistRole.UNASSIGNED && !colonist.trainingTarget) {
         colonist.experience += EXPERIENCE_GAIN_RATE;
 
-        // Check for mastery level up
-        const newLevel = this.calculateMasteryLevel(colonist.experience);
+        // Check for mastery level up (use pure function)
+        const newLevel = calculateMasteryLevel(colonist.experience);
         if (newLevel > colonist.masteryLevel) {
           colonist.masteryLevel = newLevel;
           events.push({
@@ -260,18 +150,17 @@ export class WorkforceManager {
     colonist.trainingProgress = undefined;
   }
 
+  /** Delegate to pure function */
   getTrainingTime(currentRole: ColonistRole, targetRole: ColonistRole): number {
-    const affinities = ROLE_AFFINITY[currentRole];
-    return affinities?.[targetRole] || 10;
+    return getTrainingTime(currentRole, targetRole);
   }
 
+  /** Delegate to pure function */
   calculateMasteryLevel(experience: number): MasteryLevel {
-    if (experience >= MASTERY_THRESHOLDS.MASTER) return MasteryLevel.MASTER;
-    if (experience >= MASTERY_THRESHOLDS.EXPERT) return MasteryLevel.EXPERT;
-    if (experience >= MASTERY_THRESHOLDS.SKILLED) return MasteryLevel.SKILLED;
-    return MasteryLevel.NOVICE;
+    return calculateMasteryLevel(experience);
   }
 
+  /** Provide backward-compatible role names (differs from ROLE_DISPLAY_NAMES) */
   getRoleName(role: ColonistRole): string {
     switch (role) {
       case ColonistRole.UNASSIGNED:
@@ -287,17 +176,9 @@ export class WorkforceManager {
     }
   }
 
+  /** Delegate to pure function */
   getMasteryName(level: MasteryLevel): string {
-    switch (level) {
-      case MasteryLevel.NOVICE:
-        return "Novice";
-      case MasteryLevel.SKILLED:
-        return "Skilled";
-      case MasteryLevel.EXPERT:
-        return "Expert";
-      case MasteryLevel.MASTER:
-        return "Master";
-    }
+    return getMasteryName(level);
   }
 
   getWorkforceStats(colony: ColonyManager): Record<ColonistRole, number> {
@@ -321,7 +202,8 @@ export class WorkforceManager {
    * Combines mastery level bonus with skill bonuses (capped).
    */
   getColonistEfficiency(colonist: Colonist): number {
-    const masteryEfficiency = MASTERY_EFFICIENCY[colonist.masteryLevel];
+    // Use pure function for mastery efficiency
+    const masteryEfficiency = getMasteryEfficiency(colonist.masteryLevel);
 
     let skillBonus = 0;
     for (const skillId of colonist.skills) {
@@ -351,34 +233,25 @@ export class WorkforceManager {
   }
 
   // ============ Coworker Relationship System ============
-
-  /**
-   * Generate a canonical key for a pair of colonists (alphabetically sorted).
-   */
-  private getRelationshipKey(colonistId1: string, colonistId2: string): string {
-    return colonistId1 < colonistId2
-      ? `${colonistId1}:${colonistId2}`
-      : `${colonistId2}:${colonistId1}`;
-  }
+  // Delegate to RelationshipManager
 
   /**
    * Get the relationship between two colonists.
-   * Returns undefined if they have never worked together.
+   * Delegates to RelationshipManager.
    */
   getCoworkerRelationship(
     colonistId1: string,
     colonistId2: string,
-  ): CoworkerRelationship | undefined {
-    const key = this.getRelationshipKey(colonistId1, colonistId2);
-    return this.coworkerRelationships.get(key);
+  ): import("./workforce/types").CoworkerRelationship | undefined {
+    return this.relationshipManager.getRelationship(colonistId1, colonistId2);
   }
 
   /**
    * Get the relationship strength between two colonists (0 if no relationship).
+   * Delegates to RelationshipManager.
    */
   getCoworkerRelationshipStrength(colonistId1: string, colonistId2: string): number {
-    const relationship = this.getCoworkerRelationship(colonistId1, colonistId2);
-    return relationship?.strength ?? 0;
+    return this.relationshipManager.getRelationshipStrength(colonistId1, colonistId2);
   }
 
   /**
@@ -402,20 +275,19 @@ export class WorkforceManager {
           const colonistB = building.assignedWorkers[j];
           if (!colonistB) continue;
 
-          const key = this.getRelationshipKey(colonistA, colonistB);
+          const key = getRelationshipKey(colonistA, colonistB);
           currentCoworkerPairs.add(key);
 
-          let relationship = this.coworkerRelationships.get(key);
+          const existingRelationship = this.relationshipManager.getRelationship(
+            colonistA,
+            colonistB,
+          );
 
-          if (!relationship) {
-            // First time working together
-            relationship = {
-              strength: INITIAL_COWORKER_RELATIONSHIP,
-              formedAt: currentSol,
-              lastWorkedTogether: currentSol,
-            };
-            this.coworkerRelationships.set(key, relationship);
-            this.addToAdjacencyList(colonistA, colonistB);
+          if (!existingRelationship) {
+            // First time working together - create relationship via RelationshipManager
+            this.relationshipManager.createRelationship(colonistA, colonistB, currentSol, {
+              initialStrength: INITIAL_COWORKER_RELATIONSHIP,
+            });
 
             events.push({
               type: "COWORKER_BOND_FORMED",
@@ -426,31 +298,20 @@ export class WorkforceManager {
               message: `New coworker bond formed at ${building.id}`,
             });
           } else {
-            // Strengthen existing relationship
-            relationship.strength = Math.min(
-              MAX_COWORKER_RELATIONSHIP,
-              relationship.strength + COWORKER_BONDING_RATE,
+            // Strengthen existing relationship via RelationshipManager
+            this.relationshipManager.strengthenRelationship(
+              colonistA,
+              colonistB,
+              COWORKER_BONDING_RATE,
+              currentSol,
             );
-            relationship.lastWorkedTogether = currentSol;
           }
         }
       }
     }
 
     // Decay relationships for colonists not currently working together
-    for (const [key, relationship] of this.coworkerRelationships.entries()) {
-      if (!currentCoworkerPairs.has(key)) {
-        relationship.strength = Math.max(
-          MIN_COWORKER_RELATIONSHIP,
-          relationship.strength - COWORKER_RELATIONSHIP_DECAY,
-        );
-
-        // Remove very weak relationships
-        if (relationship.strength <= MIN_COWORKER_RELATIONSHIP) {
-          // Keep the relationship but at minimum strength
-        }
-      }
-    }
+    this.relationshipManager.decayRelationships(currentCoworkerPairs);
 
     return events;
   }
@@ -461,7 +322,6 @@ export class WorkforceManager {
    */
   private processHousemateBonding(colonists: readonly Colonist[], currentSol: number): GameEvent[] {
     const events: GameEvent[] = [];
-    const currentHousematePairs = new Set<string>();
 
     // Group colonists by housing
     const housingGroups = new Map<string, Colonist[]>();
@@ -485,20 +345,16 @@ export class WorkforceManager {
           const colonistB = housemates[j];
           if (!colonistB) continue;
 
-          const key = this.getRelationshipKey(colonistA.id, colonistB.id);
-          currentHousematePairs.add(key);
+          const existingRelationship = this.relationshipManager.getRelationship(
+            colonistA.id,
+            colonistB.id,
+          );
 
-          let relationship = this.coworkerRelationships.get(key);
-
-          if (!relationship) {
-            // First time living together
-            relationship = {
-              strength: INITIAL_HOUSEMATE_RELATIONSHIP,
-              formedAt: currentSol,
-              lastWorkedTogether: currentSol,
-            };
-            this.coworkerRelationships.set(key, relationship);
-            this.addToAdjacencyList(colonistA.id, colonistB.id);
+          if (!existingRelationship) {
+            // First time living together - create via RelationshipManager
+            this.relationshipManager.createRelationship(colonistA.id, colonistB.id, currentSol, {
+              initialStrength: INITIAL_HOUSEMATE_RELATIONSHIP,
+            });
 
             events.push({
               type: "HOUSEMATE_BOND_FORMED",
@@ -510,11 +366,12 @@ export class WorkforceManager {
             });
           } else {
             // Strengthen existing relationship (housemates bond faster)
-            relationship.strength = Math.min(
-              MAX_COWORKER_RELATIONSHIP,
-              relationship.strength + HOUSEMATE_BONDING_RATE,
+            this.relationshipManager.strengthenRelationship(
+              colonistA.id,
+              colonistB.id,
+              HOUSEMATE_BONDING_RATE,
+              currentSol,
             );
-            relationship.lastWorkedTogether = currentSol;
           }
         }
       }
@@ -571,20 +428,19 @@ export class WorkforceManager {
         const bondingPartners = pickRandomSubset(others, SOCIAL_BONDS_PER_TICK);
 
         for (const partner of bondingPartners) {
-          const key = this.getRelationshipKey(colonist.id, partner.id);
+          const key = getRelationshipKey(colonist.id, partner.id);
           currentSocialPairs.add(key);
 
-          let relationship = this.coworkerRelationships.get(key);
+          const existingRelationship = this.relationshipManager.getRelationship(
+            colonist.id,
+            partner.id,
+          );
 
-          if (!relationship) {
-            // First time meeting at social building
-            relationship = {
-              strength: INITIAL_SOCIAL_RELATIONSHIP,
-              formedAt: currentSol,
-              lastWorkedTogether: currentSol,
-            };
-            this.coworkerRelationships.set(key, relationship);
-            this.addToAdjacencyList(colonist.id, partner.id);
+          if (!existingRelationship) {
+            // First time meeting at social building - create via RelationshipManager
+            this.relationshipManager.createRelationship(colonist.id, partner.id, currentSol, {
+              initialStrength: INITIAL_SOCIAL_RELATIONSHIP,
+            });
 
             events.push({
               type: "SOCIAL_BOND_FORMED",
@@ -597,11 +453,12 @@ export class WorkforceManager {
           } else {
             // Strengthen existing relationship
             const bondingRate = SOCIAL_BONDING_RATE * bondingMultiplier;
-            relationship.strength = Math.min(
-              MAX_COWORKER_RELATIONSHIP,
-              relationship.strength + bondingRate,
+            this.relationshipManager.strengthenRelationship(
+              colonist.id,
+              partner.id,
+              bondingRate,
+              currentSol,
             );
-            relationship.lastWorkedTogether = currentSol;
           }
         }
       }
@@ -615,16 +472,15 @@ export class WorkforceManager {
       }
     }
 
-    for (const [key, relationship] of this.coworkerRelationships.entries()) {
+    // Custom decay for social relationships
+    for (const [key, relationship] of this.relationshipManager.getAllRelationships()) {
       if (currentSocialPairs.has(key)) continue; // Currently socializing, skip
 
       const [id1, id2] = key.split(":");
       // Only decay if both colonists have social building assignments (social relationship)
       if (colonistsWithSocialBuildings.has(id1!) && colonistsWithSocialBuildings.has(id2!)) {
-        relationship.strength = Math.max(
-          MIN_COWORKER_RELATIONSHIP,
-          relationship.strength - SOCIAL_RELATIONSHIP_DECAY,
-        );
+        // Direct mutation since we need custom decay logic
+        relationship.strength = Math.max(0, relationship.strength - SOCIAL_RELATIONSHIP_DECAY);
       }
     }
 
@@ -633,66 +489,31 @@ export class WorkforceManager {
 
   /**
    * Calculate the team cohesion bonus for a building based on worker relationships.
-   * Returns a multiplier (1.0 = no bonus, up to 1.0 + MAX_TEAM_COHESION_BONUS).
+   * Delegates to RelationshipManager.
    */
   getTeamCohesionMultiplier(workerIds: string[]): number {
-    if (workerIds.length < 2) {
-      return 1.0; // No team bonus for solo workers
-    }
-
-    // Calculate average relationship strength between all pairs
-    let totalStrength = 0;
-    let pairCount = 0;
-
-    for (let i = 0; i < workerIds.length; i++) {
-      const workerA = workerIds[i];
-      if (!workerA) continue;
-
-      for (let j = i + 1; j < workerIds.length; j++) {
-        const workerB = workerIds[j];
-        if (!workerB) continue;
-
-        totalStrength += this.getCoworkerRelationshipStrength(workerA, workerB);
-        pairCount++;
-      }
-    }
-
-    if (pairCount === 0) {
-      return 1.0;
-    }
-
-    const averageStrength = totalStrength / pairCount;
-
-    // No bonus if average strength is below threshold
-    if (averageStrength < TEAM_COHESION_THRESHOLD) {
-      return 1.0;
-    }
-
-    // Scale bonus from 0 to MAX_TEAM_COHESION_BONUS based on strength above threshold
-    const strengthAboveThreshold = averageStrength - TEAM_COHESION_THRESHOLD;
-    const maxStrengthAboveThreshold = MAX_COWORKER_RELATIONSHIP - TEAM_COHESION_THRESHOLD;
-    const bonusRatio = strengthAboveThreshold / maxStrengthAboveThreshold;
-
-    return 1.0 + bonusRatio * MAX_TEAM_COHESION_BONUS;
+    return this.relationshipManager.getTeamCohesionMultiplier(workerIds);
   }
 
   /**
    * Get all coworker relationships.
+   * Delegates to RelationshipManager.
    */
-  getAllCoworkerRelationships(): ReadonlyMap<string, CoworkerRelationship> {
-    return this.coworkerRelationships;
+  getAllCoworkerRelationships(): ReadonlyMap<
+    string,
+    import("./workforce/types").CoworkerRelationship
+  > {
+    return this.relationshipManager.getAllRelationships();
   }
 
   // ============ Cohort System ============
 
   /**
    * Check if two colonists are in the same cohort (arrived within COHORT_WINDOW_SOLS of each other).
+   * Delegates to pure function.
    */
   areInSameCohort(colonistA: Colonist, colonistB: Colonist): boolean {
-    if (colonistA.arrivalSol === undefined || colonistB.arrivalSol === undefined) {
-      return false;
-    }
-    return Math.abs(colonistA.arrivalSol - colonistB.arrivalSol) <= COHORT_WINDOW_SOLS;
+    return areInSameCohort(colonistA.arrivalSol, colonistB.arrivalSol);
   }
 
   /**
@@ -701,13 +522,14 @@ export class WorkforceManager {
   private getBondingMultiplier(colonistA: Colonist, colonistB: Colonist): number {
     let multiplier = 1.0;
 
-    // Cohort bonus
-    if (this.areInSameCohort(colonistA, colonistB)) {
-      multiplier *= COHORT_BONDING_MULTIPLIER;
+    // Cohort bonus (use pure function)
+    if (areInSameCohort(colonistA.arrivalSol, colonistB.arrivalSol)) {
+      // Use the constant directly since getCohortBondingMultiplier requires arrival sols
+      multiplier *= 1.5; // COHORT_BONDING_MULTIPLIER
     }
 
-    // Guild bonus
-    if (this.shareGuild(colonistA, colonistB)) {
+    // Guild bonus (delegate to GuildManager)
+    if (this.guildManager.shareGuild(colonistA, colonistB)) {
       multiplier *= GUILD_BONDING_MULTIPLIER;
     }
 
@@ -715,9 +537,11 @@ export class WorkforceManager {
   }
 
   // ============ Guild System ============
+  // Delegate to GuildManager
 
   /**
    * Create a new guild.
+   * Delegates to GuildManager.
    */
   createGuild(
     name: string,
@@ -726,119 +550,63 @@ export class WorkforceManager {
     currentSol: number,
     description?: string,
   ): Guild | null {
-    if (founderIds.length < MIN_GUILD_SIZE) {
-      return null;
-    }
-
-    const id = `guild_${this.nextGuildId++}`;
-    const guild: Guild = {
-      id,
-      name,
-      type,
-      memberIds: founderIds.slice(0, MAX_GUILD_SIZE),
-      foundedSol: currentSol,
-      description,
-    };
-
-    this.guilds.set(id, guild);
-    return guild;
+    return this.guildManager.createGuild(name, type, founderIds, currentSol, description);
   }
 
   /**
    * Add a colonist to a guild.
+   * Delegates to GuildManager.
    */
   joinGuild(colonistId: string, guildId: string, colonist: Colonist): boolean {
-    const guild = this.guilds.get(guildId);
-    if (!guild) return false;
-
-    // Check guild size limit
-    if (guild.memberIds.length >= MAX_GUILD_SIZE) return false;
-
-    // Check colonist's guild membership limit
-    const membershipCount = colonist.guildIds?.length ?? 0;
-    if (membershipCount >= MAX_GUILD_MEMBERSHIPS) return false;
-
-    // Check if already a member
-    if (guild.memberIds.includes(colonistId)) return false;
-
-    guild.memberIds.push(colonistId);
-
-    // Update colonist's guild list
-    if (!colonist.guildIds) {
-      colonist.guildIds = [];
-    }
-    colonist.guildIds.push(guildId);
-
-    return true;
+    return this.guildManager.joinGuild(colonistId, guildId, colonist);
   }
 
   /**
    * Remove a colonist from a guild.
+   * Delegates to GuildManager.
    */
   leaveGuild(colonistId: string, guildId: string, colonist: Colonist): boolean {
-    const guild = this.guilds.get(guildId);
-    if (!guild) return false;
-
-    const memberIndex = guild.memberIds.indexOf(colonistId);
-    if (memberIndex === -1) return false;
-
-    guild.memberIds.splice(memberIndex, 1);
-
-    // Update colonist's guild list
-    if (colonist.guildIds) {
-      const guildIndex = colonist.guildIds.indexOf(guildId);
-      if (guildIndex !== -1) {
-        colonist.guildIds.splice(guildIndex, 1);
-      }
-    }
-
-    // Disband guild if too few members
-    if (guild.memberIds.length < MIN_GUILD_SIZE) {
-      this.disbandGuild(guildId);
-    }
-
-    return true;
+    return this.guildManager.leaveGuild(colonistId, guildId, colonist);
   }
 
   /**
    * Disband a guild.
+   * Delegates to GuildManager.
    */
   disbandGuild(guildId: string): boolean {
-    return this.guilds.delete(guildId);
+    return this.guildManager.disbandGuild(guildId);
   }
 
   /**
    * Get all guilds.
+   * Delegates to GuildManager.
    */
   getGuilds(): readonly Guild[] {
-    return [...this.guilds.values()];
+    return this.guildManager.getGuilds();
   }
 
   /**
    * Get a guild by ID.
+   * Delegates to GuildManager.
    */
   getGuild(guildId: string): Guild | undefined {
-    return this.guilds.get(guildId);
+    return this.guildManager.getGuild(guildId);
   }
 
   /**
    * Check if two colonists share a guild.
+   * Delegates to GuildManager.
    */
   shareGuild(colonistA: Colonist, colonistB: Colonist): boolean {
-    if (!colonistA.guildIds?.length || !colonistB.guildIds?.length) {
-      return false;
-    }
-    return colonistA.guildIds.some((gId) => colonistB.guildIds?.includes(gId));
+    return this.guildManager.shareGuild(colonistA, colonistB);
   }
 
   /**
    * Get shared guild IDs between two colonists.
+   * Delegates to GuildManager.
    */
   getSharedGuildIds(colonistA: Colonist, colonistB: Colonist): string[] {
-    if (!colonistA.guildIds?.length || !colonistB.guildIds?.length) {
-      return [];
-    }
-    return colonistA.guildIds.filter((gId) => colonistB.guildIds?.includes(gId));
+    return this.guildManager.getSharedGuildIds(colonistA, colonistB);
   }
 
   /**
@@ -848,7 +616,7 @@ export class WorkforceManager {
     const events: GameEvent[] = [];
     const colonistMap = new Map(colonists.map((c) => [c.id, c]));
 
-    for (const guild of this.guilds.values()) {
+    for (const guild of this.guildManager.getGuilds()) {
       if (guild.memberIds.length < 2) continue;
 
       for (let i = 0; i < guild.memberIds.length; i++) {
@@ -861,21 +629,19 @@ export class WorkforceManager {
           const colonistB = colonistMap.get(colonistBId!);
           if (!colonistB) continue;
 
-          const key = this.getRelationshipKey(colonistAId!, colonistBId!);
-          let relationship = this.coworkerRelationships.get(key);
+          const existingRelationship = this.relationshipManager.getRelationship(
+            colonistAId!,
+            colonistBId!,
+          );
 
-          if (!relationship) {
-            // Guild members meeting for first time
+          if (!existingRelationship) {
+            // Guild members meeting for first time - create via RelationshipManager
             const initialStrength =
               INITIAL_COWORKER_RELATIONSHIP + GUILD_INITIAL_RELATIONSHIP_BONUS;
-            relationship = {
-              strength: Math.min(MAX_COWORKER_RELATIONSHIP, initialStrength),
-              formedAt: currentSol,
-              lastWorkedTogether: currentSol,
+            this.relationshipManager.createRelationship(colonistAId!, colonistBId!, currentSol, {
+              initialStrength: Math.min(MAX_COWORKER_RELATIONSHIP, initialStrength),
               sharedGuildIds: [guild.id],
-            };
-            this.coworkerRelationships.set(key, relationship);
-            this.addToAdjacencyList(colonistAId!, colonistBId!);
+            });
 
             events.push({
               type: "GUILD_BOND_FORMED",
@@ -888,13 +654,16 @@ export class WorkforceManager {
             });
           } else {
             // Update shared guild tracking
-            relationship.sharedGuildIds = this.getSharedGuildIds(colonistA, colonistB);
+            const sharedGuildIds = this.guildManager.getSharedGuildIds(colonistA, colonistB);
+            this.relationshipManager.updateSharedGuilds(colonistAId!, colonistBId!, sharedGuildIds);
 
             // Guild members bond at an accelerated rate
             const bondingRate = COWORKER_BONDING_RATE * GUILD_BONDING_MULTIPLIER * 0.5; // Half rate since passive
-            relationship.strength = Math.min(
-              MAX_COWORKER_RELATIONSHIP,
-              relationship.strength + bondingRate,
+            this.relationshipManager.strengthenRelationship(
+              colonistAId!,
+              colonistBId!,
+              bondingRate,
+              currentSol,
             );
           }
         }
@@ -907,10 +676,11 @@ export class WorkforceManager {
   // ============ Preferential Attachment System ============
 
   /**
-   * Get the number of connections a colonist has. O(1) via adjacency list.
+   * Get the number of connections a colonist has.
+   * Delegates to RelationshipManager.
    */
   getConnectionCount(colonistId: string): number {
-    return this.getNeighbors(colonistId).size;
+    return this.relationshipManager.getConnectionCount(colonistId);
   }
 
   /**
@@ -918,7 +688,7 @@ export class WorkforceManager {
    * Popular colonists are more likely to form new connections.
    */
   private calculateConnectionProbability(colonist: Colonist): number {
-    const connectionCount = this.getConnectionCount(colonist.id);
+    const connectionCount = this.relationshipManager.getConnectionCount(colonist.id);
 
     if (connectionCount < PREFERENTIAL_ATTACHMENT_THRESHOLD) {
       return BASE_CONNECTION_PROBABILITY;
@@ -949,14 +719,16 @@ export class WorkforceManager {
         // Pick a random colonist they don't have a strong connection with
         const candidates = colonists.filter((c) => {
           if (c.id === colonistA.id) return false;
-          const strength = this.getCoworkerRelationshipStrength(colonistA.id, c.id);
+          const strength = this.relationshipManager.getRelationshipStrength(colonistA.id, c.id);
           return strength < WEAK_TIE_THRESHOLD;
         });
 
         if (candidates.length === 0) continue;
 
         // Prefer connecting to popular colonists (rich get richer)
-        const weights = candidates.map((c) => 1 + this.getConnectionCount(c.id));
+        const weights = candidates.map(
+          (c) => 1 + this.relationshipManager.getConnectionCount(c.id),
+        );
         const totalWeight = weights.reduce((a, b) => a + b, 0);
 
         let random = Math.random() * totalWeight;
@@ -972,22 +744,26 @@ export class WorkforceManager {
 
         if (!selectedColonist) continue;
 
-        const key = this.getRelationshipKey(colonistA.id, selectedColonist.id);
-        let relationship = this.coworkerRelationships.get(key);
+        const existingRelationship = this.relationshipManager.getRelationship(
+          colonistA.id,
+          selectedColonist.id,
+        );
 
-        if (!relationship) {
-          // Check for cohort bonus
-          const isCohort = this.areInSameCohort(colonistA, selectedColonist);
+        if (!existingRelationship) {
+          // Check for cohort bonus (use pure function)
+          const isCohort = areInSameCohort(colonistA.arrivalSol, selectedColonist.arrivalSol);
           const initialBonus = isCohort ? COHORT_INITIAL_BONUS : 0;
 
-          relationship = {
-            strength: INITIAL_COWORKER_RELATIONSHIP + initialBonus,
-            formedAt: currentSol,
-            lastWorkedTogether: currentSol,
-            isCohort,
-          };
-          this.coworkerRelationships.set(key, relationship);
-          this.addToAdjacencyList(colonistA.id, selectedColonist.id);
+          // Create relationship via RelationshipManager
+          this.relationshipManager.createRelationship(
+            colonistA.id,
+            selectedColonist.id,
+            currentSol,
+            {
+              initialStrength: INITIAL_COWORKER_RELATIONSHIP + initialBonus,
+              isCohort,
+            },
+          );
 
           events.push({
             type: "SOCIAL_BOND_FORMED",
@@ -1008,160 +784,58 @@ export class WorkforceManager {
 
   /**
    * Check if a relationship is a weak tie.
+   * Delegates to RelationshipManager.
    */
   isWeakTie(colonistId1: string, colonistId2: string): boolean {
-    const strength = this.getCoworkerRelationshipStrength(colonistId1, colonistId2);
-    return strength > 0 && strength < WEAK_TIE_THRESHOLD;
+    return this.relationshipManager.isWeakTie(colonistId1, colonistId2);
   }
 
   /**
-   * Get all weak ties for a colonist. O(degree) via adjacency list.
+   * Get all weak ties for a colonist.
+   * Delegates to RelationshipManager.
    */
   getWeakTies(colonistId: string): string[] {
-    const weakTies: string[] = [];
-    for (const neighborId of this.getNeighbors(colonistId)) {
-      const strength = this.getCoworkerRelationshipStrength(colonistId, neighborId);
-      if (strength > 0 && strength < WEAK_TIE_THRESHOLD) {
-        weakTies.push(neighborId);
-      }
-    }
-    return weakTies;
+    return this.relationshipManager.getWeakTies(colonistId);
   }
 
   /**
    * Calculate the bridging score for a colonist.
-   * Higher score means they connect otherwise disconnected groups.
+   * Delegates to RelationshipManager.
    */
-  calculateBridgingScore(colonistId: string, colonists: readonly Colonist[]): number {
-    const connections = this.getConnectedColonistIds(colonistId);
-    if (connections.length < 2) return 0;
-
-    // Check how many of their connections are NOT connected to each other
-    let bridgingPairs = 0;
-    let totalPairs = 0;
-
-    for (let i = 0; i < connections.length; i++) {
-      for (let j = i + 1; j < connections.length; j++) {
-        totalPairs++;
-        const strength = this.getCoworkerRelationshipStrength(connections[i]!, connections[j]!);
-        if (strength < WEAK_TIE_THRESHOLD) {
-          bridgingPairs++;
-        }
-      }
-    }
-
-    return totalPairs > 0 ? bridgingPairs / totalPairs : 0;
+  calculateBridgingScore(colonistId: string, _colonists: readonly Colonist[]): number {
+    return this.relationshipManager.calculateBridgingScore(colonistId);
   }
 
   // ============ Social Cohesion System ============
 
   /**
    * Calculate the clustering coefficient for a colonist.
-   * Measures how connected their neighbors are to each other.
-   *
-   * Formula: C = 2 * actual_triangles / (degree * (degree - 1))
-   * Range: 0 (no triangles) to 1 (all neighbors connected)
-   *
-   * High clustering = tight-knit social circle
-   * Low clustering = scattered/isolated connections
-   *
-   * Uses caching - only recalculates when network topology changes.
-   *
-   * @param colonistId - The colonist to calculate clustering for
-   * @returns Clustering coefficient (0-1), or 0 if < 2 neighbors
+   * Delegates to RelationshipManager.
    */
   getClusteringCoefficient(colonistId: string): number {
-    // Return cached value if available and network hasn't changed
-    if (!this.networkDirty && this.clusteringCache.has(colonistId)) {
-      return this.clusteringCache.get(colonistId)!;
-    }
-
-    const neighbors = this.getNeighbors(colonistId);
-    const degree = neighbors.size;
-
-    // Need at least 2 neighbors to form triangles
-    if (degree < 2) {
-      this.clusteringCache.set(colonistId, 0);
-      return 0;
-    }
-
-    // Count edges between neighbors (triangles)
-    // Use adjacency list for O(1) edge checks instead of relationship strength lookup
-    let triangleEdges = 0;
-    const neighborArray = [...neighbors];
-    for (let i = 0; i < neighborArray.length; i++) {
-      const neighborI = neighborArray[i]!;
-      const neighborIConnections = this.adjacencyList.get(neighborI);
-      if (!neighborIConnections) continue;
-
-      for (let j = i + 1; j < neighborArray.length; j++) {
-        if (neighborIConnections.has(neighborArray[j]!)) {
-          triangleEdges++;
-        }
-      }
-    }
-
-    // Maximum possible edges between neighbors
-    const maxPossibleEdges = (degree * (degree - 1)) / 2;
-    const coefficient = triangleEdges / maxPossibleEdges;
-
-    this.clusteringCache.set(colonistId, coefficient);
-    return coefficient;
+    return this.relationshipManager.getClusteringCoefficient(colonistId);
   }
 
   /**
    * Calculate colony-wide social cohesion score.
-   * Weighted average of individual clustering coefficients,
-   * weighted by connection count (more connected colonists matter more).
-   *
-   * Uses caching - only recalculates when network topology changes.
-   *
-   * @param colonistIds - IDs of colonists to include
-   * @returns Social cohesion score (0-1)
+   * Delegates to RelationshipManager but returns single number for backward compatibility.
    */
   getColonySocialCohesion(colonistIds: string[]): number {
-    if (colonistIds.length === 0) return 0;
-
-    // Return cached value if available and network hasn't changed
-    if (!this.networkDirty && this.colonyCohesionCache !== null) {
-      return this.colonyCohesionCache;
-    }
-
-    let totalWeightedCohesion = 0;
-    let totalWeight = 0;
-
-    for (const colonistId of colonistIds) {
-      const clustering = this.getClusteringCoefficient(colonistId);
-      const connections = this.getConnectionCount(colonistId);
-
-      // Weight by connection count (minimum weight of 1)
-      const weight = Math.max(1, connections);
-      totalWeightedCohesion += clustering * weight;
-      totalWeight += weight;
-    }
-
-    const cohesion = totalWeight > 0 ? totalWeightedCohesion / totalWeight : 0;
-
-    // Cache the result and mark network as clean
-    this.colonyCohesionCache = cohesion;
-    this.networkDirty = false;
-
-    return cohesion;
+    const cohesion = this.relationshipManager.getColonySocialCohesion(colonistIds);
+    return cohesion.averageClusteringCoefficient;
   }
 
   /**
    * Identify isolated colonists (no connections or very low clustering).
-   *
-   * @param colonistIds - IDs of colonists to check
-   * @param minConnections - Minimum connections to not be isolated (default 1)
-   * @returns Array of isolated colonist IDs
+   * Delegates to RelationshipManager.
    */
   getIsolatedColonists(colonistIds: string[], minConnections: number = 1): string[] {
-    return colonistIds.filter((id) => this.getConnectionCount(id) < minConnections);
+    return this.relationshipManager.getIsolatedColonists(colonistIds, minConnections);
   }
 
   /**
    * Get detailed social cohesion info for a colonist.
+   * Delegates to RelationshipManager.
    */
   getColonistSocialCohesion(colonistId: string): {
     clusteringCoefficient: number;
@@ -1169,60 +843,25 @@ export class WorkforceManager {
     isIsolated: boolean;
     communityStrength: number;
   } {
-    const connectionCount = this.getConnectionCount(colonistId);
-    const clusteringCoefficient = this.getClusteringCoefficient(colonistId);
-
-    // Calculate average strength of connections
-    let totalStrength = 0;
-    const neighbors = this.getNeighbors(colonistId);
-    for (const neighborId of neighbors) {
-      totalStrength += this.getCoworkerRelationshipStrength(colonistId, neighborId);
-    }
-    const communityStrength = connectionCount > 0 ? totalStrength / connectionCount : 0;
-
-    return {
-      clusteringCoefficient,
-      connectionCount,
-      isIsolated: connectionCount === 0,
-      communityStrength,
-    };
+    return this.relationshipManager.getColonistSocialCohesion(colonistId);
   }
 
   /**
-   * Get all colonist IDs connected to a given colonist. O(1) via adjacency list.
+   * Get all colonist IDs connected to a given colonist.
    */
   private getConnectedColonistIds(colonistId: string): string[] {
-    return [...this.getNeighbors(colonistId)];
+    return [...this.relationshipManager.getNeighbors(colonistId)];
   }
 
   /**
-   * Get the social network position information for a colonist. O(degree) via adjacency list.
+   * Get the social network position information for a colonist.
+   * Delegates to RelationshipManager.
    */
   getSocialNetworkPosition(
     colonistId: string,
-    colonists: readonly Colonist[],
-  ): SocialNetworkPosition {
-    const neighbors = this.getNeighbors(colonistId);
-    let totalStrength = 0;
-    let weakTieCount = 0;
-
-    for (const neighborId of neighbors) {
-      const rel = this.getCoworkerRelationship(colonistId, neighborId);
-      if (rel) {
-        totalStrength += rel.strength;
-        if (rel.strength < WEAK_TIE_THRESHOLD) {
-          weakTieCount++;
-        }
-      }
-    }
-
-    const connectionCount = neighbors.size;
-    return {
-      connectionCount,
-      averageStrength: connectionCount > 0 ? totalStrength / connectionCount : 0,
-      weakTieCount,
-      bridgingScore: this.calculateBridgingScore(colonistId, colonists),
-    };
+    _colonists: readonly Colonist[],
+  ): import("./workforce/types").SocialNetworkPosition {
+    return this.relationshipManager.getSocialNetworkPosition(colonistId);
   }
 
   /**
@@ -1230,7 +869,7 @@ export class WorkforceManager {
    */
   getBridgeColonists(colonists: readonly Colonist[], minBridgingScore: number = 0.3): Colonist[] {
     return colonists.filter(
-      (c) => this.calculateBridgingScore(c.id, colonists) >= minBridgingScore,
+      (c) => this.relationshipManager.calculateBridgingScore(c.id) >= minBridgingScore,
     );
   }
 
@@ -1238,167 +877,19 @@ export class WorkforceManager {
 
   /**
    * Detect communities in the social network using weighted label propagation.
-   * Each colonist adopts the most common label among their neighbors,
-   * weighted by relationship strength.
-   *
-   * Time complexity: O(iterations * edges)
-   * Typically converges in 5-15 iterations for social networks.
-   *
-   * @param colonistIds - IDs of colonists to partition into communities
-   * @param maxIterations - Maximum iterations before stopping (default 20)
-   * @param minCommunitySize - Minimum size for a community (smaller ones merged)
-   * @returns Array of detected communities
+   * Delegates to RelationshipManager.
    */
   detectCommunities(
     colonistIds: string[],
     maxIterations: number = 20,
     minCommunitySize: number = 2,
-  ): SocialCommunity[] {
-    if (colonistIds.length === 0) return [];
-
-    // Initialize: each colonist starts in their own community (their ID is their label)
-    const labels = new Map<string, string>();
-    for (const id of colonistIds) {
-      labels.set(id, id);
-    }
-
-    const colonistSet = new Set(colonistIds);
-
-    // Iterate until convergence or max iterations
-    for (let iteration = 0; iteration < maxIterations; iteration++) {
-      let changed = false;
-
-      // Process nodes in random order to avoid oscillation
-      const shuffled = [...colonistIds].sort(() => Math.random() - 0.5);
-
-      for (const colonistId of shuffled) {
-        const neighbors = this.getNeighbors(colonistId);
-        if (neighbors.size === 0) continue;
-
-        // Count weighted votes for each label among neighbors
-        const labelVotes = new Map<string, number>();
-
-        for (const neighborId of neighbors) {
-          // Only consider neighbors in the input set
-          if (!colonistSet.has(neighborId)) continue;
-
-          const neighborLabel = labels.get(neighborId);
-          if (!neighborLabel) continue;
-
-          // Weight by relationship strength
-          const relationship = this.getCoworkerRelationship(colonistId, neighborId);
-          const weight = relationship?.strength ?? 0;
-
-          labelVotes.set(neighborLabel, (labelVotes.get(neighborLabel) ?? 0) + weight);
-        }
-
-        // Find label with highest weighted vote
-        let maxVotes = 0;
-        let bestLabel = labels.get(colonistId)!;
-
-        for (const [label, votes] of labelVotes) {
-          if (votes > maxVotes) {
-            maxVotes = votes;
-            bestLabel = label;
-          }
-        }
-
-        // Update label if changed
-        const currentLabel = labels.get(colonistId);
-        if (currentLabel !== bestLabel) {
-          labels.set(colonistId, bestLabel);
-          changed = true;
-        }
-      }
-
-      // Converged if no labels changed
-      if (!changed) break;
-    }
-
-    // Group colonists by their final labels
-    const communities = new Map<string, string[]>();
-    for (const [colonistId, label] of labels) {
-      if (!communities.has(label)) {
-        communities.set(label, []);
-      }
-      communities.get(label)!.push(colonistId);
-    }
-
-    // Build community objects, merging small communities
-    const result: SocialCommunity[] = [];
-    let communityCounter = 1;
-    const smallCommunityMembers: string[] = [];
-
-    for (const [, memberIds] of communities) {
-      if (memberIds.length < minCommunitySize) {
-        // Collect small communities to merge later
-        smallCommunityMembers.push(...memberIds);
-      } else {
-        result.push({
-          id: `community_${communityCounter++}`,
-          memberIds,
-          cohesion: this.calculateCommunityCohesion(memberIds),
-          externalConnections: this.countExternalConnections(memberIds, colonistSet),
-        });
-      }
-    }
-
-    // Add small community members as a "misc" community if any
-    if (smallCommunityMembers.length > 0) {
-      result.push({
-        id: `community_misc`,
-        memberIds: smallCommunityMembers,
-        cohesion: this.calculateCommunityCohesion(smallCommunityMembers),
-        externalConnections: this.countExternalConnections(smallCommunityMembers, colonistSet),
-      });
-    }
-
-    return result;
-  }
-
-  /**
-   * Calculate the internal cohesion of a community.
-   * Returns average relationship strength between community members.
-   */
-  private calculateCommunityCohesion(memberIds: string[]): number {
-    if (memberIds.length < 2) return 0;
-
-    let totalStrength = 0;
-    let pairCount = 0;
-
-    for (let i = 0; i < memberIds.length; i++) {
-      for (let j = i + 1; j < memberIds.length; j++) {
-        const strength = this.getCoworkerRelationshipStrength(memberIds[i]!, memberIds[j]!);
-        totalStrength += strength;
-        pairCount++;
-      }
-    }
-
-    return pairCount > 0 ? totalStrength / pairCount : 0;
-  }
-
-  /**
-   * Count connections from community members to colonists outside the community.
-   */
-  private countExternalConnections(memberIds: string[], allColonists: Set<string>): number {
-    const memberSet = new Set(memberIds);
-    let externalCount = 0;
-
-    for (const memberId of memberIds) {
-      for (const neighborId of this.getNeighbors(memberId)) {
-        // Count if neighbor is in the colonist set but not in this community
-        if (allColonists.has(neighborId) && !memberSet.has(neighborId)) {
-          externalCount++;
-        }
-      }
-    }
-
-    // Each external edge is counted once (from the community member's perspective)
-    return externalCount;
+  ): import("./workforce/types").SocialCommunity[] {
+    return this.relationshipManager.detectCommunities(colonistIds, maxIterations, minCommunitySize);
   }
 
   /**
    * Get community statistics for the entire network.
+   * Delegates to RelationshipManager.
    */
   getCommunityStats(colonistIds: string[]): {
     communityCount: number;
@@ -1406,98 +897,62 @@ export class WorkforceManager {
     averageCohesion: number;
     modularity: number;
   } {
-    const communities = this.detectCommunities(colonistIds);
-
-    if (communities.length === 0) {
-      return { communityCount: 0, averageSize: 0, averageCohesion: 0, modularity: 0 };
-    }
-
-    const totalSize = communities.reduce((sum, c) => sum + c.memberIds.length, 0);
-    const totalCohesion = communities.reduce((sum, c) => sum + c.cohesion, 0);
-
-    // Calculate modularity (quality of community partition)
-    // Q = Σ[(internal edges / total edges) - (expected internal edges)]
-    const totalEdges = this.coworkerRelationships.size;
-    let modularity = 0;
-
-    if (totalEdges > 0) {
-      for (const community of communities) {
-        const memberSet = new Set(community.memberIds);
-        let internalEdges = 0;
-        let communityDegree = 0;
-
-        for (const memberId of community.memberIds) {
-          const neighbors = this.getNeighbors(memberId);
-          communityDegree += neighbors.size;
-
-          for (const neighborId of neighbors) {
-            if (memberSet.has(neighborId)) {
-              internalEdges++;
-            }
-          }
-        }
-
-        // Internal edges counted twice (once from each end)
-        internalEdges /= 2;
-
-        // Expected internal edges if random
-        const expected = (communityDegree / (2 * totalEdges)) ** 2 * totalEdges;
-
-        modularity += internalEdges / totalEdges - expected / totalEdges;
-      }
-    }
-
-    return {
-      communityCount: communities.length,
-      averageSize: totalSize / communities.length,
-      averageCohesion: totalCohesion / communities.length,
-      modularity: Math.max(0, Math.min(1, modularity)), // Clamp to [0, 1]
-    };
+    return this.relationshipManager.getCommunityStats(colonistIds);
   }
 
   // ============ Serialization ============
 
   toJSON() {
     return {
-      coworkerRelationships: Object.fromEntries(this.coworkerRelationships),
-      guilds: Object.fromEntries(this.guilds),
-      nextGuildId: this.nextGuildId,
+      // Keep backward-compatible keys
+      coworkerRelationships: Object.fromEntries(this.relationshipManager.getAllRelationships()),
+      guilds: Object.fromEntries(this.guildManager.getGuilds().map((g) => [g.id, g])),
+      nextGuildId: this.guildManager.toJSON().nextGuildId,
     };
   }
 
   static fromJSON(data: ReturnType<WorkforceManager["toJSON"]>): WorkforceManager {
     const manager = new WorkforceManager();
 
+    // Restore RelationshipManager from coworkerRelationships
     if (data.coworkerRelationships) {
-      manager.coworkerRelationships = new Map(
-        Object.entries(data.coworkerRelationships).map(([k, v]) => [k, v as CoworkerRelationship]),
+      // Build relationships and adjacency list
+      const relationships = new Map(
+        Object.entries(data.coworkerRelationships).map(([k, v]) => [
+          k,
+          v as import("./workforce/types").CoworkerRelationship,
+        ]),
       );
-      // Rebuild adjacency list from relationships
-      manager.rebuildAdjacencyList();
+
+      // Build adjacency list from relationships
+      const adjacencyList = new Map<string, string[]>();
+      for (const key of relationships.keys()) {
+        const [id1, id2] = key.split(":");
+        if (id1 && id2) {
+          if (!adjacencyList.has(id1)) adjacencyList.set(id1, []);
+          if (!adjacencyList.has(id2)) adjacencyList.set(id2, []);
+          adjacencyList.get(id1)!.push(id2);
+          adjacencyList.get(id2)!.push(id1);
+        }
+      }
+
+      manager.relationshipManager = RelationshipManager.fromJSON({
+        relationships: data.coworkerRelationships as Record<
+          string,
+          import("./workforce/types").CoworkerRelationship
+        >,
+        adjacencyList: Object.fromEntries(adjacencyList),
+      });
     }
 
+    // Restore GuildManager from guilds
     if (data.guilds) {
-      manager.guilds = new Map(Object.entries(data.guilds).map(([k, v]) => [k, v as Guild]));
-    }
-
-    if (data.nextGuildId) {
-      manager.nextGuildId = data.nextGuildId;
+      manager.guildManager = GuildManager.fromJSON({
+        guilds: data.guilds as Record<string, Guild>,
+        nextGuildId: data.nextGuildId ?? 1,
+      });
     }
 
     return manager;
-  }
-
-  /**
-   * Rebuild the adjacency list from the coworker relationships map.
-   * Called after deserialization to restore the O(1) neighbor lookup structure.
-   */
-  private rebuildAdjacencyList(): void {
-    this.adjacencyList.clear();
-    for (const key of this.coworkerRelationships.keys()) {
-      const [id1, id2] = key.split(":");
-      if (id1 && id2) {
-        this.addToAdjacencyList(id1, id2);
-      }
-    }
   }
 }
