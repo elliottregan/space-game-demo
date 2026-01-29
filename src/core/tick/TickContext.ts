@@ -1,0 +1,102 @@
+import type { BuildingManager } from "../systems/BuildingManager";
+import type { ColonyManager } from "../systems/ColonyManager";
+import type { EventManager } from "../systems/EventManager";
+import type { NPCInfluenceManager } from "../systems/NPCInfluenceManager";
+import type { OperationsManager } from "../systems/OperationsManager";
+import type { ResourceManager } from "../systems/ResourceManager";
+import type { TechnologyTree } from "../systems/TechnologyTree";
+import type { VictoryManager } from "../systems/VictoryManager";
+import type { WorkforceManager } from "../systems/WorkforceManager";
+
+/**
+ * Social cohesion data computed during the tick.
+ */
+export interface SocialCohesionData {
+  averageClusteringCoefficient: number;
+  averageConnectionCount: number;
+  isolatedCount: number;
+  isolatedColonists: string[];
+}
+
+/**
+ * Policy effects computed during the tick.
+ */
+export interface PolicyEffects {
+  morale: number;
+  health: number;
+}
+
+/**
+ * Derived values computed by early phases, read by later phases.
+ */
+export interface DerivedValues {
+  socialCohesion: SocialCohesionData | null;
+  policyEffects: PolicyEffects | null;
+  laborPoolBonus: number;
+  oxygenContribution: number;
+}
+
+/**
+ * Settings that affect tick behavior.
+ */
+export interface TickSettings {
+  autoAssignNewColonists: boolean;
+}
+
+/**
+ * Context passed to each phase during tick execution.
+ * Provides access to all game state and derived values.
+ */
+export interface TickContext {
+  /** Current game sol */
+  currentSol: number;
+
+  /** Core managers */
+  resources: ResourceManager;
+  buildings: BuildingManager;
+  colony: ColonyManager;
+  workforce: WorkforceManager;
+  technology: TechnologyTree;
+  operations: OperationsManager;
+  npcInfluence: NPCInfluenceManager;
+  events: EventManager;
+  victory: VictoryManager;
+
+  /** Derived values computed during tick */
+  derived: DerivedValues;
+
+  /** Settings */
+  settings: TickSettings;
+}
+
+/**
+ * Create a fresh TickContext for a tick.
+ * Derived values start as null/0, computed by phases.
+ */
+export function createTickContext(
+  currentSol: number,
+  managers: {
+    resources: ResourceManager;
+    buildings: BuildingManager;
+    colony: ColonyManager;
+    workforce: WorkforceManager;
+    technology: TechnologyTree;
+    operations: OperationsManager;
+    npcInfluence: NPCInfluenceManager;
+    events: EventManager;
+    victory: VictoryManager;
+  },
+  settings: TickSettings,
+): TickContext {
+  return {
+    currentSol,
+    ...managers,
+    derived: {
+      socialCohesion: null,
+      policyEffects: null,
+      laborPoolBonus: 0,
+      oxygenContribution: 0,
+    },
+    settings,
+  };
+}
