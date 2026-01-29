@@ -114,7 +114,7 @@ export class HeuristicStrategy {
    */
   private handleWorkerAssignment(): void {
     const buildings = this.api.buildings.snapshot();
-    const colony = this.api.colony.snapshot({ lightweight: true });
+    const colony = this.api.colony.snapshot();
 
     // Get buildings that need workers (active, have worker slots, not fully staffed)
     const needsWorkers = buildings.active.filter((b) => {
@@ -401,7 +401,7 @@ export class HeuristicStrategy {
    * @returns true if an action was taken
    */
   private handleMorale(): boolean {
-    const colony = this.api.colony.snapshot({ lightweight: true });
+    const colony = this.api.colony.snapshot();
     const buildings = this.api.buildings.snapshot();
 
     // Target morale threshold (Colony Charter needs 60, we want buffer)
@@ -498,7 +498,7 @@ export class HeuristicStrategy {
    * @returns true if an action was taken
    */
   private handleGrowth(): boolean {
-    const colony = this.api.colony.snapshot({ lightweight: true });
+    const colony = this.api.colony.snapshot();
     const resources = this.api.resources.snapshot();
 
     // Only grow if population < 100 and morale > 60

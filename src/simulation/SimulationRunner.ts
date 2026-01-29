@@ -131,7 +131,7 @@ export class SimulationRunner {
     const strategy = new HeuristicStrategy(api);
 
     // Initialize tracking - use lightweight snapshots to skip expensive calculations
-    let peakPopulation = api.colony.snapshot({ lightweight: true }).population;
+    let peakPopulation = api.colony.snapshot().population;
     const buildingsBuiltMap = new Map<string, number>();
     const techsResearchedSet = new Set<string>();
 
@@ -141,7 +141,7 @@ export class SimulationRunner {
     const crisisTimeline: CrisisPoint[] = [];
     const buildingFirstBuiltSol = new Map<string, number>();
     const techCompletedSol = new Map<string, number>();
-    let previousPopulation = api.colony.snapshot({ lightweight: true }).population;
+    let previousPopulation = api.colony.snapshot().population;
 
     // Track last crisis of each type for O(1) lookup (optimization)
     const lastCrisisOfType = new Map<CrisisType, CrisisPoint>();
@@ -172,7 +172,7 @@ export class SimulationRunner {
       solsRun++;
 
       const currentSol = api.game.currentSol();
-      const colony = api.colony.snapshot({ lightweight: true });
+      const colony = api.colony.snapshot();
       const resources = api.resources.snapshot();
 
       // Update peak population tracking
@@ -289,7 +289,7 @@ export class SimulationRunner {
     if (victoryState.status !== "victory") {
       defeatSol = finalSol;
       const resources = api.resources.snapshot();
-      const colony = api.colony.snapshot({ lightweight: true });
+      const colony = api.colony.snapshot();
       const isolatedCount = colony.colonists.filter(
         (c) => !colony.coworkerRelationships.has(c.id),
       ).length;
