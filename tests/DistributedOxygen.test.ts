@@ -20,8 +20,16 @@ describe("Distributed Oxygen System", () => {
 
       // Build factory (-1) without any positive oxygen buildings
       // Need to build multiple factories to go negative
-      gameState.buildings.startBuilding(BuildingId.AUTOMATED_FACTORY, gameState.resources, gameState.technology);
-      gameState.buildings.startBuilding(BuildingId.AUTOMATED_FACTORY, gameState.resources, gameState.technology);
+      gameState.buildings.startBuilding(
+        BuildingId.AUTOMATED_FACTORY,
+        gameState.resources,
+        gameState.technology,
+      );
+      gameState.buildings.startBuilding(
+        BuildingId.AUTOMATED_FACTORY,
+        gameState.resources,
+        gameState.technology,
+      );
 
       // Fast-forward construction (30 sols)
       for (let i = 0; i < 30; i++) {
@@ -33,8 +41,9 @@ describe("Distributed Oxygen System", () => {
       expect(total).toBe(-2);
 
       // Get effective production - should be penalized
-      const factories = gameState.buildings.getActiveBuildings()
-        .filter(b => b.definitionId === BuildingId.AUTOMATED_FACTORY);
+      const factories = gameState.buildings
+        .getActiveBuildings()
+        .filter((b) => b.definitionId === BuildingId.AUTOMATED_FACTORY);
 
       const effectiveProd = gameState.buildings.getEffectiveProduction(factories[0]!.id);
 
@@ -43,27 +52,46 @@ describe("Distributed Oxygen System", () => {
     });
 
     it("should not apply penalty when oxygen is positive", () => {
-      gameState.resources.add({ materials: 500 });
+      gameState.resources.add({ materials: 1000 });
 
-      // Build habitat (+2) and solar panel (no workerSlots, oxygenContribution: 0)
-      gameState.buildings.startBuilding(BuildingId.HABITAT, gameState.resources, gameState.technology);
-      gameState.buildings.startBuilding(BuildingId.SOLAR_PANEL, gameState.resources, gameState.technology);
+      // Research needed tech for automated factory
+      gameState.technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+      gameState.technology.completeResearch(TechnologyId.ROBOTICS);
 
-      // Fast-forward construction
-      for (let i = 0; i < 10; i++) {
+      // Build habitats (+2 each) to get positive oxygen, and automated factory (truly automated)
+      gameState.buildings.startBuilding(
+        BuildingId.HABITAT,
+        gameState.resources,
+        gameState.technology,
+      );
+      gameState.buildings.startBuilding(
+        BuildingId.HABITAT,
+        gameState.resources,
+        gameState.technology,
+      );
+      gameState.buildings.startBuilding(
+        BuildingId.AUTOMATED_FACTORY,
+        gameState.resources,
+        gameState.technology,
+      );
+
+      // Fast-forward construction (30 sols for factory)
+      for (let i = 0; i < 30; i++) {
         gameState.tick();
       }
 
       const total = gameState.buildings.getTotalOxygenContribution();
-      expect(total).toBeGreaterThan(0); // From habitat (+2)
+      // 2 habitats (+2 each) + 1 factory (-1) = +3
+      expect(total).toBeGreaterThan(0);
 
-      const solarPanels = gameState.buildings.getActiveBuildings()
-        .filter(b => b.definitionId === BuildingId.SOLAR_PANEL);
+      const factories = gameState.buildings
+        .getActiveBuildings()
+        .filter((b) => b.definitionId === BuildingId.AUTOMATED_FACTORY);
 
-      const effectiveProd = gameState.buildings.getEffectiveProduction(solarPanels[0]!.id);
+      const effectiveProd = gameState.buildings.getEffectiveProduction(factories[0]!.id);
 
-      // Base production is 10 power, no penalty (solar panels don't require workers)
-      expect(effectiveProd.power).toBe(10);
+      // Base production is 15 materials, no penalty (automated, no workers needed, oxygen positive)
+      expect(effectiveProd.materials).toBe(15);
     });
   });
 
@@ -100,8 +128,16 @@ describe("Distributed Oxygen System", () => {
       // Build a habitat (+2) and basic_farm (+2)
       gameState.resources.add({ materials: 500 });
 
-      gameState.buildings.startBuilding(BuildingId.HABITAT, gameState.resources, gameState.technology);
-      gameState.buildings.startBuilding(BuildingId.BASIC_FARM, gameState.resources, gameState.technology);
+      gameState.buildings.startBuilding(
+        BuildingId.HABITAT,
+        gameState.resources,
+        gameState.technology,
+      );
+      gameState.buildings.startBuilding(
+        BuildingId.BASIC_FARM,
+        gameState.resources,
+        gameState.technology,
+      );
 
       // Fast-forward construction (12 sols for basic_farm)
       for (let i = 0; i < 12; i++) {
@@ -118,8 +154,16 @@ describe("Distributed Oxygen System", () => {
       // Research advanced_materials for research_lab
       gameState.technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
 
-      gameState.buildings.startBuilding(BuildingId.HABITAT, gameState.resources, gameState.technology);
-      gameState.buildings.startBuilding(BuildingId.RESEARCH_LAB, gameState.resources, gameState.technology);
+      gameState.buildings.startBuilding(
+        BuildingId.HABITAT,
+        gameState.resources,
+        gameState.technology,
+      );
+      gameState.buildings.startBuilding(
+        BuildingId.RESEARCH_LAB,
+        gameState.resources,
+        gameState.technology,
+      );
 
       // Fast-forward construction (25 sols for research_lab)
       for (let i = 0; i < 25; i++) {
@@ -133,7 +177,11 @@ describe("Distributed Oxygen System", () => {
     it("should not count broken buildings", () => {
       gameState.resources.add({ materials: 500 });
 
-      gameState.buildings.startBuilding(BuildingId.HABITAT, gameState.resources, gameState.technology);
+      gameState.buildings.startBuilding(
+        BuildingId.HABITAT,
+        gameState.resources,
+        gameState.technology,
+      );
 
       // Fast-forward construction
       for (let i = 0; i < 10; i++) {
@@ -141,7 +189,7 @@ describe("Distributed Oxygen System", () => {
       }
 
       const buildings = gameState.buildings.getActiveBuildings();
-      const habitat = buildings.find(b => b.definitionId === BuildingId.HABITAT);
+      const habitat = buildings.find((b) => b.definitionId === BuildingId.HABITAT);
 
       // Break the building
       gameState.buildings.breakBuilding(habitat!.id, gameState.resources);
@@ -153,7 +201,11 @@ describe("Distributed Oxygen System", () => {
     it("should not count pending buildings", () => {
       gameState.resources.add({ materials: 500 });
 
-      gameState.buildings.startBuilding(BuildingId.HABITAT, gameState.resources, gameState.technology);
+      gameState.buildings.startBuilding(
+        BuildingId.HABITAT,
+        gameState.resources,
+        gameState.technology,
+      );
 
       // Don't advance time - building is still pending
       const total = gameState.buildings.getTotalOxygenContribution();

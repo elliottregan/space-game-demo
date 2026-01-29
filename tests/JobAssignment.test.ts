@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "bun:test";
 import { GameState } from "../src/core/GameState";
 import { BuildingId } from "../src/core/models/Building";
 import { ColonistRole, MasteryLevel } from "../src/core/models/Colonist";
+import { TechnologyId } from "../src/core/models/Technology";
 
 describe("Job Assignment", () => {
   let gameState: GameState;
@@ -15,10 +16,7 @@ describe("Job Assignment", () => {
   describe("getColonistWorkplace", () => {
     it("returns undefined for unassigned colonist", () => {
       const colonist = gameState.colony.getColonists()[0]!;
-      const workplace = gameState.workforce.getColonistWorkplace(
-        colonist.id,
-        gameState.buildings
-      );
+      const workplace = gameState.workforce.getColonistWorkplace(colonist.id, gameState.buildings);
       expect(workplace).toBeUndefined();
     });
 
@@ -27,7 +25,7 @@ describe("Job Assignment", () => {
       const farm = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       expect(farm).not.toBeNull();
 
@@ -40,10 +38,7 @@ describe("Job Assignment", () => {
       const building = gameState.buildings.getBuilding(farm!.id)!;
       const colonistId = building.assignedWorkers[0]!;
 
-      const workplace = gameState.workforce.getColonistWorkplace(
-        colonistId,
-        gameState.buildings
-      );
+      const workplace = gameState.workforce.getColonistWorkplace(colonistId, gameState.buildings);
       expect(workplace).toBe(farm!.id);
     });
   });
@@ -53,7 +48,7 @@ describe("Job Assignment", () => {
       const farm = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       // Complete construction
       for (let i = 0; i < 15; i++) {
@@ -74,7 +69,7 @@ describe("Job Assignment", () => {
       const solar = gameState.buildings.startBuilding(
         BuildingId.SOLAR_PANEL,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       // Complete construction
       for (let i = 0; i < 10; i++) {
@@ -89,7 +84,7 @@ describe("Job Assignment", () => {
       const farm = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       // Complete construction
       for (let i = 0; i < 15; i++) {
@@ -114,7 +109,7 @@ describe("Job Assignment", () => {
       const farm = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       // Complete construction
       for (let i = 0; i < 15; i++) {
@@ -136,7 +131,7 @@ describe("Job Assignment", () => {
       const farm = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       for (let i = 0; i < 15; i++) {
         gameState.buildings.tick(gameState.resources);
@@ -156,7 +151,7 @@ describe("Job Assignment", () => {
       const farm = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       for (let i = 0; i < 15; i++) {
         gameState.buildings.tick(gameState.resources);
@@ -183,16 +178,20 @@ describe("Job Assignment", () => {
 
   describe("getWorkerEfficiency", () => {
     it("returns 1 for building without worker slots", () => {
-      const solar = gameState.buildings.startBuilding(
-        BuildingId.SOLAR_PANEL,
+      // Automated Factory is truly automated with no worker slots
+      gameState.technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+      gameState.technology.completeResearch(TechnologyId.ROBOTICS);
+
+      const factory = gameState.buildings.startBuilding(
+        BuildingId.AUTOMATED_FACTORY,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 35; i++) {
         gameState.buildings.tick(gameState.resources);
       }
 
-      const efficiency = gameState.buildings.getWorkerEfficiency(solar!.id);
+      const efficiency = gameState.buildings.getWorkerEfficiency(factory!.id);
       expect(efficiency).toBe(1);
     });
 
@@ -200,7 +199,7 @@ describe("Job Assignment", () => {
       const farm = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       for (let i = 0; i < 15; i++) {
         gameState.buildings.tick(gameState.resources);
@@ -220,7 +219,7 @@ describe("Job Assignment", () => {
       const farm = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       for (let i = 0; i < 15; i++) {
         gameState.buildings.tick(gameState.resources);
@@ -241,7 +240,7 @@ describe("Job Assignment", () => {
       const farm = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       for (let i = 0; i < 15; i++) {
         gameState.buildings.tick(gameState.resources);
@@ -264,12 +263,12 @@ describe("Job Assignment", () => {
       const farm1 = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       const farm2 = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
 
       for (let i = 0; i < 15; i++) {
@@ -303,7 +302,7 @@ describe("Job Assignment", () => {
       const farm = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       for (let i = 0; i < 15; i++) {
         gameState.buildings.tick(gameState.resources);
@@ -356,7 +355,7 @@ describe("Job Assignment", () => {
       const farm = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       for (let i = 0; i < 15; i++) {
         gameState.buildings.tick(gameState.resources);
