@@ -102,6 +102,47 @@ export class WorkforceManager {
   /** Counter for generating guild IDs */
   private nextGuildId: number = 1;
 
+  // ============ Caching for expensive calculations ============
+
+  /** Cached clustering coefficients per colonist */
+  private clusteringCache: Map<string, number> = new Map();
+
+  /** Cached colony-wide social cohesion */
+  private colonyCohesionCache: number | null = null;
+
+  /** Flag indicating cache is dirty and needs recalculation */
+  private networkDirty: boolean = true;
+
+  /** Invalidate caches when network topology changes */
+  private invalidateCache(): void {
+    this.networkDirty = true;
+    this.clusteringCache.clear();
+    this.colonyCohesionCache = null;
+  }
+
+  /**
+   * Pick k random elements from array using partial Fisher-Yates shuffle.
+   * O(k) instead of O(n log n) for full shuffle + slice.
+   */
+  private pickRandomSubset<T>(array: T[], k: number): T[] {
+    const n = array.length;
+    if (k >= n) return array;
+
+    // Work on a copy to avoid mutating input
+    const copy = [...array];
+    const result: T[] = [];
+
+    for (let i = 0; i < k; i++) {
+      // Pick random index from remaining elements
+      const randomIndex = i + Math.floor(Math.random() * (n - i));
+      // Swap with current position
+      [copy[i], copy[randomIndex]] = [copy[randomIndex]!, copy[i]!];
+      result.push(copy[i]!);
+    }
+
+    return result;
+  }
+
   // ============ Adjacency List Helpers ============
 
   /**
@@ -114,16 +155,28 @@ export class WorkforceManager {
     if (!this.adjacencyList.has(colonistId2)) {
       this.adjacencyList.set(colonistId2, new Set());
     }
+    const wasNew1 = !this.adjacencyList.get(colonistId1)!.has(colonistId2);
     this.adjacencyList.get(colonistId1)!.add(colonistId2);
     this.adjacencyList.get(colonistId2)!.add(colonistId1);
+
+    // Invalidate cache if this is a new edge
+    if (wasNew1) {
+      this.invalidateCache();
+    }
   }
 
   /**
    * Remove an edge from the adjacency list (both directions).
    */
   private removeFromAdjacencyList(colonistId1: string, colonistId2: string): void {
+    const hadEdge = this.adjacencyList.get(colonistId1)?.has(colonistId2) ?? false;
     this.adjacencyList.get(colonistId1)?.delete(colonistId2);
     this.adjacencyList.get(colonistId2)?.delete(colonistId1);
+
+    // Invalidate cache if edge was removed
+    if (hadEdge) {
+      this.invalidateCache();
+    }
   }
 
   /**
@@ -535,9 +588,9 @@ export class WorkforceManager {
         const others = members.filter((c) => c.id !== colonist.id);
         if (others.length === 0) continue;
 
-        // Pick random colonists to bond with (up to SOCIAL_BONDS_PER_TICK)
-        const shuffled = [...others].sort(() => Math.random() - 0.5);
-        const bondingPartners = shuffled.slice(0, SOCIAL_BONDS_PER_TICK);
+        // Pick random colonists to bond with using partial Fisher-Yates shuffle
+        // Only shuffles SOCIAL_BONDS_PER_TICK elements instead of entire array
+        const bondingPartners = this.pickRandomSubset(others, SOCIAL_BONDS_PER_TICK);
 
         for (const partner of bondingPartners) {
           const key = this.getRelationshipKey(colonist.id, partner.id);
@@ -1034,22 +1087,37 @@ export class WorkforceManager {
    * High clustering = tight-knit social circle
    * Low clustering = scattered/isolated connections
    *
+   * Uses caching - only recalculates when network topology changes.
+   *
    * @param colonistId - The colonist to calculate clustering for
    * @returns Clustering coefficient (0-1), or 0 if < 2 neighbors
    */
   getClusteringCoefficient(colonistId: string): number {
-    const neighbors = [...this.getNeighbors(colonistId)];
-    const degree = neighbors.length;
+    // Return cached value if available and network hasn't changed
+    if (!this.networkDirty && this.clusteringCache.has(colonistId)) {
+      return this.clusteringCache.get(colonistId)!;
+    }
+
+    const neighbors = this.getNeighbors(colonistId);
+    const degree = neighbors.size;
 
     // Need at least 2 neighbors to form triangles
-    if (degree < 2) return 0;
+    if (degree < 2) {
+      this.clusteringCache.set(colonistId, 0);
+      return 0;
+    }
 
     // Count edges between neighbors (triangles)
+    // Use adjacency list for O(1) edge checks instead of relationship strength lookup
     let triangleEdges = 0;
-    for (let i = 0; i < neighbors.length; i++) {
-      for (let j = i + 1; j < neighbors.length; j++) {
-        const strength = this.getCoworkerRelationshipStrength(neighbors[i]!, neighbors[j]!);
-        if (strength > 0) {
+    const neighborArray = [...neighbors];
+    for (let i = 0; i < neighborArray.length; i++) {
+      const neighborI = neighborArray[i]!;
+      const neighborIConnections = this.adjacencyList.get(neighborI);
+      if (!neighborIConnections) continue;
+
+      for (let j = i + 1; j < neighborArray.length; j++) {
+        if (neighborIConnections.has(neighborArray[j]!)) {
           triangleEdges++;
         }
       }
@@ -1057,8 +1125,10 @@ export class WorkforceManager {
 
     // Maximum possible edges between neighbors
     const maxPossibleEdges = (degree * (degree - 1)) / 2;
+    const coefficient = triangleEdges / maxPossibleEdges;
 
-    return triangleEdges / maxPossibleEdges;
+    this.clusteringCache.set(colonistId, coefficient);
+    return coefficient;
   }
 
   /**
@@ -1066,11 +1136,18 @@ export class WorkforceManager {
    * Weighted average of individual clustering coefficients,
    * weighted by connection count (more connected colonists matter more).
    *
+   * Uses caching - only recalculates when network topology changes.
+   *
    * @param colonistIds - IDs of colonists to include
    * @returns Social cohesion score (0-1)
    */
   getColonySocialCohesion(colonistIds: string[]): number {
     if (colonistIds.length === 0) return 0;
+
+    // Return cached value if available and network hasn't changed
+    if (!this.networkDirty && this.colonyCohesionCache !== null) {
+      return this.colonyCohesionCache;
+    }
 
     let totalWeightedCohesion = 0;
     let totalWeight = 0;
@@ -1085,7 +1162,13 @@ export class WorkforceManager {
       totalWeight += weight;
     }
 
-    return totalWeight > 0 ? totalWeightedCohesion / totalWeight : 0;
+    const cohesion = totalWeight > 0 ? totalWeightedCohesion / totalWeight : 0;
+
+    // Cache the result and mark network as clean
+    this.colonyCohesionCache = cohesion;
+    this.networkDirty = false;
+
+    return cohesion;
   }
 
   /**
