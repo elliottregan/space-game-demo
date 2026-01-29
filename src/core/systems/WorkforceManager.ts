@@ -71,11 +71,49 @@ export class WorkforceManager {
   /** Tracks relationships between colonists (key: "colonistId1:colonistId2" sorted alphabetically) */
   private coworkerRelationships: Map<string, CoworkerRelationship> = new Map();
 
+  /**
+   * Adjacency list for O(1) neighbor lookups.
+   * Maps colonistId -> Set of connected colonistIds.
+   * Maintained in sync with coworkerRelationships.
+   */
+  private adjacencyList: Map<string, Set<string>> = new Map();
+
   /** Guilds in the colony */
   private guilds: Map<string, Guild> = new Map();
 
   /** Counter for generating guild IDs */
   private nextGuildId: number = 1;
+
+  // ============ Adjacency List Helpers ============
+
+  /**
+   * Add an edge to the adjacency list (both directions).
+   */
+  private addToAdjacencyList(colonistId1: string, colonistId2: string): void {
+    if (!this.adjacencyList.has(colonistId1)) {
+      this.adjacencyList.set(colonistId1, new Set());
+    }
+    if (!this.adjacencyList.has(colonistId2)) {
+      this.adjacencyList.set(colonistId2, new Set());
+    }
+    this.adjacencyList.get(colonistId1)!.add(colonistId2);
+    this.adjacencyList.get(colonistId2)!.add(colonistId1);
+  }
+
+  /**
+   * Remove an edge from the adjacency list (both directions).
+   */
+  private removeFromAdjacencyList(colonistId1: string, colonistId2: string): void {
+    this.adjacencyList.get(colonistId1)?.delete(colonistId2);
+    this.adjacencyList.get(colonistId2)?.delete(colonistId1);
+  }
+
+  /**
+   * Get neighbors of a colonist from adjacency list. O(1) lookup.
+   */
+  private getNeighbors(colonistId: string): Set<string> {
+    return this.adjacencyList.get(colonistId) ?? new Set();
+  }
 
   tick(colony: ColonyManager, buildings?: BuildingManager, currentSol: number = 0): GameEvent[] {
     const events: GameEvent[] = [];
@@ -322,6 +360,7 @@ export class WorkforceManager {
               lastWorkedTogether: currentSol,
             };
             this.coworkerRelationships.set(key, relationship);
+            this.addToAdjacencyList(colonistA, colonistB);
 
             events.push({
               type: "COWORKER_BOND_FORMED",
@@ -404,6 +443,7 @@ export class WorkforceManager {
               lastWorkedTogether: currentSol,
             };
             this.coworkerRelationships.set(key, relationship);
+            this.addToAdjacencyList(colonistA.id, colonistB.id);
 
             events.push({
               type: "HOUSEMATE_BOND_FORMED",
@@ -671,6 +711,7 @@ export class WorkforceManager {
               sharedGuildIds: [guild.id],
             };
             this.coworkerRelationships.set(key, relationship);
+            this.addToAdjacencyList(colonistAId!, colonistBId!);
 
             events.push({
               type: "GUILD_BOND_FORMED",
@@ -702,16 +743,10 @@ export class WorkforceManager {
   // ============ Preferential Attachment System ============
 
   /**
-   * Get the number of connections a colonist has.
+   * Get the number of connections a colonist has. O(1) via adjacency list.
    */
   getConnectionCount(colonistId: string): number {
-    let count = 0;
-    for (const key of this.coworkerRelationships.keys()) {
-      if (key.includes(colonistId)) {
-        count++;
-      }
-    }
-    return count;
+    return this.getNeighbors(colonistId).size;
   }
 
   /**
@@ -788,6 +823,7 @@ export class WorkforceManager {
             isCohort,
           };
           this.coworkerRelationships.set(key, relationship);
+          this.addToAdjacencyList(colonistA.id, selectedColonist.id);
 
           events.push({
             type: "SOCIAL_BOND_FORMED",
@@ -815,22 +851,16 @@ export class WorkforceManager {
   }
 
   /**
-   * Get all weak ties for a colonist.
+   * Get all weak ties for a colonist. O(degree) via adjacency list.
    */
   getWeakTies(colonistId: string): string[] {
     const weakTies: string[] = [];
-
-    for (const [key, rel] of this.coworkerRelationships) {
-      if (rel.strength > 0 && rel.strength < WEAK_TIE_THRESHOLD) {
-        const [id1, id2] = key.split(":");
-        if (id1 === colonistId) {
-          weakTies.push(id2!);
-        } else if (id2 === colonistId) {
-          weakTies.push(id1!);
-        }
+    for (const neighborId of this.getNeighbors(colonistId)) {
+      const strength = this.getCoworkerRelationshipStrength(colonistId, neighborId);
+      if (strength > 0 && strength < WEAK_TIE_THRESHOLD) {
+        weakTies.push(neighborId);
       }
     }
-
     return weakTies;
   }
 
@@ -860,34 +890,23 @@ export class WorkforceManager {
   }
 
   /**
-   * Get all colonist IDs connected to a given colonist.
+   * Get all colonist IDs connected to a given colonist. O(1) via adjacency list.
    */
   private getConnectedColonistIds(colonistId: string): string[] {
-    const connected: string[] = [];
-
-    for (const key of this.coworkerRelationships.keys()) {
-      const [id1, id2] = key.split(":");
-      if (id1 === colonistId && id2) {
-        connected.push(id2);
-      } else if (id2 === colonistId && id1) {
-        connected.push(id1);
-      }
-    }
-
-    return connected;
+    return [...this.getNeighbors(colonistId)];
   }
 
   /**
-   * Get the social network position information for a colonist.
+   * Get the social network position information for a colonist. O(degree) via adjacency list.
    */
   getSocialNetworkPosition(colonistId: string, colonists: readonly Colonist[]): SocialNetworkPosition {
+    const neighbors = this.getNeighbors(colonistId);
     let totalStrength = 0;
-    let connectionCount = 0;
     let weakTieCount = 0;
 
-    for (const [key, rel] of this.coworkerRelationships) {
-      if (key.includes(colonistId)) {
-        connectionCount++;
+    for (const neighborId of neighbors) {
+      const rel = this.getCoworkerRelationship(colonistId, neighborId);
+      if (rel) {
         totalStrength += rel.strength;
         if (rel.strength < WEAK_TIE_THRESHOLD) {
           weakTieCount++;
@@ -895,6 +914,7 @@ export class WorkforceManager {
       }
     }
 
+    const connectionCount = neighbors.size;
     return {
       connectionCount,
       averageStrength: connectionCount > 0 ? totalStrength / connectionCount : 0,
@@ -927,6 +947,8 @@ export class WorkforceManager {
       manager.coworkerRelationships = new Map(
         Object.entries(data.coworkerRelationships).map(([k, v]) => [k, v as CoworkerRelationship]),
       );
+      // Rebuild adjacency list from relationships
+      manager.rebuildAdjacencyList();
     }
 
     if (data.guilds) {
@@ -940,5 +962,19 @@ export class WorkforceManager {
     }
 
     return manager;
+  }
+
+  /**
+   * Rebuild the adjacency list from the coworker relationships map.
+   * Called after deserialization to restore the O(1) neighbor lookup structure.
+   */
+  private rebuildAdjacencyList(): void {
+    this.adjacencyList.clear();
+    for (const key of this.coworkerRelationships.keys()) {
+      const [id1, id2] = key.split(":");
+      if (id1 && id2) {
+        this.addToAdjacencyList(id1, id2);
+      }
+    }
   }
 }
