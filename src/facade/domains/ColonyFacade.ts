@@ -27,33 +27,21 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
 
   /**
    * Get complete colony state snapshot.
-   * @param options.lightweight - Skip expensive calculations (communities, skills) for simulation mode
    */
-  snapshot(options?: { lightweight?: boolean }): ColonySnapshot {
+  snapshot(): ColonySnapshot {
     const colonistIds = this.gameState.colony.getColonists().map((c) => c.id);
-    const lightweight = options?.lightweight ?? false;
-
     return {
       population: this.gameState.colony.getPopulation(),
       health: this.gameState.colony.getHealth(),
       morale: this.gameState.colony.getMorale(),
       socialCohesion: this.gameState.colony.getSocialCohesion(),
       colonists: Object.freeze([...this.gameState.colony.getColonists()]),
-      skillDefinitions: lightweight ? Object.freeze([]) : Object.freeze([...SKILLS]),
-      housingAssignments: lightweight
-        ? Object.freeze({})
-        : Object.freeze(this.gameState.colony.getHousingAssignments()),
-      unhoused: lightweight
-        ? Object.freeze([])
-        : Object.freeze([...this.gameState.colony.getUnhousedColonists()]),
+      skillDefinitions: Object.freeze([...SKILLS]),
+      housingAssignments: Object.freeze(this.gameState.colony.getHousingAssignments()),
+      unhoused: Object.freeze([...this.gameState.colony.getUnhousedColonists()]),
       coworkerRelationships: this.gameState.workforce.getAllCoworkerRelationships(),
-      guilds: lightweight
-        ? Object.freeze([])
-        : Object.freeze([...this.gameState.workforce.getGuilds()]),
-      // Community detection is O(iterations * edges) - skip in lightweight mode
-      communities: lightweight
-        ? Object.freeze([])
-        : Object.freeze(this.gameState.workforce.detectCommunities(colonistIds)),
+      guilds: Object.freeze([...this.gameState.workforce.getGuilds()]),
+      communities: Object.freeze(this.gameState.workforce.detectCommunities(colonistIds)),
     };
   }
 
