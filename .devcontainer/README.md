@@ -28,7 +28,9 @@ just claude
 | `just claude` | Run Claude Code in the container |
 | `just rebuild` | Rebuild container from scratch |
 | `just extract-credentials` | Extract OAuth credentials from macOS Keychain |
-| `just refresh-auth` | Refresh OAuth credentials (no restart needed) |
+| `just refresh-token` | Refresh token without restart |
+| `just reauth` | Re-authenticate on host and refresh container |
+| `just refresh-auth` | Refresh OAuth credentials (with restart) |
 
 ## Ports
 
@@ -42,10 +44,10 @@ just claude
 Claude Code in the container uses credentials from your host machine:
 
 1. **`~/.claude.json`** - Settings and project trust configuration
-2. **`~/.claude/.credentials.json`** - OAuth tokens (read-only)
+2. **`~/.claude/.credentials.json`** - OAuth tokens (read-write, allows container-side auth)
 3. **`~/.claude/settings.json`** - Claude settings (read-only)
 
-Note: Only specific credential files are mounted, not the entire `~/.claude/` directory. This keeps the container's plugins, cache, and history separate from the host.
+Note: Only specific credential files are mounted, not the entire `~/.claude/` directory. This keeps the container's plugins, cache, and history separate from the host while allowing authentication to work from either host or container.
 
 ### Setting Up Authentication
 
@@ -64,11 +66,30 @@ Note: Only specific credential files are mounted, not the entire `~/.claude/` di
 
 OAuth tokens expire. If you get authentication errors:
 
+**Option 1: Refresh from host (no restart)**
+```bash
+just refresh-token
+```
+This extracts fresh credentials from macOS Keychain and writes them in-place. The container picks up changes immediately via bind mount.
+
+**Option 2: Re-authenticate and refresh**
+```bash
+just reauth
+```
+This opens the Claude login flow in your browser, then refreshes the container credentials.
+
+**Option 3: Authenticate inside the container**
+```bash
+just ssh
+claude /login
+```
+Since the credentials file is mounted read-write, authenticating inside the container will update the host's credentials file too.
+
+**Option 4: Full restart (if above don't work)**
 ```bash
 just refresh-auth
 ```
-
-This extracts fresh credentials from your macOS Keychain to `~/.claude/.credentials.json`. The container picks up changes immediately via bind mount (no restart needed).
+This extracts credentials and restarts the container.
 
 ## GitHub CLI Authentication
 
@@ -161,7 +182,7 @@ just rebuild
 | `..` (project root) | `/workspace` | Project files |
 | `~/.ssh` | `/home/dev/.ssh` | SSH keys (read-only) |
 | `~/.claude.json` | `/home/dev/.claude.json` | Claude settings |
-| `~/.claude/.credentials.json` | `/home/dev/.claude/.credentials.json` | OAuth credentials (read-only) |
+| `~/.claude/.credentials.json` | `/home/dev/.claude/.credentials.json` | OAuth credentials (read-write) |
 | `~/.claude/settings.json` | `/home/dev/.claude/settings.json` | Claude settings (read-only) |
 | `~/.claude/plugins` | `/tmp/host-claude-plugins` | Host plugins config (read-only, for initialization) |
 | Named volume | `/home/dev/.claude/plugins` | Container's Claude plugins |

@@ -20,7 +20,7 @@ services:
 
     volumes:
       - ..:/workspace:cached
-      - ~/.claude/.credentials.json:/home/dev/.claude/.credentials.json:ro
+      - ~/.claude/.credentials.json:/home/dev/.claude/.credentials.json
       - ~/.claude/settings.json:/home/dev/.claude/settings.json:ro
       - ~/.claude/plugins:/tmp/host-claude-plugins:ro
       - devcontainer-claude-plugins:/home/dev/.claude/plugins

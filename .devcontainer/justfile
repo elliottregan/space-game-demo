@@ -1,5 +1,10 @@
 # Start the container
 up:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Ensure credentials file exists (bind mount requires file, not directory)
+    mkdir -p ~/.claude
+    [ -f ~/.claude/.credentials.json ] || touch ~/.claude/.credentials.json
     docker compose up -d
 
 # Stop the container
@@ -38,3 +43,31 @@ refresh-auth:
     just extract-credentials
     just restart
     @echo "Auth refreshed and container restarted"
+
+# Refresh token without restart - writes directly into the container's mounted file
+refresh-token:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Ensure host credentials file exists (bind mount requirement)
+    mkdir -p ~/.claude
+    touch ~/.claude/.credentials.json
+    # Extract fresh credentials from macOS Keychain
+    CREDS=$(security find-generic-password -s "Claude Code-credentials" -a "$(whoami)" -w 2>/dev/null) || {
+        echo "ERROR: No credentials in Keychain. Run 'claude' on host to authenticate first."
+        exit 1
+    }
+    # Write in-place to the existing file (preserves inode for bind mount)
+    echo "$CREDS" > ~/.claude/.credentials.json
+    # Verify container can read it
+    docker exec space-game-devcontainer cat /home/dev/.claude/.credentials.json > /dev/null 2>&1 && \
+        echo "Token refreshed. Container has new credentials." || \
+        echo "WARNING: Container couldn't read credentials. May need 'just restart'."
+
+# Re-authenticate on host and refresh container token
+reauth:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Opening Claude authentication in browser..."
+    claude /login
+    echo ""
+    just refresh-token
