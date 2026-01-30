@@ -36,7 +36,6 @@ const SNAPSHOT_INTERVAL = 50;
  */
 const CRISIS_THRESHOLDS = {
   food: { warning: 30, critical: 10 },
-  oxygen: { warning: 30, critical: 10 },
   water: { warning: 20, critical: 5 },
   morale: { warning: 40, critical: 25 },
   cohesion: { warning: 0.15, critical: 0.08 },
@@ -347,7 +346,6 @@ export class SimulationRunner {
         resourceTimeline.push({
           sol: currentSol,
           food: resources.current.food,
-          oxygen: resources.current.oxygen,
           water: resources.current.water,
           power: resources.current.power,
           materials: resources.current.materials,
@@ -361,7 +359,6 @@ export class SimulationRunner {
         flowTimeline.push({
           sol: currentSol,
           netFood: (resources.production.food ?? 0) - (resources.consumption.food ?? 0),
-          netOxygen: (resources.production.oxygen ?? 0) - (resources.consumption.oxygen ?? 0),
           netWater: (resources.production.water ?? 0) - (resources.consumption.water ?? 0),
           netPower: (resources.production.power ?? 0) - (resources.consumption.power ?? 0),
           netMaterials:
@@ -423,7 +420,6 @@ export class SimulationRunner {
       resourcesAtDeath = {
         sol: finalSol,
         food: resources.current.food,
-        oxygen: resources.current.oxygen,
         water: resources.current.water,
         power: resources.current.power,
         materials: resources.current.materials,
@@ -467,7 +463,7 @@ export class SimulationRunner {
    */
   private detectCrisis(
     sol: number,
-    resources: { food: number; oxygen: number; water: number },
+    resources: { food: number; water: number },
     morale: number,
     crisisTimeline: CrisisPoint[],
     lastCrisisOfType: Map<CrisisType, CrisisPoint>,
@@ -504,7 +500,6 @@ export class SimulationRunner {
     };
 
     checkResource("low_food", resources.food, CRISIS_THRESHOLDS.food);
-    checkResource("low_oxygen", resources.oxygen, CRISIS_THRESHOLDS.oxygen);
     checkResource("low_water", resources.water, CRISIS_THRESHOLDS.water);
     checkResource("low_morale", morale, CRISIS_THRESHOLDS.morale);
   }

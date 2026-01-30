@@ -28,20 +28,3 @@ export const updateLaborPoolBonus = definePhase({
     return [];
   },
 });
-
-export const applyOxygenContribution = definePhase({
-  id: "pretick:applyOxygenContribution",
-  name: "Apply Oxygen Contribution",
-  reads: ["buildings"],
-  writes: ["resources", "derived.oxygenContribution"],
-  execute(ctx) {
-    const oxygenContribution = ctx.buildings.getTotalOxygenContribution();
-    ctx.derived.oxygenContribution = oxygenContribution;
-
-    if (oxygenContribution !== 0) {
-      ctx.resources.add({ oxygen: oxygenContribution });
-    }
-
-    return [];
-  },
-});

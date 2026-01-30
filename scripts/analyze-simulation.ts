@@ -73,7 +73,6 @@ const SNAPSHOT_INTERVAL = 50;
 /** Crisis detection thresholds */
 const CRISIS_THRESHOLDS = {
   food: { warning: 30, critical: 10 },
-  oxygen: { warning: 30, critical: 10 },
   water: { warning: 20, critical: 5 },
   morale: { warning: 40, critical: 25 },
   cohesion: { warning: 0.15, critical: 0.08 },
@@ -136,7 +135,12 @@ function runSingleGame(seed: number): RunResult {
     previousPopulation = currentPop;
 
     // Detect and record crisis conditions
-    detectCrisis(currentSol, resources.current, colony.morale, crisisTimeline);
+    detectCrisis(
+      currentSol,
+      { food: resources.current.food, water: resources.current.water },
+      colony.morale,
+      crisisTimeline,
+    );
 
     // Detect social cohesion crisis
     detectCohesionCrisis(currentSol, colony.socialCohesion, crisisTimeline);
@@ -151,7 +155,6 @@ function runSingleGame(seed: number): RunResult {
       resourceTimeline.push({
         sol: currentSol,
         food: resources.current.food,
-        oxygen: resources.current.oxygen,
         water: resources.current.water,
         power: resources.current.power,
         materials: resources.current.materials,
@@ -165,7 +168,6 @@ function runSingleGame(seed: number): RunResult {
       flowTimeline.push({
         sol: currentSol,
         netFood: (resources.production.food ?? 0) - (resources.consumption.food ?? 0),
-        netOxygen: (resources.production.oxygen ?? 0) - (resources.consumption.oxygen ?? 0),
         netWater: (resources.production.water ?? 0) - (resources.consumption.water ?? 0),
         netPower: (resources.production.power ?? 0) - (resources.consumption.power ?? 0),
         netMaterials:
@@ -246,7 +248,6 @@ function runSingleGame(seed: number): RunResult {
     resourcesAtDeath = {
       sol: finalSol,
       food: resources.current.food,
-      oxygen: resources.current.oxygen,
       water: resources.current.water,
       power: resources.current.power,
       materials: resources.current.materials,
@@ -291,7 +292,7 @@ function runSingleGame(seed: number): RunResult {
  */
 function detectCrisis(
   sol: number,
-  resources: { food: number; oxygen: number; water: number },
+  resources: { food: number; water: number },
   morale: number,
   crisisTimeline: CrisisPoint[],
 ): void {
@@ -325,7 +326,6 @@ function detectCrisis(
   };
 
   checkResource("low_food", resources.food, CRISIS_THRESHOLDS.food);
-  checkResource("low_oxygen", resources.oxygen, CRISIS_THRESHOLDS.oxygen);
   checkResource("low_water", resources.water, CRISIS_THRESHOLDS.water);
   checkResource("low_morale", morale, CRISIS_THRESHOLDS.morale);
 }
@@ -916,7 +916,6 @@ function aggregateTimelines(results: RunResult[]): AggregatedSnapshot[] {
     aggregated.push({
       sol,
       food: computePercentileValue(snapshots.map((s) => s.food)),
-      oxygen: computePercentileValue(snapshots.map((s) => s.oxygen)),
       water: computePercentileValue(snapshots.map((s) => s.water)),
       power: computePercentileValue(snapshots.map((s) => s.power)),
       materials: computePercentileValue(snapshots.map((s) => s.materials)),
@@ -991,7 +990,6 @@ async function writeJsonOutput(results: RunResult[], runs: number, seed: number)
     resourceTimeline.push({
       sol,
       food: avg(snapshots.map((s) => s.food)),
-      oxygen: avg(snapshots.map((s) => s.oxygen)),
       water: avg(snapshots.map((s) => s.water)),
       power: avg(snapshots.map((s) => s.power)),
       materials: avg(snapshots.map((s) => s.materials)),

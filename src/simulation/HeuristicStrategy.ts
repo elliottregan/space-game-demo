@@ -198,16 +198,13 @@ export class HeuristicStrategy {
     const resources = this.api.resources.snapshot();
     const buildings = this.api.buildings.snapshot();
     const currentFood = resources.current.food;
-    const currentOxygen = resources.current.oxygen;
     const currentWater = resources.current.water;
     const foodProduction = resources.production.food ?? 0;
     const foodConsumption = resources.consumption.food ?? 0;
-    const oxygenProduction = resources.production.oxygen ?? 0;
-    const oxygenConsumption = resources.consumption.oxygen ?? 0;
     const waterProduction = resources.production.water ?? 0;
     const waterConsumption = resources.consumption.water ?? 0;
 
-    // Calculate oxygen contribution from buildings (not production)
+    // Calculate oxygen contribution from buildings
     const oxygenContribution = buildings.totalOxygenContribution;
 
     // Handle water production early - needed for morale recovery
@@ -216,38 +213,20 @@ export class HeuristicStrategy {
     }
 
     const foodFlow = foodProduction - foodConsumption;
-    const oxygenFlow = oxygenProduction - oxygenConsumption;
 
-    // Critical shortage: address the worse situation first
-    // Both farms and hydroponic gardens contribute oxygen
-    if (currentFood < 50 || currentOxygen < 80) {
-      const foodCritical = currentFood < 50 || foodFlow < 0;
-      const oxygenCritical = currentOxygen < 80 || oxygenFlow < 0;
-
-      // Prioritize food slightly since farms also provide oxygen
-      if (foodCritical && (!oxygenCritical || currentFood < currentOxygen)) {
-        if (this.tryBuild(BuildingId.BASIC_FARM, "survival", false)) return true;
-      }
-
-      // For oxygen, build oxygen generator (produces oxygen directly)
-      // or hydroponic garden/farm as fallback
-      if (oxygenCritical) {
-        if (this.tryBuild(BuildingId.OXYGEN_GENERATOR, "survival", false)) return true;
-        if (this.tryBuild(BuildingId.HYDROPONIC_GARDEN, "survival", false)) return true;
-        if (this.tryBuild(BuildingId.BASIC_FARM, "survival", false)) return true;
-      }
+    // Critical food shortage
+    if (currentFood < 50 || foodFlow < 0) {
+      if (this.tryBuild(BuildingId.BASIC_FARM, "survival", false)) return true;
     }
 
-    // Maintain positive flow with buffer for both resources
-    // Food needs buffer of 2 (population growth)
+    // Maintain positive food flow with buffer (population growth)
     if (foodFlow < 2) {
       if (this.tryBuild(BuildingId.BASIC_FARM, "survival")) return true;
     }
 
-    // Oxygen needs positive flow for population growth
-    // Note: oxygenContribution is from buildings, oxygenFlow is from production/consumption
-    if (oxygenFlow < 3 || oxygenContribution < 6) {
-      // Oxygen generator produces oxygen directly
+    // Oxygen contribution needs to be maintained for air quality
+    if (oxygenContribution < 6) {
+      // Oxygen generator provides the most oxygen contribution
       if (this.tryBuild(BuildingId.OXYGEN_GENERATOR, "survival")) return true;
       // Hydroponic garden provides oxygen contribution without workers
       if (this.tryBuild(BuildingId.HYDROPONIC_GARDEN, "survival")) return true;
@@ -430,7 +409,6 @@ export class HeuristicStrategy {
     if (choice.effects.resources) {
       const resources = choice.effects.resources;
       score += resources.food ?? 0;
-      score += resources.oxygen ?? 0;
       score += resources.water ?? 0;
       score += resources.power ?? 0;
       score += resources.materials ?? 0;
@@ -552,13 +530,7 @@ export class HeuristicStrategy {
     if (colony.population >= 100 || colony.morale <= 60) return false;
 
     // Calculate resource surpluses
-    const oxygenSurplus = (resources.production.oxygen ?? 0) - (resources.consumption.oxygen ?? 0);
     const foodSurplus = (resources.production.food ?? 0) - (resources.consumption.food ?? 0);
-
-    // Need at least 3 oxygen surplus before building habitat
-    if (oxygenSurplus < 3) {
-      if (this.tryBuild(BuildingId.HYDROPONIC_GARDEN, "growth", false)) return true;
-    }
 
     // Need at least 2 food surplus before growing
     if (foodSurplus < 2) {

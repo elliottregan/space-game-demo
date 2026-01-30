@@ -79,7 +79,6 @@ describe("NPCInfluenceManager", () => {
     it("should start faction-aligned NPCs at full support, others at neutral", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 200,
@@ -105,7 +104,6 @@ describe("NPCInfluenceManager", () => {
     it("should deduct proposal cost from resources", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 200,
@@ -120,7 +118,6 @@ describe("NPCInfluenceManager", () => {
     it("should fail if cannot afford proposal cost", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 50, // Not enough for generation_ship (100)
@@ -135,7 +132,6 @@ describe("NPCInfluenceManager", () => {
     it("should fail if project already active", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 200,
@@ -153,7 +149,6 @@ describe("NPCInfluenceManager", () => {
     it("should increase NPC support for active project", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 500,
@@ -172,7 +167,6 @@ describe("NPCInfluenceManager", () => {
     it("should cost materials based on NPC influence and boost amount", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 500,
@@ -191,7 +185,6 @@ describe("NPCInfluenceManager", () => {
     it("should fail if no active project", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 500,
@@ -205,7 +198,6 @@ describe("NPCInfluenceManager", () => {
     it("should clamp support to [-1, 1]", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 1000,
@@ -223,7 +215,6 @@ describe("NPCInfluenceManager", () => {
     it("should create a council and boost relationships between members", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 500,
@@ -243,7 +234,6 @@ describe("NPCInfluenceManager", () => {
     it("should increase relationship weights between council members", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 500,
@@ -267,7 +257,6 @@ describe("NPCInfluenceManager", () => {
     it("should deduct creation cost", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 500,
@@ -281,7 +270,6 @@ describe("NPCInfluenceManager", () => {
     it("should fail if cannot afford", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 10, // Not enough
@@ -302,7 +290,6 @@ describe("NPCInfluenceManager", () => {
     it("should propagate support through network each tick", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 500,
@@ -324,7 +311,6 @@ describe("NPCInfluenceManager", () => {
     it("should decrement solsRemaining each tick", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 500,
@@ -341,7 +327,6 @@ describe("NPCInfluenceManager", () => {
     it("should resolve project when solsRemaining reaches 0", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 1000,
@@ -368,7 +353,6 @@ describe("NPCInfluenceManager", () => {
     it("should emit PROJECT_PASSED event when project passes", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 1000,
@@ -395,7 +379,6 @@ describe("NPCInfluenceManager", () => {
     it("should emit PROJECT_FAILED event when project fails", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 500,
@@ -512,7 +495,6 @@ describe("NPCInfluenceManager", () => {
     it("should clear demand and boost support when faction project passes", () => {
       const resources = new ResourceManager({
         food: 100,
-        oxygen: 100,
         water: 100,
         power: 100,
         materials: 1000,
@@ -878,7 +860,6 @@ describe("NPCInfluenceManager", () => {
       it("should weaken relationships between NPCs who voted on opposite sides", () => {
         const resources = new ResourceManager({
           food: 100,
-          oxygen: 100,
           water: 100,
           power: 100,
           materials: 1000,
@@ -1064,7 +1045,6 @@ describe("NPCInfluenceManager", () => {
       it("should remove NPC from councils", () => {
         const resources = new ResourceManager({
           food: 100,
-          oxygen: 100,
           water: 100,
           power: 100,
           materials: 500,
@@ -1387,7 +1367,6 @@ describe("NPCInfluenceManager", () => {
       it("should strengthen relationships between NPCs who vote together", () => {
         const resources = new ResourceManager({
           food: 100,
-          oxygen: 100,
           water: 100,
           power: 100,
           materials: 1000,
@@ -1418,7 +1397,6 @@ describe("NPCInfluenceManager", () => {
       it("should record interactions when council is created", () => {
         const resources = new ResourceManager({
           food: 100,
-          oxygen: 100,
           water: 100,
           power: 100,
           materials: 500,

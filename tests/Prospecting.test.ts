@@ -11,7 +11,10 @@ describe("Prospecting", () => {
   beforeEach(() => {
     operations = new OperationsManager();
     resources = new ResourceManager({
-      food: 500, oxygen: 500, water: 500, power: 500, materials: 500,
+      food: 500,
+      water: 500,
+      power: 500,
+      materials: 500,
     });
   });
 
@@ -19,8 +22,8 @@ describe("Prospecting", () => {
     // OperationsManager now starts with 2 initial water sites for early-game water production
     const sites = operations.getSites();
     expect(sites.length).toBe(2);
-    expect(sites.every(s => s.resourceType === "water")).toBe(true);
-    expect(sites.every(s => !s.revealed)).toBe(true);
+    expect(sites.every((s) => s.resourceType === "water")).toBe(true);
+    expect(sites.every((s) => !s.revealed)).toBe(true);
   });
 
   test("revealSite costs materials", () => {

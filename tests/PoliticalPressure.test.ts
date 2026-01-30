@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'bun:test';
-import { GameState } from '../src/core/GameState';
-import { NPCFaction } from '../src/core/models/NPCInfluence';
+import { describe, it, expect } from "bun:test";
+import { GameState } from "../src/core/GameState";
+import { NPCFaction } from "../src/core/models/NPCInfluence";
 
 /**
  * Helper to ensure the colony has enough resources to survive indefinitely.
@@ -11,15 +11,14 @@ function ensureColonySurvival(game: GameState): void {
   // Consumption is roughly: food ~5/sol, oxygen ~5/sol, water ~3/sol
   game.resources.add({
     food: 2000,
-    oxygen: 2000,
     water: 1000,
     power: 1000,
     materials: 5000,
   });
 }
 
-describe('Political Pressure Integration', () => {
-  it('should generate demands after political pressure starts', () => {
+describe("Political Pressure Integration", () => {
+  it("should generate demands after political pressure starts", () => {
     const game = new GameState();
 
     // Ensure the colony can survive without production
@@ -36,7 +35,7 @@ describe('Political Pressure Integration', () => {
     expect(demands.length).toBeGreaterThan(0);
   });
 
-  it('should allow satisfying demands by passing projects', () => {
+  it("should allow satisfying demands by passing projects", () => {
     const game = new GameState();
 
     // Ensure the colony can survive without production
@@ -53,7 +52,9 @@ describe('Political Pressure Integration', () => {
     }
 
     // Lower support for earth_loyalists to trigger a demand
-    const earthNpcs = game.npcInfluence.getNPCs().filter(n => n.faction === NPCFaction.EarthLoyalists);
+    const earthNpcs = game.npcInfluence
+      .getNPCs()
+      .filter((n) => n.faction === NPCFaction.EarthLoyalists);
     for (const npc of earthNpcs) {
       game.npcInfluence.adjustNPCSupport(npc.id, -0.6);
     }
@@ -61,17 +62,18 @@ describe('Political Pressure Integration', () => {
     // Tick once to generate the demand
     game.tick();
 
-    const demandsBefore = game.npcInfluence.getActiveDemands()
-      .filter(d => d.factionId === NPCFaction.EarthLoyalists);
+    const demandsBefore = game.npcInfluence
+      .getActiveDemands()
+      .filter((d) => d.factionId === NPCFaction.EarthLoyalists);
     expect(demandsBefore.length).toBe(1);
 
     const firstDemand = demandsBefore[0];
     if (!firstDemand) {
-      throw new Error('Expected at least one demand for earth_loyalists');
+      throw new Error("Expected at least one demand for earth_loyalists");
     }
     const projectId = firstDemand.projectIds[0];
     if (!projectId) {
-      throw new Error('Expected at least one project in demand');
+      throw new Error("Expected at least one project in demand");
     }
 
     // Record support before project
@@ -89,7 +91,7 @@ describe('Political Pressure Integration', () => {
     let projectPassed = false;
     for (let i = 0; i < 12; i++) {
       const events = game.tick();
-      if (events.some(e => e.type === 'PROJECT_PASSED')) {
+      if (events.some((e) => e.type === "PROJECT_PASSED")) {
         projectPassed = true;
       }
     }
@@ -108,7 +110,7 @@ describe('Political Pressure Integration', () => {
     // These verify the political pressure system is working correctly.
   });
 
-  it('should have lower faction support when demands are ignored', () => {
+  it("should have lower faction support when demands are ignored", () => {
     const game = new GameState();
 
     // Ensure the colony can survive without production
@@ -126,7 +128,7 @@ describe('Political Pressure Integration', () => {
 
     // At least one faction should have significantly lower support
     // (support decays at FACTION_SUPPORT_DECAY_RATE per sol once past POLITICAL_PRESSURE_START_SOL)
-    const supportDropped = Object.keys(initialSupport).some(faction => {
+    const supportDropped = Object.keys(initialSupport).some((faction) => {
       const factionKey = faction as keyof typeof initialSupport;
       return finalSupport[factionKey] < initialSupport[factionKey];
     });

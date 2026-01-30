@@ -14,7 +14,7 @@ describe("Recreation Buildings", () => {
     gameState.buildings.startBuilding(
       BuildingId.COMMON_ROOM,
       gameState.resources,
-      gameState.technology
+      gameState.technology,
     );
 
     // Fast-forward construction (10 sols)
@@ -38,7 +38,7 @@ describe("Recreation Buildings", () => {
     gameState.buildings.startBuilding(
       BuildingId.COMMON_ROOM,
       gameState.resources,
-      gameState.technology
+      gameState.technology,
     );
 
     // Fast-forward construction
@@ -64,12 +64,12 @@ describe("Recreation Buildings", () => {
     gameState.buildings.startBuilding(
       BuildingId.COMMON_ROOM,
       gameState.resources,
-      gameState.technology
+      gameState.technology,
     );
     gameState.buildings.startBuilding(
       BuildingId.GYMNASIUM,
       gameState.resources,
-      gameState.technology
+      gameState.technology,
     );
 
     // Fast-forward construction (12 sols for gymnasium)
@@ -89,7 +89,7 @@ describe("Recreation Buildings", () => {
     gameState.buildings.startBuilding(
       BuildingId.COMMON_ROOM,
       gameState.resources,
-      gameState.technology
+      gameState.technology,
     );
 
     // Fast-forward construction
@@ -101,7 +101,7 @@ describe("Recreation Buildings", () => {
     const moraleBefore = gameState.colony.getMorale();
 
     // Add production to create positive net flow (required for morale recovery)
-    gameState.resources.addProduction({ food: 100, oxygen: 100, water: 100 });
+    gameState.resources.addProduction({ food: 100, water: 100 });
 
     // Tick a few times with positive net flow to see morale boost
     for (let i = 0; i < 5; i++) {

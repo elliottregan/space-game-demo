@@ -111,10 +111,10 @@ describe("Distributed Oxygen System", () => {
       expect(solar?.oxygenContribution).toBe(0);
     });
 
-    it("should have oxygen_generator building with production", () => {
+    it("should have oxygen_generator building with oxygen contribution", () => {
       const oxygenGen = gameState.buildings.getDefinition("oxygen_generator" as BuildingId);
       expect(oxygenGen).toBeDefined();
-      expect(oxygenGen?.production?.oxygen).toBe(5);
+      expect(oxygenGen?.oxygenContribution).toBe(5);
     });
   });
 

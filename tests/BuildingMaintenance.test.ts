@@ -40,7 +40,7 @@ describe("Building Maintenance System", () => {
 
   beforeEach(() => {
     buildingManager = new BuildingManager([TEST_BUILDING]);
-    resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100, oxygen: 100 });
+    resources = new ResourceManager({ materials: 1000, power: 100, food: 100, water: 100 });
     technology = new TechnologyTree([TEST_TECH]);
   });
 
@@ -234,7 +234,12 @@ describe("Building Maintenance System", () => {
 
     it("should fail if cannot afford maintenance", () => {
       // Start with minimal resources
-      const poorResources = new ResourceManager({ materials: 5, power: 100, food: 100, water: 100, oxygen: 100 });
+      const poorResources = new ResourceManager({
+        materials: 5,
+        power: 100,
+        food: 100,
+        water: 100,
+      });
 
       // Manually create a building without paying cost (for testing purposes)
       const building = buildingManager.startBuilding(BuildingId.SOLAR_PANEL, resources, technology);

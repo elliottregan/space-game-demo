@@ -107,7 +107,6 @@ export interface AggregateStats {
 export interface ResourceSnapshot {
   sol: number;
   food: number;
-  oxygen: number;
   water: number;
   power: number;
   materials: number;
@@ -134,7 +133,6 @@ export interface PercentileValue {
 export interface AggregatedSnapshot {
   sol: number;
   food: PercentileValue;
-  oxygen: PercentileValue;
   water: PercentileValue;
   power: PercentileValue;
   materials: PercentileValue;
@@ -151,7 +149,6 @@ export interface AggregatedSnapshot {
 export interface ResourceFlowSnapshot {
   sol: number;
   netFood: number;
-  netOxygen: number;
   netWater: number;
   netPower: number;
   netMaterials: number;
@@ -189,7 +186,6 @@ export interface EventOccurrence {
  */
 export type CrisisType =
   | "low_food"
-  | "low_oxygen"
   | "low_water"
   | "low_morale"
   | "low_cohesion"

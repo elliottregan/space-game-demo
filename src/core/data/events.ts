@@ -323,7 +323,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
         id: "patch_job",
         text: "Quick patch (may fail again)",
         effects: {
-          resources: { materials: -20, oxygen: -30 },
+          resources: { materials: -20 },
         },
       },
     ],

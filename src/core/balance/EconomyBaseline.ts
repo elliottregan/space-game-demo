@@ -2,14 +2,12 @@ import type { Resources } from "../models/Resources";
 
 export const COLONIST_NEEDS = {
   food: 0.5,
-  oxygen: 0.3,
   water: 0.2,
   power: 0.1,
 } as const;
 
 export const STARTING_RESOURCES: Resources = {
   food: 280,
-  oxygen: 140, // Very tight - creates early race between food and oxygen
   water: 100,
   power: 500,
   materials: 500,
@@ -41,8 +39,6 @@ export const COLONY_HEALTH = {
 // Resource shortage thresholds (multiplied by population)
 export const SHORTAGE_THRESHOLDS = {
   FOOD_MULTIPLIER: 2,
-  OXYGEN_MULTIPLIER: 2,
   FOOD_MORALE_PENALTY: 2,
   FOOD_HEALTH_PENALTY: 1,
-  OXYGEN_HEALTH_PENALTY: 3,
 } as const;

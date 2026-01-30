@@ -3,10 +3,9 @@ import { applyMultiplier, combineMultipliers } from "../../src/core/utils/resour
 
 describe("applyMultiplier", () => {
   it("multiplies all resource values by the multiplier", () => {
-    const baseFlow = { food: 10, oxygen: 5 };
+    const baseFlow = { food: 10 };
     const result = applyMultiplier(baseFlow, 2);
     expect(result.food).toBe(20);
-    expect(result.oxygen).toBe(10);
   });
 
   it("handles fractional multipliers", () => {
@@ -28,10 +27,9 @@ describe("applyMultiplier", () => {
   });
 
   it("skips zero and undefined values", () => {
-    const baseFlow = { food: 10, oxygen: 0, water: undefined };
+    const baseFlow = { food: 10, water: undefined };
     const result = applyMultiplier(baseFlow, 2);
     expect(result.food).toBe(20);
-    expect(result.oxygen).toBeUndefined();
     expect(result.water).toBeUndefined();
   });
 

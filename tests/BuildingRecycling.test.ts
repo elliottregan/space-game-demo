@@ -15,7 +15,6 @@ describe("Building Recycling", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
@@ -34,7 +33,6 @@ describe("Building Recycling", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
@@ -59,7 +57,6 @@ describe("Building Recycling", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
@@ -90,7 +87,6 @@ describe("Building Recycling", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
@@ -116,7 +112,6 @@ describe("Building Recycling", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
@@ -143,7 +138,6 @@ describe("Building Recycling", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
@@ -161,7 +155,6 @@ describe("Building Recycling", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
@@ -179,7 +172,6 @@ describe("Building Recycling", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
@@ -217,7 +209,6 @@ describe("Building Recycling", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
@@ -251,7 +242,6 @@ describe("Building Recycling", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
@@ -269,7 +259,6 @@ describe("Building Recycling", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
@@ -302,7 +291,6 @@ describe("Building Repurposing", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
@@ -329,7 +317,6 @@ describe("Building Repurposing", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
@@ -357,7 +344,6 @@ describe("Building Repurposing", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
 
     // Use fromJSON to pre-research required technologies for mining_station
@@ -401,7 +387,6 @@ describe("Building Repurposing", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
@@ -436,7 +421,6 @@ describe("Building Repurposing", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
@@ -480,7 +464,6 @@ describe("Building Repurposing", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
@@ -509,7 +492,6 @@ describe("Building Repurposing", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
@@ -540,7 +522,6 @@ describe("Building Repurposing", () => {
       power: 100,
       food: 100,
       water: 100,
-      oxygen: 100,
     });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
