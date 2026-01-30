@@ -94,6 +94,8 @@ interface GameUIState {
     councilFactionCounts: Record<string, number>;
     factionSupport: FactionSupportSnapshot;
     completedProjects: ProjectId[];
+    pendingProposals: Array<{ projectId: ProjectId; voteSol: number }>;
+    failedProposals: ProjectId[];
   };
 }
 
@@ -202,6 +204,8 @@ class GameService {
         councilFactionCounts: {},
         factionSupport: { earthLoyalists: 0, marsIndependence: 0, corporateInterests: 0 },
         completedProjects: [],
+        pendingProposals: [],
+        failedProposals: [],
       },
     };
   }
@@ -300,11 +304,17 @@ class GameService {
 
     // Ideology
     const ideologyData = this.facade.ideology.snapshot();
+    const pendingProposals = this.facade.ideology.getPendingProposals();
     this.state.ideology = {
       council: [...ideologyData.council],
       councilFactionCounts: { ...ideologyData.councilFactionCounts },
       factionSupport: { ...ideologyData.factionSupport },
       completedProjects: [...this.facade.ideology.getCompletedProjects()],
+      pendingProposals: pendingProposals.map((p) => ({
+        projectId: p.projectId,
+        voteSol: p.voteSol,
+      })),
+      failedProposals: [...this.facade.ideology.getFailedProposals()],
     };
   }
 

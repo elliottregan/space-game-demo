@@ -39,6 +39,27 @@ export interface FactionSupport {
 }
 
 /**
+ * A project proposal awaiting council vote.
+ */
+export interface PendingProposal {
+  projectId: ProjectId;
+  faction: NPCFaction;
+  proposedSol: number;
+  voteSol: number;
+}
+
+/**
+ * Result of a council vote on a project.
+ */
+export interface VoteResult {
+  projectId: ProjectId;
+  passed: boolean;
+  votesFor: number;
+  votesAgainst: number;
+  totalVotes: number;
+}
+
+/**
  * Manages colonist ideology, council selection, and faction support.
  * Ideology spreads through the social network similar to morale.
  */
@@ -47,6 +68,8 @@ export class IdeologyManager {
   private lastCouncilUpdateSol: number = -1;
   private lastSpreadSol: number = -1;
   private completedProjects: Set<ProjectId> = new Set();
+  private pendingProposals: Map<ProjectId, PendingProposal> = new Map();
+  private failedProposals: Set<ProjectId> = new Set();
 
   // ============ Static Helpers ============
 
@@ -457,6 +480,124 @@ export class IdeologyManager {
     return [...this.completedProjects];
   }
 
+  /**
+   * Submit a project proposal for council vote.
+   */
+  submitProposal(projectId: ProjectId, faction: NPCFaction, currentSol: number): boolean {
+    // Can't propose if already pending, completed, or failed
+    if (
+      this.pendingProposals.has(projectId) ||
+      this.completedProjects.has(projectId) ||
+      this.failedProposals.has(projectId)
+    ) {
+      return false;
+    }
+
+    this.pendingProposals.set(projectId, {
+      projectId,
+      faction,
+      proposedSol: currentSol,
+      voteSol: currentSol + IdeologyBalance.PROJECT_VOTING_PERIOD,
+    });
+
+    return true;
+  }
+
+  /**
+   * Check if a project is pending vote.
+   */
+  isPendingProposal(projectId: ProjectId): boolean {
+    return this.pendingProposals.has(projectId);
+  }
+
+  /**
+   * Check if a project has failed a vote.
+   */
+  isFailedProposal(projectId: ProjectId): boolean {
+    return this.failedProposals.has(projectId);
+  }
+
+  /**
+   * Get all pending proposals.
+   */
+  getPendingProposals(): readonly PendingProposal[] {
+    return [...this.pendingProposals.values()];
+  }
+
+  /**
+   * Get a specific pending proposal.
+   */
+  getPendingProposal(projectId: ProjectId): PendingProposal | undefined {
+    return this.pendingProposals.get(projectId);
+  }
+
+  /**
+   * Preview what the vote outcome would be for a project.
+   */
+  getVoteProjection(faction: NPCFaction): {
+    votesFor: number;
+    votesAgainst: number;
+    wouldPass: boolean;
+  } {
+    const counts = this.getCouncilFactionCounts();
+    const votesFor = counts[faction] ?? 0;
+    const totalVotes = this.council.length;
+    const votesAgainst = totalVotes - votesFor;
+    const wouldPass = votesFor > votesAgainst;
+
+    return { votesFor, votesAgainst, wouldPass };
+  }
+
+  /**
+   * Process votes for proposals that have reached their vote sol.
+   * Returns the results of any votes that occurred.
+   */
+  processVotes(currentSol: number): VoteResult[] {
+    const results: VoteResult[] = [];
+
+    for (const [projectId, proposal] of this.pendingProposals) {
+      if (currentSol >= proposal.voteSol) {
+        const projection = this.getVoteProjection(proposal.faction);
+
+        const result: VoteResult = {
+          projectId,
+          passed: projection.wouldPass,
+          votesFor: projection.votesFor,
+          votesAgainst: projection.votesAgainst,
+          totalVotes: this.council.length,
+        };
+
+        results.push(result);
+
+        // Remove from pending
+        this.pendingProposals.delete(projectId);
+
+        // Add to completed or failed
+        if (result.passed) {
+          this.completedProjects.add(projectId);
+        } else {
+          this.failedProposals.add(projectId);
+        }
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Clear a failed proposal so it can be proposed again.
+   */
+  clearFailedProposal(projectId: ProjectId): void {
+    this.failedProposals.delete(projectId);
+  }
+
+  /**
+   * Get list of failed project IDs.
+   */
+  getFailedProposals(): readonly ProjectId[] {
+    return [...this.failedProposals];
+  }
+
   // ============ Serialization ============
 
   toJSON(): {
@@ -464,12 +605,16 @@ export class IdeologyManager {
     lastCouncilUpdateSol: number;
     lastSpreadSol: number;
     completedProjects: ProjectId[];
+    pendingProposals: PendingProposal[];
+    failedProposals: ProjectId[];
   } {
     return {
       council: this.council,
       lastCouncilUpdateSol: this.lastCouncilUpdateSol,
       lastSpreadSol: this.lastSpreadSol,
       completedProjects: [...this.completedProjects],
+      pendingProposals: [...this.pendingProposals.values()],
+      failedProposals: [...this.failedProposals],
     };
   }
 
@@ -481,6 +626,12 @@ export class IdeologyManager {
     if (data.lastSpreadSol !== undefined) manager.lastSpreadSol = data.lastSpreadSol;
     if (data.completedProjects) {
       manager.completedProjects = new Set(data.completedProjects);
+    }
+    if (data.pendingProposals) {
+      manager.pendingProposals = new Map(data.pendingProposals.map((p) => [p.projectId, p]));
+    }
+    if (data.failedProposals) {
+      manager.failedProposals = new Set(data.failedProposals);
     }
     return manager;
   }

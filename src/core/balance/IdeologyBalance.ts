@@ -32,6 +32,11 @@ export const COUNCIL_SIZE_PER_POPULATION = 10;
 /** Sols between council recalculation */
 export const COUNCIL_UPDATE_INTERVAL = 30;
 
+// ============ Project Voting ============
+
+/** Sols between proposal and council vote */
+export const PROJECT_VOTING_PERIOD = 10;
+
 // ============ Project Support Requirements ============
 
 /** Support required for minor faction projects */

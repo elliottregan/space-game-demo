@@ -27,7 +27,7 @@ import {
 // Technology phases
 import { processResearch } from "./technology";
 // Ideology phases
-import { propagateIdeology } from "./ideology";
+import { propagateIdeology, processProjectVotes } from "./ideology";
 // Operations phases
 import { processOperations, processDepositExtraction } from "./operations";
 // Events phases
@@ -55,7 +55,7 @@ export {
   assignHousing,
 } from "./colony";
 export { processResearch } from "./technology";
-export { propagateIdeology } from "./ideology";
+export { propagateIdeology, processProjectVotes } from "./ideology";
 export { processOperations, processDepositExtraction } from "./operations";
 export { processRandomEvents } from "./events";
 export { checkVictoryConditions } from "./victory";
@@ -108,6 +108,7 @@ export function createStandardTickRunner(): TickRunner {
 
   // 7. Ideology phases
   runner.register(propagateIdeology);
+  runner.register(processProjectVotes);
 
   // 8. Operations phases
   runner.register(processOperations);

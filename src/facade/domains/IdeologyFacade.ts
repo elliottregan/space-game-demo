@@ -95,6 +95,30 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
       };
     }
 
+    // Check if pending vote
+    if (this.gameState.ideology.isPendingProposal(projectId)) {
+      const currentSupport = this.getFactionSupportFor(project.type);
+      return {
+        canPropose: false,
+        currentSupport,
+        requiredSupport: project.requiredSupport,
+        reason: "Project awaiting council vote",
+        isPending: true,
+      };
+    }
+
+    // Check if failed vote (can be retried later)
+    if (this.gameState.ideology.isFailedProposal(projectId)) {
+      const currentSupport = this.getFactionSupportFor(project.type);
+      return {
+        canPropose: false,
+        currentSupport,
+        requiredSupport: project.requiredSupport,
+        reason: "Project failed council vote",
+        isFailed: true,
+      };
+    }
+
     const currentSupport = this.getFactionSupportFor(project.type);
     const canAfford = this.gameState.resources.canAfford(project.proposalCost);
 
@@ -124,10 +148,11 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
   }
 
   /**
-   * Propose and enact a project.
-   * Deducts cost, marks as complete, and applies morale effects.
+   * Submit a project proposal for council vote.
+   * Deducts cost and starts the voting period.
+   * The vote will be processed after PROJECT_VOTING_PERIOD sols.
    */
-  proposeProject(projectId: ProjectId): Result<{ projectId: ProjectId }> {
+  proposeProject(projectId: ProjectId): Result<{ projectId: ProjectId; voteSol: number }> {
     const eligibility = this.canProposeProject(projectId);
     if (!eligibility.canPropose) {
       return {
@@ -146,15 +171,44 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
     // Deduct cost
     this.gameState.resources.deduct(project.proposalCost);
 
-    // Mark as completed
-    this.gameState.ideology.completeProject(projectId);
+    // Submit for vote
+    const currentSol = this.gameState.currentSol;
+    this.gameState.ideology.submitProposal(projectId, project.type, currentSol);
 
-    // Apply morale effects
-    const colonists = this.gameState.colony.getColonists();
-    const moraleManager = this.gameState.workforce.getMoraleManager();
-    this.gameState.ideology.applyProjectMoraleEffects(project.type, colonists, moraleManager);
+    const proposal = this.gameState.ideology.getPendingProposal(projectId);
+    return { success: true, data: { projectId, voteSol: proposal?.voteSol ?? currentSol + 10 } };
+  }
 
-    return { success: true, data: { projectId } };
+  /**
+   * Get the vote projection for a faction.
+   */
+  getVoteProjection(faction: NPCFaction): {
+    votesFor: number;
+    votesAgainst: number;
+    wouldPass: boolean;
+  } {
+    return this.gameState.ideology.getVoteProjection(faction);
+  }
+
+  /**
+   * Get all pending proposals.
+   */
+  getPendingProposals(): readonly import("../../core/systems/IdeologyManager").PendingProposal[] {
+    return this.gameState.ideology.getPendingProposals();
+  }
+
+  /**
+   * Get list of failed project IDs.
+   */
+  getFailedProposals(): readonly ProjectId[] {
+    return this.gameState.ideology.getFailedProposals();
+  }
+
+  /**
+   * Clear a failed proposal so it can be proposed again.
+   */
+  clearFailedProposal(projectId: ProjectId): void {
+    this.gameState.ideology.clearFailedProposal(projectId);
   }
 
   /**

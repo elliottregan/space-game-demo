@@ -24,25 +24,69 @@ function formatSupport(support: number): string {
   return `${(support * 100).toFixed(0)}%`;
 }
 
-// Projects with eligibility
+// Projects with eligibility and status
 // oxlint-disable-next-line no-unused-vars
-const projectsWithEligibility = computed(() => {
+const projectsWithStatus = computed(() => {
   // Use reactive state directly to ensure Vue tracks dependencies
   const completedSet = new Set(state.ideology.completedProjects);
+  const failedSet = new Set(state.ideology.failedProposals);
+  const pendingMap = new Map(state.ideology.pendingProposals.map((p) => [p.projectId, p]));
   const factionSupport = state.ideology.factionSupport;
+  const councilFactionCounts = state.ideology.councilFactionCounts;
+  const councilSize = state.ideology.council.length;
   const resources = state.resources;
+  const currentSol = state.currentSol;
 
   return PROJECTS.map((project) => {
     const isCompleted = completedSet.has(project.id);
+    const isFailed = failedSet.has(project.id);
+    const pending = pendingMap.get(project.id);
+    const isPending = !!pending;
+
+    // Get faction vote counts
+    const votesFor = councilFactionCounts[project.type] ?? 0;
+    const votesAgainst = councilSize - votesFor;
+    const wouldPass = votesFor > votesAgainst;
 
     if (isCompleted) {
       return {
         ...project,
+        status: "completed" as const,
         canPropose: false,
         currentSupport: 0,
         requiredSupport: project.requiredSupport,
-        reason: "Project already completed",
-        isCompleted: true,
+        votesFor,
+        votesAgainst,
+        wouldPass,
+      };
+    }
+
+    if (isPending) {
+      const solsUntilVote = pending.voteSol - currentSol;
+      return {
+        ...project,
+        status: "pending" as const,
+        canPropose: false,
+        currentSupport: 0,
+        requiredSupport: project.requiredSupport,
+        solsUntilVote,
+        voteSol: pending.voteSol,
+        votesFor,
+        votesAgainst,
+        wouldPass,
+      };
+    }
+
+    if (isFailed) {
+      return {
+        ...project,
+        status: "failed" as const,
+        canPropose: false,
+        currentSupport: 0,
+        requiredSupport: project.requiredSupport,
+        votesFor,
+        votesAgainst,
+        wouldPass,
       };
     }
 
@@ -77,11 +121,14 @@ const projectsWithEligibility = computed(() => {
 
     return {
       ...project,
+      status: "available" as const,
       canPropose,
       currentSupport,
       requiredSupport: project.requiredSupport,
       reason,
-      isCompleted: false,
+      votesFor,
+      votesAgainst,
+      wouldPass,
     };
   });
 });
@@ -103,18 +150,28 @@ function handlePropose(projectId: ProjectId): void {
   <GPanel title="Projects" accent="slate">
     <div class="projects-list">
       <div
-        v-for="project in projectsWithEligibility"
+        v-for="project in projectsWithStatus"
         :key="project.id"
         class="project-card"
         :class="{
-          'project-locked': !project.canPropose && !project.isCompleted,
-          'project-completed': project.isCompleted,
+          'project-locked': project.status === 'available' && !project.canPropose,
+          'project-completed': project.status === 'completed',
+          'project-pending': project.status === 'pending',
+          'project-failed': project.status === 'failed',
         }"
       >
         <div class="project-header">
           <span class="project-name">{{ project.name }}</span>
           <div class="project-badges">
-            <GBadge v-if="project.isCompleted" variant="positive" size="sm"> Completed </GBadge>
+            <GBadge v-if="project.status === 'completed'" variant="positive" size="sm">
+              Passed
+            </GBadge>
+            <GBadge v-else-if="project.status === 'pending'" variant="info" size="sm">
+              Vote in {{ project.solsUntilVote }} sols
+            </GBadge>
+            <GBadge v-else-if="project.status === 'failed'" variant="muted" size="sm">
+              Failed
+            </GBadge>
             <GBadge :variant="getFactionBadgeVariant(project.type)" size="sm">
               {{ project.type.replace("_", " ") }}
             </GBadge>
@@ -124,25 +181,46 @@ function handlePropose(projectId: ProjectId): void {
         <div class="project-footer">
           <span class="project-cost">Cost: {{ formatCost(project.proposalCost) }}</span>
           <span
-            v-if="!project.isCompleted"
+            v-if="project.status === 'available'"
             class="project-support"
             :class="{
-              'support-sufficient': project.canPropose,
-              'support-insufficient': !project.canPropose,
+              'support-sufficient': project.currentSupport >= project.requiredSupport,
+              'support-insufficient': project.currentSupport < project.requiredSupport,
             }"
           >
             {{ formatSupport(project.currentSupport) }} /
             {{ formatSupport(project.requiredSupport) }}
           </span>
         </div>
+
+        <!-- Vote projection for pending projects -->
+        <div v-if="project.status === 'pending'" class="vote-projection">
+          <span class="vote-label">Council votes:</span>
+          <span :class="project.wouldPass ? 'vote-passing' : 'vote-failing'">
+            {{ project.votesFor }} for / {{ project.votesAgainst }} against
+            <span v-if="project.wouldPass">(will pass)</span>
+            <span v-else>(will fail)</span>
+          </span>
+        </div>
+
+        <!-- Vote projection for available projects -->
+        <div v-if="project.status === 'available' && project.canPropose" class="vote-projection">
+          <span class="vote-label">If proposed:</span>
+          <span :class="project.wouldPass ? 'vote-passing' : 'vote-failing'">
+            {{ project.votesFor }} for / {{ project.votesAgainst }} against
+            <span v-if="project.wouldPass">(would pass)</span>
+            <span v-else>(would fail)</span>
+          </span>
+        </div>
+
         <div
-          v-if="!project.canPropose && !project.isCompleted && project.reason"
+          v-if="project.status === 'available' && !project.canPropose && project.reason"
           class="project-reason"
         >
           {{ project.reason }}
         </div>
         <GButton
-          v-if="project.canPropose"
+          v-if="project.status === 'available' && project.canPropose"
           size="sm"
           class="propose-button"
           @click="handlePropose(project.id)"
@@ -153,7 +231,7 @@ function handlePropose(projectId: ProjectId): void {
     </div>
 
     <p class="hint">
-      Projects require faction support to propose. Build support by lobbying council members.
+      Projects require faction support to propose, then pass by council vote after 10 sols.
     </p>
   </GPanel>
 </template>
@@ -178,6 +256,15 @@ function handlePropose(projectId: ProjectId): void {
 .project-card.project-completed {
   border-left-color: var(--color-positive);
   opacity: 0.8;
+}
+
+.project-card.project-pending {
+  border-left-color: var(--color-info);
+}
+
+.project-card.project-failed {
+  border-left-color: var(--color-muted);
+  opacity: 0.6;
 }
 
 .project-header {
@@ -227,6 +314,26 @@ function handlePropose(projectId: ProjectId): void {
 }
 
 .support-insufficient {
+  color: var(--color-warning);
+}
+
+.vote-projection {
+  margin-top: var(--g-space-xs);
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  display: flex;
+  gap: var(--g-space-xs);
+}
+
+.vote-label {
+  color: var(--g-color-text-muted);
+}
+
+.vote-passing {
+  color: var(--color-positive);
+}
+
+.vote-failing {
   color: var(--color-warning);
 }
 
