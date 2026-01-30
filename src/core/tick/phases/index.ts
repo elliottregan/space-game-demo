@@ -16,7 +16,7 @@ import {
 // Workforce phases
 import { processWorkforceTick } from "./workforce";
 // Colonist morale phases
-import { propagateColonistMorale } from "./colonistMorale";
+import { visitSocialBuildings, propagateColonistMorale } from "./colonistMorale";
 // Colony phases
 import {
   calculateSocialCohesion,
@@ -48,7 +48,7 @@ export {
   processMaintenanceDecay,
 } from "./buildings";
 export { processWorkforceTick } from "./workforce";
-export { propagateColonistMorale } from "./colonistMorale";
+export { visitSocialBuildings, propagateColonistMorale } from "./colonistMorale";
 export {
   calculateSocialCohesion,
   calculatePolicyEffects,
@@ -95,7 +95,8 @@ export function createStandardTickRunner(): TickRunner {
   // 4. Workforce phases (using combined tick for now)
   runner.register(processWorkforceTick);
 
-  // 4b. Colonist morale propagation (after workforce, before colony phases)
+  // 4b. Colonist morale phases (after workforce, before colony phases)
+  runner.register(visitSocialBuildings);
   runner.register(propagateColonistMorale);
 
   // 5. Colony phases

@@ -160,7 +160,7 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
       influence: mock(() => successResult(undefined)),
     },
     game: {
-      currentSol: mock(() => 0),
+      currentSol: mock(() => overrides.currentSol ?? 100), // Default to 100 to bypass bootstrap
       advanceSol: mock(() => successResult({ events: [] })),
       advanceSols: mock(() =>
         successResult({ solsAdvanced: 1, events: [], stopReason: undefined }),
@@ -192,6 +192,7 @@ interface MockedAPI {
   hasActiveEvent?: boolean;
   activeEvent?: ActiveEventSnapshot | null;
   eventResolveCalled?: (choiceId: string) => void;
+  currentSol?: number;
 }
 
 describe("HeuristicStrategy", () => {

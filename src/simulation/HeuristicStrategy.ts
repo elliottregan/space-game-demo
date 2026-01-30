@@ -110,6 +110,10 @@ export class HeuristicStrategy {
     // First, ensure workers are assigned to buildings
     this.handleWorkerAssignment();
 
+    // Early game bootstrap: ensure at least one farm and oxygen generator exist
+    const currentSol = this.api.game.currentSol();
+    if (currentSol < 50 && this.handleEarlyGameBootstrap()) return;
+
     // Execute priority handlers in order
     // Each returns true if it took an action, allowing for multiple actions per tick
     // but prioritizing survival/events over growth
@@ -119,6 +123,44 @@ export class HeuristicStrategy {
     if (this.handleInfrastructure()) return;
     if (this.handleGrowth()) return;
     this.handleVictoryPush();
+  }
+
+  /**
+   * Early game bootstrap phase (first 100 sols).
+   * Ensures minimum survival infrastructure is built early.
+   * Less restrictive than before - only blocks when we have ZERO critical buildings.
+   * @returns true if an action was taken
+   */
+  private handleEarlyGameBootstrap(): boolean {
+    const buildings = this.api.buildings.snapshot();
+
+    // Count active and pending survival buildings
+    let farmCount = 0;
+    let oxygenGenCount = 0;
+
+    for (const b of buildings.active) {
+      if (b.definitionId === BuildingId.BASIC_FARM) farmCount++;
+      if (b.definitionId === BuildingId.OXYGEN_GENERATOR) oxygenGenCount++;
+    }
+
+    for (const b of buildings.pending) {
+      if (b.definitionId === BuildingId.BASIC_FARM) farmCount++;
+      if (b.definitionId === BuildingId.OXYGEN_GENERATOR) oxygenGenCount++;
+    }
+
+    // Critical: must have at least 1 farm and 1 oxygen generator
+    // If missing either, try to build it immediately
+    if (farmCount === 0) {
+      if (this.tryBuild(BuildingId.BASIC_FARM, "survival", false)) return true;
+    }
+
+    if (oxygenGenCount === 0) {
+      if (this.tryBuild(BuildingId.OXYGEN_GENERATOR, "survival", false)) return true;
+    }
+
+    // If we have basic infrastructure, allow normal flow
+    // The regular handleSurvival will continue building more as needed
+    return false;
   }
 
   /**
@@ -219,8 +261,9 @@ export class HeuristicStrategy {
       if (this.tryBuild(BuildingId.BASIC_FARM, "survival", false)) return true;
     }
 
-    // Maintain positive food flow with buffer (population growth)
-    if (foodFlow < 2) {
+    // Maintain positive flow with buffer for food
+    // Food needs buffer of 4 to handle population growth and events
+    if (foodFlow < 4) {
       if (this.tryBuild(BuildingId.BASIC_FARM, "survival")) return true;
     }
 
@@ -532,9 +575,16 @@ export class HeuristicStrategy {
     // Calculate resource surpluses
     const foodSurplus = (resources.production.food ?? 0) - (resources.consumption.food ?? 0);
 
-    // Need at least 2 food surplus before growing
-    if (foodSurplus < 2) {
+    // Need at least 4 food surplus before growing (increased from 2)
+    // This prevents building habitats when food is barely sufficient
+    if (foodSurplus < 4) {
       if (this.tryBuild(BuildingId.BASIC_FARM, "growth", false)) return true;
+    }
+
+    // Also check food stockpile - don't grow if food is low
+    if (resources.current.food < 80) {
+      if (this.tryBuild(BuildingId.BASIC_FARM, "growth", false)) return true;
+      return false; // Don't build habitat if food stockpile is low
     }
 
     // Build habitat to grow population

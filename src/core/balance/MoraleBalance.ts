@@ -30,4 +30,14 @@ export const COLONIST_MORALE = {
 
   // Initial morale for new colonists
   INITIAL_MORALE: 70,
+
+  // Social building (third place) boost
+  SOCIAL_BUILDING_BOOST_DIVISOR: 10, // moraleBoost / this = per-sol gain
+
+  // Grace period for physiological needs (colonists don't penalize negative net flow early game)
+  PHYSIOLOGICAL_GRACE_PERIOD: 100, // sols before net flow affects morale
+
+  // Stockpile thresholds for physiological satisfaction
+  STOCKPILE_SATISFIED: 50, // resources above this = fully satisfied
+  STOCKPILE_CRITICAL: 10, // resources below this = unsatisfied
 };
