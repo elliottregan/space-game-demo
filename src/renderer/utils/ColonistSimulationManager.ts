@@ -41,13 +41,29 @@ export class ColonistSimulationManager {
   }
 
   update(colonists: Colonist[], relationships: Map<string, number>): void {
-    // Create nodes
-    this.nodes = colonists.map((c) => ({
-      id: c.id,
-      role: c.role,
-      x: this.positions.get(c.id)?.x ?? this.width / 2,
-      y: this.positions.get(c.id)?.y ?? this.height / 2,
-    }));
+    // Track existing vs new colonist IDs
+    const currentIds = new Set(colonists.map((c) => c.id));
+    const existingIds = new Set(this.positions.keys());
+    const newIds = new Set([...currentIds].filter((id) => !existingIds.has(id)));
+
+    // Clean up positions for departed colonists
+    for (const id of existingIds) {
+      if (!currentIds.has(id)) {
+        this.positions.delete(id);
+      }
+    }
+
+    // Create nodes, spawning new colonists near their strongest relationship
+    this.nodes = colonists.map((c) => {
+      const existingPos = this.positions.get(c.id);
+      if (existingPos) {
+        return { id: c.id, role: c.role, x: existingPos.x, y: existingPos.y };
+      }
+
+      // New colonist - find spawn position near strongest relationship
+      const spawnPos = this.findSpawnPosition(c.id, relationships);
+      return { id: c.id, role: c.role, x: spawnPos.x, y: spawnPos.y };
+    });
 
     // Create links
     const nodeById = new Map(this.nodes.map((n) => [n.id, n]));
@@ -65,13 +81,52 @@ export class ColonistSimulationManager {
     // Create or update simulation
     this.initSimulation();
 
-    // Run simulation synchronously for initial positions
-    this.simulation?.tick(100);
+    // Run fewer ticks when just warming from existing positions
+    const tickCount = newIds.size > 0 || this.positions.size === 0 ? 100 : 30;
+    this.simulation?.tick(tickCount);
 
     // Store positions
     for (const node of this.nodes) {
       this.positions.set(node.id, { x: node.x ?? 0, y: node.y ?? 0 });
     }
+  }
+
+  private findSpawnPosition(
+    newId: string,
+    relationships: Map<string, number>,
+  ): { x: number; y: number } {
+    // Find the strongest relationship with an existing colonist
+    let strongestRelation: { id: string; weight: number } | null = null;
+
+    for (const [key, weight] of relationships) {
+      const [id1, id2] = key.split(":");
+      const otherId = id1 === newId ? id2 : id2 === newId ? id1 : null;
+
+      if (otherId && this.positions.has(otherId)) {
+        if (!strongestRelation || weight > strongestRelation.weight) {
+          strongestRelation = { id: otherId, weight };
+        }
+      }
+    }
+
+    if (strongestRelation) {
+      const relatedPos = this.positions.get(strongestRelation.id);
+      if (relatedPos) {
+        // Add small random offset so they don't spawn exactly on top
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 30 + Math.random() * 30;
+        return {
+          x: relatedPos.x + Math.cos(angle) * distance,
+          y: relatedPos.y + Math.sin(angle) * distance,
+        };
+      }
+    }
+
+    // No existing relationship - spawn at center with small random offset
+    return {
+      x: this.width / 2 + (Math.random() - 0.5) * 50,
+      y: this.height / 2 + (Math.random() - 0.5) * 50,
+    };
   }
 
   private initSimulation(): void {
