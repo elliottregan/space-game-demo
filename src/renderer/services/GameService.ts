@@ -489,6 +489,15 @@ class GameService {
     return { success: false, assignmentsChanged: 0 };
   }
 
+  optimizeHousing(): { success: boolean; assignmentsChanged: number } {
+    const result = this.facade.colony.optimizeHousing();
+    this.syncState();
+    if (result.success) {
+      return { success: true, assignmentsChanged: result.data.assignmentsChanged };
+    }
+    return { success: false, assignmentsChanged: 0 };
+  }
+
   getUnassignedColonists(): Colonist[] {
     return [...this.facade.colony.getUnassignedColonists()];
   }

@@ -6,7 +6,6 @@ import { ColonistDetailPanel, ColonistGraph } from "../ColonistGraph";
 import BuildingSection from "./BuildingSection.vue";
 import ColonyStatsBar from "./ColonyStatsBar.vue";
 import HousingSection from "./HousingSection.vue";
-import UnhousedSection from "./UnhousedSection.vue";
 
 const state = gameService.getState();
 
@@ -18,8 +17,6 @@ const activeBuildings = computed(() =>
 const buildingsByCategory = computed(() => {
   const categories: Record<string, typeof state.buildings> = {
     housing: [],
-    production: [],
-    infrastructure: [],
     recreation: [],
     research: [],
   };
@@ -34,11 +31,8 @@ const buildingsByCategory = computed(() => {
       categories.recreation.push(building);
     } else if (def.workerRole === "research") {
       categories.research.push(building);
-    } else if (def.production?.food || def.production?.water || def.production?.oxygen) {
-      categories.production.push(building);
-    } else {
-      categories.infrastructure.push(building);
     }
+    // Production and infrastructure buildings are now managed in Operations page
   }
 
   return categories;
@@ -97,32 +91,7 @@ const buildingsForGraph = computed(() =>
       :housing-assignments="state.housingAssignments"
       :building-definitions="state.buildingDefinitions"
       :skill-definitions="state.skillDefinitions"
-    />
-
-    <UnhousedSection
-      v-if="state.unhoused.length > 0"
-      :colonists="state.unhoused"
-      :buildings="state.buildings"
-      :building-definitions="state.buildingDefinitions"
-      :skill-definitions="state.skillDefinitions"
-    />
-
-    <BuildingSection
-      v-if="buildingsByCategory.production.length > 0"
-      title="Production"
-      :buildings="buildingsByCategory.production"
-      :building-definitions="state.buildingDefinitions"
-      :colonists="state.colonists"
-      :skill-definitions="state.skillDefinitions"
-    />
-
-    <BuildingSection
-      v-if="buildingsByCategory.infrastructure.length > 0"
-      title="Infrastructure"
-      :buildings="buildingsByCategory.infrastructure"
-      :building-definitions="state.buildingDefinitions"
-      :colonists="state.colonists"
-      :skill-definitions="state.skillDefinitions"
+      :unhoused="state.unhoused"
     />
 
     <BuildingSection

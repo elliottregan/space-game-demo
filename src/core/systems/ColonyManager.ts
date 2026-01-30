@@ -547,6 +547,36 @@ export class ColonyManager {
   }
 
   /**
+   * Assign a colonist to a specific habitat.
+   * Returns false if colonist not found, building not a habitat, or at capacity.
+   */
+  assignColonistToHousing(
+    colonistId: string,
+    buildingId: string,
+    buildings: BuildingManager,
+  ): boolean {
+    const colonist = this.colonists.get(colonistId);
+    if (!colonist) return false;
+
+    const building = buildings.getBuilding(buildingId);
+    if (!building || building.status !== "active") return false;
+
+    const def = buildings.getDefinition(building.definitionId);
+    if (!def?.capacity) return false;
+
+    // Count current residents
+    let currentCount = 0;
+    for (const c of this.colonists.values()) {
+      if (c.housingId === buildingId) currentCount++;
+    }
+
+    if (currentCount >= def.capacity) return false;
+
+    colonist.housingId = buildingId;
+    return true;
+  }
+
+  /**
    * Assign a colonist to a social building.
    * Returns false if building is at capacity or colonist already assigned.
    */

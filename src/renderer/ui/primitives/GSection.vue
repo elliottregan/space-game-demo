@@ -2,7 +2,7 @@
 withDefaults(
   defineProps<{
     title: string;
-    variant?: "default" | "muted" | "warning" | "uppercase";
+    variant?: "default" | "muted" | "warning" | "danger" | "uppercase";
     border?: "top" | "bottom" | "none";
   }>(),
   {
@@ -87,6 +87,12 @@ withDefaults(
 
 .g-section--warning .g-section__title {
   color: var(--g-accent-amber);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.g-section--danger .g-section__title {
+  color: var(--g-color-danger);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }

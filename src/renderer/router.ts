@@ -28,6 +28,11 @@ const router = createRouter({
       component: () => import("./components/ResearchTab.vue"),
     },
     {
+      path: "/operations",
+      name: "operations",
+      component: () => import("./components/OperationsPage/OperationsPage.vue"),
+    },
+    {
       path: "/ui",
       name: "ui-showcase",
       component: () => import("./components/UIShowcase.vue"),
