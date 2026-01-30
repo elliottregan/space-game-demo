@@ -1,13 +1,69 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { NPCFaction } from "../../../core/models/NPCInfluence";
 import { gameService } from "../../services/GameService";
-import { GPanel } from "../../ui";
+import { GPanel, GButton, GSelect } from "../../ui";
+import type { SelectOption } from "../../ui/primitives/GSelect.vue";
 
 const state = gameService.getState();
 
+// Lobbying UI state
+const selectedMemberId = ref<string | null>(null);
+const selectedFaction = ref<NPCFaction>(NPCFaction.EarthLoyalists);
+const lobbyBoost = ref(0.1);
+
+// Lobby options
+const lobbyOptions: SelectOption<number>[] = [
+  { label: "Small (+5%)", value: 0.05 },
+  { label: "Medium (+10%)", value: 0.1 },
+  { label: "Large (+15%)", value: 0.15 },
+  { label: "Major (+20%)", value: 0.2 },
+];
+
+const factionOptions: SelectOption<string>[] = [
+  { label: "Earth Loyalists", value: NPCFaction.EarthLoyalists },
+  { label: "Mars Independence", value: NPCFaction.MarsIndependence },
+  { label: "Corporate Interests", value: NPCFaction.CorporateInterests },
+];
+
+// Computed values for lobbying
+// oxlint-disable-next-line no-unused-vars
+const lobbyCost = computed(() => {
+  if (!selectedMemberId.value) return 0;
+  return gameService.getCouncilLobbyCost(
+    selectedMemberId.value,
+    selectedFaction.value,
+    lobbyBoost.value,
+  );
+});
+
+// oxlint-disable-next-line no-unused-vars
+const canLobby = computed(() => {
+  if (!selectedMemberId.value) return false;
+  return gameService.canLobbyCouncilMember(
+    selectedMemberId.value,
+    selectedFaction.value,
+    lobbyBoost.value,
+  );
+});
+
+// oxlint-disable-next-line no-unused-vars
+function selectMember(colonistId: string): void {
+  if (selectedMemberId.value === colonistId) {
+    selectedMemberId.value = null;
+  } else {
+    selectedMemberId.value = colonistId;
+  }
+}
+
+// oxlint-disable-next-line no-unused-vars
+function handleLobby(): void {
+  if (!selectedMemberId.value) return;
+  gameService.lobbyCouncilMember(selectedMemberId.value, selectedFaction.value, lobbyBoost.value);
+}
+
 // Map ideology support to display format
-// biome-ignore lint/correctness/noUnusedVariables: used in template
+// oxlint-disable-next-line no-unused-vars
 const factionData = computed(() => [
   {
     id: NPCFaction.EarthLoyalists,
@@ -29,12 +85,12 @@ const factionData = computed(() => [
   },
 ]);
 
-// biome-ignore lint/correctness/noUnusedVariables: used in template
+// oxlint-disable-next-line no-unused-vars
 function formatSupport(support: number): string {
   return `${(support * 100).toFixed(0)}%`;
 }
 
-// biome-ignore lint/correctness/noUnusedVariables: used in template
+// oxlint-disable-next-line no-unused-vars
 function getSupportColor(support: number): string {
   if (support >= 0.5) return "var(--color-positive)";
   if (support >= 0.35) return "var(--color-info)";
@@ -42,7 +98,7 @@ function getSupportColor(support: number): string {
   return "var(--color-muted)";
 }
 
-// biome-ignore lint/correctness/noUnusedVariables: used in template
+// oxlint-disable-next-line no-unused-vars
 function getFactionColor(factionId: string): string {
   switch (factionId) {
     case NPCFaction.EarthLoyalists:
@@ -85,7 +141,11 @@ function getFactionColor(factionId: string): string {
         </div>
 
         <div class="faction-details">
-          <span class="council-seats">{{ faction.councilSeats }} council seat{{ faction.councilSeats !== 1 ? 's' : '' }}</span>
+          <span class="council-seats"
+            >{{ faction.councilSeats }} council seat{{
+              faction.councilSeats !== 1 ? "s" : ""
+            }}</span
+          >
         </div>
       </div>
     </div>
@@ -98,16 +158,51 @@ function getFactionColor(factionId: string): string {
           v-for="member in state.ideology.council"
           :key="member.colonistId"
           class="council-member"
-          :style="{ borderLeftColor: member.faction ? getFactionColor(member.faction) : 'var(--color-muted)' }"
+          :class="{ selected: selectedMemberId === member.colonistId }"
+          :style="{
+            borderLeftColor: member.faction
+              ? getFactionColor(member.faction)
+              : 'var(--color-muted)',
+          }"
+          @click="selectMember(member.colonistId)"
         >
           <span class="member-name">{{ member.name }}</span>
           <span class="member-influence">{{ (member.influence * 100).toFixed(0) }}</span>
         </div>
       </div>
+
+      <!-- Lobbying Controls -->
+      <div v-if="selectedMemberId" class="lobby-section">
+        <h4 class="lobby-title">Lobby Council Member</h4>
+
+        <div class="lobby-controls">
+          <div class="lobby-row">
+            <label class="lobby-label">Faction:</label>
+            <GSelect v-model="selectedFaction" :options="factionOptions" size="sm" />
+          </div>
+
+          <div class="lobby-row">
+            <label class="lobby-label">Boost:</label>
+            <GSelect v-model="lobbyBoost" :options="lobbyOptions" size="sm" />
+          </div>
+
+          <div class="lobby-row">
+            <span class="lobby-label">Cost:</span>
+            <span class="lobby-cost">{{ lobbyCost }} materials</span>
+          </div>
+
+          <GButton size="sm" :disabled="!canLobby" @click="handleLobby"> Lobby </GButton>
+        </div>
+
+        <p class="lobby-hint">
+          Lobbying increases a council member's affinity for a faction, influencing their votes.
+        </p>
+      </div>
     </div>
 
     <p class="hint">
       Colonist ideology spreads through social networks. High-influence colonists form the council.
+      Click a council member to lobby them.
     </p>
   </GPanel>
 </template>
@@ -206,6 +301,17 @@ function getFactionColor(factionId: string): string {
   background: var(--g-color-bg-elevated);
   font-family: var(--g-font-mono);
   font-size: var(--g-font-size-sm);
+  cursor: pointer;
+  transition: background-color var(--g-transition-fast);
+}
+
+.council-member:hover {
+  background: var(--g-color-bg-surface);
+}
+
+.council-member.selected {
+  background: var(--g-color-bg-surface);
+  outline: 1px solid var(--g-color-border-focus);
 }
 
 .member-name {
@@ -221,5 +327,55 @@ function getFactionColor(factionId: string): string {
   color: var(--g-color-text-muted);
   font-family: var(--g-font-mono);
   font-size: var(--g-font-size-sm);
+}
+
+/* Lobbying Section */
+.lobby-section {
+  margin-top: var(--g-space-md);
+  padding: var(--g-space-md);
+  background: var(--g-color-bg-base);
+  border: 1px solid var(--g-color-border);
+}
+
+.lobby-title {
+  margin: 0 0 var(--g-space-sm);
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.lobby-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-sm);
+}
+
+.lobby-row {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-sm);
+}
+
+.lobby-label {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  min-width: 60px;
+}
+
+.lobby-cost {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-sm);
+  color: var(--color-warning);
+}
+
+.lobby-hint {
+  margin: var(--g-space-sm) 0 0;
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
 }
 </style>
