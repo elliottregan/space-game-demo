@@ -350,7 +350,7 @@ export class ColonyManager {
     }
   }
 
-  private updateConsumption(resources: ResourceManager): void {
+  updateConsumption(resources: ResourceManager): void {
     const population = this.colonists.size;
 
     // Clear previous consumption and set new based on population

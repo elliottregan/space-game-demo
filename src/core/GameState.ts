@@ -87,8 +87,8 @@ export class GameState {
     // Create pre-built buildings
     this.createPreBuiltBuildings(condition.preBuiltBuildings);
 
-    // Initialize colonist consumption
-    this.colony.tick(this.resources, this.buildings, { morale: 0, health: 0 });
+    // Initialize colonist consumption (without triggering population growth)
+    this.colony.updateConsumption(this.resources);
   }
 
   /**

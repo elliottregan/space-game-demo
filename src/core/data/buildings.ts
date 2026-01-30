@@ -59,7 +59,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     cost: { materials: 45 },
     constructionTime: 12,
     production: { food: 10 },
-    consumption: { water: 3, power: 2 },
+    consumption: { water: 2, power: 2 },
     workerSlots: 2,
     workerRole: ColonistRole.FARMING,
     oxygenContribution: 2,

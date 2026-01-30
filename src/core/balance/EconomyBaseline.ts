@@ -8,16 +8,16 @@ export const COLONIST_NEEDS = {
 
 export const STARTING_RESOURCES: Resources = {
   food: 280,
-  water: 100,
+  water: 200,
   power: 500,
   materials: 500,
 };
 
 export const STARTING_POPULATION = 14;
 
-export const POPULATION_GROWTH_RATE = 0.05;
+export const POPULATION_GROWTH_RATE = 0.08;
 
-export const MIN_POPULATION_FOR_GROWTH = 15;
+export const MIN_POPULATION_FOR_GROWTH = 12;
 
 // Colony morale and health thresholds
 export const COLONY_MORALE = {
