@@ -20,7 +20,6 @@ import { visitSocialBuildings, propagateColonistMorale } from "./colonistMorale"
 // Colony phases
 import {
   calculateSocialCohesion,
-  calculatePolicyEffects,
   processColonyTick,
   autoAssignWorkers,
   assignHousing,
@@ -51,7 +50,6 @@ export { processWorkforceTick } from "./workforce";
 export { visitSocialBuildings, propagateColonistMorale } from "./colonistMorale";
 export {
   calculateSocialCohesion,
-  calculatePolicyEffects,
   processColonyTick,
   autoAssignWorkers,
   assignHousing,
@@ -70,9 +68,9 @@ export { checkVictoryConditions } from "./victory";
  * 2. Resources: Apply flows, check depletion
  * 3. Buildings: Construction, repairs, recycling, maintenance
  * 4. Workforce: Bonding, training, experience
- * 5. Colony: Social cohesion, policy effects, tick, auto-assign, housing
+ * 5. Colony: Social cohesion, tick, auto-assign, housing
  * 6. Technology: Research progress
- * 7. Politics: NPC influence
+ * 7. Ideology: Ideology propagation
  * 8. Operations: Operations, deposit extraction
  * 9. Events: Random events
  * 10. Victory: Check conditions
@@ -101,7 +99,6 @@ export function createStandardTickRunner(): TickRunner {
 
   // 5. Colony phases
   runner.register(calculateSocialCohesion);
-  runner.register(calculatePolicyEffects);
   runner.register(processColonyTick);
   runner.register(autoAssignWorkers);
   runner.register(assignHousing);

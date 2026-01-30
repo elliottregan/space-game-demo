@@ -71,15 +71,9 @@ export { NPCId, ProjectId } from "./npc";
 // Operations types
 export type {
   ActiveExpedition,
-  ColonyPolicies,
   ExpeditionType,
-  ExplorationStance,
   OperationsSnapshot,
-  PolicyType,
-  PolicyValue,
   ProspectingSite,
-  ResourcePriority,
-  WorkIntensity,
 } from "./operations";
 // Politics types
 export type { FactionDemand, FactionStatus, NPCFaction, PoliticsSnapshot } from "./politics";

@@ -6,8 +6,6 @@ import type {
   ActiveExpedition,
   ExpeditionType,
   OperationsSnapshot,
-  PolicyType,
-  PolicyValue,
   ProspectingSite,
 } from "../types";
 import { type CanDoResult, err, ok, type Result } from "../types/common";
@@ -32,27 +30,9 @@ export class OperationsFacade {
    */
   snapshot(): OperationsSnapshot {
     return {
-      policies: Object.freeze({ ...this.gameState.operations.getPolicies() }),
-      policyCooldownRemaining: this.gameState.operations.getSolsUntilPolicyChange(
-        this.gameState.currentSol,
-      ),
       expeditions: Object.freeze([...this.gameState.operations.getActiveExpeditions()]),
       sites: Object.freeze([...this.gameState.operations.getSites()]),
     };
-  }
-
-  /**
-   * Check if a policy can be changed.
-   */
-  canChangePolicy(): CanDoResult {
-    const cooldown = this.gameState.operations.getSolsUntilPolicyChange(this.gameState.currentSol);
-    if (cooldown > 0) {
-      return {
-        allowed: false,
-        reason: `Policy change on cooldown (${cooldown} sols remaining)`,
-      };
-    }
-    return { allowed: true };
   }
 
   /**
@@ -130,39 +110,6 @@ export class OperationsFacade {
   // ==========================================================================
   // Commands
   // ==========================================================================
-
-  /**
-   * Set a colony policy.
-   */
-  setPolicy(type: PolicyType, value: PolicyValue): Result<void> {
-    return this.executeCommand(() => {
-      const check = this.canChangePolicy();
-      if (!check.allowed) {
-        return err({
-          type: "COOLDOWN_ACTIVE",
-          remainingSols: this.gameState.operations.getSolsUntilPolicyChange(
-            this.gameState.currentSol,
-          ),
-        });
-      }
-
-      const success = this.gameState.operations.setPolicy(
-        type,
-        value as never,
-        this.gameState.currentSol,
-      );
-
-      if (!success) {
-        return err({
-          type: "INVALID_TARGET",
-          target: `${type}:${value}`,
-          reason: "Policy change failed",
-        });
-      }
-
-      return ok(undefined);
-    });
-  }
 
   /**
    * Launch an expedition.

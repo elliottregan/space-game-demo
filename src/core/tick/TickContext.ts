@@ -20,19 +20,10 @@ export interface SocialCohesionData {
 }
 
 /**
- * Policy effects computed during the tick.
- */
-export interface PolicyEffects {
-  morale: number;
-  health: number;
-}
-
-/**
  * Derived values computed by early phases, read by later phases.
  */
 export interface DerivedValues {
   socialCohesion: SocialCohesionData | null;
-  policyEffects: PolicyEffects | null;
   laborPoolBonus: number;
   airQuality: number;
   airQualityEffects: { health: number; morale: number; efficiency: number } | null;
@@ -97,7 +88,6 @@ export function createTickContext(
     ...managers,
     derived: {
       socialCohesion: null,
-      policyEffects: null,
       laborPoolBonus: 0,
       airQuality: 1,
       airQualityEffects: null,

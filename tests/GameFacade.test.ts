@@ -174,16 +174,8 @@ describe("GameAPI", () => {
   describe("Operations Queries", () => {
     it("should return operations snapshot", () => {
       const ops = api.operations.snapshot();
-      expect(ops.policies).toBeDefined();
-      expect(ops.policyCooldownRemaining).toBeDefined();
       expect(ops.expeditions).toBeDefined();
       expect(ops.sites).toBeDefined();
-    });
-
-    it("should check policy cooldown", () => {
-      const check = api.operations.canChangePolicy();
-      // At sol 0, should be able to change policy
-      expect(check.allowed).toBe(true);
     });
   });
 
@@ -245,7 +237,8 @@ describe("GameAPI", () => {
       api.buildings.build(BuildingId.SOLAR_PANEL);
 
       const savedSol = api.game.currentSol();
-      const savedBuildings = api.buildings.snapshot().pending.length + api.buildings.snapshot().active.length;
+      const savedBuildings =
+        api.buildings.snapshot().pending.length + api.buildings.snapshot().active.length;
 
       const saveData = api.save();
       expect(saveData).toBeDefined();
@@ -371,7 +364,7 @@ describe("GameAPI", () => {
 
       const snapshot = api.buildings.snapshot();
       const activeSolarPanels = snapshot.active.filter(
-        (b) => b.definitionId === BuildingId.SOLAR_PANEL
+        (b) => b.definitionId === BuildingId.SOLAR_PANEL,
       );
       expect(activeSolarPanels.length).toBeGreaterThan(0);
     });

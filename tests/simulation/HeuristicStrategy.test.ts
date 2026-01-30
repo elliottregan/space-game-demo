@@ -141,13 +141,9 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
     },
     operations: {
       snapshot: mock(() => ({
-        policies: {},
-        policyCooldownRemaining: 0,
         expeditions: [],
         sites: [],
       })),
-      canChangePolicy: mock(() => allowed),
-      setPolicy: mock(() => successResult(undefined)),
       canLaunchExpedition: mock(() => allowed),
       launchExpedition: mock(() => successResult(undefined)),
       canDevelopSite: mock(() => allowed),

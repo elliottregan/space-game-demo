@@ -1,10 +1,6 @@
 <script setup lang="ts">
-import { gameService } from "../services/GameService";
 import { CouncilPanel } from "./CouncilPanel";
-import { OperationsPanel } from "./OperationsPanel";
 import { PoliticsPanel } from "./PoliticsPanel";
-
-const state = gameService.getState();
 </script>
 
 <template>
@@ -15,9 +11,6 @@ const state = gameService.getState();
       </div>
       <div class="politics-col">
         <CouncilPanel />
-      </div>
-      <div class="politics-col">
-        <OperationsPanel />
       </div>
     </div>
   </div>
@@ -32,7 +25,7 @@ const state = gameService.getState();
 
 .politics-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
 }
 

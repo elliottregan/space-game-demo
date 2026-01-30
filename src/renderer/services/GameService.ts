@@ -8,7 +8,6 @@ import {
   type BuildingMode,
   type Colonist,
   type ColonistRole,
-  type ColonyPolicies,
   type CouncilMemberSnapshot,
   type EventChoice,
   type ExpeditionType,
@@ -18,8 +17,6 @@ import {
   GameAPI,
   type GameEvent,
   type NPCFaction,
-  type PolicyType,
-  type PolicyValue,
   type ProspectingSite,
   type RandomEventDefinition,
   type ResourceDelta,
@@ -86,8 +83,6 @@ interface GameUIState {
   eventChoices: EventChoice[];
   victoryState: VictoryState;
   recentEvents: GameEvent[];
-  policies: ColonyPolicies;
-  policyCooldownRemaining: number;
   activeExpeditions: ActiveExpedition[];
   prospectingSites: ProspectingSite[];
   airQuality: number;
@@ -195,13 +190,6 @@ class GameService {
       eventChoices: [],
       victoryState: { status: "playing" },
       recentEvents: [],
-      policies: {
-        workIntensity: "standard",
-        resourcePriority: "balanced",
-        explorationStance: "standard",
-        lastChangeAt: 0,
-      },
-      policyCooldownRemaining: 0,
       activeExpeditions: [],
       prospectingSites: [],
       airQuality: 1,
@@ -298,8 +286,6 @@ class GameService {
 
     // Operations
     const ops = this.facade.operations.snapshot();
-    this.state.policies = { ...ops.policies };
-    this.state.policyCooldownRemaining = ops.policyCooldownRemaining;
     this.state.activeExpeditions = [...ops.expeditions];
     this.state.prospectingSites = [...ops.sites];
 
@@ -393,10 +379,6 @@ class GameService {
   }
 
   // Operations actions
-  setPolicy(type: PolicyType, value: string): boolean {
-    return this.facade.operations.setPolicy(type, value as PolicyValue).success;
-  }
-
   startExpedition(type: string, crewIds: string[]): boolean {
     return this.facade.operations.launchExpedition(type as ExpeditionType, crewIds).success;
   }
