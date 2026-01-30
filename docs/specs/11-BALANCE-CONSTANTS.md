@@ -238,3 +238,50 @@ const trainingTime = ROLE_AFFINITY[currentRole][targetRole] || 10;
 - Change PROGRESSION_TARGETS to aim for different timelines
 - Modify tech research times in technologies.ts
 - Adjust building construction times in buildings.ts
+
+## Materials Production Buildings
+
+Buildings that produce materials, in order of availability:
+
+### Basic Mine (no tech required)
+
+| Property | Value |
+|----------|-------|
+| Cost | 50 materials |
+| Construction | 10 sols |
+| Production | 4 materials/sol |
+| Consumption | 3 power |
+| Workers | 4 ENGINEERING |
+| Requires Deposit | Yes |
+
+### 3D Fabricator (requires Advanced Materials)
+
+| Property | Value |
+|----------|-------|
+| Cost | 90 materials |
+| Construction | 15 sols |
+| Production | 7 materials/sol |
+| Consumption | 8 power |
+| Workers | 2 ENGINEERING |
+| Requires Deposit | No |
+
+### Automated Factory (requires Robotics)
+
+| Property | Value |
+|----------|-------|
+| Cost | 200 materials |
+| Construction | 30 sols |
+| Production | 15 materials/sol |
+| Consumption | 15 power |
+| Workers | None |
+| Requires Deposit | No |
+
+## Technology Research Times
+
+Key mid-game technologies:
+
+| Technology | Research Time | Prerequisites |
+|------------|---------------|---------------|
+| Advanced Materials | 55 sols | None |
+| Robotics | 85 sols | Advanced Materials |
+| Nuclear Fission | 115 sols | Advanced Materials |
