@@ -2,7 +2,7 @@
 import { computed, ref } from "vue";
 import { ColonistRole } from "../../../core/models/Colonist";
 import { gameService } from "../../services/GameService";
-import { GPanel } from "../../ui";
+import { GButton, GPanel } from "../../ui";
 import BuildingRoleGroup from "./BuildingRoleGroup.vue";
 import ColonistPool from "./ColonistPool.vue";
 
@@ -11,6 +11,9 @@ const state = gameService.getState();
 // Drag and selection state
 const selectedColonistId = ref<string | null>(null);
 const draggingColonistId = ref<string | null>(null);
+
+// Auto-assign toggle state
+const autoAssignEnabled = ref(gameService.getAutoAssignNewColonists());
 
 // Get unassigned colonists (not assigned to any building)
 const unassignedColonists = computed(() => {
@@ -83,11 +86,51 @@ function onUnassign(colonistId: string) {
 function onDropToPool(colonistId: string) {
   gameService.api.colony.unassignFromBuilding(colonistId);
 }
+
+// Workforce controls
+const understaffedSlots = computed(() => {
+  let total = 0;
+  for (const building of state.buildings) {
+    const def = state.buildingDefinitions.find((d) => d.id === building.definitionId);
+    if (!def?.workerSlots || building.status !== "active") continue;
+    total += def.workerSlots - building.assignedWorkers.length;
+  }
+  return total;
+});
+
+function handleOptimizeWorkforce() {
+  gameService.optimizeWorkforce();
+}
+
+function handleToggleAutoAssign(e: Event) {
+  const target = e.target as HTMLInputElement;
+  autoAssignEnabled.value = target.checked;
+  gameService.setAutoAssignNewColonists(target.checked);
+}
 </script>
 
 <template>
   <div class="operations-page">
     <GPanel title="Workforce Assignment" accent="amber">
+      <div class="workforce-controls">
+        <div class="workforce-left">
+          <span class="workforce-stat">
+            Unassigned: {{ unassignedColonists.length }} | Open slots: {{ understaffedSlots }}
+          </span>
+          <label class="toggle-label">
+            <input type="checkbox" :checked="autoAssignEnabled" @change="handleToggleAutoAssign" />
+            Auto-assign new colonists
+          </label>
+        </div>
+        <GButton
+          size="sm"
+          :disabled="unassignedColonists.length === 0 || understaffedSlots === 0"
+          @click="handleOptimizeWorkforce"
+        >
+          Optimize Workforce
+        </GButton>
+      </div>
+
       <div class="operations-layout">
         <ColonistPool
           :colonists="unassignedColonists"
@@ -148,6 +191,41 @@ function onDropToPool(colonistId: string) {
   text-align: center;
   color: var(--g-color-text-muted);
   font-style: italic;
+}
+
+.workforce-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--g-space-md);
+  margin-bottom: var(--g-space-md);
+  padding: var(--g-space-sm);
+  background: rgba(128, 128, 128, 0.1);
+  border-radius: var(--g-radius-sm);
+}
+
+.workforce-left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-xs);
+}
+
+.workforce-stat {
+  font-size: 0.85em;
+  color: var(--g-color-muted);
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-xs);
+  font-size: 0.8em;
+  color: var(--g-color-muted);
+  cursor: pointer;
+}
+
+.toggle-label input[type="checkbox"] {
+  cursor: pointer;
 }
 
 @media (max-width: 768px) {
