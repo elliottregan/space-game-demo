@@ -399,6 +399,9 @@ class GameService {
   // Ideology/Lobbying actions
   lobbyCouncilMember(colonistId: string, faction: NPCFaction, affinityBoost: number): boolean {
     const result = this.facade.ideology.lobbyCouncilMember(colonistId, faction, affinityBoost);
+    if (result.success) {
+      this.syncState();
+    }
     return result.success;
   }
 
@@ -413,6 +416,9 @@ class GameService {
   // Project methods
   proposeProject(projectId: ProjectId): boolean {
     const result = this.facade.ideology.proposeProject(projectId);
+    if (result.success) {
+      this.syncState();
+    }
     return result.success;
   }
 
