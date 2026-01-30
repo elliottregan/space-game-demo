@@ -122,14 +122,14 @@ describe("3D Fabricator", () => {
     it("building adds to colony oxygen contribution", () => {
       researchTech(TechnologyId.ADVANCED_MATERIALS);
 
-      const oxygenBefore = api.buildings.snapshot().totalOxygenContribution;
+      const productionBefore = api.airQuality.snapshot().production;
 
       buildAndComplete(BuildingId.FABRICATOR_3D);
 
-      const oxygenAfter = api.buildings.snapshot().totalOxygenContribution;
+      const productionAfter = api.airQuality.snapshot().production;
 
       // Should decrease by 1 (negative contribution)
-      expect(oxygenAfter).toBe(oxygenBefore - 1);
+      expect(productionAfter).toBe(productionBefore - 1);
     });
   });
 

@@ -449,7 +449,6 @@ describe("BuildingsFacade", () => {
       expect(snapshot.pending).toBeDefined();
       expect(snapshot.definitions).toBeDefined();
       expect(typeof snapshot.moraleBoost).toBe("number");
-      expect(typeof snapshot.totalOxygenContribution).toBe("number");
     });
 
     it("returns frozen arrays", () => {
