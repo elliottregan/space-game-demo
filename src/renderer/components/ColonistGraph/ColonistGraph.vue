@@ -389,8 +389,7 @@ watch(dimensions, render);
 .colonist-graph {
   position: relative;
   width: 100%;
-  height: 100%;
-  min-height: 250px;
+  aspect-ratio: 1 / 1;
   background: var(--g-color-bg-base);
   overflow: hidden;
 }
