@@ -34,11 +34,57 @@ export class ColonistSimulationManager {
   private width: number;
   private height: number;
   private positions: Map<string, { x: number; y: number }> = new Map();
+  private animationFrame: number | null = null;
+  private onTickCallback: (() => void) | null = null;
+  private _isAnimating = false;
 
   constructor(width: number, height: number) {
     this.width = width;
     this.height = height;
   }
+
+  setOnTick(callback: (() => void) | null): void {
+    this.onTickCallback = callback;
+  }
+
+  isAnimating(): boolean {
+    return this._isAnimating;
+  }
+
+  startAnimation(): void {
+    if (this._isAnimating || !this.simulation) return;
+    this._isAnimating = true;
+    this.animationFrame = requestAnimationFrame(this.animate);
+  }
+
+  stopAnimation(): void {
+    this._isAnimating = false;
+    if (this.animationFrame !== null) {
+      cancelAnimationFrame(this.animationFrame);
+      this.animationFrame = null;
+    }
+  }
+
+  private animate = (): void => {
+    if (!this._isAnimating || !this.simulation) return;
+
+    this.simulation.tick(1);
+
+    // Update stored positions
+    for (const node of this.nodes) {
+      this.positions.set(node.id, { x: node.x ?? 0, y: node.y ?? 0 });
+    }
+
+    this.onTickCallback?.();
+
+    // Check if simulation has settled
+    if (this.simulation.alpha() < 0.001) {
+      this.stopAnimation();
+      return;
+    }
+
+    this.animationFrame = requestAnimationFrame(this.animate);
+  };
 
   update(colonists: Colonist[], relationships: Map<string, number>): void {
     // Track existing vs new colonist IDs
@@ -81,13 +127,19 @@ export class ColonistSimulationManager {
     // Create or update simulation
     this.initSimulation();
 
-    // Run fewer ticks when just warming from existing positions
-    const tickCount = newIds.size > 0 || this.positions.size === 0 ? 100 : 30;
-    this.simulation?.tick(tickCount);
+    if (this._isAnimating) {
+      // When animating, just set alpha and let animation loop handle ticks
+      const alpha = newIds.size > 0 ? 0.3 : 0.1;
+      this.simulation?.alpha(alpha).restart();
+    } else {
+      // Run fewer ticks when just warming from existing positions
+      const tickCount = newIds.size > 0 || this.positions.size === 0 ? 100 : 30;
+      this.simulation?.tick(tickCount);
 
-    // Store positions
-    for (const node of this.nodes) {
-      this.positions.set(node.id, { x: node.x ?? 0, y: node.y ?? 0 });
+      // Store positions
+      for (const node of this.nodes) {
+        this.positions.set(node.id, { x: node.x ?? 0, y: node.y ?? 0 });
+      }
     }
   }
 
@@ -165,6 +217,7 @@ export class ColonistSimulationManager {
   }
 
   destroy(): void {
+    this.stopAnimation();
     this.simulation?.stop();
     this.simulation = null;
   }

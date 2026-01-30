@@ -1,7 +1,37 @@
 // tests/ColonistSimulationManager.test.ts
-import { describe, expect, it } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { ColonistSimulationManager } from "../src/renderer/utils/ColonistSimulationManager";
 import { ColonistRole, MasteryLevel, type Colonist } from "../src/core/models/Colonist";
+
+// Polyfill requestAnimationFrame for test environment
+let rafId = 0;
+const rafCallbacks = new Map<number, FrameRequestCallback>();
+
+beforeAll(() => {
+  globalThis.requestAnimationFrame = (callback: FrameRequestCallback): number => {
+    const id = ++rafId;
+    rafCallbacks.set(id, callback);
+    setTimeout(() => {
+      const cb = rafCallbacks.get(id);
+      if (cb) {
+        rafCallbacks.delete(id);
+        cb(performance.now());
+      }
+    }, 16); // ~60fps
+    return id;
+  };
+
+  globalThis.cancelAnimationFrame = (id: number): void => {
+    rafCallbacks.delete(id);
+  };
+});
+
+afterAll(() => {
+  // @ts-expect-error Cleaning up polyfill
+  delete globalThis.requestAnimationFrame;
+  // @ts-expect-error Cleaning up polyfill
+  delete globalThis.cancelAnimationFrame;
+});
 
 function makeColonist(id: string, name: string, role = ColonistRole.UNASSIGNED): Colonist {
   return {
@@ -108,6 +138,68 @@ describe("ColonistSimulationManager", () => {
     expect(positions.length).toBe(1);
     expect(positions.find((p) => p.id === "c1")).toBeDefined();
     expect(positions.find((p) => p.id === "c2")).toBeUndefined();
+
+    manager.destroy();
+  });
+
+  it("calls onTick callback during animation", async () => {
+    const manager = new ColonistSimulationManager(600, 400);
+    const colonists = [makeColonist("c1", "Alice Smith"), makeColonist("c2", "Bob Jones")];
+    const relationships = new Map([["c1:c2", 0.5]]);
+
+    let tickCount = 0;
+    manager.setOnTick(() => {
+      tickCount++;
+    });
+
+    manager.update(colonists, relationships);
+    manager.startAnimation();
+
+    // Wait for some animation frames
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    manager.stopAnimation();
+    expect(tickCount).toBeGreaterThan(0);
+
+    manager.destroy();
+  });
+
+  it("stops animation when stopAnimation is called", async () => {
+    const manager = new ColonistSimulationManager(600, 400);
+    const colonists = [makeColonist("c1", "Alice Smith")];
+
+    manager.update(colonists, new Map());
+    manager.startAnimation();
+    expect(manager.isAnimating()).toBe(true);
+
+    // Wait for a frame
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    manager.stopAnimation();
+    expect(manager.isAnimating()).toBe(false);
+
+    manager.destroy();
+  });
+
+  it("auto-stops animation when simulation settles", async () => {
+    const manager = new ColonistSimulationManager(600, 400);
+    const colonists = [makeColonist("c1", "Alice Smith")];
+
+    manager.update(colonists, new Map());
+    manager.startAnimation();
+
+    // Run many frames until alpha drops below threshold
+    // This tests the auto-stop behavior
+    let frames = 0;
+    const maxFrames = 500; // Safety limit
+    while (manager.isAnimating() && frames < maxFrames) {
+      await new Promise((resolve) => setTimeout(resolve, 16));
+      frames++;
+    }
+
+    // Should have auto-stopped due to low alpha, not hit the safety limit
+    expect(manager.isAnimating()).toBe(false);
+    expect(frames).toBeLessThan(maxFrames);
 
     manager.destroy();
   });
