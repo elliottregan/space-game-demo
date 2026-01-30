@@ -37,10 +37,22 @@ export class ColonistSimulationManager {
   private animationFrame: number | null = null;
   private onTickCallback: (() => void) | null = null;
   private _isAnimating = false;
+  private visibilityHandler: (() => void) | null = null;
 
   constructor(width: number, height: number) {
     this.width = width;
     this.height = height;
+
+    // Pause animation when tab is hidden
+    this.visibilityHandler = () => {
+      if (document.hidden) {
+        this.stopAnimation();
+      }
+    };
+
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", this.visibilityHandler);
+    }
   }
 
   setOnTick(callback: (() => void) | null): void {
@@ -220,5 +232,9 @@ export class ColonistSimulationManager {
     this.stopAnimation();
     this.simulation?.stop();
     this.simulation = null;
+
+    if (this.visibilityHandler && typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", this.visibilityHandler);
+    }
   }
 }
