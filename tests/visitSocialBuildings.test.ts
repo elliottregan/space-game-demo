@@ -116,13 +116,17 @@ describe("visitSocialBuildings phase", () => {
     game.resources.add({ materials: 100 });
 
     // Start but don't complete construction
-    game.buildings.startBuilding(BuildingId.COMMON_ROOM, game.resources, game.technology);
-    // Only run 1 tick - not enough to complete
-    game.tick();
+    const newBuilding = game.buildings.startBuilding(
+      BuildingId.COMMON_ROOM,
+      game.resources,
+      game.technology,
+    );
+    expect(newBuilding).not.toBeNull();
+    // Don't run tick - we want the building to stay pending
 
     const moraleManager = game.getColonistMoraleManager();
-    const building = game.buildings.getBuildings()[0]!;
-    expect(building.status).not.toBe("active");
+    const building = newBuilding!;
+    expect(building.status).toBe("pending");
 
     // Set colonist morale and assign to the incomplete building
     const colonist = game.colony.getColonists()[0]!;

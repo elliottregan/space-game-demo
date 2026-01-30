@@ -62,7 +62,13 @@ export const propagateColonistMorale = definePhase({
     );
 
     // Propagate individual morale through social network
-    ctx.colonistMorale.propagateMorale(colonists, ctx.resources, relationships, ctx.colony);
+    ctx.colonistMorale.propagateMorale(
+      colonists,
+      ctx.resources,
+      relationships,
+      ctx.colony,
+      ctx.currentSol,
+    );
 
     // Sync colony-wide morale from individual morales
     const colonyMorale = ctx.colonistMorale.getColonyMorale(colonists, relationships);

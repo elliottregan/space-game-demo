@@ -21,10 +21,11 @@ export class ColonistMoraleManager {
     resources: ResourceManager,
     relationships: RelationshipManager,
     colony: ColonyManager,
+    currentSol: number = 0,
   ): number {
     const weights = COLONIST_MORALE.NEEDS_WEIGHTS;
 
-    const physiological = this.calculatePhysiologicalNeed(resources, colony);
+    const physiological = this.calculatePhysiologicalNeed(resources, colony, currentSol);
     const safety = this.calculateSafetyNeed(colonist);
     const social = this.calculateSocialNeed(colonist.id, relationships);
     const esteem = this.calculateEsteemNeed(colonist);
@@ -41,21 +42,45 @@ export class ColonistMoraleManager {
   /**
    * Physiological need: food, water, oxygen availability.
    * Returns 0-1 satisfaction.
+   *
+   * Uses stockpile levels rather than net flow - colonists feel secure when
+   * resources are plentiful, even if production temporarily lags consumption.
+   *
+   * During the grace period (first N sols), colonists are optimistic while
+   * the colony bootstraps and return full satisfaction.
    */
-  private calculatePhysiologicalNeed(resources: ResourceManager, colony: ColonyManager): number {
-    const netFlow = resources.getNetFlow();
+  private calculatePhysiologicalNeed(
+    resources: ResourceManager,
+    colony: ColonyManager,
+    currentSol: number,
+  ): number {
     const population = colony.getPopulation();
 
     if (population === 0) return 1.0;
 
-    // Check if we have positive net flow for essentials
-    const foodOk = (netFlow.food ?? 0) >= 0;
-    const waterOk = (netFlow.water ?? 0) >= 0;
-    const oxygenOk = (netFlow.oxygen ?? 0) >= 0;
+    // Grace period: colonists are optimistic while colony bootstraps
+    if (currentSol < COLONIST_MORALE.PHYSIOLOGICAL_GRACE_PERIOD) {
+      return 1.0;
+    }
 
-    // All three must be positive for full satisfaction
-    const satisfiedCount = [foodOk, waterOk, oxygenOk].filter(Boolean).length;
-    return satisfiedCount / 3;
+    const stockpile = resources.getResources();
+    const satisfied = COLONIST_MORALE.STOCKPILE_SATISFIED;
+    const critical = COLONIST_MORALE.STOCKPILE_CRITICAL;
+
+    // Calculate satisfaction for each essential resource based on stockpile level
+    // >= satisfied threshold = 1.0, <= critical threshold = 0.0, linear interpolation between
+    const calcSatisfaction = (amount: number): number => {
+      if (amount >= satisfied) return 1.0;
+      if (amount <= critical) return 0.0;
+      return (amount - critical) / (satisfied - critical);
+    };
+
+    const foodSat = calcSatisfaction(stockpile.food);
+    const waterSat = calcSatisfaction(stockpile.water);
+    const oxygenSat = calcSatisfaction(stockpile.oxygen);
+
+    // Average satisfaction across all three essentials
+    return (foodSat + waterSat + oxygenSat) / 3;
   }
 
   /**
@@ -124,6 +149,7 @@ export class ColonistMoraleManager {
     resources: ResourceManager,
     relationships: RelationshipManager,
     colony: ColonyManager,
+    currentSol: number = 0,
   ): void {
     const alpha = COLONIST_MORALE.PROPAGATION_ALPHA;
     const baseWeight = COLONIST_MORALE.BASE_MORALE_WEIGHT;
@@ -134,7 +160,13 @@ export class ColonistMoraleManager {
 
     for (const colonist of colonists) {
       const currentMorale = this.getMorale(colonist.id);
-      const baseMorale = this.calculateBaseMorale(colonist, resources, relationships, colony);
+      const baseMorale = this.calculateBaseMorale(
+        colonist,
+        resources,
+        relationships,
+        colony,
+        currentSol,
+      );
 
       const neighbors = relationships.getNeighbors(colonist.id);
 

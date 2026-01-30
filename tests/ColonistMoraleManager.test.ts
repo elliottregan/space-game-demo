@@ -51,21 +51,75 @@ describe("ColonistMoraleManager", () => {
       expect(baseMorale).toBeGreaterThan(80);
     });
 
-    it("returns low morale when physiological needs unmet", () => {
+    it("returns low morale when stockpiles critically low (after grace period)", () => {
+      // Create colony with low stockpiles
+      const lowResourceManager = new ResourceManager({
+        food: 5, // Below critical threshold (10)
+        water: 5,
+        oxygen: 5,
+        power: 100,
+        materials: 100,
+      });
+
       const colonist = colonyManager.getColonists()[0]!;
       colonist.housingId = "habitat_1";
 
-      // Negative resource flow (shortage)
+      // Test after grace period (100 sols)
+      const baseMorale = moraleManager.calculateBaseMorale(
+        colonist,
+        lowResourceManager,
+        relationshipManager,
+        colonyManager,
+        150, // Past grace period
+      );
+
+      expect(baseMorale).toBeLessThan(60);
+    });
+
+    it("returns high morale when stockpiles adequate despite negative net flow", () => {
+      const colonist = colonyManager.getColonists()[0]!;
+      colonist.housingId = "habitat_1";
+
+      // High consumption (negative net flow) but good stockpiles
       resourceManager.addConsumption({ food: 200, water: 200, oxygen: 200 });
 
+      // Test after grace period - stockpiles are still at 100 (satisfied threshold is 50)
       const baseMorale = moraleManager.calculateBaseMorale(
         colonist,
         resourceManager,
         relationshipManager,
         colonyManager,
+        150, // Past grace period
       );
 
-      expect(baseMorale).toBeLessThan(60);
+      // Should be satisfied because stockpiles are high
+      expect(baseMorale).toBeGreaterThan(60);
+    });
+
+    it("ignores low stockpiles during grace period", () => {
+      // Create colony with low stockpiles
+      const lowResourceManager = new ResourceManager({
+        food: 5,
+        water: 5,
+        oxygen: 5,
+        power: 100,
+        materials: 100,
+      });
+
+      const colonist = colonyManager.getColonists()[0]!;
+      colonist.housingId = "habitat_1";
+
+      // Test during grace period (first 100 sols)
+      const baseMorale = moraleManager.calculateBaseMorale(
+        colonist,
+        lowResourceManager,
+        relationshipManager,
+        colonyManager,
+        50, // Within grace period
+      );
+
+      // Should not be penalized during grace period
+      expect(baseMorale).toBeGreaterThan(60);
     });
 
     it("penalizes unhoused colonists", () => {
