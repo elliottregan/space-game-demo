@@ -24,6 +24,8 @@ import type {
   CrisisTimelineAnalysis,
   OutlierAnalysis,
   SocialCohesionAnalysis,
+  AggregatedSnapshot,
+  PercentileValue,
 } from "../src/simulation/types";
 
 /**
@@ -857,6 +859,78 @@ function computeSocialCohesion(results: RunResult[]): SocialCohesionAnalysis {
 }
 
 /**
+ * Calculate a percentile value from an array.
+ * Uses linear interpolation between adjacent values.
+ * Returns 0 for empty arrays.
+ */
+function percentile(arr: number[], p: number): number {
+  if (arr.length === 0) return 0;
+  const sorted = [...arr].sort((a, b) => a - b);
+  const idx = (p / 100) * (sorted.length - 1);
+  const lower = Math.floor(idx);
+  const upper = Math.ceil(idx);
+  // oxlint-disable-next-line no-non-null-assertion
+  if (lower === upper) return sorted[lower]!;
+  // oxlint-disable-next-line no-non-null-assertion
+  return sorted[lower]! + (sorted[upper]! - sorted[lower]!) * (idx - lower);
+}
+
+/**
+ * Create a PercentileValue from an array of numbers.
+ */
+function computePercentileValue(values: number[]): PercentileValue {
+  return {
+    median: percentile(values, 50),
+    p25: percentile(values, 25),
+    p75: percentile(values, 75),
+  };
+}
+
+/**
+ * Aggregate resource timelines from multiple runs into percentile bands.
+ * For each sol checkpoint, computes median and P25-P75 bands for each metric.
+ */
+function aggregateTimelines(results: RunResult[]): AggregatedSnapshot[] {
+  // Collect all timelines from results
+  const timelinesBySol = new Map<number, ResourceSnapshot[]>();
+
+  for (const result of results) {
+    if (!result.resourceTimeline) continue;
+    for (const snapshot of result.resourceTimeline) {
+      const existing = timelinesBySol.get(snapshot.sol) ?? [];
+      existing.push(snapshot);
+      timelinesBySol.set(snapshot.sol, existing);
+    }
+  }
+
+  // Find all unique sols and sort them
+  const allSols = Array.from(timelinesBySol.keys()).sort((a, b) => a - b);
+
+  // For each sol, compute percentiles for each metric
+  const aggregated: AggregatedSnapshot[] = [];
+
+  for (const sol of allSols) {
+    const snapshots = timelinesBySol.get(sol);
+    if (!snapshots || snapshots.length === 0) continue;
+
+    aggregated.push({
+      sol,
+      food: computePercentileValue(snapshots.map((s) => s.food)),
+      oxygen: computePercentileValue(snapshots.map((s) => s.oxygen)),
+      water: computePercentileValue(snapshots.map((s) => s.water)),
+      power: computePercentileValue(snapshots.map((s) => s.power)),
+      materials: computePercentileValue(snapshots.map((s) => s.materials)),
+      population: computePercentileValue(snapshots.map((s) => s.population)),
+      morale: computePercentileValue(snapshots.map((s) => s.morale)),
+      socialCohesion: computePercentileValue(snapshots.map((s) => s.socialCohesion)),
+      runsActive: snapshots.length,
+    });
+  }
+
+  return aggregated;
+}
+
+/**
  * Write analysis data as JSON for visualization.
  */
 async function writeJsonOutput(results: RunResult[], runs: number, seed: number): Promise<string> {
@@ -941,6 +1015,9 @@ async function writeJsonOutput(results: RunResult[], runs: number, seed: number)
   const victoryTimes = victories.map((r) => r.finalSol);
   const peakPops = results.map((r) => r.peakPopulation);
 
+  // Aggregate timelines with percentile bands
+  const aggregatedTimeline = aggregateTimelines(results);
+
   const output: AnalysisOutput = {
     metadata: {
       timestamp: now.toISOString(),
@@ -959,6 +1036,7 @@ async function writeJsonOutput(results: RunResult[], runs: number, seed: number)
     techFrequency,
     buildingCounts,
     resourceTimeline,
+    aggregatedTimeline,
     crisisEvents,
     runs: results,
     stats: {
