@@ -15,6 +15,7 @@ export enum BuildingId {
   RESEARCH_LAB = "research_lab",
   ADVANCED_HABITAT = "advanced_habitat",
   AUTOMATED_FACTORY = "automated_factory",
+  FABRICATOR_3D = "fabricator_3d",
   MINING_STATION = "mining_station",
   NUCLEAR_REACTOR = "nuclear_reactor",
   BIOLAB = "biolab",
