@@ -7,7 +7,6 @@ export { ColonyFacade } from "./ColonyFacade";
 export { EventsFacade } from "./EventsFacade";
 export { GameFlowFacade } from "./GameFlowFacade";
 export { IdeologyFacade } from "./IdeologyFacade";
-export { NPCFacade } from "./NPCFacade";
 export { OperationsFacade } from "./OperationsFacade";
 export { PoliticsFacade } from "./PoliticsFacade";
 export { ResourcesFacade } from "./ResourcesFacade";

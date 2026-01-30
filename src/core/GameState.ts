@@ -3,8 +3,6 @@ import { INITIAL_COLONIST_RELATIONSHIP } from "./balance/WorkforceBalance";
 import { BUILDINGS } from "./data/buildings";
 import { RANDOM_EVENTS } from "./data/events";
 import { FOUNDING_COLONISTS, FOUNDING_RELATIONSHIPS } from "./data/foundingColonists";
-import { INITIAL_RELATIONSHIPS, NPCS } from "./data/npcs";
-import { PROJECTS } from "./data/projects";
 import { TECHNOLOGIES } from "./data/technologies";
 import { BuildingId } from "./models/Building";
 import type { GameEvent } from "./models/GameEvent";
@@ -14,7 +12,6 @@ import { ColonistMoraleManager } from "./systems/ColonistMoraleManager";
 import { ColonyManager } from "./systems/ColonyManager";
 import { EventManager } from "./systems/EventManager";
 import { IdeologyManager } from "./systems/IdeologyManager";
-import { NPCInfluenceManager } from "./systems/NPCInfluenceManager";
 import { OperationsManager } from "./systems/OperationsManager";
 import { ResourceManager } from "./systems/ResourceManager";
 import { TechnologyTree } from "./systems/TechnologyTree";
@@ -35,7 +32,6 @@ export class GameState {
   events: EventManager;
   victory: VictoryManager;
   operations: OperationsManager;
-  npcInfluence: NPCInfluenceManager;
   airQuality: AirQualityManager;
   ideology: IdeologyManager;
 
@@ -76,7 +72,6 @@ export class GameState {
     this.events = new EventManager(RANDOM_EVENTS);
     this.victory = new VictoryManager();
     this.operations = new OperationsManager();
-    this.npcInfluence = new NPCInfluenceManager(NPCS, INITIAL_RELATIONSHIPS, PROJECTS);
     this.airQuality = new AirQualityManager();
     this.ideology = new IdeologyManager();
 
@@ -226,7 +221,6 @@ export class GameState {
         colonistMorale: this.colonistMorale,
         technology: this.technology,
         operations: this.operations,
-        npcInfluence: this.npcInfluence,
         events: this.events,
         victory: this.victory,
         ideology: this.ideology,
@@ -290,7 +284,6 @@ export class GameState {
       events: this.events.toJSON(),
       victory: this.victory.toJSON(),
       operations: this.operations.toJSON(),
-      npcInfluence: this.npcInfluence.toJSON(),
       airQuality: this.airQuality.toJSON(),
       ideology: this.ideology.toJSON(),
       autoAssignNewColonists: this.autoAssignNewColonists,
@@ -316,15 +309,6 @@ export class GameState {
 
     if (data.operations) {
       state.operations = OperationsManager.fromJSON(data.operations);
-    }
-
-    if (data.npcInfluence) {
-      state.npcInfluence = NPCInfluenceManager.fromJSON(
-        data.npcInfluence,
-        NPCS,
-        INITIAL_RELATIONSHIPS,
-        PROJECTS,
-      );
     }
 
     if (data.airQuality) {

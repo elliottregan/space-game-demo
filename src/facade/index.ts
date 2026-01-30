@@ -9,7 +9,6 @@ export {
   EventsFacade,
   GameFlowFacade,
   IdeologyFacade,
-  NPCFacade,
   OperationsFacade,
   PoliticsFacade,
   ResourcesFacade,

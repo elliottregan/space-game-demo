@@ -3,7 +3,6 @@ import type { ColonistMoraleManager } from "../systems/ColonistMoraleManager";
 import type { ColonyManager } from "../systems/ColonyManager";
 import type { EventManager } from "../systems/EventManager";
 import type { IdeologyManager } from "../systems/IdeologyManager";
-import type { NPCInfluenceManager } from "../systems/NPCInfluenceManager";
 import type { OperationsManager } from "../systems/OperationsManager";
 import type { ResourceManager } from "../systems/ResourceManager";
 import type { TechnologyTree } from "../systems/TechnologyTree";
@@ -62,7 +61,6 @@ export interface TickContext {
   colonistMorale: ColonistMoraleManager;
   technology: TechnologyTree;
   operations: OperationsManager;
-  npcInfluence: NPCInfluenceManager;
   events: EventManager;
   victory: VictoryManager;
   ideology: IdeologyManager;
@@ -88,7 +86,6 @@ export function createTickContext(
     colonistMorale: ColonistMoraleManager;
     technology: TechnologyTree;
     operations: OperationsManager;
-    npcInfluence: NPCInfluenceManager;
     events: EventManager;
     victory: VictoryManager;
     ideology: IdeologyManager;

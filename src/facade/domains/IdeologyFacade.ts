@@ -1,6 +1,7 @@
 // src/facade/domains/IdeologyFacade.ts
 
 import type { GameState } from "../../core/GameState";
+import { getProject } from "../../core/data/projects";
 import type { NPCFaction, ProjectId } from "../../core/models/NPCInfluence";
 import type { Result } from "../types/common";
 import type { Queryable } from "../types/interfaces";
@@ -72,7 +73,7 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
    * Check if a project can be proposed based on faction support.
    */
   canProposeProject(projectId: ProjectId): ProjectEligibility {
-    const project = this.gameState.npcInfluence.getProject(projectId);
+    const project = getProject(projectId);
     if (!project) {
       return {
         canPropose: false,
@@ -83,17 +84,30 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
     }
 
     const currentSupport = this.getFactionSupportFor(project.type);
-    const result = this.gameState.npcInfluence.canProposeProject(
-      projectId,
-      currentSupport,
-      this.gameState.resources,
-    );
+    const canAfford = this.gameState.resources.canAfford(project.proposalCost);
+
+    if (!canAfford) {
+      return {
+        canPropose: false,
+        currentSupport,
+        requiredSupport: project.requiredSupport,
+        reason: "Cannot afford proposal cost",
+      };
+    }
+
+    if (currentSupport < project.requiredSupport) {
+      return {
+        canPropose: false,
+        currentSupport,
+        requiredSupport: project.requiredSupport,
+        reason: `Insufficient faction support (need ${Math.round(project.requiredSupport * 100)}%)`,
+      };
+    }
 
     return {
-      canPropose: result.canPropose,
+      canPropose: true,
       currentSupport,
       requiredSupport: project.requiredSupport,
-      reason: result.reason,
     };
   }
 

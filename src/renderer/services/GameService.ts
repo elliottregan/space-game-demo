@@ -1,5 +1,4 @@
 import { reactive, readonly } from "vue";
-import type { Council, NPC, Project } from "../../core/models/NPCInfluence";
 import {
   type ActiveEvent,
   type ActiveExpedition,
@@ -21,7 +20,6 @@ import {
   type NPCFaction,
   type PolicyType,
   type PolicyValue,
-  ProjectId,
   type ProspectingSite,
   type RandomEventDefinition,
   type ResourceDelta,
@@ -92,18 +90,6 @@ interface GameUIState {
   policyCooldownRemaining: number;
   activeExpeditions: ActiveExpedition[];
   prospectingSites: ProspectingSite[];
-  npcInfluence: {
-    npcs: NPC[];
-    projects: Project[];
-    activeProject: {
-      projectId: string;
-      supportLevels: Record<string, number>;
-      solsRemaining: number;
-      averageSupport: number;
-    } | null;
-    councils: Council[];
-    relationshipMatrix: readonly (readonly number[])[];
-  };
   airQuality: number;
   airQualityProduction: number;
   airQualityConsumption: number;
@@ -166,8 +152,8 @@ class GameService {
    * - api.colony - Colony queries and workforce commands
    * - api.politics - Politics queries and decision commands
    * - api.operations - Operations queries and commands
-   * - api.npc - NPC influence queries and commands
    * - api.events - Event queries and resolve command
+   * - api.ideology - Ideology, council, and lobbying
    * - api.game - Game flow (advanceSol, save, load, newGame)
    */
   get api(): GameAPI {
@@ -218,13 +204,6 @@ class GameService {
       policyCooldownRemaining: 0,
       activeExpeditions: [],
       prospectingSites: [],
-      npcInfluence: {
-        npcs: [],
-        projects: [],
-        activeProject: null,
-        councils: [],
-        relationshipMatrix: [],
-      },
       airQuality: 1,
       airQualityProduction: 0,
       airQualityConsumption: 0,
@@ -323,16 +302,6 @@ class GameService {
     this.state.policyCooldownRemaining = ops.policyCooldownRemaining;
     this.state.activeExpeditions = [...ops.expeditions];
     this.state.prospectingSites = [...ops.sites];
-
-    // NPC Influence
-    const npc = this.facade.npc.snapshot();
-    this.state.npcInfluence = {
-      npcs: [...npc.npcs],
-      projects: [...npc.projects],
-      activeProject: npc.activeProject ? { ...npc.activeProject } : null,
-      councils: [...npc.councils],
-      relationshipMatrix: npc.relationshipMatrix,
-    };
 
     // Air Quality
     const airQualityData = this.facade.airQuality.snapshot();
@@ -442,11 +411,6 @@ class GameService {
 
   setBuildingMode(buildingId: string, mode: BuildingMode): boolean {
     return this.facade.buildings.setMode(buildingId, mode).success;
-  }
-
-  // NPC Influence actions
-  proposeProject(projectId: string): boolean {
-    return this.facade.npc.proposeProject(projectId as ProjectId).success;
   }
 
   // Ideology/Lobbying actions

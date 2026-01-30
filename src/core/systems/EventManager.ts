@@ -5,10 +5,8 @@ import type {
   GameEvent,
   RandomEventDefinition,
 } from "../models/GameEvent";
-import type { NPCFaction } from "../models/NPCInfluence";
 import { rng } from "../utils/random";
 import type { ColonyManager } from "./ColonyManager";
-import type { NPCInfluenceManager } from "./NPCInfluenceManager";
 import type { ResourceManager } from "./ResourceManager";
 
 export class EventManager {
@@ -64,12 +62,7 @@ export class EventManager {
     });
   }
 
-  resolveEvent(
-    choiceId: string,
-    resources: ResourceManager,
-    colony: ColonyManager,
-    npcInfluence: NPCInfluenceManager,
-  ): GameEvent[] {
+  resolveEvent(choiceId: string, resources: ResourceManager, colony: ColonyManager): GameEvent[] {
     const events: GameEvent[] = [];
 
     if (!this.activeEvent) return events;
@@ -95,19 +88,8 @@ export class EventManager {
       colony.adjustPopulation(choice.effects.population);
     }
 
-    if (choice.effects.support) {
-      // Adjust support for all NPCs in each affected faction
-      for (const [factionId, amount] of Object.entries(choice.effects.support)) {
-        const npcs = npcInfluence.getNPCs();
-        for (const npc of npcs) {
-          if (npc.faction === (factionId as NPCFaction)) {
-            // Convert percentage-style support (e.g., 10, -5) to normalized (-1 to 1) range
-            // Assuming support values in events are in percentage points (divided by 100)
-            npcInfluence.adjustNPCSupport(npc.id, amount / 100);
-          }
-        }
-      }
-    }
+    // Note: support effects are no longer applied - the old NPC system has been removed.
+    // Events can still have support in their effects for future ideology integration.
 
     events.push({
       type: "EVENT_RESOLVED",

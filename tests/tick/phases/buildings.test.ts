@@ -19,11 +19,12 @@ describe("buildings phases", () => {
         buildings: state.buildings,
         colony: state.colony,
         workforce: state.workforce,
+        colonistMorale: state.colonistMorale,
         technology: state.technology,
         operations: state.operations,
-        npcInfluence: state.npcInfluence,
         events: state.events,
         victory: state.victory,
+        ideology: state.ideology,
       },
       { autoAssignNewColonists: true },
     );
