@@ -125,9 +125,9 @@ function renderChartsContent(): string {
       <div id="histogram" class="chart-container"></div>
     </div>
     <div class="chart-panel">
-      <h2>Resource Timeline</h2>
+      <h2>Resource Timelines</h2>
       ${batchB ? renderTimelineLegend() : ""}
-      <div id="timeline" class="chart-container"></div>
+      <div id="timeline" class="chart-container timeline-container"></div>
     </div>
     <div class="charts-row">
       <div class="chart-panel">
