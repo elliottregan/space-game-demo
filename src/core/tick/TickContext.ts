@@ -1,4 +1,5 @@
 import type { BuildingManager } from "../systems/BuildingManager";
+import type { ColonistMoraleManager } from "../systems/ColonistMoraleManager";
 import type { ColonyManager } from "../systems/ColonyManager";
 import type { EventManager } from "../systems/EventManager";
 import type { NPCInfluenceManager } from "../systems/NPCInfluenceManager";
@@ -56,6 +57,7 @@ export interface TickContext {
   buildings: BuildingManager;
   colony: ColonyManager;
   workforce: WorkforceManager;
+  colonistMorale: ColonistMoraleManager;
   technology: TechnologyTree;
   operations: OperationsManager;
   npcInfluence: NPCInfluenceManager;
@@ -80,6 +82,7 @@ export function createTickContext(
     buildings: BuildingManager;
     colony: ColonyManager;
     workforce: WorkforceManager;
+    colonistMorale: ColonistMoraleManager;
     technology: TechnologyTree;
     operations: OperationsManager;
     npcInfluence: NPCInfluenceManager;

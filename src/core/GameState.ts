@@ -7,6 +7,7 @@ import { TECHNOLOGIES } from "./data/technologies";
 import { BuildingId } from "./models/Building";
 import type { GameEvent } from "./models/GameEvent";
 import { BuildingManager } from "./systems/BuildingManager";
+import { ColonistMoraleManager } from "./systems/ColonistMoraleManager";
 import { ColonyManager } from "./systems/ColonyManager";
 import { EventManager } from "./systems/EventManager";
 import { NPCInfluenceManager } from "./systems/NPCInfluenceManager";
@@ -26,6 +27,7 @@ export class GameState {
   buildings: BuildingManager;
   colony: ColonyManager;
   workforce: WorkforceManager;
+  colonistMorale: ColonistMoraleManager;
   events: EventManager;
   victory: VictoryManager;
   operations: OperationsManager;
@@ -41,6 +43,10 @@ export class GameState {
 
   setAutoAssignNewColonists(value: boolean): void {
     this.autoAssignNewColonists = value;
+  }
+
+  getColonistMoraleManager(): ColonistMoraleManager {
+    return this.colonistMorale;
   }
 
   constructor(startingConditionId?: string) {
@@ -60,6 +66,7 @@ export class GameState {
     this.buildings.setTechnologyTree(this.technology);
     this.workforce = new WorkforceManager();
     this.buildings.setWorkforceManager(this.workforce);
+    this.colonistMorale = new ColonistMoraleManager();
     this.events = new EventManager(RANDOM_EVENTS);
     this.victory = new VictoryManager();
     this.operations = new OperationsManager();
@@ -162,6 +169,7 @@ export class GameState {
         buildings: this.buildings,
         colony: this.colony,
         workforce: this.workforce,
+        colonistMorale: this.colonistMorale,
         technology: this.technology,
         operations: this.operations,
         npcInfluence: this.npcInfluence,
@@ -223,6 +231,7 @@ export class GameState {
       technology: this.technology.toJSON(),
       buildings: this.buildings.toJSON(),
       colony: this.colony.toJSON(),
+      colonistMorale: this.colonistMorale.toJSON(),
       events: this.events.toJSON(),
       victory: this.victory.toJSON(),
       operations: this.operations.toJSON(),
@@ -243,6 +252,10 @@ export class GameState {
     state.buildings.setTechnologyTree(state.technology);
     state.events = EventManager.fromJSON(data.events, RANDOM_EVENTS);
     state.victory = VictoryManager.fromJSON(data.victory);
+
+    if (data.colonistMorale) {
+      state.colonistMorale = ColonistMoraleManager.fromJSON(data.colonistMorale);
+    }
 
     if (data.operations) {
       state.operations = OperationsManager.fromJSON(data.operations);

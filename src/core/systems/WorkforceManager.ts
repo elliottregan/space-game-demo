@@ -55,6 +55,14 @@ export class WorkforceManager {
   /** Manages guilds - delegated to GuildManager */
   private guildManager: GuildManager = new GuildManager();
 
+  /**
+   * Get the underlying RelationshipManager for direct access.
+   * Used by morale propagation and other systems that need centrality data.
+   */
+  getRelationshipManager(): RelationshipManager {
+    return this.relationshipManager;
+  }
+
   tick(colony: ColonyManager, buildings?: BuildingManager, currentSol: number = 0): GameEvent[] {
     const events: GameEvent[] = [];
     const colonists = colony.getColonists();
