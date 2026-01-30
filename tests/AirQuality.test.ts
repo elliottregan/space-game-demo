@@ -71,3 +71,68 @@ describe("AirQualityManager", () => {
     });
   });
 });
+
+describe("AirQualityManager effects", () => {
+  describe("getHealthEffect", () => {
+    it("should return 0 when comfortable (>=0.8)", () => {
+      const manager = new AirQualityManager();
+      manager.calculate(10, 10); // 1.0
+      expect(manager.getHealthEffect()).toBe(0);
+
+      manager.calculate(8, 10); // 0.8
+      expect(manager.getHealthEffect()).toBe(0);
+    });
+
+    it("should return negative value when strained (0.5-0.8)", () => {
+      const manager = new AirQualityManager();
+      manager.calculate(6, 10); // 0.6
+      expect(manager.getHealthEffect()).toBeLessThan(0);
+    });
+
+    it("should return larger negative value when critical (<0.5)", () => {
+      const manager = new AirQualityManager();
+      manager.calculate(3, 10); // 0.3
+      const criticalEffect = manager.getHealthEffect();
+
+      manager.calculate(6, 10); // 0.6
+      const strainedEffect = manager.getHealthEffect();
+
+      expect(criticalEffect).toBeLessThan(strainedEffect);
+    });
+  });
+
+  describe("getMoraleEffect", () => {
+    it("should return 0 when comfortable (>=0.8)", () => {
+      const manager = new AirQualityManager();
+      manager.calculate(10, 10);
+      expect(manager.getMoraleEffect()).toBe(0);
+    });
+
+    it("should return negative value when strained", () => {
+      const manager = new AirQualityManager();
+      manager.calculate(6, 10);
+      expect(manager.getMoraleEffect()).toBeLessThan(0);
+    });
+  });
+
+  describe("getEfficiencyMultiplier", () => {
+    it("should return 1 when comfortable (>=0.8)", () => {
+      const manager = new AirQualityManager();
+      manager.calculate(10, 10);
+      expect(manager.getEfficiencyMultiplier()).toBe(1);
+    });
+
+    it("should return 1 when strained (0.5-0.8)", () => {
+      const manager = new AirQualityManager();
+      manager.calculate(6, 10); // 0.6
+      expect(manager.getEfficiencyMultiplier()).toBe(1);
+    });
+
+    it("should return <1 when critical (<0.5)", () => {
+      const manager = new AirQualityManager();
+      manager.calculate(3, 10); // 0.3
+      expect(manager.getEfficiencyMultiplier()).toBeLessThan(1);
+      expect(manager.getEfficiencyMultiplier()).toBeGreaterThan(0);
+    });
+  });
+});
