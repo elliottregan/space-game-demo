@@ -519,3 +519,177 @@ body {
 .timeline-container {
   min-height: 560px;
 }
+
+/* Drop zone styles */
+.drop-zone {
+  border: 2px dashed var(--g-color-border);
+  border-radius: 8px;
+  padding: var(--g-space-xl, 32px);
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--g-color-bg-surface);
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+  border-color: var(--g-accent-cyan, #5f9ea0);
+  background: var(--g-color-bg-elevated);
+}
+
+.drop-zone-icon {
+  font-size: 3rem;
+  margin-bottom: var(--g-space-md, 16px);
+  opacity: 0.5;
+}
+
+.drop-zone-text {
+  font-size: 1.125rem;
+  margin-bottom: var(--g-space-sm, 8px);
+}
+
+.drop-zone-hint {
+  font-size: 0.875rem;
+  color: var(--g-color-text-muted);
+}
+
+.browse-btn {
+  background: var(--g-color-bg-elevated);
+  color: var(--g-color-text);
+  border: 1px solid var(--g-color-border);
+  padding: 0.5rem 1rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  margin-top: var(--g-space-md, 16px);
+  transition: all 0.2s ease;
+}
+
+.browse-btn:hover {
+  border-color: var(--g-accent-cyan, #5f9ea0);
+  color: var(--g-accent-cyan, #5f9ea0);
+}
+
+/* Full-page drag overlay */
+.drop-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.drop-overlay-content {
+  text-align: center;
+  color: var(--g-accent-cyan, #5f9ea0);
+}
+
+.drop-overlay-icon {
+  font-size: 4rem;
+  margin-bottom: var(--g-space-md, 16px);
+}
+
+.drop-overlay-text {
+  font-size: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* File info display */
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-sm, 8px);
+  font-size: 0.875rem;
+}
+
+.file-info-name {
+  color: var(--g-color-text);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-info-btn {
+  background: none;
+  border: 1px solid var(--g-color-border);
+  color: var(--g-color-text-muted);
+  padding: 0.25rem 0.5rem;
+  font-family: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.file-info-btn:hover {
+  border-color: var(--g-color-text);
+  color: var(--g-color-text);
+}
+
+/* Error toast */
+.error-toast {
+  position: fixed;
+  bottom: var(--g-space-lg, 24px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--chart-negative);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  z-index: 1001;
+  animation: toast-in 0.3s ease;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Batch file selectors for loaded state */
+.batch-files {
+  display: flex;
+  gap: var(--g-space-md, 16px);
+  align-items: center;
+}
+
+.batch-file {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-sm, 8px);
+}
+
+.batch-file-label {
+  font-size: 0.875rem;
+  color: var(--g-color-text-muted);
+  text-transform: uppercase;
+}
+
+.add-compare-btn {
+  background: none;
+  border: 1px dashed var(--g-color-border);
+  color: var(--g-color-text-muted);
+  padding: 0.25rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-compare-btn:hover {
+  border-color: var(--g-accent-cyan, #5f9ea0);
+  color: var(--g-accent-cyan, #5f9ea0);
+}
