@@ -52,8 +52,24 @@ const workforceStats = computed(() => {
     [ColonistRole.FARMING]: 0,
   };
 
+  // Build map of colonist ID → assigned building's workerRole
+  const colonistAssignments = new Map<string, ColonistRole>();
+  for (const building of state.buildings) {
+    const def = state.buildingDefinitions.find((d) => d.id === building.definitionId);
+    if (!def?.workerRole) continue;
+    for (const colonistId of building.assignedWorkers) {
+      colonistAssignments.set(colonistId, def.workerRole);
+    }
+  }
+
+  // Count colonists by their building assignment, not their role property
   for (const colonist of state.colonists) {
-    stats[colonist.role]++;
+    const assignedRole = colonistAssignments.get(colonist.id);
+    if (assignedRole) {
+      stats[assignedRole]++;
+    } else {
+      stats[ColonistRole.UNASSIGNED]++;
+    }
   }
 
   return stats;
