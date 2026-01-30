@@ -8,6 +8,7 @@ import {
 import { AirQualityManager } from "../src/core/systems/AirQualityManager";
 import { RESOURCE_KEYS } from "../src/core/models/Resources";
 import { GameState } from "../src/core/GameState";
+import { BuildingId } from "../src/core/models/Building";
 
 describe("AirQualityBalance constants", () => {
   it("should have BASE_OXYGEN_PER_COLONIST defined", () => {
@@ -181,5 +182,39 @@ describe("GameState air quality integration", () => {
 
     const restored = GameState.fromJSON(json);
     expect(restored.airQuality.getAirQuality()).toBe(gameState.airQuality.getAirQuality());
+  });
+});
+
+describe("Building efficiency with air quality", () => {
+  it("should apply efficiency penalty when air quality is critical", () => {
+    const gameState = new GameState();
+    gameState.resources.add({ materials: 1000 });
+
+    // Build a basic farm (produces food)
+    gameState.buildings.startBuilding(
+      BuildingId.BASIC_FARM,
+      gameState.resources,
+      gameState.technology,
+    );
+
+    // Complete construction
+    for (let i = 0; i < 15; i++) {
+      gameState.tick();
+    }
+
+    const farms = gameState.buildings
+      .getActiveBuildings()
+      .filter((b) => b.definitionId === BuildingId.BASIC_FARM);
+
+    // Get production with air quality at 1.0 (full efficiency)
+    gameState.buildings.setAirQualityEfficiency(1.0);
+    const fullProd = gameState.buildings.getEffectiveProduction(farms[0].id);
+
+    // Set air quality efficiency multiplier to 50%
+    gameState.buildings.setAirQualityEfficiency(0.5);
+    const reducedProd = gameState.buildings.getEffectiveProduction(farms[0].id);
+
+    // Production should be halved when air quality efficiency is 50%
+    expect(reducedProd.food).toBe(fullProd.food! * 0.5);
   });
 });

@@ -4,7 +4,6 @@ import {
   CONDITION_EFFICIENCY_PENALTY,
   CONDITION_EFFICIENCY_THRESHOLD,
   MAINTENANCE_START_SOL,
-  OXYGEN_DEFICIT_EFFICIENCY_PENALTY,
 } from "../balance/BuildingBalance";
 import { BUILDING_MODES, REPAIR_DURATION_SOLS } from "../balance/OperationsBalance";
 import { getSkillById } from "../data/skills";
@@ -40,6 +39,7 @@ export class BuildingManager {
   private colonyManager: ColonyManager | null = null;
   private technologyTree: TechnologyTree | null = null;
   private workforceManager: WorkforceManager | null = null;
+  private airQualityEfficiency: number = 1;
 
   setColonyManager(colony: ColonyManager): void {
     this.colonyManager = colony;
@@ -51,6 +51,10 @@ export class BuildingManager {
 
   setWorkforceManager(workforce: WorkforceManager): void {
     this.workforceManager = workforce;
+  }
+
+  setAirQualityEfficiency(multiplier: number): void {
+    this.airQualityEfficiency = Math.max(0, Math.min(1, multiplier));
   }
 
   constructor(defs: BuildingDefinition[]) {
@@ -657,13 +661,9 @@ export class BuildingManager {
     return condition < CONDITION_EFFICIENCY_THRESHOLD ? 1 - CONDITION_EFFICIENCY_PENALTY : 1;
   }
 
-  private getOxygenDeficitMultiplier(): number {
-    return this.getTotalOxygenContribution() < 0 ? 1 - OXYGEN_DEFICIT_EFFICIENCY_PENALTY : 1;
-  }
-
   /**
    * Calculate the combined efficiency multiplier for a building.
-   * Factors: condition, oxygen, staffing, worker efficiency, team cohesion.
+   * Factors: condition, air quality, staffing, worker efficiency, team cohesion.
    */
   private getBuildingEfficiencyMultiplier(buildingId: string, overrideCondition?: number): number {
     const building = this.buildings.get(buildingId);
@@ -673,7 +673,7 @@ export class BuildingManager {
 
     return combineMultipliers(
       this.getConditionMultiplier(condition),
-      this.getOxygenDeficitMultiplier(),
+      this.airQualityEfficiency,
       this.getStaffingEfficiency(buildingId),
       this.getWorkerEfficiency(buildingId),
       this.getTeamCohesionMultiplier(buildingId),
