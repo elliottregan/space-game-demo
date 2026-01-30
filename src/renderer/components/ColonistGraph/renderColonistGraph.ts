@@ -1,6 +1,6 @@
 import { select } from "d3-selection";
 import { type Colonist, ColonistRole } from "../../../core/models/Colonist";
-import type { PositionedColonist } from "../../utils/colonistForceLayout";
+import type { PositionedColonist } from "../../utils/ColonistSimulationManager";
 
 export interface ColonistGraphNode extends PositionedColonist {
   colonist: Colonist;
