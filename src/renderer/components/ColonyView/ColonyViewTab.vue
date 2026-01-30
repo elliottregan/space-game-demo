@@ -6,7 +6,6 @@ import { ColonistDetailPanel, ColonistGraph } from "../ColonistGraph";
 import BuildingSection from "./BuildingSection.vue";
 import ColonyStatsBar from "./ColonyStatsBar.vue";
 import HousingSection from "./HousingSection.vue";
-import UnhousedSection from "./UnhousedSection.vue";
 
 const state = gameService.getState();
 
@@ -92,14 +91,7 @@ const buildingsForGraph = computed(() =>
       :housing-assignments="state.housingAssignments"
       :building-definitions="state.buildingDefinitions"
       :skill-definitions="state.skillDefinitions"
-    />
-
-    <UnhousedSection
-      v-if="state.unhoused.length > 0"
-      :colonists="state.unhoused"
-      :buildings="state.buildings"
-      :building-definitions="state.buildingDefinitions"
-      :skill-definitions="state.skillDefinitions"
+      :unhoused="state.unhoused"
     />
 
     <BuildingSection

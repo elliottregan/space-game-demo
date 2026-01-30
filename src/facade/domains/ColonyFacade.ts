@@ -364,4 +364,65 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
   setAutoAssignNewColonists(value: boolean): void {
     this.gameState.setAutoAssignNewColonists(value);
   }
+
+  /**
+   * Assign a colonist to housing in a building.
+   */
+  assignToHousing(colonistId: string, buildingId: string): Result<void> {
+    return this.executeCommand(() => {
+      const colonist = this.gameState.colony.getColonist(colonistId);
+      if (!colonist) {
+        return err({
+          type: "NOT_FOUND",
+          entity: "colonist",
+          id: colonistId,
+        });
+      }
+
+      const success = this.gameState.colony.assignColonistToHousing(
+        colonistId,
+        buildingId,
+        this.gameState.buildings,
+      );
+
+      if (!success) {
+        return err({
+          type: "INVALID_STATE",
+          current: "cannot assign",
+          expected: "assignable",
+          reason: "Building full, not a housing building, or not active",
+        });
+      }
+
+      return ok(undefined);
+    });
+  }
+
+  /**
+   * Unassign a colonist from their current housing.
+   */
+  unassignFromHousing(colonistId: string): Result<void> {
+    return this.executeCommand(() => {
+      const colonist = this.gameState.colony.getColonist(colonistId);
+      if (!colonist) {
+        return err({
+          type: "NOT_FOUND",
+          entity: "colonist",
+          id: colonistId,
+        });
+      }
+
+      if (!colonist.housingId) {
+        return err({
+          type: "INVALID_STATE",
+          current: "not housed",
+          expected: "housed",
+          reason: "Colonist is not assigned to any housing",
+        });
+      }
+
+      this.gameState.colony.clearHousingAssignment(colonistId);
+      return ok(undefined);
+    });
+  }
 }
