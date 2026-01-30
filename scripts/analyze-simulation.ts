@@ -106,7 +106,7 @@ function runSingleGame(seed: number): RunResult {
   }
 
   let solsRun = 0;
-  while (!api.game.isGameOver() && solsRun < 10000) {
+  while (!api.game.isGameOver() && solsRun < 5000) {
     strategy.executeTick();
     api.game.advanceSol();
     solsRun++;

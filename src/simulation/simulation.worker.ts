@@ -20,7 +20,7 @@ declare const self: Worker;
 /**
  * Maximum sols to run before considering a game stuck.
  */
-const MAX_SOLS = 10000;
+const MAX_SOLS = 5000;
 
 /**
  * Interval at which resource snapshots are taken.
