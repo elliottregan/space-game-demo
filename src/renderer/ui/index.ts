@@ -10,6 +10,8 @@ export { default as GActionCard } from "./composites/GActionCard.vue";
 export { default as GEntityHeader } from "./composites/GEntityHeader.vue";
 export { default as GProgressItem } from "./composites/GProgressItem.vue";
 export { default as GStatsBar } from "./composites/GStatsBar.vue";
+export { default as GStatsGrid } from "./composites/GStatsGrid.vue";
+export type { GridStat } from "./composites/GStatsGrid.vue";
 export { default as ResourceBadge } from "./composites/ResourceBadge.vue";
 
 // Primitives

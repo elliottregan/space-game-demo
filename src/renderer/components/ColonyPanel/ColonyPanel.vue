@@ -2,14 +2,13 @@
 import { computed, ref } from "vue";
 import { ColonistRole } from "../../../core/models/Colonist";
 import { gameService } from "../../services/GameService";
-import type { Stat } from "../../ui";
-import { GButton, GPanel, GStatsBar } from "../../ui";
+import type { GridStat, Stat } from "../../ui";
+import { GButton, GPanel, GStatsBar, GStatsGrid } from "../../ui";
 import {
   getCohesionVariant,
   getHealthVariant,
   getMoraleVariant,
 } from "../../utils/displayThresholds";
-import WorkforceGrid from "./WorkforceGrid.vue";
 
 // Reactive state for template bindings (auto-updates when API syncs)
 const state = gameService.getState();
@@ -42,9 +41,17 @@ const colonyStats = computed<Stat[]>(() => {
   return stats;
 });
 
+const roleConfig: Record<ColonistRole, { icon: string; label: string }> = {
+  [ColonistRole.UNASSIGNED]: { icon: "👤", label: "Unassigned" },
+  [ColonistRole.RESEARCH]: { icon: "🔬", label: "Researchers" },
+  [ColonistRole.ENGINEERING]: { icon: "⚙️", label: "Engineers" },
+  [ColonistRole.CIVIL_SCIENCE]: { icon: "📊", label: "Scientists" },
+  [ColonistRole.FARMING]: { icon: "🌱", label: "Farmers" },
+};
+
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-const workforceStats = computed(() => {
-  const stats: Record<ColonistRole, number> = {
+const workforceStats = computed<GridStat[]>(() => {
+  const counts: Record<ColonistRole, number> = {
     [ColonistRole.UNASSIGNED]: 0,
     [ColonistRole.RESEARCH]: 0,
     [ColonistRole.ENGINEERING]: 0,
@@ -66,13 +73,37 @@ const workforceStats = computed(() => {
   for (const colonist of state.colonists) {
     const assignedRole = colonistAssignments.get(colonist.id);
     if (assignedRole) {
-      stats[assignedRole]++;
+      counts[assignedRole]++;
     } else {
-      stats[ColonistRole.UNASSIGNED]++;
+      counts[ColonistRole.UNASSIGNED]++;
     }
   }
 
-  return stats;
+  return Object.entries(counts).map(([role, count]) => ({
+    key: role,
+    icon: roleConfig[role as ColonistRole].icon,
+    count,
+    label: roleConfig[role as ColonistRole].label,
+  }));
+});
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+const housingStats = computed<GridStat[]>(() => {
+  let housed = 0;
+  let unhoused = 0;
+
+  for (const colonist of state.colonists) {
+    if (colonist.housingId) {
+      housed++;
+    } else {
+      unhoused++;
+    }
+  }
+
+  return [
+    { key: "housed", icon: "🏠", count: housed, label: "Housed" },
+    { key: "unhoused", icon: "🚫", count: unhoused, label: "Unhoused" },
+  ];
 });
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -131,7 +162,8 @@ function handleToggleAutoAssign(e: Event) {
       </GButton>
     </div>
 
-    <WorkforceGrid :workforce-stats="workforceStats" />
+    <GStatsGrid title="Workforce" :stats="workforceStats" />
+    <GStatsGrid title="Housing" :stats="housingStats" />
   </GPanel>
 </template>
 
