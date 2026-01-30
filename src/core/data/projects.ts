@@ -50,6 +50,16 @@ export const PROJECTS: Project[] = [
     requiredSupport: 0.35,
     effects: { unlockBuilding: "medical_center" },
   },
+  {
+    id: ProjectId.DEMOCRATIC_ASSEMBLY,
+    name: "Democratic Assembly",
+    description:
+      "Establish a formal democratic assembly where all colonists have a voice in governance.",
+    type: NPCFaction.MarsIndependence,
+    proposalCost: { materials: 70 },
+    requiredSupport: 0.35,
+    effects: { unlockBuilding: "assembly_hall" },
+  },
 
   // Corporate Interests projects
   {
