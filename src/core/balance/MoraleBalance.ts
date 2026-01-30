@@ -30,4 +30,7 @@ export const COLONIST_MORALE = {
 
   // Initial morale for new colonists
   INITIAL_MORALE: 70,
+
+  // Social building (third place) boost
+  SOCIAL_BUILDING_BOOST_DIVISOR: 10, // moraleBoost / this = per-sol gain
 };
