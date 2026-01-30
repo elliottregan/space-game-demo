@@ -46,5 +46,14 @@ export interface ProjectEligibility {
   reason?: string;
 }
 
+/**
+ * Lobby action eligibility check result.
+ */
+export interface LobbyEligibility {
+  canLobby: boolean;
+  cost: number;
+  reason?: string;
+}
+
 // Re-export ColonistIdeology for convenience
 export type { ColonistIdeology };

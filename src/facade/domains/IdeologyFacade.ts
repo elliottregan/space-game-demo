@@ -2,12 +2,14 @@
 
 import type { GameState } from "../../core/GameState";
 import type { NPCFaction, ProjectId } from "../../core/models/NPCInfluence";
+import type { Result } from "../types/common";
 import type { Queryable } from "../types/interfaces";
 import type {
   IdeologySnapshot,
   FactionSupportSnapshot,
   CouncilMemberSnapshot,
   ProjectEligibility,
+  LobbyEligibility,
 } from "../types/ideology";
 
 /**
@@ -93,5 +95,81 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
       requiredSupport: project.requiredSupport,
       reason: result.reason,
     };
+  }
+
+  // ============ Lobbying ============
+
+  /**
+   * Check if a council member can be lobbied.
+   */
+  canLobby(colonistId: string, faction: NPCFaction, affinityBoost: number): LobbyEligibility {
+    const check = this.gameState.ideology.canLobby(colonistId);
+    if (!check.canLobby) {
+      return { canLobby: false, cost: Infinity, reason: check.reason };
+    }
+
+    const cost = this.gameState.ideology.getLobbyCost(colonistId, faction, affinityBoost);
+    const canAfford = this.gameState.resources.canAfford({ materials: cost });
+
+    if (!canAfford) {
+      return { canLobby: false, cost, reason: "Cannot afford lobbying cost" };
+    }
+
+    return { canLobby: true, cost };
+  }
+
+  /**
+   * Get the cost to lobby a council member.
+   */
+  getLobbyCost(colonistId: string, faction: NPCFaction, affinityBoost: number): number {
+    return this.gameState.ideology.getLobbyCost(colonistId, faction, affinityBoost);
+  }
+
+  /**
+   * Lobby a council member to boost their faction affinity.
+   */
+  lobbyCouncilMember(
+    colonistId: string,
+    faction: NPCFaction,
+    affinityBoost: number,
+  ): Result<{ newAffinity: number }> {
+    const eligibility = this.canLobby(colonistId, faction, affinityBoost);
+    if (!eligibility.canLobby) {
+      return {
+        success: false,
+        error: {
+          type: "INVALID_STATE",
+          current: "ineligible",
+          expected: "eligible",
+          reason: eligibility.reason || "Cannot lobby",
+        },
+      };
+    }
+
+    // Deduct cost
+    this.gameState.resources.deduct({ materials: eligibility.cost });
+
+    // Apply lobby effect
+    const colonists = this.gameState.colony.getColonists();
+    const result = this.gameState.ideology.lobbyColonist(
+      colonistId,
+      faction,
+      affinityBoost,
+      colonists,
+    );
+
+    if (!result.success || result.newAffinity === undefined) {
+      return {
+        success: false,
+        error: {
+          type: "INVALID_STATE",
+          current: "failed",
+          expected: "success",
+          reason: result.reason || "Lobby failed",
+        },
+      };
+    }
+
+    return { success: true, data: { newAffinity: result.newAffinity } };
   }
 }
