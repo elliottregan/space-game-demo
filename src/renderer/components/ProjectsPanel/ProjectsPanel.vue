@@ -25,22 +25,63 @@ function formatSupport(support: number): string {
 }
 
 // Projects with eligibility
-// Access reactive state to trigger re-computation when projects change
 // oxlint-disable-next-line no-unused-vars
 const projectsWithEligibility = computed(() => {
-  // Depend on reactive completedProjects to trigger updates
-  const _completed = state.ideology.completedProjects;
-  const _resources = state.resources;
+  // Use reactive state directly to ensure Vue tracks dependencies
+  const completedSet = new Set(state.ideology.completedProjects);
+  const factionSupport = state.ideology.factionSupport;
+  const resources = state.resources;
 
   return PROJECTS.map((project) => {
-    const eligibility = gameService.api.ideology.canProposeProject(project.id);
+    const isCompleted = completedSet.has(project.id);
+
+    if (isCompleted) {
+      return {
+        ...project,
+        canPropose: false,
+        currentSupport: 0,
+        requiredSupport: project.requiredSupport,
+        reason: "Project already completed",
+        isCompleted: true,
+      };
+    }
+
+    // Get support for this project's faction from reactive state
+    let currentSupport = 0;
+    switch (project.type) {
+      case NPCFaction.EarthLoyalists:
+        currentSupport = factionSupport.earthLoyalists;
+        break;
+      case NPCFaction.MarsIndependence:
+        currentSupport = factionSupport.marsIndependence;
+        break;
+      case NPCFaction.CorporateInterests:
+        currentSupport = factionSupport.corporateInterests;
+        break;
+    }
+
+    // Check affordability from reactive resources
+    const canAfford = Object.entries(project.proposalCost).every(
+      ([resource, amount]) => (resources[resource as keyof typeof resources] ?? 0) >= amount,
+    );
+
+    const hasSufficientSupport = currentSupport >= project.requiredSupport;
+    const canPropose = canAfford && hasSufficientSupport;
+
+    let reason: string | undefined;
+    if (!canAfford) {
+      reason = "Cannot afford proposal cost";
+    } else if (!hasSufficientSupport) {
+      reason = `Insufficient faction support (need ${Math.round(project.requiredSupport * 100)}%)`;
+    }
+
     return {
       ...project,
-      canPropose: eligibility.canPropose,
-      currentSupport: eligibility.currentSupport,
-      requiredSupport: eligibility.requiredSupport,
-      reason: eligibility.reason,
-      isCompleted: eligibility.isCompleted ?? false,
+      canPropose,
+      currentSupport,
+      requiredSupport: project.requiredSupport,
+      reason,
+      isCompleted: false,
     };
   });
 });
