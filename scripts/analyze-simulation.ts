@@ -479,10 +479,15 @@ let quietMode = false;
 /**
  * Output function that captures for file writing and optionally logs to console.
  */
-function output(message: string = ""): void {
+function output(message: string = "", flush: boolean = false): void {
   outputLines.push(message);
   if (!quietMode) {
-    console.log(message);
+    if (flush) {
+      // Use synchronous write for immediate output
+      process.stdout.write(message + "\n");
+    } else {
+      console.log(message);
+    }
   }
 }
 
@@ -1073,7 +1078,7 @@ async function main(): Promise<void> {
   const results = await runSimulationsParallel(runs, seed, (completed, total) => {
     // Report progress every 50 runs
     if (completed - lastReportedProgress >= 50 || completed === total) {
-      output(`  Progress: ${completed}/${total}`);
+      output(`  Progress: ${completed}/${total}`, true);
       lastReportedProgress = completed;
     }
   });

@@ -182,6 +182,59 @@ describe("ColonistMoraleManager", () => {
 
       expect(connectedMorale).toBeGreaterThan(isolatedMorale);
     });
+
+    it("penalizes low air quality (after grace period)", () => {
+      const colonist = colonyManager.getColonists()[0]!;
+      colonist.housingId = "habitat_1";
+
+      const highAirMorale = moraleManager.calculateBaseMorale(
+        colonist,
+        resourceManager,
+        relationshipManager,
+        colonyManager,
+        150, // Past grace period
+        1.0, // Perfect air quality
+      );
+
+      const lowAirMorale = moraleManager.calculateBaseMorale(
+        colonist,
+        resourceManager,
+        relationshipManager,
+        colonyManager,
+        150, // Past grace period
+        0.3, // Poor air quality
+      );
+
+      expect(highAirMorale).toBeGreaterThan(lowAirMorale);
+    });
+
+    it("uses air quality directly as satisfaction (0-1 scale)", () => {
+      const colonist = colonyManager.getColonists()[0]!;
+      colonist.housingId = "habitat_1";
+
+      // With zero air quality, physiological need should be significantly reduced
+      const zeroAirMorale = moraleManager.calculateBaseMorale(
+        colonist,
+        resourceManager,
+        relationshipManager,
+        colonyManager,
+        150, // Past grace period
+        0.0, // No air
+      );
+
+      // With full air quality
+      const fullAirMorale = moraleManager.calculateBaseMorale(
+        colonist,
+        resourceManager,
+        relationshipManager,
+        colonyManager,
+        150,
+        1.0,
+      );
+
+      // The difference should be meaningful (air is 1/3 of physiological, which is ~40% of morale)
+      expect(fullAirMorale - zeroAirMorale).toBeGreaterThan(10);
+    });
   });
 
   describe("propagateMorale", () => {

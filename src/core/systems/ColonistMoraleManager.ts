@@ -22,10 +22,16 @@ export class ColonistMoraleManager {
     relationships: RelationshipManager,
     colony: ColonyManager,
     currentSol: number = 0,
+    airQuality: number = 1,
   ): number {
     const weights = COLONIST_MORALE.NEEDS_WEIGHTS;
 
-    const physiological = this.calculatePhysiologicalNeed(resources, colony, currentSol);
+    const physiological = this.calculatePhysiologicalNeed(
+      resources,
+      colony,
+      currentSol,
+      airQuality,
+    );
     const safety = this.calculateSafetyNeed(colonist);
     const social = this.calculateSocialNeed(colonist.id, relationships);
     const esteem = this.calculateEsteemNeed(colonist);
@@ -40,11 +46,12 @@ export class ColonistMoraleManager {
   }
 
   /**
-   * Physiological need: food, water, oxygen availability.
+   * Physiological need: food, water, air quality availability.
    * Returns 0-1 satisfaction.
    *
    * Uses stockpile levels rather than net flow - colonists feel secure when
    * resources are plentiful, even if production temporarily lags consumption.
+   * Air quality is a ratio (0-1) rather than a stockpile.
    *
    * During the grace period (first N sols), colonists are optimistic while
    * the colony bootstraps and return full satisfaction.
@@ -53,6 +60,7 @@ export class ColonistMoraleManager {
     resources: ResourceManager,
     colony: ColonyManager,
     currentSol: number,
+    airQuality: number,
   ): number {
     const population = colony.getPopulation();
 
@@ -77,10 +85,11 @@ export class ColonistMoraleManager {
 
     const foodSat = calcSatisfaction(stockpile.food);
     const waterSat = calcSatisfaction(stockpile.water);
-    const oxygenSat = calcSatisfaction(stockpile.oxygen);
+    // Air quality is already a 0-1 ratio, use directly as satisfaction
+    const airSat = airQuality;
 
     // Average satisfaction across all three essentials
-    return (foodSat + waterSat + oxygenSat) / 3;
+    return (foodSat + waterSat + airSat) / 3;
   }
 
   /**
@@ -150,6 +159,7 @@ export class ColonistMoraleManager {
     relationships: RelationshipManager,
     colony: ColonyManager,
     currentSol: number = 0,
+    airQuality: number = 1,
   ): void {
     const alpha = COLONIST_MORALE.PROPAGATION_ALPHA;
     const baseWeight = COLONIST_MORALE.BASE_MORALE_WEIGHT;
@@ -166,6 +176,7 @@ export class ColonistMoraleManager {
         relationships,
         colony,
         currentSol,
+        airQuality,
       );
 
       const neighbors = relationships.getNeighbors(colonist.id);
