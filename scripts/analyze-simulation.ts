@@ -894,14 +894,27 @@ function computePercentileValue(values: number[]): PercentileValue {
 /**
  * Aggregate resource timelines from multiple runs into percentile bands.
  * For each sol checkpoint, computes median and P25-P75 bands for each metric.
+ * Only includes sols up to the slowest victory (or max defeat if no victories),
+ * since games that timeout at the simulation limit aren't meaningful data.
  */
 function aggregateTimelines(results: RunResult[]): AggregatedSnapshot[] {
-  // Collect all timelines from results
+  // Find the meaningful game range - use max victory time, or max defeat if no victories
+  const victories = results.filter((r) => r.outcome === "victory");
+  const maxVictorySol = victories.length > 0 ? Math.max(...victories.map((r) => r.finalSol)) : 0;
+  const maxDefeatSol = Math.max(
+    ...results.filter((r) => r.outcome === "defeat").map((r) => r.finalSol),
+  );
+  // Use max victory time if we have victories, otherwise fall back to max defeat time
+  const timelineLimit = maxVictorySol > 0 ? maxVictorySol : maxDefeatSol;
+
+  // Collect all timelines from results, limited to meaningful game range
   const timelinesBySol = new Map<number, ResourceSnapshot[]>();
 
   for (const result of results) {
     if (!result.resourceTimeline) continue;
     for (const snapshot of result.resourceTimeline) {
+      // Only include snapshots within the meaningful game range
+      if (snapshot.sol > timelineLimit) continue;
       const existing = timelinesBySol.get(snapshot.sol) ?? [];
       existing.push(snapshot);
       timelinesBySol.set(snapshot.sol, existing);
