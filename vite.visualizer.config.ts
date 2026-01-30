@@ -4,7 +4,7 @@ import { resolve } from "path";
 
 export default defineConfig({
   root: "src/visualization",
-  base: process.env.VITE_VISUALIZER_BASE || "/visualizer/",
+  base: process.env.VITE_VISUALIZER_BASE || "/",
   build: {
     outDir: "../../dist/visualizer",
     emptyOutDir: true,

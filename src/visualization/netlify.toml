@@ -1,0 +1,11 @@
+[build]
+  command = "cd ../.. && bun install && bun run build:visualizer"
+  publish = "../../dist/visualizer"
+
+# No SPA routing needed - single page without client-side routes
+
+# Cache static assets
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
