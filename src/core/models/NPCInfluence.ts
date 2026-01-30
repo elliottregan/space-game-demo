@@ -61,6 +61,12 @@ export enum ProjectId {
   AI_GOVERNANCE = "ai_governance",
   MINING_CONCESSION = "mining_concession",
   LABOR_EFFICIENCY = "labor_efficiency",
+  // New projects
+  DEMOCRATIC_ASSEMBLY = "democratic_assembly",
+  // Capstone projects
+  RETURN_MISSION = "return_mission",
+  DECLARATION_OF_SOVEREIGNTY = "declaration_of_sovereignty",
+  PLANETARY_ACQUISITION = "planetary_acquisition",
 }
 
 /** All project IDs as an array for iteration */
@@ -73,6 +79,10 @@ export const ALL_PROJECT_IDS: readonly ProjectId[] = [
   ProjectId.AI_GOVERNANCE,
   ProjectId.MINING_CONCESSION,
   ProjectId.LABOR_EFFICIENCY,
+  ProjectId.DEMOCRATIC_ASSEMBLY,
+  ProjectId.RETURN_MISSION,
+  ProjectId.DECLARATION_OF_SOVEREIGNTY,
+  ProjectId.PLANETARY_ACQUISITION,
 ] as const;
 
 export interface NPC {
