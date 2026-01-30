@@ -6,6 +6,7 @@ import {
   AIR_QUALITY_DEADLY,
 } from "../src/core/balance/AirQualityBalance";
 import { AirQualityManager } from "../src/core/systems/AirQualityManager";
+import { RESOURCE_KEYS } from "../src/core/models/Resources";
 
 describe("AirQualityBalance constants", () => {
   it("should have BASE_OXYGEN_PER_COLONIST defined", () => {
@@ -148,5 +149,15 @@ describe("AirQualityManager serialization", () => {
   it("should deserialize from JSON", () => {
     const manager = AirQualityManager.fromJSON({ airQuality: 0.7 });
     expect(manager.getAirQuality()).toBe(0.7);
+  });
+});
+
+describe("Resources without oxygen", () => {
+  it("should not include oxygen in RESOURCE_KEYS", () => {
+    expect(RESOURCE_KEYS).not.toContain("oxygen");
+  });
+
+  it("should have exactly 4 resource keys", () => {
+    expect(RESOURCE_KEYS).toEqual(["food", "water", "power", "materials"]);
   });
 });
