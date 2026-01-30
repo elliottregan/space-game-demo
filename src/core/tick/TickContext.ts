@@ -34,6 +34,8 @@ export interface DerivedValues {
   policyEffects: PolicyEffects | null;
   laborPoolBonus: number;
   oxygenContribution: number;
+  airQuality: number;
+  airQualityEffects: { health: number; morale: number; efficiency: number } | null;
 }
 
 /**
@@ -96,6 +98,8 @@ export function createTickContext(
       policyEffects: null,
       laborPoolBonus: 0,
       oxygenContribution: 0,
+      airQuality: 1,
+      airQualityEffects: null,
     },
     settings,
   };
