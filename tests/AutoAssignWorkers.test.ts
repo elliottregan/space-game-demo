@@ -36,9 +36,11 @@ describe("Auto-Assign Workers", () => {
   });
 
   describe("getUnderstaffedBuildings", () => {
-    it("returns empty array when no buildings exist", () => {
+    it("returns starting buildings as understaffed before worker assignment", () => {
+      // Default starting condition has buildings that need workers
       const understaffed = gameState.buildings.getUnderstaffedBuildings();
-      expect(understaffed).toHaveLength(0);
+      // Solar panel (1 slot), basic farm (2 slots), oxygen generator (2 slots) = 4 buildings with worker slots
+      expect(understaffed.length).toBeGreaterThan(0);
     });
 
     it("returns buildings with empty worker slots", () => {
@@ -46,7 +48,7 @@ describe("Auto-Assign Workers", () => {
       const farm = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       expect(farm).not.toBeNull();
 
@@ -71,7 +73,7 @@ describe("Auto-Assign Workers", () => {
       const solar = gameState.buildings.startBuilding(
         BuildingId.SOLAR_PANEL,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       expect(solar).not.toBeNull();
 
@@ -92,12 +94,12 @@ describe("Auto-Assign Workers", () => {
       const farm = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       const mine = gameState.buildings.startBuilding(
         BuildingId.BASIC_MINE,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
 
       expect(farm).not.toBeNull();
@@ -132,7 +134,7 @@ describe("Auto-Assign Workers", () => {
       const farm = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       expect(farm).not.toBeNull();
 
@@ -162,7 +164,7 @@ describe("Auto-Assign Workers", () => {
       const farm = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
 
       // Complete construction
@@ -192,12 +194,12 @@ describe("Auto-Assign Workers", () => {
       const farm1 = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       const farm2 = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
 
       // Complete construction
@@ -227,7 +229,7 @@ describe("Auto-Assign Workers", () => {
       const farm = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
 
       // Complete construction
@@ -240,7 +242,7 @@ describe("Auto-Assign Workers", () => {
       const farm2 = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
       for (let i = 0; i < 15; i++) {
         gameState.buildings.tick(gameState.resources);
@@ -261,10 +263,11 @@ describe("Auto-Assign Workers", () => {
       expect(events).toBeDefined();
     });
 
-    it("returns empty array when no understaffed buildings", () => {
-      // No buildings built
+    it("assigns workers to starting buildings", () => {
+      // Default starting condition has buildings that need workers
       const events = gameState.buildings.autoAssignAllWorkers(gameState.colony);
-      expect(events).toHaveLength(0);
+      // Should assign workers to starting buildings (solar panel, farm, oxygen generator)
+      expect(events.length).toBeGreaterThan(0);
     });
   });
 
@@ -274,7 +277,7 @@ describe("Auto-Assign Workers", () => {
       const farm = gameState.buildings.startBuilding(
         BuildingId.BASIC_FARM,
         gameState.resources,
-        gameState.technology
+        gameState.technology,
       );
 
       // Complete construction

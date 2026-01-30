@@ -82,6 +82,18 @@ describe("Recreation Buildings", () => {
   });
 
   it("should apply morale boost during colony tick", () => {
+    // Add sustainable production to offset starting building consumption
+    gameState.resources.addProduction({ food: 100, water: 100 });
+
+    // Build extra oxygen generator to push air quality above comfortable threshold
+    // Starting: 9 oxygen / 14 colonists = 64%. Need 11.2+ for 80%.
+    // Extra oxygen generator adds +5 -> 14/14 = 100%
+    gameState.buildings.startBuilding(
+      BuildingId.OXYGEN_GENERATOR,
+      gameState.resources,
+      gameState.technology,
+    );
+
     // Lower morale to see the effect
     gameState.colony.setMorale(50);
 
@@ -92,16 +104,13 @@ describe("Recreation Buildings", () => {
       gameState.technology,
     );
 
-    // Fast-forward construction
-    for (let i = 0; i < 10; i++) {
+    // Fast-forward construction (12 sols for oxygen generator)
+    for (let i = 0; i < 12; i++) {
       gameState.tick();
     }
 
     // Record morale before additional ticks
     const moraleBefore = gameState.colony.getMorale();
-
-    // Add production to create positive net flow (required for morale recovery)
-    gameState.resources.addProduction({ food: 100, water: 100 });
 
     // Tick a few times with positive net flow to see morale boost
     for (let i = 0; i < 5; i++) {

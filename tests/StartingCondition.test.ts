@@ -5,10 +5,15 @@ import { BuildingId } from "../src/core/models/Building";
 import { GameAPI } from "../src/facade/GameAPI";
 
 describe("StartingConditions", () => {
-  it("should have a default condition with no pre-built buildings", () => {
+  it("should have a default condition with minimal life support buildings", () => {
     const defaultCondition = STARTING_CONDITIONS.find((c) => c.id === StartingConditionId.DEFAULT);
     expect(defaultCondition).toBeDefined();
-    expect(defaultCondition!.preBuiltBuildings).toEqual([]);
+    // Default has minimal life support: 2 solar panels, 1 habitat, 1 farm, 1 oxygen generator
+    expect(defaultCondition!.preBuiltBuildings).toContain(BuildingId.SOLAR_PANEL);
+    expect(defaultCondition!.preBuiltBuildings).toContain(BuildingId.HABITAT);
+    expect(defaultCondition!.preBuiltBuildings).toContain(BuildingId.BASIC_FARM);
+    expect(defaultCondition!.preBuiltBuildings).toContain(BuildingId.OXYGEN_GENERATOR);
+    expect(defaultCondition!.preBuiltBuildings.length).toBe(5);
     expect(defaultCondition!.population).toBe(14);
   });
 
@@ -34,7 +39,8 @@ describe("GameState with StartingConditions", () => {
   it("should create default state when no condition specified", () => {
     const state = new GameState();
     expect(state.colony.getPopulation()).toBe(14);
-    expect(state.buildings.getBuildingCount()).toBe(0);
+    // Default now has 5 starting buildings for air quality balance
+    expect(state.buildings.getBuildingCount()).toBe(5);
   });
 
   it("should create state with pre-built buildings for established base", () => {
@@ -62,7 +68,8 @@ describe("GameAPI with StartingConditions", () => {
     const api = new GameAPI();
     api.newGame();
     expect(api.colony.snapshot().population).toBe(14);
-    expect(api.buildings.snapshot().active.length).toBe(0);
+    // Default now has 5 starting buildings for air quality balance
+    expect(api.buildings.snapshot().active.length).toBe(5);
   });
 
   it("should start new game with specified condition", () => {
