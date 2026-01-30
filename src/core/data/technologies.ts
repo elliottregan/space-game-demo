@@ -55,7 +55,7 @@ export const TECHNOLOGIES: Technology[] = [
     name: "Nuclear Fission",
     description: "Safe nuclear power generation",
     prerequisites: [TechnologyId.ADVANCED_MATERIALS],
-    cost: { sols: 180 },
+    cost: { sols: 115 },
     unlocks: [BuildingId.NUCLEAR_REACTOR],
   },
 
@@ -65,7 +65,7 @@ export const TECHNOLOGIES: Technology[] = [
     name: "Genetic Engineering",
     description: "Modify organisms for Mars conditions",
     prerequisites: [TechnologyId.HYDROPONICS],
-    cost: { sols: 200 },
+    cost: { sols: 130 },
     unlocks: [BuildingId.BIOLAB],
   },
   {
@@ -73,7 +73,7 @@ export const TECHNOLOGIES: Technology[] = [
     name: "Advanced Medicine",
     description: "Extend human lifespan and health",
     prerequisites: [TechnologyId.GENETICS],
-    cost: { sols: 250 },
+    cost: { sols: 160 },
     unlocks: [BuildingId.MEDICAL_CENTER],
   },
   {
@@ -89,7 +89,7 @@ export const TECHNOLOGIES: Technology[] = [
     name: "Cryogenic Sleep",
     description: "Suspend humans for long-duration travel",
     prerequisites: [TechnologyId.ADVANCED_MEDICINE],
-    cost: { sols: 250 },
+    cost: { sols: 160 },
     unlocks: [BuildingId.CRYO_FACILITY],
   },
 
@@ -99,7 +99,7 @@ export const TECHNOLOGIES: Technology[] = [
     name: "Fusion Drive",
     description: "Propulsion system for interstellar travel",
     prerequisites: [TechnologyId.NUCLEAR_FISSION, TechnologyId.ADVANCED_MATERIALS],
-    cost: { sols: 400 },
+    cost: { sols: 255 },
     unlocks: [],
   },
   {
@@ -107,7 +107,7 @@ export const TECHNOLOGIES: Technology[] = [
     name: "Closed Ecosystem",
     description: "Fully self-sustaining life support",
     prerequisites: [TechnologyId.HYDROPONICS, TechnologyId.WATER_RECYCLING, TechnologyId.GENETICS],
-    cost: { sols: 350 },
+    cost: { sols: 225 },
     unlocks: [],
   },
   {
@@ -119,7 +119,7 @@ export const TECHNOLOGIES: Technology[] = [
       TechnologyId.CRYOSLEEP,
       TechnologyId.CLOSED_ECOSYSTEM,
     ],
-    cost: { sols: 500, resources: { materials: 1000 } },
+    cost: { sols: 320, resources: { materials: 500 } },
     unlocks: [SpecialUnlockId.ARC_SHIP],
   },
 ];
