@@ -35,7 +35,7 @@ export const TECHNOLOGIES: Technology[] = [
     name: "Robotics",
     description: "Automated labor and manufacturing",
     prerequisites: [TechnologyId.ADVANCED_MATERIALS],
-    cost: { sols: 120 },
+    cost: { sols: 85 },
     unlocks: [BuildingId.AUTOMATED_FACTORY],
     effects: [
       { type: "construction_speed", value: 1.2 },
