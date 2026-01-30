@@ -38,6 +38,7 @@ export class ColonistSimulationManager {
   private onTickCallback: (() => void) | null = null;
   private _isAnimating = false;
   private visibilityHandler: (() => void) | null = null;
+  private pendingAlpha = 0; // Alpha to use when animation starts
 
   constructor(width: number, height: number) {
     this.width = width;
@@ -66,6 +67,11 @@ export class ColonistSimulationManager {
   startAnimation(): void {
     if (this._isAnimating || !this.simulation) return;
     this._isAnimating = true;
+    // Apply pending alpha from recent update
+    if (this.pendingAlpha > 0) {
+      this.simulation.alpha(this.pendingAlpha).restart();
+      this.pendingAlpha = 0;
+    }
     this.animationFrame = requestAnimationFrame(this.animate);
   }
 
@@ -155,21 +161,21 @@ export class ColonistSimulationManager {
 
     // Determine how much to reheat based on changes
     const hasStructuralChanges = hasNewColonists || hasRemovedColonists;
+    const isFirstRender = this.positions.size === 0;
+    const alpha = hasStructuralChanges ? 0.15 : 0.05;
 
-    if (this._isAnimating) {
-      // Always give a small alpha bump when data changes while animating
-      // This ensures the simulation responds to relationship strength changes
-      const alpha = hasStructuralChanges ? 0.15 : 0.05;
-      this.simulation?.alpha(alpha).restart();
-    } else {
-      // Run synchronous ticks
-      const tickCount = hasStructuralChanges || this.positions.size === 0 ? 100 : 30;
-      this.simulation?.tick(tickCount);
-
-      // Store positions
+    if (isFirstRender) {
+      // First render - run sync ticks to get initial layout
+      this.simulation?.tick(100);
       for (const node of this.nodes) {
         this.positions.set(node.id, { x: node.x ?? 0, y: node.y ?? 0 });
       }
+    } else if (this._isAnimating) {
+      // Apply alpha immediately when already animating
+      this.simulation?.alpha(alpha).restart();
+    } else {
+      // Store alpha for when animation starts
+      this.pendingAlpha = alpha;
     }
   }
 
