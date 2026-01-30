@@ -279,6 +279,7 @@ function render() {
 
 // ResizeObserver to track container size changes
 let resizeObserver: ResizeObserver | null = null;
+let resizeFrameId: number | null = null;
 
 onMounted(() => {
   updateDimensions();
@@ -302,8 +303,15 @@ onMounted(() => {
 
   if (containerRef.value) {
     resizeObserver = new ResizeObserver(() => {
-      updateDimensions();
-      render();
+      // Throttle resize handling with requestAnimationFrame
+      if (resizeFrameId !== null) {
+        cancelAnimationFrame(resizeFrameId);
+      }
+      resizeFrameId = requestAnimationFrame(() => {
+        updateDimensions();
+        render();
+        resizeFrameId = null;
+      });
     });
     resizeObserver.observe(containerRef.value);
   }
@@ -311,6 +319,9 @@ onMounted(() => {
 
 onUnmounted(() => {
   resizeObserver?.disconnect();
+  if (resizeFrameId !== null) {
+    cancelAnimationFrame(resizeFrameId);
+  }
   simulationManager?.destroy();
   simulationManager = null;
 });
@@ -389,7 +400,8 @@ watch(dimensions, render);
 .colonist-graph {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  height: 100%;
+  max-height: 680px;
   background: var(--g-color-bg-base);
   overflow: hidden;
 }

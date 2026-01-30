@@ -154,6 +154,7 @@ const buildingsForGraph = computed(() =>
 
 .relationship-panel {
   height: 350px;
+  max-height: 680px;
   display: flex;
   flex-direction: column;
 }
