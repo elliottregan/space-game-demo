@@ -2,9 +2,11 @@
 // Re-export types from simulation for use in visualization
 
 export type {
+  AggregatedSnapshot,
   AnalysisOutput,
-  ResourceSnapshot,
   CrisisPoint,
+  PercentileValue,
+  ResourceSnapshot,
   RunResult,
   VictoryTimeStats,
   PeakPopulationStats,

@@ -514,3 +514,8 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
+
+/* Timeline container for stacked resource charts */
+.timeline-container {
+  min-height: 560px;
+}

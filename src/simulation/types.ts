@@ -119,6 +119,33 @@ export interface ResourceSnapshot {
 }
 
 /**
+ * Percentile values for aggregated metrics across multiple runs.
+ */
+export interface PercentileValue {
+  median: number;
+  p25: number;
+  p75: number;
+}
+
+/**
+ * Aggregated snapshot combining data from multiple runs at a given sol.
+ * Uses percentile values to show distribution of metrics.
+ */
+export interface AggregatedSnapshot {
+  sol: number;
+  food: PercentileValue;
+  oxygen: PercentileValue;
+  water: PercentileValue;
+  power: PercentileValue;
+  materials: PercentileValue;
+  population: PercentileValue;
+  morale: PercentileValue;
+  socialCohesion: PercentileValue;
+  /** Number of simulation runs that were still active at this sol */
+  runsActive: number;
+}
+
+/**
  * Net resource flow snapshot at a given sol.
  */
 export interface ResourceFlowSnapshot {
@@ -325,6 +352,8 @@ export interface AnalysisOutput {
   techFrequency: Record<string, number>;
   buildingCounts: Record<string, number>;
   resourceTimeline: ResourceSnapshot[];
+  /** Aggregated timeline with percentile bands across all runs */
+  aggregatedTimeline: AggregatedSnapshot[];
   crisisEvents: CrisisPoint[];
   runs: RunResult[];
 
