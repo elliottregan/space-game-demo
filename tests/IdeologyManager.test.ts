@@ -6,11 +6,7 @@ import { NPCFaction } from "../src/core/models/NPCInfluence";
 import type { Colonist, ColonistIdeology } from "../src/core/models/Colonist";
 import { ColonistRole, MasteryLevel } from "../src/core/models/Colonist";
 
-function createTestColonist(
-  id: string,
-  name: string,
-  ideology: ColonistIdeology,
-): Colonist {
+function createTestColonist(id: string, name: string, ideology: ColonistIdeology): Colonist {
   return {
     id,
     name,
@@ -75,7 +71,9 @@ describe("IdeologyManager", () => {
     });
 
     test("converts CorporateInterests to corporateInterests", () => {
-      expect(IdeologyManager.factionToKey(NPCFaction.CorporateInterests)).toBe("corporateInterests");
+      expect(IdeologyManager.factionToKey(NPCFaction.CorporateInterests)).toBe(
+        "corporateInterests",
+      );
     });
   });
 
@@ -263,6 +261,167 @@ describe("IdeologyManager", () => {
       const restored = IdeologyManager.fromJSON(json);
 
       expect(restored.getCouncil()).toEqual(manager.getCouncil());
+    });
+  });
+
+  describe("lobbying", () => {
+    let manager: IdeologyManager;
+    let relationshipManager: RelationshipManager;
+
+    beforeEach(() => {
+      manager = new IdeologyManager();
+      relationshipManager = new RelationshipManager();
+    });
+
+    test("calculates lobby cost based on colonist influence", () => {
+      const colonists = [
+        createTestColonist("c1", "High Influence", {
+          earthLoyalist: 0.9,
+          marsIndependence: 0.1,
+          corporateInterests: 0.1,
+          conviction: 0.9,
+        }),
+        createTestColonist("c2", "Low Influence", {
+          earthLoyalist: 0.5,
+          marsIndependence: 0.5,
+          corporateInterests: 0.2,
+          conviction: 0.3,
+        }),
+      ];
+
+      // Create relationships to establish centrality
+      relationshipManager.createRelationship("c1", "c2", 0, { initialStrength: 0.8 });
+      relationshipManager.recalculateCentrality(0);
+
+      manager.selectCouncil(colonists, relationshipManager, 0);
+
+      const highInfluenceCost = manager.getLobbyCost("c1", NPCFaction.EarthLoyalists, 0.15);
+      const lowInfluenceCost = manager.getLobbyCost("c2", NPCFaction.EarthLoyalists, 0.15);
+
+      // Higher influence colonist should cost more to lobby
+      expect(highInfluenceCost).toBeGreaterThan(lowInfluenceCost);
+      // Both should be finite (valid council members)
+      expect(highInfluenceCost).toBeLessThan(Infinity);
+      expect(lowInfluenceCost).toBeLessThan(Infinity);
+    });
+
+    test("returns Infinity cost for non-council member", () => {
+      const colonists = [
+        createTestColonist("c1", "Council Member", {
+          earthLoyalist: 0.9,
+          marsIndependence: 0.1,
+          corporateInterests: 0.1,
+          conviction: 0.9,
+        }),
+      ];
+
+      relationshipManager.recalculateCentrality(0);
+      manager.selectCouncil(colonists, relationshipManager, 0);
+
+      const cost = manager.getLobbyCost("nonexistent", NPCFaction.EarthLoyalists, 0.15);
+      expect(cost).toBe(Infinity);
+    });
+
+    test("boosts colonist faction affinity when lobbied", () => {
+      const colonists = [
+        createTestColonist("c1", "Target", {
+          earthLoyalist: 0.5,
+          marsIndependence: 0.3,
+          corporateInterests: 0.2,
+          conviction: 0.5,
+        }),
+      ];
+
+      relationshipManager.recalculateCentrality(0);
+      manager.selectCouncil(colonists, relationshipManager, 0);
+
+      const result = manager.lobbyColonist("c1", NPCFaction.MarsIndependence, 0.15, colonists);
+
+      expect(result.success).toBe(true);
+      expect(result.newAffinity).toBeCloseTo(0.45, 2);
+      expect(colonists[0]!.ideology!.marsIndependence).toBeCloseTo(0.45, 2);
+    });
+
+    test("fails to lobby non-council member", () => {
+      const colonists = [
+        createTestColonist("c1", "Council Member", {
+          earthLoyalist: 0.9,
+          marsIndependence: 0.1,
+          corporateInterests: 0.1,
+          conviction: 0.9,
+        }),
+        createTestColonist("c2", "Not on Council", {
+          earthLoyalist: 0.3,
+          marsIndependence: 0.3,
+          corporateInterests: 0.3,
+          conviction: 0.1,
+        }),
+      ];
+
+      relationshipManager.recalculateCentrality(0);
+      // Only c1 will be on council due to higher conviction
+      manager.selectCouncil([colonists[0]!], relationshipManager, 0);
+
+      const result = manager.lobbyColonist("c2", NPCFaction.EarthLoyalists, 0.15, colonists);
+
+      expect(result.success).toBe(false);
+      expect(result.reason).toBe("Target is not a council member");
+    });
+
+    test("clamps affinity to max 1.0", () => {
+      const colonists = [
+        createTestColonist("c1", "High Affinity", {
+          earthLoyalist: 0.95,
+          marsIndependence: 0.1,
+          corporateInterests: 0.1,
+          conviction: 0.8,
+        }),
+      ];
+
+      relationshipManager.recalculateCentrality(0);
+      manager.selectCouncil(colonists, relationshipManager, 0);
+
+      const result = manager.lobbyColonist("c1", NPCFaction.EarthLoyalists, 0.15, colonists);
+
+      expect(result.success).toBe(true);
+      expect(result.newAffinity).toBe(1.0);
+      expect(colonists[0]!.ideology!.earthLoyalist).toBe(1.0);
+    });
+
+    test("canLobby returns true for council member", () => {
+      const colonists = [
+        createTestColonist("c1", "Council Member", {
+          earthLoyalist: 0.9,
+          marsIndependence: 0.1,
+          corporateInterests: 0.1,
+          conviction: 0.9,
+        }),
+      ];
+
+      relationshipManager.recalculateCentrality(0);
+      manager.selectCouncil(colonists, relationshipManager, 0);
+
+      const result = manager.canLobby("c1");
+      expect(result.canLobby).toBe(true);
+      expect(result.reason).toBeUndefined();
+    });
+
+    test("canLobby returns false for non-council member", () => {
+      const colonists = [
+        createTestColonist("c1", "Council Member", {
+          earthLoyalist: 0.9,
+          marsIndependence: 0.1,
+          corporateInterests: 0.1,
+          conviction: 0.9,
+        }),
+      ];
+
+      relationshipManager.recalculateCentrality(0);
+      manager.selectCouncil(colonists, relationshipManager, 0);
+
+      const result = manager.canLobby("nonexistent");
+      expect(result.canLobby).toBe(false);
+      expect(result.reason).toBe("Target is not a council member");
     });
   });
 });

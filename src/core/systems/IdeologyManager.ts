@@ -21,6 +21,15 @@ export interface CouncilMember {
 }
 
 /**
+ * Result of a lobby attempt.
+ */
+export interface LobbyResult {
+  success: boolean;
+  reason?: string;
+  newAffinity?: number;
+}
+
+/**
  * Colony-wide faction support levels.
  */
 export interface FactionSupport {
@@ -300,7 +309,8 @@ export class IdeologyManager {
       avgInfluence.corporateInterests /= totalWeight;
 
       // Resistance based on own conviction
-      const resistance = colonist.ideology!.conviction * IdeologyBalance.CONVICTION_RESISTANCE_FACTOR;
+      const resistance =
+        colonist.ideology!.conviction * IdeologyBalance.CONVICTION_RESISTANCE_FACTOR;
       const effectiveRate = IdeologyBalance.IDEOLOGY_SPREAD_RATE * (1 - resistance);
 
       // Drift toward neighbor average
@@ -312,10 +322,7 @@ export class IdeologyManager {
         effectiveRate * (avgInfluence.corporateInterests - colonist.ideology!.corporateInterests);
 
       // Clamp values to [0, 1]
-      colonist.ideology!.earthLoyalist = Math.max(
-        0,
-        Math.min(1, colonist.ideology!.earthLoyalist),
-      );
+      colonist.ideology!.earthLoyalist = Math.max(0, Math.min(1, colonist.ideology!.earthLoyalist));
       colonist.ideology!.marsIndependence = Math.max(
         0,
         Math.min(1, colonist.ideology!.marsIndependence),
@@ -367,6 +374,65 @@ export class IdeologyManager {
     }
   }
 
+  // ============ Lobbying ============
+
+  /**
+   * Calculate the cost in materials to lobby a council member.
+   * Cost scales with the colonist's influence (centrality × conviction).
+   */
+  getLobbyCost(colonistId: string, _faction: NPCFaction, affinityBoost: number): number {
+    const member = this.council.find((m) => m.colonistId === colonistId);
+    if (!member) return Infinity;
+
+    // Base cost + influence scaling
+    const influenceCost = member.influence * IdeologyBalance.LOBBY_INFLUENCE_COST_MULTIPLIER;
+    const boostMultiplier = affinityBoost / IdeologyBalance.LOBBY_AFFINITY_BOOST;
+
+    return Math.ceil(IdeologyBalance.LOBBY_BASE_COST + influenceCost * boostMultiplier);
+  }
+
+  /**
+   * Lobby a council member to boost their affinity for a faction.
+   * The boosted affinity will naturally spread through the social network.
+   */
+  lobbyColonist(
+    colonistId: string,
+    faction: NPCFaction,
+    affinityBoost: number,
+    colonists: Colonist[],
+  ): LobbyResult {
+    // Verify target is a council member
+    const member = this.council.find((m) => m.colonistId === colonistId);
+    if (!member) {
+      return { success: false, reason: "Target is not a council member" };
+    }
+
+    // Find the colonist
+    const colonist = colonists.find((c) => c.id === colonistId);
+    if (!colonist || !colonist.ideology) {
+      return { success: false, reason: "Colonist not found or has no ideology" };
+    }
+
+    // Apply the affinity boost
+    const factionKey = IdeologyManager.factionToKey(faction);
+    const currentAffinity = colonist.ideology[factionKey];
+    const newAffinity = Math.min(1.0, currentAffinity + affinityBoost);
+    colonist.ideology[factionKey] = newAffinity;
+
+    return { success: true, newAffinity };
+  }
+
+  /**
+   * Check if a colonist can be lobbied (must be council member).
+   */
+  canLobby(colonistId: string): { canLobby: boolean; reason?: string } {
+    const member = this.council.find((m) => m.colonistId === colonistId);
+    if (!member) {
+      return { canLobby: false, reason: "Target is not a council member" };
+    }
+    return { canLobby: true };
+  }
+
   // ============ Serialization ============
 
   toJSON(): {
@@ -384,7 +450,8 @@ export class IdeologyManager {
   static fromJSON(data: ReturnType<IdeologyManager["toJSON"]>): IdeologyManager {
     const manager = new IdeologyManager();
     if (data.council) manager.council = data.council;
-    if (data.lastCouncilUpdateSol !== undefined) manager.lastCouncilUpdateSol = data.lastCouncilUpdateSol;
+    if (data.lastCouncilUpdateSol !== undefined)
+      manager.lastCouncilUpdateSol = data.lastCouncilUpdateSol;
     if (data.lastSpreadSol !== undefined) manager.lastSpreadSol = data.lastSpreadSol;
     return manager;
   }
