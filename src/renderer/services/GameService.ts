@@ -18,7 +18,7 @@ import {
   type FactionSupportSnapshot,
   GameAPI,
   type GameEvent,
-  NPCId,
+  type NPCFaction,
   type PolicyType,
   type PolicyValue,
   ProjectId,
@@ -449,16 +449,18 @@ class GameService {
     return this.facade.npc.proposeProject(projectId as ProjectId).success;
   }
 
-  lobbyNPC(npcId: string, supportBoost: number): boolean {
-    return this.facade.npc.lobbyNPC(npcId as NPCId, supportBoost).success;
+  // Ideology/Lobbying actions
+  lobbyCouncilMember(colonistId: string, faction: NPCFaction, affinityBoost: number): boolean {
+    const result = this.facade.ideology.lobbyCouncilMember(colonistId, faction, affinityBoost);
+    return result.success;
   }
 
-  createCouncil(name: string, memberIds: string[]): boolean {
-    return this.facade.npc.createCouncil(name, memberIds as NPCId[]).success;
+  getCouncilLobbyCost(colonistId: string, faction: NPCFaction, affinityBoost: number): number {
+    return this.facade.ideology.getLobbyCost(colonistId, faction, affinityBoost);
   }
 
-  getLobbyCost(npcId: string, supportBoost: number): number {
-    return this.facade.npc.getLobbyCost(npcId as NPCId, supportBoost);
+  canLobbyCouncilMember(colonistId: string, faction: NPCFaction, affinityBoost: number): boolean {
+    return this.facade.ideology.canLobby(colonistId, faction, affinityBoost).canLobby;
   }
 
   // Deposit methods
