@@ -38,8 +38,8 @@ export const propagateIdeology = definePhase({
 export const processProjectVotes = definePhase({
   id: "ideology:processProjectVotes",
   name: "Process Project Votes",
-  reads: ["ideology", "colony", "workforce", "currentSol"],
-  writes: ["ideology"],
+  reads: ["ideology", "colony", "workforce", "currentSol", "victory"],
+  writes: ["ideology", "victory"],
   execute(ctx) {
     const events: GameEvent[] = [];
     const colonists = ctx.colony.getColonists();
@@ -52,6 +52,13 @@ export const processProjectVotes = definePhase({
       if (!project) continue;
 
       if (result.passed) {
+        // Check for capstone victory
+        const victoryEvent = ctx.victory.checkCapstoneVictory(result.projectId);
+        if (victoryEvent) {
+          events.push(victoryEvent);
+          return events; // Stop processing, game is won
+        }
+
         // Apply morale effects for passed projects
         ctx.ideology.applyProjectMoraleEffects(project.type, colonists, ctx.colonistMorale);
 
