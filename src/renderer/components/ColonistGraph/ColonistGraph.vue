@@ -400,7 +400,7 @@ watch(dimensions, render);
 .colonist-graph {
   position: relative;
   width: 100%;
-  height: 100%;
+  min-height: 500px;
   max-height: 680px;
   background: var(--g-color-bg-base);
   overflow: hidden;
