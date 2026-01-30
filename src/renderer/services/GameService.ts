@@ -32,6 +32,14 @@ import {
 } from "../../facade";
 
 /**
+ * Individual colonist morale data for UI display.
+ */
+interface ColonistMoraleData {
+  morale: number;
+  centrality: number;
+}
+
+/**
  * Reactive UI state interface.
  * This is the shape of state exposed to Vue components.
  */
@@ -48,6 +56,7 @@ interface GameUIState {
   moraleBoost: number;
   totalOxygenContribution: number;
   colonists: Colonist[];
+  colonistMorale: Record<string, ColonistMoraleData>;
   skillDefinitions: SkillDefinition[];
   housingAssignments: Record<string, Colonist[]>;
   unhoused: Colonist[];
@@ -170,6 +179,7 @@ class GameService {
       moraleBoost: 0,
       totalOxygenContribution: 0,
       colonists: [],
+      colonistMorale: {},
       skillDefinitions: [],
       housingAssignments: {},
       unhoused: [],
@@ -232,6 +242,7 @@ class GameService {
     this.state.morale = colony.morale;
     this.state.socialCohesion = colony.socialCohesion;
     this.state.colonists = [...colony.colonists];
+    this.state.colonistMorale = this.facade.colony.getColonistMoraleData();
     this.state.skillDefinitions = [...colony.skillDefinitions];
 
     // Housing data - deep copy the arrays

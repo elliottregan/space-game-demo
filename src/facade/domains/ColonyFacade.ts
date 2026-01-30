@@ -105,6 +105,26 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
     return this.gameState.colony.getColonists().filter((c) => c.trainingTarget !== undefined);
   }
 
+  /**
+   * Get individual morale and centrality data for all colonists.
+   */
+  getColonistMoraleData(): Record<string, { morale: number; centrality: number }> {
+    const colonists = this.gameState.colony.getColonists();
+    const moraleManager = this.gameState.getColonistMoraleManager();
+    const relationshipManager = this.gameState.workforce.getRelationshipManager();
+
+    const result: Record<string, { morale: number; centrality: number }> = {};
+
+    for (const colonist of colonists) {
+      result[colonist.id] = {
+        morale: moraleManager.getMorale(colonist.id),
+        centrality: relationshipManager.getCentrality(colonist.id),
+      };
+    }
+
+    return result;
+  }
+
   // ==========================================================================
   // Commands
   // ==========================================================================
