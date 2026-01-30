@@ -1,7 +1,7 @@
 // src/core/systems/IdeologyManager.ts
 
 import type { Colonist, ColonistIdeology } from "../models/Colonist";
-import { NPCFaction } from "../models/NPCInfluence";
+import { NPCFaction, type ProjectId } from "../models/NPCInfluence";
 import type { RelationshipManager } from "./RelationshipManager";
 import type { ColonistMoraleManager } from "./ColonistMoraleManager";
 import * as IdeologyBalance from "../balance/IdeologyBalance";
@@ -46,6 +46,7 @@ export class IdeologyManager {
   private council: CouncilMember[] = [];
   private lastCouncilUpdateSol: number = -1;
   private lastSpreadSol: number = -1;
+  private completedProjects: Set<ProjectId> = new Set();
 
   // ============ Static Helpers ============
 
@@ -433,17 +434,42 @@ export class IdeologyManager {
     return { canLobby: true };
   }
 
+  // ============ Projects ============
+
+  /**
+   * Check if a project has been completed.
+   */
+  isProjectCompleted(projectId: ProjectId): boolean {
+    return this.completedProjects.has(projectId);
+  }
+
+  /**
+   * Mark a project as completed.
+   */
+  completeProject(projectId: ProjectId): void {
+    this.completedProjects.add(projectId);
+  }
+
+  /**
+   * Get list of completed project IDs.
+   */
+  getCompletedProjects(): readonly ProjectId[] {
+    return [...this.completedProjects];
+  }
+
   // ============ Serialization ============
 
   toJSON(): {
     council: CouncilMember[];
     lastCouncilUpdateSol: number;
     lastSpreadSol: number;
+    completedProjects: ProjectId[];
   } {
     return {
       council: this.council,
       lastCouncilUpdateSol: this.lastCouncilUpdateSol,
       lastSpreadSol: this.lastSpreadSol,
+      completedProjects: [...this.completedProjects],
     };
   }
 
@@ -453,6 +479,9 @@ export class IdeologyManager {
     if (data.lastCouncilUpdateSol !== undefined)
       manager.lastCouncilUpdateSol = data.lastCouncilUpdateSol;
     if (data.lastSpreadSol !== undefined) manager.lastSpreadSol = data.lastSpreadSol;
+    if (data.completedProjects) {
+      manager.completedProjects = new Set(data.completedProjects);
+    }
     return manager;
   }
 }

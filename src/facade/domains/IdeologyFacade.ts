@@ -83,6 +83,18 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
       };
     }
 
+    // Check if already completed
+    if (this.gameState.ideology.isProjectCompleted(projectId)) {
+      const currentSupport = this.getFactionSupportFor(project.type);
+      return {
+        canPropose: false,
+        currentSupport,
+        requiredSupport: project.requiredSupport,
+        reason: "Project already completed",
+        isCompleted: true,
+      };
+    }
+
     const currentSupport = this.getFactionSupportFor(project.type);
     const canAfford = this.gameState.resources.canAfford(project.proposalCost);
 
@@ -109,6 +121,47 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
       currentSupport,
       requiredSupport: project.requiredSupport,
     };
+  }
+
+  /**
+   * Propose and enact a project.
+   * Deducts cost, marks as complete, and applies morale effects.
+   */
+  proposeProject(projectId: ProjectId): Result<{ projectId: ProjectId }> {
+    const eligibility = this.canProposeProject(projectId);
+    if (!eligibility.canPropose) {
+      return {
+        success: false,
+        error: {
+          type: "INVALID_STATE",
+          current: "ineligible",
+          expected: "eligible",
+          reason: eligibility.reason || "Cannot propose project",
+        },
+      };
+    }
+
+    const project = getProject(projectId)!;
+
+    // Deduct cost
+    this.gameState.resources.deduct(project.proposalCost);
+
+    // Mark as completed
+    this.gameState.ideology.completeProject(projectId);
+
+    // Apply morale effects
+    const colonists = this.gameState.colony.getColonists();
+    const moraleManager = this.gameState.workforce.getMoraleManager();
+    this.gameState.ideology.applyProjectMoraleEffects(project.type, colonists, moraleManager);
+
+    return { success: true, data: { projectId } };
+  }
+
+  /**
+   * Get list of completed project IDs.
+   */
+  getCompletedProjects(): readonly ProjectId[] {
+    return this.gameState.ideology.getCompletedProjects();
   }
 
   // ============ Lobbying ============

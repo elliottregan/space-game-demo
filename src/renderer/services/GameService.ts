@@ -17,6 +17,7 @@ import {
   GameAPI,
   type GameEvent,
   type NPCFaction,
+  ProjectId,
   type ProspectingSite,
   type RandomEventDefinition,
   type ResourceDelta,
@@ -407,6 +408,12 @@ class GameService {
 
   canLobbyCouncilMember(colonistId: string, faction: NPCFaction, affinityBoost: number): boolean {
     return this.facade.ideology.canLobby(colonistId, faction, affinityBoost).canLobby;
+  }
+
+  // Project methods
+  proposeProject(projectId: ProjectId): boolean {
+    const result = this.facade.ideology.proposeProject(projectId);
+    return result.success;
   }
 
   // Deposit methods

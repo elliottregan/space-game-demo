@@ -44,6 +44,7 @@ export interface ProjectEligibility {
   currentSupport: number;
   requiredSupport: number;
   reason?: string;
+  isCompleted?: boolean;
 }
 
 /**
