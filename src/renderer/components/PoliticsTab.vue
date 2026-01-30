@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CouncilPanel } from "./CouncilPanel";
 import { PoliticsPanel } from "./PoliticsPanel";
+import { ProjectsPanel } from "./ProjectsPanel";
 </script>
 
 <template>
@@ -11,6 +12,7 @@ import { PoliticsPanel } from "./PoliticsPanel";
       </div>
       <div class="politics-col">
         <CouncilPanel />
+        <ProjectsPanel />
       </div>
     </div>
   </div>
