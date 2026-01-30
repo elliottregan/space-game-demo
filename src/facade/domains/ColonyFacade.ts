@@ -366,6 +366,18 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
   }
 
   /**
+   * Auto-assign all unhoused colonists to available housing.
+   */
+  optimizeHousing(): Result<{ assignmentsChanged: number }> {
+    return this.executeCommand(() => {
+      const unhousedBefore = this.gameState.colony.getUnhousedColonists().length;
+      this.gameState.colony.assignHousing(this.gameState.buildings);
+      const unhousedAfter = this.gameState.colony.getUnhousedColonists().length;
+      return ok({ assignmentsChanged: unhousedBefore - unhousedAfter });
+    });
+  }
+
+  /**
    * Assign a colonist to housing in a building.
    */
   assignToHousing(colonistId: string, buildingId: string): Result<void> {

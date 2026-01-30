@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import type { Building, BuildingDefinition, Colonist, SkillDefinition } from "../../../facade";
 import { gameService } from "../../services/GameService";
-import { GEmptyState, GPanel } from "../../ui";
+import { GButton, GEmptyState, GPanel } from "../../ui";
 import HousingBuildingCard from "./HousingBuildingCard.vue";
 import UnhousedPool from "./UnhousedPool.vue";
 
-defineProps<{
+const props = defineProps<{
   buildings: Building[];
   housingAssignments: Record<string, Colonist[]>;
   buildingDefinitions: BuildingDefinition[];
@@ -16,6 +16,22 @@ defineProps<{
 
 const selectedColonistId = ref<string | null>(null);
 const draggingColonistId = ref<string | null>(null);
+
+const availableBeds = computed(() => {
+  let total = 0;
+  for (const building of props.buildings) {
+    if (building.status !== "active") continue;
+    const def = props.buildingDefinitions.find((d) => d.id === building.definitionId);
+    if (!def?.capacity) continue;
+    const residents = props.housingAssignments[building.id]?.length || 0;
+    total += def.capacity - residents;
+  }
+  return total;
+});
+
+function handleOptimizeHousing() {
+  gameService.optimizeHousing();
+}
 
 function getDefinition(
   building: Building,
@@ -51,6 +67,19 @@ function onUnassignFromHousing(colonistId: string) {
 
 <template>
   <GPanel title="Housing">
+    <div class="housing-controls">
+      <span class="housing-stat">
+        Unhoused: {{ unhoused.length }} | Available beds: {{ availableBeds }}
+      </span>
+      <GButton
+        size="sm"
+        :disabled="unhoused.length === 0 || availableBeds === 0"
+        @click="handleOptimizeHousing"
+      >
+        Optimize Housing
+      </GButton>
+    </div>
+
     <div class="housing-layout">
       <UnhousedPool
         :colonists="unhoused"
@@ -83,6 +112,22 @@ function onUnassignFromHousing(colonistId: string) {
 </template>
 
 <style scoped>
+.housing-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--g-space-md);
+  margin-bottom: var(--g-space-md);
+  padding: var(--g-space-sm);
+  background: rgba(128, 128, 128, 0.1);
+  border-radius: var(--g-radius-sm);
+}
+
+.housing-stat {
+  font-size: 0.85em;
+  color: var(--g-color-muted);
+}
+
 .housing-layout {
   display: flex;
   gap: var(--g-space-lg);
