@@ -93,6 +93,7 @@ interface GameUIState {
     council: CouncilMemberSnapshot[];
     councilFactionCounts: Record<string, number>;
     factionSupport: FactionSupportSnapshot;
+    completedProjects: ProjectId[];
   };
 }
 
@@ -200,6 +201,7 @@ class GameService {
         council: [],
         councilFactionCounts: {},
         factionSupport: { earthLoyalists: 0, marsIndependence: 0, corporateInterests: 0 },
+        completedProjects: [],
       },
     };
   }
@@ -302,6 +304,7 @@ class GameService {
       council: [...ideologyData.council],
       councilFactionCounts: { ...ideologyData.councilFactionCounts },
       factionSupport: { ...ideologyData.factionSupport },
+      completedProjects: [...this.facade.ideology.getCompletedProjects()],
     };
   }
 

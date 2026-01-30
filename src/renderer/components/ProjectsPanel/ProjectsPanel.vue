@@ -5,6 +5,8 @@ import { NPCFaction, ProjectId } from "../../../core/models/NPCInfluence";
 import { gameService } from "../../services/GameService";
 import { GPanel, GBadge, GButton } from "../../ui";
 
+const state = gameService.getState();
+
 // oxlint-disable-next-line no-unused-vars
 function getFactionBadgeVariant(faction: NPCFaction): "info" | "positive" | "warning" | "muted" {
   switch (faction) {
@@ -23,8 +25,13 @@ function formatSupport(support: number): string {
 }
 
 // Projects with eligibility
+// Access reactive state to trigger re-computation when projects change
 // oxlint-disable-next-line no-unused-vars
 const projectsWithEligibility = computed(() => {
+  // Depend on reactive completedProjects to trigger updates
+  const _completed = state.ideology.completedProjects;
+  const _resources = state.resources;
+
   return PROJECTS.map((project) => {
     const eligibility = gameService.api.ideology.canProposeProject(project.id);
     return {
