@@ -62,6 +62,41 @@ function handleLobby(): void {
   gameService.lobbyCouncilMember(selectedMemberId.value, selectedFaction.value, lobbyBoost.value);
 }
 
+// Colonists with ideology data, sorted by highest affinity
+// oxlint-disable-next-line no-unused-vars
+const colonistsWithIdeology = computed(() => {
+  return state.colonists
+    .filter((c) => c.ideology)
+    .map((c) => {
+      const ideology = c.ideology!;
+      const maxAffinity = Math.max(
+        ideology.earthLoyalist,
+        ideology.marsIndependence,
+        ideology.corporateInterests,
+      );
+      let primaryFaction: NPCFaction | null = null;
+      if (maxAffinity >= 0.3) {
+        if (ideology.earthLoyalist === maxAffinity) primaryFaction = NPCFaction.EarthLoyalists;
+        else if (ideology.marsIndependence === maxAffinity)
+          primaryFaction = NPCFaction.MarsIndependence;
+        else primaryFaction = NPCFaction.CorporateInterests;
+      }
+      return {
+        id: c.id,
+        name: c.name,
+        earthLoyalist: ideology.earthLoyalist,
+        marsIndependence: ideology.marsIndependence,
+        corporateInterests: ideology.corporateInterests,
+        conviction: ideology.conviction,
+        primaryFaction,
+      };
+    })
+    .sort((a, b) => {
+      // Sort by conviction (most politically active first)
+      return b.conviction - a.conviction;
+    });
+});
+
 // Map ideology support to display format
 // oxlint-disable-next-line no-unused-vars
 const factionData = computed(() => [
@@ -167,7 +202,9 @@ function getFactionColor(factionId: string): string {
           @click="selectMember(member.colonistId)"
         >
           <span class="member-name">{{ member.name }}</span>
-          <span class="member-influence">{{ (member.influence * 100).toFixed(0) }}</span>
+          <span class="member-influence" title="Influence = centrality × conviction"
+            >influence: {{ (member.influence * 100).toFixed(0) }}</span
+          >
         </div>
       </div>
 
@@ -197,6 +234,44 @@ function getFactionColor(factionId: string): string {
         <p class="lobby-hint">
           Lobbying increases a council member's affinity for a faction, influencing their votes.
         </p>
+      </div>
+    </div>
+
+    <!-- All Colonists Ideology -->
+    <div v-if="colonistsWithIdeology.length > 0" class="colonists-section">
+      <h3 class="section-title">Colonist Ideologies</h3>
+      <div class="colonists-table">
+        <div class="table-header">
+          <span class="col-name">Name</span>
+          <span class="col-faction" :style="{ color: getFactionColor(NPCFaction.EarthLoyalists) }"
+            >EL</span
+          >
+          <span class="col-faction" :style="{ color: getFactionColor(NPCFaction.MarsIndependence) }"
+            >MI</span
+          >
+          <span
+            class="col-faction"
+            :style="{ color: getFactionColor(NPCFaction.CorporateInterests) }"
+            >CI</span
+          >
+          <span class="col-conviction">Conv</span>
+        </div>
+        <div
+          v-for="colonist in colonistsWithIdeology"
+          :key="colonist.id"
+          class="colonist-row"
+          :style="{
+            borderLeftColor: colonist.primaryFaction
+              ? getFactionColor(colonist.primaryFaction)
+              : 'var(--color-muted)',
+          }"
+        >
+          <span class="col-name">{{ colonist.name }}</span>
+          <span class="col-faction">{{ (colonist.earthLoyalist * 100).toFixed(0) }}</span>
+          <span class="col-faction">{{ (colonist.marsIndependence * 100).toFixed(0) }}</span>
+          <span class="col-faction">{{ (colonist.corporateInterests * 100).toFixed(0) }}</span>
+          <span class="col-conviction">{{ (colonist.conviction * 100).toFixed(0) }}</span>
+        </div>
       </div>
     </div>
 
@@ -376,6 +451,68 @@ function getFactionColor(factionId: string): string {
   margin: var(--g-space-sm) 0 0;
   font-family: var(--g-font-mono);
   font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+}
+
+/* Colonists Ideology Section */
+.colonists-section {
+  margin-top: var(--g-space-lg);
+  padding-top: var(--g-space-md);
+  border-top: var(--g-border-width) solid var(--g-color-border-strong);
+}
+
+.colonists-table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.table-header {
+  display: flex;
+  padding: var(--g-space-xs) var(--g-space-sm);
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--g-color-border);
+  position: sticky;
+  top: 0;
+  background: var(--g-color-bg-base);
+}
+
+.colonist-row {
+  display: flex;
+  padding: var(--g-space-xs) var(--g-space-sm);
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  background: var(--g-color-bg-elevated);
+  border-left: 3px solid;
+}
+
+.colonist-row:hover {
+  background: var(--g-color-bg-surface);
+}
+
+.col-name {
+  flex: 1;
+  min-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-faction {
+  width: 32px;
+  text-align: right;
+  color: var(--g-color-text-muted);
+}
+
+.col-conviction {
+  width: 36px;
+  text-align: right;
   color: var(--g-color-text-muted);
 }
 </style>
