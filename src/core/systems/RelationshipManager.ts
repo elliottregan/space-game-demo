@@ -14,6 +14,7 @@ import {
   calculateTeamCohesionMultiplier,
 } from "./workforce/socialGraph";
 import { detectCommunities } from "./workforce/communityDetection";
+import { computeEigenvectorCentrality } from "./workforce/centrality";
 import {
   INITIAL_COWORKER_RELATIONSHIP,
   MAX_COWORKER_RELATIONSHIP,
@@ -38,6 +39,8 @@ export interface CreateRelationshipOptions {
 export class RelationshipManager {
   private relationships: Map<string, CoworkerRelationship> = new Map();
   private adjacencyList: Map<string, Set<string>> = new Map();
+  private centralityCache: Map<string, number> = new Map();
+  private lastCentralitySol: number = -1;
 
   /**
    * Create a new relationship between two colonists.
@@ -363,6 +366,49 @@ export class RelationshipManager {
     };
   }
 
+  // ============ Centrality ============
+
+  /**
+   * Recalculate eigenvector centrality for all colonists.
+   */
+  recalculateCentrality(currentSol: number): void {
+    this.centralityCache = computeEigenvectorCentrality(this.adjacencyList, (id1, id2) =>
+      this.getRelationshipStrength(id1, id2),
+    );
+    this.lastCentralitySol = currentSol;
+  }
+
+  /**
+   * Recalculate centrality if enough time has passed since last calculation.
+   */
+  recalculateCentralityIfStale(currentSol: number, interval: number): void {
+    if (this.lastCentralitySol < 0 || currentSol - this.lastCentralitySol >= interval) {
+      this.recalculateCentrality(currentSol);
+    }
+  }
+
+  /**
+   * Get cached centrality for a colonist.
+   * Returns 0 if colonist not in cache.
+   */
+  getCentrality(colonistId: string): number {
+    return this.centralityCache.get(colonistId) ?? 0;
+  }
+
+  /**
+   * Get the sol when centrality was last calculated.
+   */
+  getLastCentralitySol(): number {
+    return this.lastCentralitySol;
+  }
+
+  /**
+   * Get all centrality scores.
+   */
+  getAllCentrality(): ReadonlyMap<string, number> {
+    return this.centralityCache;
+  }
+
   // ============ Private Helpers ============
 
   private addToAdjacency(colonistId: string, neighborId: string): void {
@@ -379,12 +425,16 @@ export class RelationshipManager {
   toJSON(): {
     relationships: Record<string, CoworkerRelationship>;
     adjacencyList: Record<string, string[]>;
+    centralityCache: Record<string, number>;
+    lastCentralitySol: number;
   } {
     return {
       relationships: Object.fromEntries(this.relationships),
       adjacencyList: Object.fromEntries(
         [...this.adjacencyList.entries()].map(([k, v]) => [k, [...v]]),
       ),
+      centralityCache: Object.fromEntries(this.centralityCache),
+      lastCentralitySol: this.lastCentralitySol,
     };
   }
 
@@ -401,6 +451,14 @@ export class RelationshipManager {
       manager.adjacencyList = new Map(
         Object.entries(data.adjacencyList).map(([k, v]) => [k, new Set(v as string[])]),
       );
+    }
+
+    if (data.centralityCache) {
+      manager.centralityCache = new Map(Object.entries(data.centralityCache));
+    }
+
+    if (data.lastCentralitySol !== undefined) {
+      manager.lastCentralitySol = data.lastCentralitySol;
     }
 
     return manager;
