@@ -65,14 +65,14 @@ export const calculateAirQuality = definePhase({
     ctx.buildings.setAirQualityEfficiency(efficiency);
 
     // Generate warning events
-    if (airQuality < 0.5) {
+    if (airQuality < AIR_QUALITY_CRITICAL) {
       events.push({
         type: "AIR_QUALITY_CRITICAL",
         airQuality,
         severity: "critical",
         message: `Air quality critical: ${Math.round(airQuality * 100)}%`,
       });
-    } else if (airQuality < 0.8) {
+    } else if (airQuality < AIR_QUALITY_COMFORTABLE) {
       events.push({
         type: "AIR_QUALITY_LOW",
         airQuality,
