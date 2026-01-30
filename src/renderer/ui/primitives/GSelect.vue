@@ -5,7 +5,7 @@ export interface SelectOption<T extends string | number = string | number> {
   disabled?: boolean;
 }
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     modelValue?: string | number;
     options: SelectOption[];
@@ -22,9 +22,20 @@ withDefaults(
   },
 );
 
-defineEmits<{
+const emit = defineEmits<{
   "update:modelValue": [value: string | number];
 }>();
+
+function handleChange(event: Event): void {
+  const stringValue = (event.target as HTMLSelectElement).value;
+  // Find the matching option to get the original typed value
+  const matchingOption = props.options.find((opt) => String(opt.value) === stringValue);
+  if (matchingOption) {
+    emit("update:modelValue", matchingOption.value);
+  } else {
+    emit("update:modelValue", stringValue);
+  }
+}
 </script>
 
 <template>
@@ -37,7 +48,7 @@ defineEmits<{
       :class="[`g-select--${size}`, `g-select--${variant}`]"
       :value="modelValue"
       :disabled="disabled"
-      @change="$emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
+      @change="handleChange"
     >
       <option v-if="placeholder" value="" disabled>{{ placeholder }}</option>
       <option
