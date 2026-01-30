@@ -4,7 +4,7 @@ import type { Colonist } from "../../../core/models/Colonist";
 import type { Guild } from "../../../core/models/Guild";
 import { WEAK_TIE_THRESHOLD } from "../../../core/balance/WorkforceBalance";
 import type { CoworkerRelationship } from "../../../core/systems/WorkforceManager";
-import { computeColonistForceLayout } from "../../utils/colonistForceLayout";
+import { ColonistSimulationManager } from "../../utils/ColonistSimulationManager";
 import {
   type ColonistGraphData,
   type ColonistGraphLink,
@@ -47,6 +47,7 @@ function updateDimensions() {
       width: Math.max(200, rect.width),
       height: Math.max(200, rect.height),
     };
+    simulationManager?.resize(dimensions.value.width, dimensions.value.height);
   }
 }
 
@@ -59,15 +60,18 @@ const relationshipStrengths = computed(() => {
   return map;
 });
 
-// Compute force layout positions
-const layoutPositions = computed(() => {
-  return computeColonistForceLayout({
-    colonists: props.colonists,
-    relationships: relationshipStrengths.value,
-    width: dimensions.value.width,
-    height: dimensions.value.height,
-  });
-});
+// Simulation manager
+let simulationManager: ColonistSimulationManager | null = null;
+
+// Reactive positions from simulation
+const layoutPositions = ref<{ id: string; x: number; y: number }[]>([]);
+
+function updateSimulation() {
+  if (!simulationManager) return;
+  simulationManager.update(props.colonists, relationshipStrengths.value);
+  layoutPositions.value = simulationManager.getPositions();
+  simulationManager.startAnimation();
+}
 
 // Build coworker pairs from buildings
 const coworkerPairs = computed(() => {
@@ -275,15 +279,39 @@ function render() {
 
 // ResizeObserver to track container size changes
 let resizeObserver: ResizeObserver | null = null;
+let resizeFrameId: number | null = null;
 
 onMounted(() => {
   updateDimensions();
+
+  // Create simulation manager
+  simulationManager = new ColonistSimulationManager(
+    dimensions.value.width,
+    dimensions.value.height,
+  );
+
+  // Set up tick callback for animation
+  simulationManager.setOnTick(() => {
+    if (simulationManager) {
+      layoutPositions.value = simulationManager.getPositions();
+    }
+  });
+
+  // Initial update
+  updateSimulation();
   render();
 
   if (containerRef.value) {
     resizeObserver = new ResizeObserver(() => {
-      updateDimensions();
-      render();
+      // Throttle resize handling with requestAnimationFrame
+      if (resizeFrameId !== null) {
+        cancelAnimationFrame(resizeFrameId);
+      }
+      resizeFrameId = requestAnimationFrame(() => {
+        updateDimensions();
+        render();
+        resizeFrameId = null;
+      });
     });
     resizeObserver.observe(containerRef.value);
   }
@@ -291,8 +319,14 @@ onMounted(() => {
 
 onUnmounted(() => {
   resizeObserver?.disconnect();
+  if (resizeFrameId !== null) {
+    cancelAnimationFrame(resizeFrameId);
+  }
+  simulationManager?.destroy();
+  simulationManager = null;
 });
 
+watch([() => props.colonists, relationshipStrengths], updateSimulation, { deep: true });
 watch([graphData, () => props.selectedColonistId], render);
 watch(dimensions, render);
 </script>
@@ -366,8 +400,8 @@ watch(dimensions, render);
 .colonist-graph {
   position: relative;
   width: 100%;
-  height: 100%;
-  min-height: 250px;
+  min-height: 500px;
+  max-height: 680px;
   background: var(--g-color-bg-base);
   overflow: hidden;
 }
