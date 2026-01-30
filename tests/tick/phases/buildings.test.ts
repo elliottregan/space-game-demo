@@ -4,7 +4,6 @@ import {
   processConstruction,
   processRepairs,
   processRecycling,
-  processMaintenanceDecay,
 } from "../../../src/core/tick/phases/buildings";
 import { createTickContext } from "../../../src/core/tick/TickContext";
 import { GameState } from "../../../src/core/GameState";
@@ -84,19 +83,6 @@ describe("buildings phases", () => {
     test("returns empty events array (stub)", () => {
       const ctx = createTestContext();
       const events = processRecycling.execute(ctx);
-      expect(events).toEqual([]);
-    });
-  });
-
-  describe("processMaintenanceDecay (stub)", () => {
-    test("has correct phase metadata", () => {
-      expect(processMaintenanceDecay.id).toBe("buildings:processMaintenanceDecay");
-      expect(processMaintenanceDecay.name).toBe("Process Maintenance Decay");
-    });
-
-    test("returns empty events array (stub)", () => {
-      const ctx = createTestContext();
-      const events = processMaintenanceDecay.execute(ctx);
       expect(events).toEqual([]);
     });
   });

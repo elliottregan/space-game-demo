@@ -11,7 +11,6 @@ import {
   processConstruction,
   processRepairs,
   processRecycling,
-  processMaintenanceDecay,
 } from "./buildings";
 // Workforce phases
 import { processWorkforceTick } from "./workforce";
@@ -44,7 +43,6 @@ export {
   processConstruction,
   processRepairs,
   processRecycling,
-  processMaintenanceDecay,
 } from "./buildings";
 export { processWorkforceTick } from "./workforce";
 export { visitSocialBuildings, propagateColonistMorale } from "./colonistMorale";
@@ -66,7 +64,7 @@ export { checkVictoryConditions } from "./victory";
  * Phase execution order:
  * 1. Pre-tick: Labor pool bonus
  * 2. Resources: Apply flows, check depletion
- * 3. Buildings: Construction, repairs, recycling, maintenance
+ * 3. Buildings: Construction, repairs, recycling
  * 4. Workforce: Bonding, training, experience
  * 5. Colony: Social cohesion, tick, auto-assign, housing
  * 6. Technology: Research progress

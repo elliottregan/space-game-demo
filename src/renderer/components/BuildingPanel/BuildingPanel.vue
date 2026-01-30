@@ -6,7 +6,6 @@ import { gameService } from "../../services/GameService";
 import { GCardGrid, GPanel } from "../../ui";
 import { calculateHighlightInfo } from "../../utils/formatters";
 import BuildingCard from "./BuildingCard.vue";
-import BuildingMaintenance from "./BuildingMaintenance.vue";
 import CategoryTabs from "./CategoryTabs.vue";
 import ConstructionQueue from "./ConstructionQueue.vue";
 
@@ -118,24 +117,6 @@ function getBuildingName(definitionId: string): string {
 function getConstructionTime(definitionId: string): number {
   return api.buildings.getDefinition(definitionId)?.constructionTime || 0;
 }
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function getMaintenanceCost(buildingId: string) {
-  return api.buildings.getMaintenanceCost(buildingId);
-}
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function canPerformMaintenance(buildingId: string): boolean {
-  return api.buildings.canPerformMaintenance(buildingId).allowed;
-}
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function performMaintenance(buildingId: string): void {
-  const result = api.buildings.performMaintenance(buildingId);
-  if (!result.success) {
-    console.warn(`Maintenance failed: ${result.error.type}`, result.error);
-  }
-}
 </script>
 
 <template>
@@ -167,14 +148,6 @@ function performMaintenance(buildingId: string): void {
       :pending-buildings="pendingBuildings"
       :get-building-name="getBuildingName"
       :get-construction-time="getConstructionTime"
-    />
-
-    <BuildingMaintenance
-      :buildings="activeBuildings"
-      :get-definition="(defId) => api.buildings.getDefinition(defId)"
-      :get-maintenance-cost="getMaintenanceCost"
-      :can-perform-maintenance="canPerformMaintenance"
-      @maintain="performMaintenance"
     />
   </GPanel>
 </template>

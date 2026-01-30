@@ -1,4 +1,3 @@
-import { MAINTENANCE_COST_MULTIPLIER } from "../balance/BuildingBalance";
 import {
   RECYCLING_RECOVERY_RATES,
   RECYCLING_TIME_MULTIPLIER,
@@ -37,13 +36,6 @@ export function scaleCost(
  */
 export function calculateRepairCost(def: BuildingDefinition): ResourceDelta {
   return scaleCost(def.cost, REPAIR_COST_MULTIPLIER);
-}
-
-/**
- * Calculate maintenance cost for a building (fraction of original cost).
- */
-export function calculateMaintenanceCost(def: BuildingDefinition): ResourceDelta {
-  return scaleCost(def.cost, MAINTENANCE_COST_MULTIPLIER);
 }
 
 /**

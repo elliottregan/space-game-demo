@@ -188,9 +188,6 @@ export class GameState {
         mode: "normal",
         broken: false,
         repairProgress: 0,
-        condition: 100,
-        age: 0,
-        lastMaintenance: 0,
       });
 
       // Register production/consumption

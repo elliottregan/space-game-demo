@@ -201,43 +201,6 @@ export class BuildingsFacade
     return this.gameState.buildings.getRepurposeCost(targetDefId);
   }
 
-  /**
-   * Get the maintenance cost for a building.
-   */
-  getMaintenanceCost(buildingId: string): ResourceDelta | undefined {
-    return this.gameState.buildings.getMaintenanceCost(buildingId);
-  }
-
-  /**
-   * Check if maintenance can be performed on a building.
-   */
-  canPerformMaintenance(buildingId: string): CanDoResult {
-    const building = this.gameState.buildings.getBuilding(buildingId);
-    if (!building) {
-      return { allowed: false, reason: "Building not found" };
-    }
-
-    if (building.status !== "active") {
-      return { allowed: false, reason: `Building must be active (current: ${building.status})` };
-    }
-
-    if (building.broken) {
-      return { allowed: false, reason: "Building is broken - repair it first" };
-    }
-
-    const cost = this.gameState.buildings.getMaintenanceCost(buildingId);
-    if (!cost) {
-      return { allowed: false, reason: "Cannot calculate maintenance cost" };
-    }
-
-    const affordability = this.checkAffordability(cost);
-    if (!affordability.allowed) {
-      return affordability;
-    }
-
-    return { allowed: true };
-  }
-
   // ==========================================================================
   // Commands
   // ==========================================================================
@@ -399,38 +362,6 @@ export class BuildingsFacade
           type: "INVALID_TARGET",
           target: buildingId,
           reason: "Repurpose operation failed",
-        });
-      }
-
-      return ok(undefined);
-    });
-  }
-
-  /**
-   * Perform maintenance on a building to restore condition.
-   */
-  performMaintenance(buildingId: string): Result<void> {
-    return this.executeCommand(() => {
-      const check = this.canPerformMaintenance(buildingId);
-      if (!check.allowed) {
-        return err({
-          type: "INVALID_STATE",
-          current: "degraded",
-          expected: "maintained",
-          reason: check.reason ?? "Cannot perform maintenance",
-        });
-      }
-
-      const success = this.gameState.buildings.performMaintenance(
-        buildingId,
-        this.gameState.resources,
-      );
-
-      if (!success) {
-        return err({
-          type: "INVALID_TARGET",
-          target: buildingId,
-          reason: "Maintenance operation failed",
         });
       }
 

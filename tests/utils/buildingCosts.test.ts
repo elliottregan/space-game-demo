@@ -2,7 +2,6 @@ import { describe, it, expect } from "bun:test";
 import {
   scaleCost,
   calculateRepairCost,
-  calculateMaintenanceCost,
   calculateRepurposeCost,
   calculateRepurposeTime,
   getRecyclingRate,
@@ -18,12 +17,9 @@ import {
   REPURPOSE_TIME_MULTIPLIER,
   RUSH_RECYCLING_PENALTY,
 } from "../../src/core/balance/OperationsBalance";
-import { MAINTENANCE_COST_MULTIPLIER } from "../../src/core/balance/BuildingBalance";
 import { BuildingId, type Building, type BuildingDefinition } from "../../src/core/models/Building";
 
-function createBuildingDefinition(
-  overrides: Partial<BuildingDefinition> = {},
-): BuildingDefinition {
+function createBuildingDefinition(overrides: Partial<BuildingDefinition> = {}): BuildingDefinition {
   return {
     id: BuildingId.HABITAT,
     name: "Test Building",
@@ -44,9 +40,6 @@ function createBuilding(overrides: Partial<Building> = {}): Building {
     mode: "normal",
     broken: false,
     repairProgress: 0,
-    condition: 100,
-    age: 0,
-    lastMaintenance: 0,
     ...overrides,
   };
 }
@@ -109,14 +102,6 @@ describe("calculateRepairCost", () => {
     const result = calculateRepairCost(def);
     expect(result.materials).toBe(Math.ceil(100 * REPAIR_COST_MULTIPLIER));
     expect(result.power).toBe(Math.ceil(50 * REPAIR_COST_MULTIPLIER));
-  });
-});
-
-describe("calculateMaintenanceCost", () => {
-  it("calculates maintenance cost as fraction of building cost", () => {
-    const def = createBuildingDefinition({ cost: { materials: 100 } });
-    const result = calculateMaintenanceCost(def);
-    expect(result.materials).toBe(Math.ceil(100 * MAINTENANCE_COST_MULTIPLIER));
   });
 });
 

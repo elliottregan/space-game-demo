@@ -67,12 +67,6 @@ export interface Building {
   depositId?: string; // linked deposit for mining buildings
   recyclingProgress?: number;
   repurposeFromDefId?: BuildingId; // Set when repurposing, cleared when complete
-  /** Building condition 0-100%, affects efficiency when low */
-  condition: number;
-  /** Sols since construction */
-  age: number;
-  /** Sol when last maintenance was performed */
-  lastMaintenance: number;
 }
 
 /**

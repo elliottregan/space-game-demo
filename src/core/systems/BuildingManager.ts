@@ -1,10 +1,3 @@
-import {
-  CONDITION_DECAY_AMOUNT,
-  CONDITION_DECAY_INTERVAL,
-  CONDITION_EFFICIENCY_PENALTY,
-  CONDITION_EFFICIENCY_THRESHOLD,
-  MAINTENANCE_START_SOL,
-} from "../balance/BuildingBalance";
 import { BUILDING_MODES, REPAIR_DURATION_SOLS } from "../balance/OperationsBalance";
 import { getSkillById } from "../data/skills";
 import { type Building, type BuildingDefinition, BuildingId } from "../models/Building";
@@ -14,7 +7,6 @@ import type { GameEvent } from "../models/GameEvent";
 import type { ResourceDelta } from "../models/Resources";
 import {
   applyRushRecyclingPenalty,
-  calculateMaintenanceCost,
   calculateRecycleTime,
   calculateRecycleValue,
   calculateRepairCost,
@@ -105,7 +97,6 @@ export class BuildingManager {
       this.processConstruction(building, def, resources, events);
       this.processRepairs(building, def, resources, events);
       this.processRecycling(building, def, resources, events, buildingsToDelete);
-      this.processMaintenanceDecay(building, def, resources, events);
     }
 
     // Delete buildings that were recycled (outside of iteration loop)
@@ -337,44 +328,6 @@ export class BuildingManager {
     }
   }
 
-  private processMaintenanceDecay(
-    building: Building,
-    def: BuildingDefinition,
-    resources: ResourceManager,
-    events: GameEvent[],
-  ): void {
-    if (building.status !== "active" || building.broken) return;
-
-    building.age += 1;
-
-    // Condition decay starts after MAINTENANCE_START_SOL
-    if (this.currentSol < MAINTENANCE_START_SOL) return;
-
-    // Decay condition every CONDITION_DECAY_INTERVAL sols
-    if (building.age % CONDITION_DECAY_INTERVAL !== 0 || building.condition <= 0) return;
-
-    const oldCondition = building.condition;
-    building.condition = Math.max(0, building.condition - CONDITION_DECAY_AMOUNT);
-
-    // Check if crossing efficiency threshold - need to update production/consumption
-    if (
-      oldCondition >= CONDITION_EFFICIENCY_THRESHOLD &&
-      building.condition < CONDITION_EFFICIENCY_THRESHOLD
-    ) {
-      // Remove old production/consumption and re-add with penalty
-      this.applyBuildingResourceFlow(building.id, resources, false, oldCondition);
-      this.applyBuildingResourceFlow(building.id, resources, true);
-
-      events.push({
-        type: "BUILDING_DEGRADED",
-        buildingId: building.id,
-        buildingName: def.name,
-        severity: "warning",
-        message: `${def.name} condition critical - efficiency reduced!`,
-      });
-    }
-  }
-
   canBuild(defId: BuildingId, resources: ResourceManager, technology: TechnologyTree): boolean {
     const def = this.definitions.get(defId);
     if (!def) return false;
@@ -406,9 +359,6 @@ export class BuildingManager {
       mode: "normal",
       broken: false,
       repairProgress: 0,
-      condition: 100,
-      age: 0,
-      lastMaintenance: this.currentSol,
     };
 
     this.buildings.set(building.id, building);
@@ -486,47 +436,6 @@ export class BuildingManager {
   isRepairing(buildingId: string): boolean {
     const building = this.buildings.get(buildingId);
     return building?.broken === true && building.repairProgress > 0;
-  }
-
-  getMaintenanceCost(buildingId: string): ResourceDelta | undefined {
-    const result = this.getBuildingWithDef(buildingId);
-    if (!result || result.building.status !== "active" || result.building.broken) return undefined;
-    return calculateMaintenanceCost(result.def);
-  }
-
-  canPerformMaintenance(buildingId: string, resources: ResourceManager): boolean {
-    const cost = this.getMaintenanceCost(buildingId);
-    if (!cost) return false;
-    return resources.canAfford(cost);
-  }
-
-  performMaintenance(buildingId: string, resources: ResourceManager): boolean {
-    const building = this.buildings.get(buildingId);
-    if (!building) return false;
-    if (building.status !== "active" || building.broken) return false;
-
-    const cost = this.getMaintenanceCost(buildingId);
-    if (!cost || !resources.canAfford(cost)) return false;
-
-    // Check if condition was below threshold (production/consumption needs update)
-    const wasBelow = building.condition < CONDITION_EFFICIENCY_THRESHOLD;
-
-    resources.deduct(cost);
-
-    // If we were below threshold, remove old production/consumption first
-    if (wasBelow) {
-      this.applyBuildingResourceFlow(buildingId, resources, false);
-    }
-
-    building.condition = 100;
-    building.lastMaintenance = this.currentSol;
-
-    // If we were below threshold, add new production/consumption with full efficiency
-    if (wasBelow) {
-      this.applyBuildingResourceFlow(buildingId, resources, true);
-    }
-
-    return true;
   }
 
   getRecycleValue(buildingId: string): ResourceDelta | undefined {
@@ -657,22 +566,15 @@ export class BuildingManager {
     return this.buildings.get(buildingId)?.mode;
   }
 
-  private getConditionMultiplier(condition: number): number {
-    return condition < CONDITION_EFFICIENCY_THRESHOLD ? 1 - CONDITION_EFFICIENCY_PENALTY : 1;
-  }
-
   /**
    * Calculate the combined efficiency multiplier for a building.
-   * Factors: condition, air quality, staffing, worker efficiency, team cohesion.
+   * Factors: air quality, staffing, worker efficiency, team cohesion.
    */
-  private getBuildingEfficiencyMultiplier(buildingId: string, overrideCondition?: number): number {
+  private getBuildingEfficiencyMultiplier(buildingId: string): number {
     const building = this.buildings.get(buildingId);
     if (!building) return 0;
 
-    const condition = overrideCondition ?? building.condition;
-
     return combineMultipliers(
-      this.getConditionMultiplier(condition),
       this.airQualityEfficiency,
       this.getStaffingEfficiency(buildingId),
       this.getWorkerEfficiency(buildingId),
@@ -695,29 +597,23 @@ export class BuildingManager {
     return this.workforceManager.getTeamCohesionMultiplier(building.assignedWorkers);
   }
 
-  getEffectiveProduction(buildingId: string, overrideCondition?: number): ResourceDelta {
+  getEffectiveProduction(buildingId: string): ResourceDelta {
     const result = this.getBuildingWithDef(buildingId);
     if (!result || result.building.status !== "active" || result.building.broken) return {};
     if (!result.def.production) return {};
 
     const modeMultiplier = BUILDING_MODES[result.building.mode].production;
-    const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(
-      buildingId,
-      overrideCondition,
-    );
+    const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(buildingId);
     return applyMultiplier(result.def.production, modeMultiplier * efficiencyMultiplier);
   }
 
-  getEffectiveConsumption(buildingId: string, overrideCondition?: number): ResourceDelta {
+  getEffectiveConsumption(buildingId: string): ResourceDelta {
     const result = this.getBuildingWithDef(buildingId);
     if (!result || result.building.status !== "active" || result.building.broken) return {};
     if (!result.def.consumption) return {};
 
     const modeMultiplier = BUILDING_MODES[result.building.mode].consumption;
-    const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(
-      buildingId,
-      overrideCondition,
-    );
+    const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(buildingId);
     return applyMultiplier(result.def.consumption, modeMultiplier * efficiencyMultiplier);
   }
 
@@ -726,16 +622,14 @@ export class BuildingManager {
    * @param buildingId - The building to process
    * @param resources - Resource manager to update
    * @param add - true to add, false to remove
-   * @param overrideCondition - Optional condition override for calculations
    */
   private applyBuildingResourceFlow(
     buildingId: string,
     resources: ResourceManager,
     add: boolean,
-    overrideCondition?: number,
   ): void {
-    const prod = this.getEffectiveProduction(buildingId, overrideCondition);
-    const cons = this.getEffectiveConsumption(buildingId, overrideCondition);
+    const prod = this.getEffectiveProduction(buildingId);
+    const cons = this.getEffectiveConsumption(buildingId);
 
     if (Object.keys(prod).length > 0) {
       if (add) {
@@ -899,9 +793,6 @@ export class BuildingManager {
         repairProgress: b.repairProgress ?? 0,
         recyclingProgress: b.recyclingProgress,
         repurposeFromDefId: b.repurposeFromDefId,
-        condition: b.condition ?? 100,
-        age: b.age ?? 0,
-        lastMaintenance: b.lastMaintenance ?? 0,
       };
       manager.buildings.set(building.id, building);
     });
