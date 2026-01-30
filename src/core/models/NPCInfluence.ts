@@ -111,6 +111,12 @@ export interface Project {
     unlockTech?: string;
     unlockBuilding?: string;
   };
+  /** True if this is a capstone victory project */
+  isCapstone?: boolean;
+  /** Projects that must be completed before this can be proposed */
+  prerequisites?: ProjectId[];
+  /** Required council support from this faction to propose capstone (0-1) */
+  requiredCouncilSupport?: number;
 }
 
 export interface ActiveProject {
