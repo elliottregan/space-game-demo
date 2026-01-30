@@ -153,8 +153,6 @@ const buildingsForGraph = computed(() =>
 }
 
 .relationship-panel {
-  height: 350px;
-  max-height: 680px;
   display: flex;
   flex-direction: column;
 }
@@ -177,11 +175,6 @@ const buildingsForGraph = computed(() =>
 }
 
 @media (max-width: 768px) {
-  .relationship-panel {
-    height: auto;
-    min-height: 300px;
-  }
-
   .graph-container {
     flex-direction: column;
     height: auto;
