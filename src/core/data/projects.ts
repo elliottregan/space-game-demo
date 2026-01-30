@@ -88,6 +88,54 @@ export const PROJECTS: Project[] = [
     proposalCost: { materials: 40 },
     requiredSupport: 0.2,
   },
+
+  // Capstone Victory Projects
+  {
+    id: ProjectId.RETURN_MISSION,
+    name: "Return Mission",
+    description:
+      "Launch a crewed mission back to Earth, proving Mars can sustain true interplanetary civilization.",
+    type: NPCFaction.EarthLoyalists,
+    proposalCost: {},
+    requiredSupport: 0,
+    isCapstone: true,
+    prerequisites: [
+      ProjectId.EARTH_MEMORIAL,
+      ProjectId.HERITAGE_ARCHIVE,
+      ProjectId.GENERATION_SHIP,
+    ],
+    requiredCouncilSupport: 0.65,
+  },
+  {
+    id: ProjectId.DECLARATION_OF_SOVEREIGNTY,
+    name: "Declaration of Sovereignty",
+    description: "Formally declare Mars an independent nation, free from Earth jurisdiction.",
+    type: NPCFaction.MarsIndependence,
+    proposalCost: {},
+    requiredSupport: 0,
+    isCapstone: true,
+    prerequisites: [
+      ProjectId.UNIVERSAL_HOUSING,
+      ProjectId.HEALTHCARE_EXPANSION,
+      ProjectId.DEMOCRATIC_ASSEMBLY,
+    ],
+    requiredCouncilSupport: 0.65,
+  },
+  {
+    id: ProjectId.PLANETARY_ACQUISITION,
+    name: "Planetary Acquisition",
+    description: "Take the colony public. Shareholders on Earth now own Mars.",
+    type: NPCFaction.CorporateInterests,
+    proposalCost: {},
+    requiredSupport: 0,
+    isCapstone: true,
+    prerequisites: [
+      ProjectId.LABOR_EFFICIENCY,
+      ProjectId.MINING_CONCESSION,
+      ProjectId.AI_GOVERNANCE,
+    ],
+    requiredCouncilSupport: 0.65,
+  },
 ];
 
 /**
