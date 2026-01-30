@@ -129,4 +129,107 @@ describe("ColonistMoraleManager", () => {
       expect(connectedMorale).toBeGreaterThan(isolatedMorale);
     });
   });
+
+  describe("propagateMorale", () => {
+    it("isolated colonist morale converges to base morale", () => {
+      const colonist = colonyManager.getColonists()[0]!;
+      colonist.housingId = "h1";
+      resourceManager.addProduction({ food: 10, water: 10, oxygen: 10 });
+
+      // Set initial morale different from base
+      moraleManager.setMorale(colonist.id, 30);
+
+      // Calculate base morale
+      const baseMorale = moraleManager.calculateBaseMorale(
+        colonist,
+        resourceManager,
+        relationshipManager,
+        colonyManager,
+      );
+
+      // Propagate several times
+      for (let i = 0; i < 20; i++) {
+        moraleManager.propagateMorale(
+          colonyManager.getColonists(),
+          resourceManager,
+          relationshipManager,
+          colonyManager,
+        );
+      }
+
+      // Should converge toward base morale
+      const finalMorale = moraleManager.getMorale(colonist.id);
+      expect(Math.abs(finalMorale - baseMorale)).toBeLessThan(10);
+    });
+
+    it("high-centrality happy colonist raises neighbors morale", () => {
+      const colonists = colonyManager.getColonists();
+      const hub = colonists[0]!;
+      const neighbor = colonists[1]!;
+
+      // House everyone
+      hub.housingId = "h1";
+      neighbor.housingId = "h2";
+      resourceManager.addProduction({ food: 10, water: 10, oxygen: 10 });
+
+      // Create star topology (hub connected to all)
+      for (const other of colonists.slice(1)) {
+        relationshipManager.createRelationship(hub.id, other.id, 0, { initialStrength: 0.8 });
+      }
+
+      // Calculate centrality
+      relationshipManager.recalculateCentrality(0);
+
+      // Hub is happy, neighbor starts sad
+      moraleManager.setMorale(hub.id, 90);
+      moraleManager.setMorale(neighbor.id, 40);
+
+      // Propagate
+      for (let i = 0; i < 10; i++) {
+        moraleManager.propagateMorale(
+          colonists,
+          resourceManager,
+          relationshipManager,
+          colonyManager,
+        );
+      }
+
+      // Neighbor should have increased morale
+      expect(moraleManager.getMorale(neighbor.id)).toBeGreaterThan(40);
+    });
+
+    it("high-centrality unhappy colonist drags down neighbors", () => {
+      const colonists = colonyManager.getColonists();
+      const hub = colonists[0]!;
+      const neighbor = colonists[1]!;
+
+      hub.housingId = "h1";
+      neighbor.housingId = "h2";
+      resourceManager.addProduction({ food: 10, water: 10, oxygen: 10 });
+
+      // Create connections
+      for (const other of colonists.slice(1)) {
+        relationshipManager.createRelationship(hub.id, other.id, 0, { initialStrength: 0.8 });
+      }
+
+      relationshipManager.recalculateCentrality(0);
+
+      // Hub is sad, neighbor starts happy
+      moraleManager.setMorale(hub.id, 20);
+      moraleManager.setMorale(neighbor.id, 80);
+
+      // Propagate
+      for (let i = 0; i < 10; i++) {
+        moraleManager.propagateMorale(
+          colonists,
+          resourceManager,
+          relationshipManager,
+          colonyManager,
+        );
+      }
+
+      // Neighbor should have decreased morale
+      expect(moraleManager.getMorale(neighbor.id)).toBeLessThan(80);
+    });
+  });
 });

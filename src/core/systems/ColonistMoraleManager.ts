@@ -115,6 +115,66 @@ export class ColonistMoraleManager {
   }
 
   /**
+   * Propagate morale through the social network for one tick.
+   * Each colonist's morale moves toward a blend of their base morale
+   * and their neighbors' morale (weighted by relationship strength and centrality).
+   */
+  propagateMorale(
+    colonists: Colonist[],
+    resources: ResourceManager,
+    relationships: RelationshipManager,
+    colony: ColonyManager,
+  ): void {
+    const alpha = COLONIST_MORALE.PROPAGATION_ALPHA;
+    const baseWeight = COLONIST_MORALE.BASE_MORALE_WEIGHT;
+    const socialWeight = COLONIST_MORALE.SOCIAL_INFLUENCE_WEIGHT;
+
+    // Calculate new morale for each colonist
+    const newMorale = new Map<string, number>();
+
+    for (const colonist of colonists) {
+      const currentMorale = this.getMorale(colonist.id);
+      const baseMorale = this.calculateBaseMorale(colonist, resources, relationships, colony);
+
+      const neighbors = relationships.getNeighbors(colonist.id);
+
+      if (neighbors.size === 0) {
+        // Isolated: drift toward base morale only
+        const target = baseMorale;
+        newMorale.set(colonist.id, currentMorale + alpha * (target - currentMorale));
+        continue;
+      }
+
+      // Weighted average of neighbors' morale
+      let neighborInfluence = 0;
+      let totalWeight = 0;
+
+      for (const neighborId of neighbors) {
+        const strength = relationships.getRelationshipStrength(colonist.id, neighborId);
+        const neighborCentrality = relationships.getCentrality(neighborId);
+        const weight = strength * Math.max(0.1, neighborCentrality); // Floor to prevent zero weight
+
+        neighborInfluence += this.getMorale(neighborId) * weight;
+        totalWeight += weight;
+      }
+
+      const socialMorale = totalWeight > 0 ? neighborInfluence / totalWeight : baseMorale;
+
+      // Blend base needs with social influence
+      const targetMorale = baseWeight * baseMorale + socialWeight * socialMorale;
+
+      // Gradual drift toward target
+      const nextMorale = currentMorale + alpha * (targetMorale - currentMorale);
+      newMorale.set(colonist.id, Math.max(0, Math.min(100, nextMorale)));
+    }
+
+    // Apply all updates
+    for (const [id, morale] of newMorale) {
+      this.moraleState.set(id, morale);
+    }
+  }
+
+  /**
    * Get current morale for a colonist.
    */
   getMorale(colonistId: string): number {
