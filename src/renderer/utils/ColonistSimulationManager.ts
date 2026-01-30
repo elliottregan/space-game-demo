@@ -101,21 +101,24 @@ export class ColonistSimulationManager {
   update(colonists: Colonist[], relationships: Map<string, number>): void {
     // Track existing vs new colonist IDs
     const currentIds = new Set(colonists.map((c) => c.id));
-    const existingIds = new Set(this.positions.keys());
-    const newIds = new Set([...currentIds].filter((id) => !existingIds.has(id)));
+    const existingNodeMap = new Map(this.nodes.map((n) => [n.id, n]));
+    const hasNewColonists = colonists.some((c) => !existingNodeMap.has(c.id));
+    const hasRemovedColonists = this.nodes.some((n) => !currentIds.has(n.id));
 
     // Clean up positions for departed colonists
-    for (const id of existingIds) {
-      if (!currentIds.has(id)) {
-        this.positions.delete(id);
+    for (const node of this.nodes) {
+      if (!currentIds.has(node.id)) {
+        this.positions.delete(node.id);
       }
     }
 
-    // Create nodes, spawning new colonists near their strongest relationship
+    // Update nodes, preserving existing node objects to maintain velocity
     this.nodes = colonists.map((c) => {
-      const existingPos = this.positions.get(c.id);
-      if (existingPos) {
-        return { id: c.id, role: c.role, x: existingPos.x, y: existingPos.y };
+      const existingNode = existingNodeMap.get(c.id);
+      if (existingNode) {
+        // Preserve the existing node object (keeps vx, vy, x, y)
+        existingNode.role = c.role;
+        return existingNode;
       }
 
       // New colonist - find spawn position near strongest relationship
@@ -136,16 +139,32 @@ export class ColonistSimulationManager {
       }
     }
 
-    // Create or update simulation
-    this.initSimulation();
+    // Initialize simulation if it doesn't exist, otherwise update in place
+    if (!this.simulation) {
+      this.initSimulation();
+    } else {
+      // Update existing simulation with new nodes and links
+      this.simulation.nodes(this.nodes);
+      const linkForce = this.simulation.force("link") as
+        | ReturnType<typeof forceLink<SimNode, SimLink>>
+        | undefined;
+      if (linkForce) {
+        linkForce.links(this.links);
+      }
+    }
+
+    // Determine how much to reheat based on changes
+    const needsReheat = hasNewColonists || hasRemovedColonists;
 
     if (this._isAnimating) {
-      // When animating, just set alpha and let animation loop handle ticks
-      const alpha = newIds.size > 0 ? 0.3 : 0.1;
-      this.simulation?.alpha(alpha).restart();
+      // When animating, gently reheat only if there are structural changes
+      if (needsReheat) {
+        this.simulation?.alpha(0.15).restart();
+      }
+      // If no structural changes, let simulation continue naturally (no reheat)
     } else {
-      // Run fewer ticks when just warming from existing positions
-      const tickCount = newIds.size > 0 || this.positions.size === 0 ? 100 : 30;
+      // Run synchronous ticks
+      const tickCount = needsReheat || this.positions.size === 0 ? 100 : 30;
       this.simulation?.tick(tickCount);
 
       // Store positions
