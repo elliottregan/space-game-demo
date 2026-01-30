@@ -69,3 +69,20 @@ export const NEW_COLONIST_IDEOLOGY = {
   corporateInterests: 0.33,
   conviction: 0.2,
 } as const;
+
+// ============ Lobbying ============
+
+/** Base cost in materials to lobby a council member */
+export const LOBBY_BASE_COST = 15;
+
+/** How much lobbying boosts the target faction affinity (0-1 scale) */
+export const LOBBY_AFFINITY_BOOST = 0.15;
+
+/** Cost multiplier based on colonist's influence (higher influence = more expensive) */
+export const LOBBY_INFLUENCE_COST_MULTIPLIER = 10;
+
+/** Minimum affinity boost option */
+export const LOBBY_MIN_BOOST = 0.05;
+
+/** Maximum affinity boost option */
+export const LOBBY_MAX_BOOST = 0.25;
