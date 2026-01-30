@@ -54,12 +54,20 @@ export const calculatePolicyEffects = definePhase({
  * Process Colony Tick Phase
  *
  * Handles population growth, health changes, morale changes, and consumption.
- * Uses derived.socialCohesion and derived.policyEffects computed by earlier phases.
+ * Uses derived.socialCohesion, derived.policyEffects, and derived.airQualityEffects
+ * computed by earlier phases.
  */
 export const processColonyTick = definePhase({
   id: "colony:processColonyTick",
   name: "Process Colony Tick",
-  reads: ["colony", "resources", "buildings", "derived.socialCohesion", "derived.policyEffects"],
+  reads: [
+    "colony",
+    "resources",
+    "buildings",
+    "derived.socialCohesion",
+    "derived.policyEffects",
+    "derived.airQualityEffects",
+  ],
   writes: ["colony", "resources", "events"],
   execute(ctx: TickContext): GameEvent[] {
     // Convert SocialCohesionData to the format ColonyManager.tick expects
@@ -70,12 +78,16 @@ export const processColonyTick = definePhase({
         }
       : { cohesion: 0, isolatedColonists: [] };
 
-    return ctx.colony.tick(
-      ctx.resources,
-      ctx.buildings,
-      ctx.derived.policyEffects ?? { morale: 0, health: 0 },
-      socialCohesionForColony,
-    );
+    // Combine policy effects with air quality effects
+    const policyEffects = ctx.derived.policyEffects ?? { morale: 0, health: 0 };
+    const airQualityEffects = ctx.derived.airQualityEffects ?? { health: 0, morale: 0 };
+
+    const combinedEffects = {
+      morale: policyEffects.morale + airQualityEffects.morale,
+      health: policyEffects.health + airQualityEffects.health,
+    };
+
+    return ctx.colony.tick(ctx.resources, ctx.buildings, combinedEffects, socialCohesionForColony);
   },
 });
 
