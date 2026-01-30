@@ -7,26 +7,18 @@ import {
   EXPEDITION_EXPERIENCE_BONUS,
   EXPEDITION_EXPERIENCE_CAP,
   EXPEDITIONS,
-  EXPLORATION_STANCE,
   EXTRACTION_RATE_MULTIPLIERS,
   MAX_CONCURRENT_EXPEDITIONS,
   MAX_REVEALED_SITES,
-  POLICY_CHANGE_COOLDOWN_SOLS,
   PROSPECTING_QUALITY,
   PROSPECTING_REVEAL_COST,
-  RESOURCE_PRIORITY,
-  WORK_INTENSITY,
 } from "../balance/OperationsBalance";
 import type { GameEvent } from "../models/GameEvent";
 import type {
   ActiveExpedition,
-  ColonyPolicies,
   ExpeditionResult,
   ExpeditionType,
-  ExplorationStance,
   ProspectingSite,
-  ResourcePriority,
-  WorkIntensity,
 } from "../models/Operation";
 import type { WarningLevel } from "../utils/depositExtraction";
 import { rng } from "../utils/random";
@@ -34,13 +26,6 @@ import type { ColonyManager } from "./ColonyManager";
 import type { ResourceManager } from "./ResourceManager";
 
 export class OperationsManager {
-  private policies: ColonyPolicies = {
-    workIntensity: "standard",
-    resourcePriority: "balanced",
-    explorationStance: "standard",
-    lastChangeAt: -POLICY_CHANGE_COOLDOWN_SOLS, // Allow immediate first change
-  };
-
   private expeditions: ActiveExpedition[] = [];
   private sites: ProspectingSite[] = [];
   private expeditionExperience: number = 0;
@@ -92,65 +77,6 @@ export class OperationsManager {
     });
   }
 
-  getPolicies(): Readonly<ColonyPolicies> {
-    return { ...this.policies };
-  }
-
-  canChangePolicy(currentSol: number): boolean {
-    return currentSol - this.policies.lastChangeAt >= POLICY_CHANGE_COOLDOWN_SOLS;
-  }
-
-  getSolsUntilPolicyChange(currentSol: number): number {
-    const elapsed = currentSol - this.policies.lastChangeAt;
-    return Math.max(0, POLICY_CHANGE_COOLDOWN_SOLS - elapsed);
-  }
-
-  setPolicy(
-    type: "workIntensity" | "resourcePriority" | "explorationStance",
-    value: WorkIntensity | ResourcePriority | ExplorationStance,
-    currentSol: number,
-  ): boolean {
-    if (!this.canChangePolicy(currentSol)) return false;
-
-    switch (type) {
-      case "workIntensity":
-        this.policies.workIntensity = value as WorkIntensity;
-        break;
-      case "resourcePriority":
-        this.policies.resourcePriority = value as ResourcePriority;
-        break;
-      case "explorationStance":
-        this.policies.explorationStance = value as ExplorationStance;
-        break;
-    }
-
-    this.policies.lastChangeAt = currentSol;
-    return true;
-  }
-
-  getProductionMultiplier(): number {
-    const workMult = WORK_INTENSITY[this.policies.workIntensity].productionMult;
-    const resourceMult = RESOURCE_PRIORITY[this.policies.resourcePriority].productionMult;
-    return workMult * resourceMult;
-  }
-
-  getMoraleEffect(): number {
-    return WORK_INTENSITY[this.policies.workIntensity].moralePerSol;
-  }
-
-  getHealthEffect(): number {
-    const effect = WORK_INTENSITY[this.policies.workIntensity];
-    return "healthPerSol" in effect ? effect.healthPerSol : 0;
-  }
-
-  getExpeditionCostMultiplier(): number {
-    return EXPLORATION_STANCE[this.policies.explorationStance].costMult;
-  }
-
-  getExpeditionSuccessModifier(): number {
-    return EXPLORATION_STANCE[this.policies.explorationStance].successMod;
-  }
-
   getActiveExpeditions(): readonly ActiveExpedition[] {
     return [...this.expeditions];
   }
@@ -163,8 +89,7 @@ export class OperationsManager {
     if (this.expeditions.length >= MAX_CONCURRENT_EXPEDITIONS) return false;
 
     const config = EXPEDITIONS[type];
-    const costMult = this.getExpeditionCostMultiplier();
-    const materialCost = Math.ceil(config.materials * costMult);
+    const materialCost = config.materials;
 
     if (!resources.canAfford({ materials: materialCost })) return false;
 
@@ -197,8 +122,7 @@ export class OperationsManager {
       if (!colony.getColonist(id) || assignedCrew.has(id)) return false;
     }
 
-    const costMult = this.getExpeditionCostMultiplier();
-    resources.deduct({ materials: Math.ceil(config.materials * costMult) });
+    resources.deduct({ materials: config.materials });
 
     this.expeditions.push({
       id: `expedition_${this.nextExpeditionId++}`,
@@ -276,9 +200,7 @@ export class OperationsManager {
   private resolveExpedition(expedition: ActiveExpedition, colony: ColonyManager): ExpeditionResult {
     const config = EXPEDITIONS[expedition.type];
     const successChance =
-      config.baseSuccess +
-      this.getExpeditionSuccessModifier() +
-      Math.min(this.expeditionExperience, EXPEDITION_EXPERIENCE_CAP);
+      config.baseSuccess + Math.min(this.expeditionExperience, EXPEDITION_EXPERIENCE_CAP);
 
     const success = rng.chance(successChance);
     this.expeditionExperience = Math.min(
@@ -502,7 +424,6 @@ export class OperationsManager {
 
   toJSON() {
     return {
-      policies: this.policies,
       expeditions: this.expeditions,
       sites: this.sites,
       expeditionExperience: this.expeditionExperience,
@@ -511,7 +432,6 @@ export class OperationsManager {
 
   static fromJSON(data: ReturnType<OperationsManager["toJSON"]>): OperationsManager {
     const manager = new OperationsManager();
-    manager.policies = data.policies;
     manager.expeditions = data.expeditions || [];
     manager.sites = data.sites || [];
     manager.expeditionExperience = data.expeditionExperience || 0;

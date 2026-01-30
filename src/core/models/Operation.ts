@@ -2,17 +2,6 @@
 
 export type BuildingMode = "conservation" | "normal" | "overdrive";
 
-export type WorkIntensity = "relaxed" | "standard" | "crunch";
-export type ResourcePriority = "stockpile" | "balanced" | "burn";
-export type ExplorationStance = "cautious" | "standard" | "aggressive";
-
-export interface ColonyPolicies {
-  workIntensity: WorkIntensity;
-  resourcePriority: ResourcePriority;
-  explorationStance: ExplorationStance;
-  lastChangeAt: number; // sol when last changed
-}
-
 export type ExpeditionType = "survey" | "salvage" | "science" | "deep";
 
 export interface ActiveExpedition {

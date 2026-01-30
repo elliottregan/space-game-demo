@@ -1,5 +1,20 @@
 import type { SkillId } from "../data/skills";
 
+/**
+ * Colonist political ideology - affinity to each faction.
+ * Values are 0-1 and independent (don't need to sum to 1).
+ */
+export interface ColonistIdeology {
+  /** Affinity toward Earth Loyalists (0-1) */
+  earthLoyalist: number;
+  /** Affinity toward Mars Independence (0-1) */
+  marsIndependence: number;
+  /** Affinity toward Corporate Interests (0-1) */
+  corporateInterests: number;
+  /** How strongly held beliefs are - resistance to influence (0-1) */
+  conviction: number;
+}
+
 export enum ColonistRole {
   UNASSIGNED = "unassigned",
   RESEARCH = "research",
@@ -40,4 +55,5 @@ export interface Colonist {
   arrivalSol?: number; // Sol when colonist arrived (for cohort bonding)
   guildIds?: string[]; // Guild memberships
   socialBuildingIds?: string[]; // Assigned social buildings (third spaces)
+  ideology?: ColonistIdeology; // Political ideology (optional for migration)
 }

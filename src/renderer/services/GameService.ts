@@ -1,5 +1,4 @@
 import { reactive, readonly } from "vue";
-import type { Council, NPC, Project } from "../../core/models/NPCInfluence";
 import {
   type ActiveEvent,
   type ActiveExpedition,
@@ -9,16 +8,15 @@ import {
   type BuildingMode,
   type Colonist,
   type ColonistRole,
-  type ColonyPolicies,
+  type CouncilMemberSnapshot,
   type EventChoice,
   type ExpeditionType,
   type FactionDemand,
   type FactionStatus,
+  type FactionSupportSnapshot,
   GameAPI,
   type GameEvent,
-  NPCId,
-  type PolicyType,
-  type PolicyValue,
+  type NPCFaction,
   ProjectId,
   type ProspectingSite,
   type RandomEventDefinition,
@@ -86,25 +84,19 @@ interface GameUIState {
   eventChoices: EventChoice[];
   victoryState: VictoryState;
   recentEvents: GameEvent[];
-  policies: ColonyPolicies;
-  policyCooldownRemaining: number;
   activeExpeditions: ActiveExpedition[];
   prospectingSites: ProspectingSite[];
-  npcInfluence: {
-    npcs: NPC[];
-    projects: Project[];
-    activeProject: {
-      projectId: string;
-      supportLevels: Record<string, number>;
-      solsRemaining: number;
-      averageSupport: number;
-    } | null;
-    councils: Council[];
-    relationshipMatrix: readonly (readonly number[])[];
-  };
   airQuality: number;
   airQualityProduction: number;
   airQualityConsumption: number;
+  ideology: {
+    council: CouncilMemberSnapshot[];
+    councilFactionCounts: Record<string, number>;
+    factionSupport: FactionSupportSnapshot;
+    completedProjects: ProjectId[];
+    pendingProposals: Array<{ projectId: ProjectId; voteSol: number }>;
+    failedProposals: ProjectId[];
+  };
 }
 
 /**
@@ -159,8 +151,8 @@ class GameService {
    * - api.colony - Colony queries and workforce commands
    * - api.politics - Politics queries and decision commands
    * - api.operations - Operations queries and commands
-   * - api.npc - NPC influence queries and commands
    * - api.events - Event queries and resolve command
+   * - api.ideology - Ideology, council, and lobbying
    * - api.game - Game flow (advanceSol, save, load, newGame)
    */
   get api(): GameAPI {
@@ -202,25 +194,19 @@ class GameService {
       eventChoices: [],
       victoryState: { status: "playing" },
       recentEvents: [],
-      policies: {
-        workIntensity: "standard",
-        resourcePriority: "balanced",
-        explorationStance: "standard",
-        lastChangeAt: 0,
-      },
-      policyCooldownRemaining: 0,
       activeExpeditions: [],
       prospectingSites: [],
-      npcInfluence: {
-        npcs: [],
-        projects: [],
-        activeProject: null,
-        councils: [],
-        relationshipMatrix: [],
-      },
       airQuality: 1,
       airQualityProduction: 0,
       airQualityConsumption: 0,
+      ideology: {
+        council: [],
+        councilFactionCounts: {},
+        factionSupport: { earthLoyalists: 0, marsIndependence: 0, corporateInterests: 0 },
+        completedProjects: [],
+        pendingProposals: [],
+        failedProposals: [],
+      },
     };
   }
 
@@ -307,26 +293,29 @@ class GameService {
 
     // Operations
     const ops = this.facade.operations.snapshot();
-    this.state.policies = { ...ops.policies };
-    this.state.policyCooldownRemaining = ops.policyCooldownRemaining;
     this.state.activeExpeditions = [...ops.expeditions];
     this.state.prospectingSites = [...ops.sites];
-
-    // NPC Influence
-    const npc = this.facade.npc.snapshot();
-    this.state.npcInfluence = {
-      npcs: [...npc.npcs],
-      projects: [...npc.projects],
-      activeProject: npc.activeProject ? { ...npc.activeProject } : null,
-      councils: [...npc.councils],
-      relationshipMatrix: npc.relationshipMatrix,
-    };
 
     // Air Quality
     const airQualityData = this.facade.airQuality.snapshot();
     this.state.airQuality = airQualityData.airQuality;
     this.state.airQualityProduction = airQualityData.production;
     this.state.airQualityConsumption = airQualityData.consumption;
+
+    // Ideology
+    const ideologyData = this.facade.ideology.snapshot();
+    const pendingProposals = this.facade.ideology.getPendingProposals();
+    this.state.ideology = {
+      council: [...ideologyData.council],
+      councilFactionCounts: { ...ideologyData.councilFactionCounts },
+      factionSupport: { ...ideologyData.factionSupport },
+      completedProjects: [...this.facade.ideology.getCompletedProjects()],
+      pendingProposals: pendingProposals.map((p) => ({
+        projectId: p.projectId,
+        voteSol: p.voteSol,
+      })),
+      failedProposals: [...this.facade.ideology.getFailedProposals()],
+    };
   }
 
   /**
@@ -404,10 +393,6 @@ class GameService {
   }
 
   // Operations actions
-  setPolicy(type: PolicyType, value: string): boolean {
-    return this.facade.operations.setPolicy(type, value as PolicyValue).success;
-  }
-
   startExpedition(type: string, crewIds: string[]): boolean {
     return this.facade.operations.launchExpedition(type as ExpeditionType, crewIds).success;
   }
@@ -424,21 +409,30 @@ class GameService {
     return this.facade.buildings.setMode(buildingId, mode).success;
   }
 
-  // NPC Influence actions
-  proposeProject(projectId: string): boolean {
-    return this.facade.npc.proposeProject(projectId as ProjectId).success;
+  // Ideology/Lobbying actions
+  lobbyCouncilMember(colonistId: string, faction: NPCFaction, affinityBoost: number): boolean {
+    const result = this.facade.ideology.lobbyCouncilMember(colonistId, faction, affinityBoost);
+    if (result.success) {
+      this.syncState();
+    }
+    return result.success;
   }
 
-  lobbyNPC(npcId: string, supportBoost: number): boolean {
-    return this.facade.npc.lobbyNPC(npcId as NPCId, supportBoost).success;
+  getCouncilLobbyCost(colonistId: string, faction: NPCFaction, affinityBoost: number): number {
+    return this.facade.ideology.getLobbyCost(colonistId, faction, affinityBoost);
   }
 
-  createCouncil(name: string, memberIds: string[]): boolean {
-    return this.facade.npc.createCouncil(name, memberIds as NPCId[]).success;
+  canLobbyCouncilMember(colonistId: string, faction: NPCFaction, affinityBoost: number): boolean {
+    return this.facade.ideology.canLobby(colonistId, faction, affinityBoost).canLobby;
   }
 
-  getLobbyCost(npcId: string, supportBoost: number): number {
-    return this.facade.npc.getLobbyCost(npcId as NPCId, supportBoost);
+  // Project methods
+  proposeProject(projectId: ProjectId): boolean {
+    const result = this.facade.ideology.proposeProject(projectId);
+    if (result.success) {
+      this.syncState();
+    }
+    return result.success;
   }
 
   // Deposit methods

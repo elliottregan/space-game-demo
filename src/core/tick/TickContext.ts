@@ -2,7 +2,7 @@ import type { BuildingManager } from "../systems/BuildingManager";
 import type { ColonistMoraleManager } from "../systems/ColonistMoraleManager";
 import type { ColonyManager } from "../systems/ColonyManager";
 import type { EventManager } from "../systems/EventManager";
-import type { NPCInfluenceManager } from "../systems/NPCInfluenceManager";
+import type { IdeologyManager } from "../systems/IdeologyManager";
 import type { OperationsManager } from "../systems/OperationsManager";
 import type { ResourceManager } from "../systems/ResourceManager";
 import type { TechnologyTree } from "../systems/TechnologyTree";
@@ -20,19 +20,10 @@ export interface SocialCohesionData {
 }
 
 /**
- * Policy effects computed during the tick.
- */
-export interface PolicyEffects {
-  morale: number;
-  health: number;
-}
-
-/**
  * Derived values computed by early phases, read by later phases.
  */
 export interface DerivedValues {
   socialCohesion: SocialCohesionData | null;
-  policyEffects: PolicyEffects | null;
   laborPoolBonus: number;
   airQuality: number;
   airQualityEffects: { health: number; morale: number; efficiency: number } | null;
@@ -61,9 +52,9 @@ export interface TickContext {
   colonistMorale: ColonistMoraleManager;
   technology: TechnologyTree;
   operations: OperationsManager;
-  npcInfluence: NPCInfluenceManager;
   events: EventManager;
   victory: VictoryManager;
+  ideology: IdeologyManager;
 
   /** Derived values computed during tick */
   derived: DerivedValues;
@@ -86,9 +77,9 @@ export function createTickContext(
     colonistMorale: ColonistMoraleManager;
     technology: TechnologyTree;
     operations: OperationsManager;
-    npcInfluence: NPCInfluenceManager;
     events: EventManager;
     victory: VictoryManager;
+    ideology: IdeologyManager;
   },
   settings: TickSettings,
 ): TickContext {
@@ -97,7 +88,6 @@ export function createTickContext(
     ...managers,
     derived: {
       socialCohesion: null,
-      policyEffects: null,
       laborPoolBonus: 0,
       airQuality: 1,
       airQualityEffects: null,

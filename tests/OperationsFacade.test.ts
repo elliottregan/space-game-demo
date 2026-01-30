@@ -280,8 +280,6 @@ describe("OperationsFacade", () => {
     it("returns snapshot with all fields", () => {
       const snapshot = api.operations.snapshot();
 
-      expect(snapshot.policies).toBeDefined();
-      expect(typeof snapshot.policyCooldownRemaining).toBe("number");
       expect(Array.isArray(snapshot.expeditions)).toBe(true);
       expect(Array.isArray(snapshot.sites)).toBe(true);
     });
@@ -289,47 +287,8 @@ describe("OperationsFacade", () => {
     it("returns frozen arrays", () => {
       const snapshot = api.operations.snapshot();
 
-      expect(Object.isFrozen(snapshot.policies)).toBe(true);
       expect(Object.isFrozen(snapshot.expeditions)).toBe(true);
       expect(Object.isFrozen(snapshot.sites)).toBe(true);
-    });
-  });
-
-  // ==========================================================================
-  // Policy tests
-  // ==========================================================================
-  describe("Policy Operations", () => {
-    it("canChangePolicy returns true initially", () => {
-      const result = api.operations.canChangePolicy();
-      expect(result.allowed).toBe(true);
-    });
-
-    it("canChangePolicy returns false during cooldown", () => {
-      // Set a policy to trigger cooldown
-      api.operations.setPolicy("resourcePriority", "balanced");
-
-      // Advance one sol
-      api.game.advanceSol();
-
-      const result = api.operations.canChangePolicy();
-      expect(result.allowed).toBe(false);
-      expect(result.reason).toContain("cooldown");
-    });
-
-    it("setPolicy succeeds when no cooldown", () => {
-      const result = api.operations.setPolicy("resourcePriority", "burn");
-      expect(result.success).toBe(true);
-    });
-
-    it("setPolicy fails during cooldown", () => {
-      api.operations.setPolicy("resourcePriority", "balanced");
-      api.game.advanceSol();
-
-      const result = api.operations.setPolicy("resourcePriority", "burn");
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.type).toBe("COOLDOWN_ACTIVE");
-      }
     });
   });
 

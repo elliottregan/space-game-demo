@@ -10,27 +10,6 @@ export const BUILDING_MODES = {
 export const REPAIR_COST_MULTIPLIER = 0.25;
 export const REPAIR_DURATION_SOLS = 3;
 
-// Policy Effects
-export const WORK_INTENSITY = {
-  relaxed: { productionMult: 0.8, moralePerSol: 1 },
-  standard: { productionMult: 1.0, moralePerSol: 0 },
-  crunch: { productionMult: 1.2, moralePerSol: -1, healthPerSol: -0.5 },
-} as const;
-
-export const RESOURCE_PRIORITY = {
-  stockpile: { productionMult: 0.9 },
-  balanced: { productionMult: 1.0 },
-  burn: { productionMult: 1.15, decayRate: 0.05 },
-} as const;
-
-export const EXPLORATION_STANCE = {
-  cautious: { costMult: 1.5, successMod: 0.2 },
-  standard: { costMult: 1.0, successMod: 0 },
-  aggressive: { costMult: 0.75, successMod: -0.15 },
-} as const;
-
-export const POLICY_CHANGE_COOLDOWN_SOLS = 10;
-
 // Expedition Definitions
 export const EXPEDITIONS = {
   survey: { crew: 2, materials: 20, duration: 10, baseSuccess: 0.7 },

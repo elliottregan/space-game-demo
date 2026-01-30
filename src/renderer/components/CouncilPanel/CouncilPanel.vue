@@ -1,129 +1,138 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed } from "vue";
+import { NPCFaction } from "../../../core/models/NPCInfluence";
 import { gameService } from "../../services/GameService";
-import { GBadge, GButton, GInput, GPanel } from "../../ui";
+import { GBadge, GPanel } from "../../ui";
 
 const state = gameService.getState();
-const api = gameService.api;
 
-const councilName = ref("");
-const selectedMembers = ref<string[]>([]);
+// Map faction IDs to display names
+const factionNames: Record<NPCFaction | "neutral", string> = {
+  [NPCFaction.EarthLoyalists]: "Earth Loyalists",
+  [NPCFaction.MarsIndependence]: "Mars Independence",
+  [NPCFaction.CorporateInterests]: "Corporate Interests",
+  neutral: "Neutral",
+};
 
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-const canCreateCouncil = computed(() => {
-  return (
-    selectedMembers.value.length >= 2 &&
-    councilName.value.trim() !== "" &&
-    state.resources.materials >= 50
-  );
+// Get faction badge variant
+function getFactionVariant(faction: NPCFaction | null): "positive" | "warning" | "info" | "muted" {
+  if (!faction) return "muted";
+  switch (faction) {
+    case NPCFaction.EarthLoyalists:
+      return "info";
+    case NPCFaction.MarsIndependence:
+      return "positive";
+    case NPCFaction.CorporateInterests:
+      return "warning";
+    default:
+      return "muted";
+  }
+}
+
+// Sort council members by influence
+const sortedCouncil = computed(() => {
+  return [...state.ideology.council].sort((a, b) => b.influence - a.influence);
 });
 
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function createCouncil(): void {
-  if (!councilName.value || selectedMembers.value.length < 2) return;
-  const result = api.npc.createCouncil(councilName.value, selectedMembers.value);
-  if (!result.success) {
-    console.warn(`Council creation failed: ${result.error.type}`, result.error);
-  }
-  councilName.value = "";
-  selectedMembers.value = [];
-}
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-function toggleMember(npcId: string) {
-  const idx = selectedMembers.value.indexOf(npcId);
-  if (idx === -1) {
-    selectedMembers.value.push(npcId);
-  } else {
-    selectedMembers.value.splice(idx, 1);
-  }
-}
+// Get faction counts
+const factionCounts = computed(() => {
+  const counts = state.ideology.councilFactionCounts;
+  return Object.entries(counts)
+    .filter(([_, count]) => count > 0)
+    .map(([faction, count]) => ({
+      faction: faction as NPCFaction | "neutral",
+      name: factionNames[faction as NPCFaction | "neutral"],
+      count,
+    }))
+    .sort((a, b) => b.count - a.count);
+});
 </script>
 
 <template>
-  <GPanel title="Councils" accent="slate">
-    <div v-if="state.npcInfluence.councils.length === 0" class="empty-state">
-      No councils formed yet.
+  <GPanel title="Colony Council" accent="slate">
+    <div v-if="state.ideology.council.length === 0" class="empty-state">
+      Council will form as the colony grows.
     </div>
-    <div v-else class="council-list">
-      <div v-for="council in state.npcInfluence.councils" :key="council.id" class="council-item">
-        <span class="council-name">{{ council.name }}</span>
-        <GBadge variant="muted">{{ council.memberIds.length }} members</GBadge>
+    <template v-else>
+      <!-- Faction composition -->
+      <div class="faction-summary">
+        <GBadge
+          v-for="fc in factionCounts"
+          :key="fc.faction"
+          :variant="getFactionVariant(fc.faction as NPCFaction)"
+        >
+          {{ fc.name }}: {{ fc.count }}
+        </GBadge>
       </div>
-    </div>
 
-    <h4 class="subsection-title">Form New Council</h4>
-    <GInput v-model="councilName" placeholder="Council name" size="sm" />
-    <div class="council-member-select">
-      <div
-        v-for="npc in state.npcInfluence.npcs"
-        :key="npc.id"
-        class="council-member-option"
-        :class="{ selected: selectedMembers.includes(npc.id) }"
-        @click="toggleMember(npc.id)"
-      >
-        {{ npc.name }}
+      <!-- Council members -->
+      <div class="council-list">
+        <div v-for="member in sortedCouncil" :key="member.colonistId" class="council-member">
+          <div class="member-info">
+            <span class="member-name">{{ member.name }}</span>
+            <GBadge :variant="getFactionVariant(member.faction)" size="sm">
+              {{ member.faction ? factionNames[member.faction] : "Neutral" }}
+            </GBadge>
+          </div>
+          <div class="member-stats">
+            <span class="stat" title="Political Influence">
+              Influence: {{ member.influence.toFixed(2) }}
+            </span>
+            <span class="stat" title="Ideological Conviction">
+              Conviction: {{ (member.conviction * 100).toFixed(0) }}%
+            </span>
+          </div>
+        </div>
       </div>
-    </div>
-    <GButton variant="primary" :disabled="!canCreateCouncil" @click="createCouncil">
-      Create Council (50 materials)
-    </GButton>
+    </template>
   </GPanel>
 </template>
 
 <style scoped>
-.subsection-title {
-  margin: var(--g-space-md) 0 var(--g-space-sm);
-  font-family: var(--g-font-mono);
-  font-size: var(--g-font-size-xs);
-  color: var(--g-color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+.faction-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--g-space-xs);
+  margin-bottom: var(--g-space-md);
 }
 
 .council-list {
   display: flex;
   flex-direction: column;
-  gap: var(--g-space-xs);
-  margin: var(--g-space-sm) 0;
+  gap: var(--g-space-sm);
 }
 
-.council-item {
-  display: flex;
-  align-items: center;
-  gap: var(--g-space-sm);
+.council-member {
   padding: var(--g-space-sm);
   border-top: var(--g-border-width) solid var(--g-color-border-strong);
+}
+
+.council-member:last-child {
   border-bottom: var(--g-border-width) solid var(--g-color-border-strong);
 }
 
-.council-name {
-  flex: 1;
+.member-info {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-sm);
+  margin-bottom: var(--g-space-xs);
+}
+
+.member-name {
+  font-weight: var(--g-font-weight-medium);
   font-size: var(--g-font-size-sm);
 }
 
-.council-member-select {
+.member-stats {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--g-space-xs);
-  margin: var(--g-space-sm) 0;
-}
-
-.council-member-option {
-  padding: var(--g-space-xs) var(--g-space-sm);
-  font-family: var(--g-font-mono);
+  gap: var(--g-space-md);
   font-size: var(--g-font-size-xs);
-  border: var(--g-border-width) solid var(--g-color-border-strong);
-  cursor: pointer;
-  transition: background var(--g-transition-fast);
+  color: var(--g-color-text-muted);
+  font-family: var(--g-font-mono);
 }
 
-.council-member-option:hover {
-  background: var(--g-color-bg-surface);
-}
-
-.council-member-option.selected {
-  background: var(--g-color-bg-surface);
+.stat {
+  cursor: help;
 }
 
 .empty-state {

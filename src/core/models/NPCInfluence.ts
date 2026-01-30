@@ -93,6 +93,8 @@ export interface Project {
   type: ProjectType;
   /** Resource cost to propose this project */
   proposalCost: ResourceDelta;
+  /** Required faction support level to propose (0-1) */
+  requiredSupport: number;
   /** Effects applied if project passes */
   effects?: {
     resources?: ResourceDelta;

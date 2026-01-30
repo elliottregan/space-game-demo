@@ -9,7 +9,7 @@ import {
   ColonyFacade,
   EventsFacade,
   GameFlowFacade,
-  NPCFacade,
+  IdeologyFacade,
   OperationsFacade,
   PoliticsFacade,
   ResourcesFacade,
@@ -32,9 +32,9 @@ export type StateChangeListener = () => void;
  * - api.colony - Colony queries and workforce commands
  * - api.politics - Politics queries and decision commands
  * - api.operations - Operations queries and commands
- * - api.npc - NPC influence queries and commands
  * - api.events - Event queries and resolve command
  * - api.game - Game flow (advanceSol, save, load, newGame)
+ * - api.ideology - Ideology, council, and lobbying
  *
  * Key features:
  * - All queries return immutable snapshots
@@ -54,10 +54,10 @@ export class GameAPI {
   private _colony: ColonyFacade | null = null;
   private _politics: PoliticsFacade | null = null;
   private _operations: OperationsFacade | null = null;
-  private _npc: NPCFacade | null = null;
   private _events: EventsFacade | null = null;
   private _game: GameFlowFacade | null = null;
   private _airQuality: AirQualityFacade | null = null;
+  private _ideology: IdeologyFacade | null = null;
 
   constructor() {
     this.gameState = new GameState();
@@ -72,10 +72,10 @@ export class GameAPI {
     this._colony = null;
     this._politics = null;
     this._operations = null;
-    this._npc = null;
     this._events = null;
     this._game = null;
     this._airQuality = null;
+    this._ideology = null;
   }
 
   // ==========================================================================
@@ -244,16 +244,6 @@ export class GameAPI {
   }
 
   /**
-   * NPC influence queries and commands.
-   */
-  get npc(): NPCFacade {
-    if (!this._npc) {
-      this._npc = new NPCFacade(this.gameState, this.executeCommand, this.checkAffordability);
-    }
-    return this._npc;
-  }
-
-  /**
    * Event queries and resolve command.
    */
   get events(): EventsFacade {
@@ -291,6 +281,16 @@ export class GameAPI {
       this._airQuality = new AirQualityFacade(this.gameState);
     }
     return this._airQuality;
+  }
+
+  /**
+   * Ideology queries (council, faction support, project eligibility).
+   */
+  get ideology(): IdeologyFacade {
+    if (!this._ideology) {
+      this._ideology = new IdeologyFacade(this.gameState);
+    }
+    return this._ideology;
   }
 
   // ==========================================================================

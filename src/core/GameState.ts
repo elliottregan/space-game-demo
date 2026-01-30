@@ -2,7 +2,7 @@ import { getStartingCondition, StartingConditionId } from "./data/startingCondit
 import { INITIAL_COLONIST_RELATIONSHIP } from "./balance/WorkforceBalance";
 import { BUILDINGS } from "./data/buildings";
 import { RANDOM_EVENTS } from "./data/events";
-import { INITIAL_RELATIONSHIPS, NPCS, PROJECTS } from "./data/npcs";
+import { FOUNDING_COLONISTS, FOUNDING_RELATIONSHIPS } from "./data/foundingColonists";
 import { TECHNOLOGIES } from "./data/technologies";
 import { BuildingId } from "./models/Building";
 import type { GameEvent } from "./models/GameEvent";
@@ -11,7 +11,7 @@ import { BuildingManager } from "./systems/BuildingManager";
 import { ColonistMoraleManager } from "./systems/ColonistMoraleManager";
 import { ColonyManager } from "./systems/ColonyManager";
 import { EventManager } from "./systems/EventManager";
-import { NPCInfluenceManager } from "./systems/NPCInfluenceManager";
+import { IdeologyManager } from "./systems/IdeologyManager";
 import { OperationsManager } from "./systems/OperationsManager";
 import { ResourceManager } from "./systems/ResourceManager";
 import { TechnologyTree } from "./systems/TechnologyTree";
@@ -32,8 +32,8 @@ export class GameState {
   events: EventManager;
   victory: VictoryManager;
   operations: OperationsManager;
-  npcInfluence: NPCInfluenceManager;
   airQuality: AirQualityManager;
+  ideology: IdeologyManager;
 
   private tickRunner: TickRunner;
   private eventLog: GameEvent[] = [];
@@ -72,11 +72,14 @@ export class GameState {
     this.events = new EventManager(RANDOM_EVENTS);
     this.victory = new VictoryManager();
     this.operations = new OperationsManager();
-    this.npcInfluence = new NPCInfluenceManager(NPCS, INITIAL_RELATIONSHIPS, PROJECTS);
     this.airQuality = new AirQualityManager();
+    this.ideology = new IdeologyManager();
 
     // Initialize tick runner
     this.tickRunner = createStandardTickRunner();
+
+    // Initialize founding colonists with preset ideologies
+    this.initializeFoundingColonists();
 
     // Create initial relationships between starting colonists (they trained together)
     this.initializeColonistRelationships();
@@ -86,6 +89,49 @@ export class GameState {
 
     // Initialize colonist consumption
     this.colony.tick(this.resources, this.buildings, { morale: 0, health: 0 });
+  }
+
+  /**
+   * Initialize founding colonists with preset ideologies.
+   * Applies preset ideology to existing colonists (matching by index).
+   * Creates relationships between founding colonists based on FOUNDING_RELATIONSHIPS.
+   */
+  private initializeFoundingColonists(): void {
+    const colonists = this.colony.getColonists();
+
+    // Apply founding colonist data to existing colonists
+    for (let i = 0; i < Math.min(colonists.length, FOUNDING_COLONISTS.length); i++) {
+      const colonist = colonists[i];
+      const foundingData = FOUNDING_COLONISTS[i];
+
+      if (colonist && foundingData) {
+        // Update colonist with founding data
+        colonist.name = foundingData.name;
+        colonist.ideology = { ...foundingData.ideology };
+        if (foundingData.role) {
+          colonist.role = foundingData.role;
+        }
+      }
+    }
+
+    // Create relationships between founding colonists
+    for (const [key, strength] of Object.entries(FOUNDING_RELATIONSHIPS)) {
+      const [id1, id2] = key.split(":");
+      if (!id1 || !id2) continue;
+
+      // Map founding IDs to actual colonist IDs
+      const foundingIndex1 = FOUNDING_COLONISTS.findIndex((f) => f.id === id1);
+      const foundingIndex2 = FOUNDING_COLONISTS.findIndex((f) => f.id === id2);
+
+      if (foundingIndex1 >= 0 && foundingIndex2 >= 0) {
+        const colonist1 = colonists[foundingIndex1];
+        const colonist2 = colonists[foundingIndex2];
+
+        if (colonist1 && colonist2) {
+          this.workforce.createInitialRelationship(colonist1.id, colonist2.id, strength);
+        }
+      }
+    }
   }
 
   /**
@@ -175,9 +221,9 @@ export class GameState {
         colonistMorale: this.colonistMorale,
         technology: this.technology,
         operations: this.operations,
-        npcInfluence: this.npcInfluence,
         events: this.events,
         victory: this.victory,
+        ideology: this.ideology,
       },
       { autoAssignNewColonists: this.autoAssignNewColonists },
     );
@@ -238,8 +284,8 @@ export class GameState {
       events: this.events.toJSON(),
       victory: this.victory.toJSON(),
       operations: this.operations.toJSON(),
-      npcInfluence: this.npcInfluence.toJSON(),
       airQuality: this.airQuality.toJSON(),
+      ideology: this.ideology.toJSON(),
       autoAssignNewColonists: this.autoAssignNewColonists,
     };
   }
@@ -265,17 +311,12 @@ export class GameState {
       state.operations = OperationsManager.fromJSON(data.operations);
     }
 
-    if (data.npcInfluence) {
-      state.npcInfluence = NPCInfluenceManager.fromJSON(
-        data.npcInfluence,
-        NPCS,
-        INITIAL_RELATIONSHIPS,
-        PROJECTS,
-      );
-    }
-
     if (data.airQuality) {
       state.airQuality = AirQualityManager.fromJSON(data.airQuality);
+    }
+
+    if (data.ideology) {
+      state.ideology = IdeologyManager.fromJSON(data.ideology);
     }
 
     if (data.autoAssignNewColonists !== undefined) {

@@ -31,31 +31,10 @@ export const calculateSocialCohesion = definePhase({
 });
 
 /**
- * Calculate Policy Effects Phase
- *
- * Computes policy effects (morale and health modifiers) from operations.
- * Populates derived.policyEffects for use by later phases.
- */
-export const calculatePolicyEffects = definePhase({
-  id: "colony:calculatePolicyEffects",
-  name: "Calculate Policy Effects",
-  reads: ["operations"],
-  writes: ["derived.policyEffects"],
-  execute(ctx: TickContext): GameEvent[] {
-    ctx.derived.policyEffects = {
-      morale: ctx.operations.getMoraleEffect(),
-      health: ctx.operations.getHealthEffect(),
-    };
-    return [];
-  },
-});
-
-/**
  * Process Colony Tick Phase
  *
  * Handles population growth, health changes, morale changes, and consumption.
- * Uses derived.socialCohesion, derived.policyEffects, and derived.airQualityEffects
- * computed by earlier phases.
+ * Uses derived.socialCohesion and derived.airQualityEffects computed by earlier phases.
  */
 export const processColonyTick = definePhase({
   id: "colony:processColonyTick",
@@ -65,7 +44,6 @@ export const processColonyTick = definePhase({
     "resources",
     "buildings",
     "derived.socialCohesion",
-    "derived.policyEffects",
     "derived.airQualityEffects",
   ],
   writes: ["colony", "resources", "events"],
@@ -78,13 +56,12 @@ export const processColonyTick = definePhase({
         }
       : { cohesion: 0, isolatedColonists: [] };
 
-    // Combine policy effects with air quality effects
-    const policyEffects = ctx.derived.policyEffects ?? { morale: 0, health: 0 };
+    // Use air quality effects (no policy effects since policies were removed)
     const airQualityEffects = ctx.derived.airQualityEffects ?? { health: 0, morale: 0 };
 
     const combinedEffects = {
-      morale: policyEffects.morale + airQualityEffects.morale,
-      health: policyEffects.health + airQualityEffects.health,
+      morale: airQualityEffects.morale,
+      health: airQualityEffects.health,
     };
 
     return ctx.colony.tick(ctx.resources, ctx.buildings, combinedEffects, socialCohesionForColony);

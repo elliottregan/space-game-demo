@@ -8,7 +8,7 @@ export {
   ColonyFacade,
   EventsFacade,
   GameFlowFacade,
-  NPCFacade,
+  IdeologyFacade,
   OperationsFacade,
   PoliticsFacade,
   ResourcesFacade,

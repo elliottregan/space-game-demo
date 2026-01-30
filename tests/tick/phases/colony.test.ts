@@ -1,7 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import {
   calculateSocialCohesion,
-  calculatePolicyEffects,
   processColonyTick,
   autoAssignWorkers,
   assignHousing,
@@ -19,11 +18,12 @@ describe("colony phases", () => {
         buildings: state.buildings,
         colony: state.colony,
         workforce: state.workforce,
+        colonistMorale: state.colonistMorale,
         technology: state.technology,
         operations: state.operations,
-        npcInfluence: state.npcInfluence,
         events: state.events,
         victory: state.victory,
+        ideology: state.ideology,
       },
       { autoAssignNewColonists: true },
     );
@@ -54,30 +54,6 @@ describe("colony phases", () => {
     });
   });
 
-  describe("calculatePolicyEffects", () => {
-    test("has correct phase metadata", () => {
-      expect(calculatePolicyEffects.id).toBe("colony:calculatePolicyEffects");
-      expect(calculatePolicyEffects.name).toBe("Calculate Policy Effects");
-      expect(calculatePolicyEffects.reads).toContain("operations");
-      expect(calculatePolicyEffects.writes).toContain("derived.policyEffects");
-    });
-
-    test("populates derived.policyEffects", () => {
-      const ctx = createTestContext();
-      expect(ctx.derived.policyEffects).toBeNull();
-      calculatePolicyEffects.execute(ctx);
-      expect(ctx.derived.policyEffects).not.toBeNull();
-      expect(ctx.derived.policyEffects).toHaveProperty("morale");
-      expect(ctx.derived.policyEffects).toHaveProperty("health");
-    });
-
-    test("returns empty events array", () => {
-      const ctx = createTestContext();
-      const events = calculatePolicyEffects.execute(ctx);
-      expect(events).toEqual([]);
-    });
-  });
-
   describe("processColonyTick", () => {
     test("has correct phase metadata", () => {
       expect(processColonyTick.id).toBe("colony:processColonyTick");
@@ -86,7 +62,6 @@ describe("colony phases", () => {
       expect(processColonyTick.reads).toContain("resources");
       expect(processColonyTick.reads).toContain("buildings");
       expect(processColonyTick.reads).toContain("derived.socialCohesion");
-      expect(processColonyTick.reads).toContain("derived.policyEffects");
       expect(processColonyTick.writes).toContain("colony");
       expect(processColonyTick.writes).toContain("resources");
       expect(processColonyTick.writes).toContain("events");
@@ -96,7 +71,6 @@ describe("colony phases", () => {
       const ctx = createTestContext();
       // Setup derived values that processColonyTick expects
       calculateSocialCohesion.execute(ctx);
-      calculatePolicyEffects.execute(ctx);
       const events = processColonyTick.execute(ctx);
       expect(Array.isArray(events)).toBe(true);
     });
@@ -129,11 +103,12 @@ describe("colony phases", () => {
           buildings: state.buildings,
           colony: state.colony,
           workforce: state.workforce,
+          colonistMorale: state.colonistMorale,
           technology: state.technology,
           operations: state.operations,
-          npcInfluence: state.npcInfluence,
           events: state.events,
           victory: state.victory,
+          ideology: state.ideology,
         },
         { autoAssignNewColonists: false },
       );
