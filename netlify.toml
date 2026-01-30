@@ -2,13 +2,8 @@
   command = "bun run build && bun run build:visualizer"
   publish = "dist"
 
-# Visualizer SPA routing
-[[redirects]]
-  from = "/visualizer/*"
-  to = "/visualizer/index.html"
-  status = 200
-
 # Main game SPA routing (Vue Router)
+# Note: /visualizer/ doesn't need SPA routing - it's a single page app without client-side routes
 [[redirects]]
   from = "/*"
   to = "/index.html"
