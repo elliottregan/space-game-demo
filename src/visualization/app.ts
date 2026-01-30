@@ -1,33 +1,178 @@
 // src/visualization/app.ts
-// Main entry point for visualization app
+// Main entry point for visualization app - static file loading version
 
 import type { AnalysisOutput } from "./types";
 
 // State
-let logs: string[] = [];
 let batchA: AnalysisOutput | null = null;
 let batchB: AnalysisOutput | null = null;
-let selectedFileA: string = "";
-let selectedFileB: string = "";
+let fileNameA: string = "";
+let fileNameB: string = "";
 let currentPage: "charts" | "stats" = "charts";
+let isDragging = false;
+let errorMessage: string | null = null;
 
 // DOM Elements
 const app = document.getElementById("app")!;
+const fileInputA = document.getElementById("file-input-a") as HTMLInputElement;
+const fileInputB = document.getElementById("file-input-b") as HTMLInputElement;
 
 /**
- * Fetch list of available log files.
+ * Validate that data matches the AnalysisOutput structure.
  */
-async function fetchLogs(): Promise<string[]> {
-  const response = await fetch("/api/logs");
-  return response.json();
+function validateAnalysisOutput(data: unknown): data is AnalysisOutput {
+  if (typeof data !== "object" || data === null) return false;
+  const obj = data as Record<string, unknown>;
+  if (typeof obj.metadata !== "object" || obj.metadata === null) return false;
+  if (typeof obj.summary !== "object" || obj.summary === null) return false;
+  if (!Array.isArray(obj.victoryTimes)) return false;
+  if (!Array.isArray(obj.peakPopulations)) return false;
+  const meta = obj.metadata as Record<string, unknown>;
+  if (typeof meta.runs !== "number") return false;
+  const summary = obj.summary as Record<string, unknown>;
+  if (typeof summary.winRate !== "number") return false;
+  if (typeof summary.victories !== "number") return false;
+  if (typeof summary.defeats !== "number") return false;
+  return true;
 }
 
 /**
- * Fetch a specific log file.
+ * Load and parse a JSON file.
  */
-async function fetchLog(filename: string): Promise<AnalysisOutput> {
-  const response = await fetch(`/api/logs/${filename}`);
-  return response.json();
+function loadFile(file: File): Promise<AnalysisOutput> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const text = reader.result as string;
+        const data: unknown = JSON.parse(text);
+        if (!validateAnalysisOutput(data)) {
+          reject(new Error("Invalid analysis file format"));
+          return;
+        }
+        resolve(data);
+      } catch {
+        reject(new Error("Failed to parse JSON file"));
+      }
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsText(file);
+  });
+}
+
+/**
+ * Show an error toast message.
+ */
+function showError(message: string): void {
+  errorMessage = message;
+  render();
+  setTimeout(() => {
+    errorMessage = null;
+    render();
+  }, 4000);
+}
+
+/**
+ * Handle file selection for Batch A.
+ */
+async function handleFileA(file: File): Promise<void> {
+  try {
+    batchA = await loadFile(file);
+    fileNameA = file.name;
+    render();
+    if (currentPage === "charts") {
+      renderCharts();
+    }
+  } catch (err) {
+    showError(err instanceof Error ? err.message : "Failed to load file");
+  }
+}
+
+/**
+ * Handle file selection for Batch B.
+ */
+async function handleFileB(file: File): Promise<void> {
+  try {
+    batchB = await loadFile(file);
+    fileNameB = file.name;
+    render();
+    if (currentPage === "charts") {
+      renderCharts();
+    }
+  } catch (err) {
+    showError(err instanceof Error ? err.message : "Failed to load file");
+  }
+}
+
+/**
+ * Set up drag and drop handlers for the entire document.
+ */
+function setupDragAndDrop(): void {
+  document.addEventListener("dragenter", (e) => {
+    e.preventDefault();
+    isDragging = true;
+    render();
+  });
+
+  document.addEventListener("dragleave", (e) => {
+    e.preventDefault();
+    // Only hide overlay if leaving the document
+    if (e.relatedTarget === null) {
+      isDragging = false;
+      render();
+    }
+  });
+
+  document.addEventListener("dragover", (e) => {
+    e.preventDefault();
+  });
+
+  document.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    isDragging = false;
+
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) {
+      render();
+      return;
+    }
+
+    const file = files[0];
+    if (!file.name.endsWith(".json")) {
+      showError("Please drop a JSON file");
+      return;
+    }
+
+    // Load as Batch A if empty, otherwise as Batch B
+    if (!batchA) {
+      await handleFileA(file);
+    } else if (!batchB) {
+      await handleFileB(file);
+    } else {
+      showError("Both batches already loaded. Clear one first.");
+    }
+  });
+}
+
+/**
+ * Set up file input change handlers.
+ */
+function setupFileInputs(): void {
+  fileInputA?.addEventListener("change", async () => {
+    const file = fileInputA.files?.[0];
+    if (file) {
+      await handleFileA(file);
+      fileInputA.value = "";
+    }
+  });
+
+  fileInputB?.addEventListener("change", async () => {
+    const file = fileInputB.files?.[0];
+    if (file) {
+      await handleFileB(file);
+      fileInputB.value = "";
+    }
+  });
 }
 
 /**
@@ -44,26 +189,75 @@ function formatFilename(filename: string): string {
 }
 
 /**
- * Render the app.
+ * Render the drag overlay.
  */
-function render(): void {
-  app.innerHTML = `
+function renderDragOverlay(): string {
+  if (!isDragging) return "";
+  return `
+    <div class="drag-overlay">
+      <div class="drag-overlay-content">
+        <div class="drag-overlay-icon">📊</div>
+        <div class="drag-overlay-text">Drop to load analysis</div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Render the error toast.
+ */
+function renderErrorToast(): string {
+  if (!errorMessage) return "";
+  return `
+    <div class="error-toast">
+      ${errorMessage}
+    </div>
+  `;
+}
+
+/**
+ * Render the empty state (no files loaded).
+ */
+function renderEmptyState(): string {
+  return `
+    <div class="drop-zone" id="drop-zone">
+      <div class="drop-zone-icon">📊</div>
+      <div class="drop-zone-text">Drop simulation analysis JSON here</div>
+      <div class="drop-zone-hint">or</div>
+      <button class="browse-btn" id="browse-btn">Browse files</button>
+    </div>
+  `;
+}
+
+/**
+ * Render the loaded state (files loaded, show controls).
+ */
+function renderLoadedState(): string {
+  return `
     <header class="header">
       <h1>Simulation Analysis Viewer</h1>
       <div class="batch-selectors">
         <div class="batch-selector">
           <label>Batch A:</label>
-          <select id="select-a">
-            <option value="">Select analysis...</option>
-            ${logs.map((f) => `<option value="${f}"${f === selectedFileA ? " selected" : ""}>${formatFilename(f)}</option>`).join("")}
-          </select>
+          <div class="file-display">
+            <span class="file-name">${formatFilename(fileNameA)}</span>
+            <button class="clear-btn" id="clear-a" title="Clear">×</button>
+          </div>
         </div>
         <div class="batch-selector">
           <label>Batch B (compare):</label>
-          <select id="select-b">
-            <option value=""${selectedFileB === "" ? " selected" : ""}>None</option>
-            ${logs.map((f) => `<option value="${f}"${f === selectedFileB ? " selected" : ""}>${formatFilename(f)}</option>`).join("")}
-          </select>
+          ${
+            batchB
+              ? `
+            <div class="file-display">
+              <span class="file-name">${formatFilename(fileNameB)}</span>
+              <button class="clear-btn" id="clear-b" title="Clear">×</button>
+            </div>
+          `
+              : `
+            <button class="add-batch-btn" id="add-batch-b">+ Add comparison</button>
+          `
+          }
         </div>
       </div>
     </header>
@@ -72,12 +266,56 @@ function render(): void {
       ${currentPage === "charts" ? renderChartsContent() : renderStatsContent()}
     </main>
   `;
+}
 
-  // Attach event listeners
-  document.getElementById("select-a")?.addEventListener("change", onSelectA);
-  document.getElementById("select-b")?.addEventListener("change", onSelectB);
+/**
+ * Attach event listeners after render.
+ */
+function attachEventListeners(): void {
+  // Navigation
   document.getElementById("nav-charts")?.addEventListener("click", () => switchPage("charts"));
   document.getElementById("nav-stats")?.addEventListener("click", () => switchPage("stats"));
+
+  // Empty state browse button
+  document.getElementById("browse-btn")?.addEventListener("click", () => {
+    fileInputA?.click();
+  });
+
+  // Clear buttons
+  document.getElementById("clear-a")?.addEventListener("click", () => {
+    batchA = null;
+    fileNameA = "";
+    batchB = null;
+    fileNameB = "";
+    render();
+  });
+
+  document.getElementById("clear-b")?.addEventListener("click", () => {
+    batchB = null;
+    fileNameB = "";
+    render();
+    if (currentPage === "charts") {
+      renderCharts();
+    }
+  });
+
+  // Add batch B button
+  document.getElementById("add-batch-b")?.addEventListener("click", () => {
+    fileInputB?.click();
+  });
+}
+
+/**
+ * Render the app.
+ */
+function render(): void {
+  app.innerHTML = `
+    ${renderDragOverlay()}
+    ${renderErrorToast()}
+    ${batchA ? renderLoadedState() : renderEmptyState()}
+  `;
+
+  attachEventListeners();
 }
 
 /**
@@ -894,61 +1132,16 @@ function renderComparison(): string {
 }
 
 /**
- * Handle batch A selection.
- */
-async function onSelectA(event: Event): Promise<void> {
-  const select = event.target as HTMLSelectElement;
-  const filename = select.value;
-  selectedFileA = filename;
-
-  if (!filename) {
-    batchA = null;
-    render();
-    return;
-  }
-
-  batchA = await fetchLog(filename);
-  render();
-  if (currentPage === "charts") {
-    renderCharts();
-  }
-}
-
-/**
- * Handle batch B selection.
- */
-async function onSelectB(event: Event): Promise<void> {
-  const select = event.target as HTMLSelectElement;
-  const filename = select.value;
-  selectedFileB = filename;
-
-  if (!filename) {
-    batchB = null;
-    render();
-    if (currentPage === "charts") {
-      renderCharts();
-    }
-    return;
-  }
-
-  batchB = await fetchLog(filename);
-  render();
-  if (currentPage === "charts") {
-    renderCharts();
-  }
-}
-
-/**
- * Render D3 charts (placeholder - implemented in separate tasks).
+ * Render D3 charts.
  */
 function renderCharts(): void {
   if (!batchA) return;
 
   // Charts will be rendered by separate modules
-  import("./charts/histogram.js").then((m) => m.renderHistogram("histogram", batchA!, batchB));
-  import("./charts/timeline.js").then((m) => m.renderTimeline("timeline", batchA!, batchB));
-  import("./charts/heatmap.js").then((m) => m.renderHeatmap("heatmap", batchA!, batchB));
-  import("./charts/progression.js").then((m) =>
+  import("./charts/histogram.ts").then((m) => m.renderHistogram("histogram", batchA!, batchB));
+  import("./charts/timeline.ts").then((m) => m.renderTimeline("timeline", batchA!, batchB));
+  import("./charts/heatmap.ts").then((m) => m.renderHeatmap("heatmap", batchA!, batchB));
+  import("./charts/progression.ts").then((m) =>
     m.renderProgression("progression", batchA!, batchB),
   );
 }
@@ -956,9 +1149,9 @@ function renderCharts(): void {
 /**
  * Initialize the app.
  */
-async function init(): Promise<void> {
-  app.innerHTML = `<div class="loading">Loading...</div>`;
-  logs = await fetchLogs();
+function init(): void {
+  setupDragAndDrop();
+  setupFileInputs();
   render();
 }
 
