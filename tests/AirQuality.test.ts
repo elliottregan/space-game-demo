@@ -136,3 +136,17 @@ describe("AirQualityManager effects", () => {
     });
   });
 });
+
+describe("AirQualityManager serialization", () => {
+  it("should serialize to JSON", () => {
+    const manager = new AirQualityManager();
+    manager.calculate(6, 10);
+    const json = manager.toJSON();
+    expect(json.airQuality).toBe(0.6);
+  });
+
+  it("should deserialize from JSON", () => {
+    const manager = AirQualityManager.fromJSON({ airQuality: 0.7 });
+    expect(manager.getAirQuality()).toBe(0.7);
+  });
+});

@@ -74,4 +74,16 @@ export class AirQualityManager {
     const severity = 1 - this.airQuality / AIR_QUALITY_CRITICAL;
     return 1 - severity * AIR_QUALITY_MAX_EFFICIENCY_PENALTY;
   }
+
+  toJSON() {
+    return {
+      airQuality: this.airQuality,
+    };
+  }
+
+  static fromJSON(data: { airQuality: number }): AirQualityManager {
+    const manager = new AirQualityManager();
+    manager.airQuality = data.airQuality;
+    return manager;
+  }
 }
