@@ -83,6 +83,14 @@ export type {
 } from "./operations";
 // Politics types
 export type { FactionDemand, FactionStatus, NPCFaction, PoliticsSnapshot } from "./politics";
+// Ideology types
+export type {
+  ColonistIdeology,
+  CouncilMemberSnapshot,
+  FactionSupportSnapshot,
+  IdeologySnapshot,
+  ProjectEligibility,
+} from "./ideology";
 export type { Technology, TechnologySnapshot, TechResearch, UnlockId } from "./technology";
 // Technology types
 export { SpecialUnlockId, TechnologyId } from "./technology";

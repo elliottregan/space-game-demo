@@ -10,10 +10,12 @@ import {
   type Colonist,
   type ColonistRole,
   type ColonyPolicies,
+  type CouncilMemberSnapshot,
   type EventChoice,
   type ExpeditionType,
   type FactionDemand,
   type FactionStatus,
+  type FactionSupportSnapshot,
   GameAPI,
   type GameEvent,
   NPCId,
@@ -105,6 +107,11 @@ interface GameUIState {
   airQuality: number;
   airQualityProduction: number;
   airQualityConsumption: number;
+  ideology: {
+    council: CouncilMemberSnapshot[];
+    councilFactionCounts: Record<string, number>;
+    factionSupport: FactionSupportSnapshot;
+  };
 }
 
 /**
@@ -221,6 +228,11 @@ class GameService {
       airQuality: 1,
       airQualityProduction: 0,
       airQualityConsumption: 0,
+      ideology: {
+        council: [],
+        councilFactionCounts: {},
+        factionSupport: { earthLoyalists: 0, marsIndependence: 0, corporateInterests: 0 },
+      },
     };
   }
 
@@ -327,6 +339,14 @@ class GameService {
     this.state.airQuality = airQualityData.airQuality;
     this.state.airQualityProduction = airQualityData.production;
     this.state.airQualityConsumption = airQualityData.consumption;
+
+    // Ideology
+    const ideologyData = this.facade.ideology.snapshot();
+    this.state.ideology = {
+      council: [...ideologyData.council],
+      councilFactionCounts: { ...ideologyData.councilFactionCounts },
+      factionSupport: { ...ideologyData.factionSupport },
+    };
   }
 
   /**

@@ -9,6 +9,7 @@ import {
   ColonyFacade,
   EventsFacade,
   GameFlowFacade,
+  IdeologyFacade,
   NPCFacade,
   OperationsFacade,
   PoliticsFacade,
@@ -58,6 +59,7 @@ export class GameAPI {
   private _events: EventsFacade | null = null;
   private _game: GameFlowFacade | null = null;
   private _airQuality: AirQualityFacade | null = null;
+  private _ideology: IdeologyFacade | null = null;
 
   constructor() {
     this.gameState = new GameState();
@@ -76,6 +78,7 @@ export class GameAPI {
     this._events = null;
     this._game = null;
     this._airQuality = null;
+    this._ideology = null;
   }
 
   // ==========================================================================
@@ -291,6 +294,16 @@ export class GameAPI {
       this._airQuality = new AirQualityFacade(this.gameState);
     }
     return this._airQuality;
+  }
+
+  /**
+   * Ideology queries (council, faction support, project eligibility).
+   */
+  get ideology(): IdeologyFacade {
+    if (!this._ideology) {
+      this._ideology = new IdeologyFacade(this.gameState);
+    }
+    return this._ideology;
   }
 
   // ==========================================================================
