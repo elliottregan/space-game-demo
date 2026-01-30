@@ -338,15 +338,14 @@ describe("ColonyFacade", () => {
       const farm = farms.find((f) => f.assignedWorkers.length < 2); // Farm has 2 worker slots
 
       // Find an unassigned colonist
-      let colonists = api.colony.snapshot().colonists;
-      let colonist = colonists.find((c) => !c.assignedBuildingId);
+      let colonist = api.colony.getUnassignedColonists()[0];
 
       // If no unassigned colonist, unassign one
       if (!colonist) {
+        const colonists = api.colony.snapshot().colonists;
         const assignedColonist = colonists[0]!;
         api.colony.unassignFromBuilding(assignedColonist.id);
-        colonists = api.colony.snapshot().colonists;
-        colonist = colonists.find((c) => c.id === assignedColonist.id)!;
+        colonist = api.colony.getById(assignedColonist.id)!;
       }
 
       const result = api.colony.assignToBuilding(colonist.id, farm!.id);

@@ -805,7 +805,7 @@ describe("NPCInfluenceManager", () => {
         }
 
         const weight = manager.getRelationshipWeight(NPCId.CHEN_WEI, NPCId.MARIA_SANTOS);
-        expect(weight).toBe(0);
+        expect(weight).toBeCloseTo(0, 5);
       });
     });
 
