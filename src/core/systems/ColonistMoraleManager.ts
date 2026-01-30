@@ -175,6 +175,30 @@ export class ColonistMoraleManager {
   }
 
   /**
+   * Calculate colony-wide morale as centrality-weighted average.
+   * High-centrality colonists contribute more to the overall "vibe".
+   */
+  getColonyMorale(colonists: Colonist[], relationships: RelationshipManager): number {
+    if (colonists.length === 0) return 50;
+
+    let weightedSum = 0;
+    let totalCentrality = 0;
+
+    for (const colonist of colonists) {
+      const morale = this.getMorale(colonist.id);
+      const centrality = relationships.getCentrality(colonist.id);
+
+      // Use centrality as weight, with floor of 1/n for colonists without centrality
+      const weight = centrality > 0 ? centrality : 1 / colonists.length;
+
+      weightedSum += morale * weight;
+      totalCentrality += weight;
+    }
+
+    return totalCentrality > 0 ? weightedSum / totalCentrality : 50;
+  }
+
+  /**
    * Get current morale for a colonist.
    */
   getMorale(colonistId: string): number {

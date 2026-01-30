@@ -232,4 +232,51 @@ describe("ColonistMoraleManager", () => {
       expect(moraleManager.getMorale(neighbor.id)).toBeLessThan(80);
     });
   });
+
+  describe("getColonyMorale", () => {
+    it("returns centrality-weighted average", () => {
+      const colonists = colonyManager.getColonists();
+
+      // Create star topology - first colonist is hub
+      const hub = colonists[0]!;
+      for (const other of colonists.slice(1)) {
+        relationshipManager.createRelationship(hub.id, other.id, 0, { initialStrength: 0.8 });
+      }
+      relationshipManager.recalculateCentrality(0);
+
+      // Hub has low morale, others have high morale
+      moraleManager.setMorale(hub.id, 20);
+      for (const other of colonists.slice(1)) {
+        moraleManager.setMorale(other.id, 80);
+      }
+
+      const colonyMorale = moraleManager.getColonyMorale(colonists, relationshipManager);
+
+      // Simple average would be (20 + 80 + 80) / 3 = 60
+      // But hub has higher centrality, so colony morale should be lower
+      expect(colonyMorale).toBeLessThan(60);
+    });
+
+    it("returns simple average when no centrality calculated", () => {
+      const colonists = colonyManager.getColonists();
+
+      moraleManager.setMorale(colonists[0]!.id, 30);
+      moraleManager.setMorale(colonists[1]!.id, 60);
+      moraleManager.setMorale(colonists[2]!.id, 90);
+
+      // No centrality calculation, all colonists equal weight
+      const colonyMorale = moraleManager.getColonyMorale(colonists, relationshipManager);
+
+      expect(colonyMorale).toBeCloseTo(60, 0);
+    });
+
+    it("returns 50 for empty colony", () => {
+      const emptyColony = new ColonyManager(0);
+      const colonyMorale = moraleManager.getColonyMorale(
+        emptyColony.getColonists(),
+        relationshipManager,
+      );
+      expect(colonyMorale).toBe(50);
+    });
+  });
 });
