@@ -193,6 +193,40 @@ export class NPCInfluenceManager {
   // ============ Project Proposal ============
 
   /**
+   * Check if a project can be proposed.
+   * Checks faction support requirement, resource cost, and active project status.
+   */
+  canProposeProject(
+    projectId: ProjectId,
+    factionSupport: number,
+    resources: ResourceManager,
+  ): { canPropose: boolean; reason?: string } {
+    const project = this.projects.get(projectId);
+    if (!project) {
+      return { canPropose: false, reason: "Project not found" };
+    }
+
+    if (this.activeProject) {
+      return { canPropose: false, reason: "Another project is already active" };
+    }
+
+    if (factionSupport < project.requiredSupport) {
+      const current = Math.round(factionSupport * 100);
+      const required = Math.round(project.requiredSupport * 100);
+      return {
+        canPropose: false,
+        reason: `Insufficient faction support (${current}% < ${required}% required)`,
+      };
+    }
+
+    if (!resources.canAfford(project.proposalCost)) {
+      return { canPropose: false, reason: "Cannot afford proposal cost" };
+    }
+
+    return { canPropose: true };
+  }
+
+  /**
    * Propose a project for NPC consideration.
    * @returns true if proposal succeeded, false if cannot afford or project already active
    */

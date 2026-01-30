@@ -29,6 +29,8 @@ import {
 import { processResearch } from "./technology";
 // Politics phases
 import { processNPCInfluence } from "./politics";
+// Ideology phases
+import { propagateIdeology } from "./ideology";
 // Operations phases
 import { processOperations, processDepositExtraction } from "./operations";
 // Events phases
@@ -58,6 +60,7 @@ export {
 } from "./colony";
 export { processResearch } from "./technology";
 export { processNPCInfluence } from "./politics";
+export { propagateIdeology } from "./ideology";
 export { processOperations, processDepositExtraction } from "./operations";
 export { processRandomEvents } from "./events";
 export { checkVictoryConditions } from "./victory";
@@ -111,6 +114,9 @@ export function createStandardTickRunner(): TickRunner {
 
   // 7. Politics phases
   runner.register(processNPCInfluence);
+
+  // 7b. Ideology phases (after politics, before operations)
+  runner.register(propagateIdeology);
 
   // 8. Operations phases
   runner.register(processOperations);

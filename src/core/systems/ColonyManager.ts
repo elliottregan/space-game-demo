@@ -8,8 +8,9 @@ import {
 } from "../balance/EconomyBaseline";
 import { COLONIST_SKILL_COUNT, SOCIAL_COHESION } from "../balance/WorkforceBalance";
 import { type SkillId, SKILLS } from "../data/skills";
-import type { Colonist } from "../models/Colonist";
+import type { Colonist, ColonistIdeology } from "../models/Colonist";
 import { ColonistRole, MasteryLevel } from "../models/Colonist";
+import { IdeologyManager } from "./IdeologyManager";
 import type { GameEvent } from "../models/GameEvent";
 import { BuildingPurpose } from "../models/Building";
 import type { BuildingManager } from "./BuildingManager";
@@ -366,7 +367,7 @@ export class ColonyManager {
     });
   }
 
-  addColonist(name?: string): Colonist {
+  addColonist(name?: string, ideology?: ColonistIdeology): Colonist {
     const firstName = rng.pick(FIRST_NAMES) ?? "Unknown";
     const lastName = rng.pick(LAST_NAMES) ?? "Colonist";
 
@@ -377,6 +378,7 @@ export class ColonyManager {
       experience: 0,
       masteryLevel: MasteryLevel.NOVICE,
       skills: this.assignRandomSkills(),
+      ideology: ideology ?? IdeologyManager.createNeutralIdeology(),
     };
 
     this.colonists.set(colonist.id, colonist);

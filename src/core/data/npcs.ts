@@ -117,6 +117,7 @@ export const PROJECTS: Project[] = [
     description: "Begin construction of an interstellar colony ship.",
     type: NPCFaction.EarthLoyalists,
     proposalCost: { materials: 100 },
+    requiredSupport: 0.5, // Victory path - high requirement
     effects: { unlockBuilding: "shipyard" },
   },
   {
@@ -125,6 +126,7 @@ export const PROJECTS: Project[] = [
     description: "Build a memorial to honor our home planet.",
     type: NPCFaction.EarthLoyalists,
     proposalCost: { materials: 40 },
+    requiredSupport: 0.2, // Minor project
   },
   {
     id: ProjectId.HERITAGE_ARCHIVE,
@@ -132,6 +134,7 @@ export const PROJECTS: Project[] = [
     description: "Preserve Earth cultures and traditions.",
     type: NPCFaction.EarthLoyalists,
     proposalCost: { materials: 50 },
+    requiredSupport: 0.35, // Major project
     effects: { unlockBuilding: "archive" },
   },
 
@@ -142,6 +145,7 @@ export const PROJECTS: Project[] = [
     description: "Guarantee housing for all colonists.",
     type: NPCFaction.MarsIndependence,
     proposalCost: { materials: 80 },
+    requiredSupport: 0.35, // Major project
     effects: { unlockBuilding: "housing_complex" },
   },
   {
@@ -150,6 +154,7 @@ export const PROJECTS: Project[] = [
     description: "Expand medical facilities and access.",
     type: NPCFaction.MarsIndependence,
     proposalCost: { materials: 60, water: 30 },
+    requiredSupport: 0.35, // Major project
     effects: { unlockBuilding: "medical_center" },
   },
 
@@ -160,6 +165,7 @@ export const PROJECTS: Project[] = [
     description: "Implement AI systems to help with colony decision-making.",
     type: NPCFaction.CorporateInterests,
     proposalCost: { materials: 50, power: 50 },
+    requiredSupport: 0.35, // Major project
     effects: { unlockTech: "advanced_ai" },
   },
   {
@@ -168,6 +174,7 @@ export const PROJECTS: Project[] = [
     description: "Grant exclusive extraction rights to corporate partners.",
     type: NPCFaction.CorporateInterests,
     proposalCost: { materials: 60 },
+    requiredSupport: 0.35, // Major project
     effects: { unlockBuilding: "efficient_mine" },
   },
   {
@@ -176,5 +183,6 @@ export const PROJECTS: Project[] = [
     description: "Controversial productivity initiative that increases output.",
     type: NPCFaction.CorporateInterests,
     proposalCost: { materials: 40 },
+    requiredSupport: 0.2, // Minor project
   },
 ];

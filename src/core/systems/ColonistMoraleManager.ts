@@ -256,6 +256,15 @@ export class ColonistMoraleManager {
   }
 
   /**
+   * Adjust morale for a colonist by a delta amount.
+   * Positive delta increases morale, negative decreases it.
+   */
+  adjustColonistMorale(colonistId: string, delta: number): void {
+    const current = this.getMorale(colonistId);
+    this.setMorale(colonistId, current + delta);
+  }
+
+  /**
    * Remove a colonist from morale tracking.
    */
   removeColonist(colonistId: string): void {
