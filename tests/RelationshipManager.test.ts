@@ -100,4 +100,68 @@ describe("RelationshipManager", () => {
       expect(restored.getNeighbors("a").has("b")).toBe(true);
     });
   });
+
+  describe("centrality", () => {
+    it("computes centrality for connected colonists", () => {
+      const manager = new RelationshipManager();
+      manager.createRelationship("a", "b", 0);
+      manager.createRelationship("a", "c", 0);
+      manager.createRelationship("b", "c", 0);
+
+      manager.recalculateCentrality(0);
+
+      // All connected in triangle - should have equal centrality
+      const centralityA = manager.getCentrality("a");
+      const centralityB = manager.getCentrality("b");
+      expect(centralityA).toBeCloseTo(centralityB, 2);
+      expect(centralityA).toBeGreaterThan(0);
+    });
+
+    it("returns zero centrality for unknown colonist", () => {
+      const manager = new RelationshipManager();
+      expect(manager.getCentrality("unknown")).toBe(0);
+    });
+
+    it("caches centrality until recalc interval", () => {
+      const manager = new RelationshipManager();
+      manager.createRelationship("a", "b", 0);
+      manager.recalculateCentrality(0);
+
+      const first = manager.getCentrality("a");
+
+      // Add new relationship but don't recalculate
+      manager.createRelationship("a", "c", 5);
+
+      // Should still return cached value
+      expect(manager.getCentrality("a")).toBe(first);
+    });
+
+    it("recalculates when stale", () => {
+      const manager = new RelationshipManager();
+      manager.createRelationship("a", "b", 0);
+      manager.recalculateCentralityIfStale(0, 20); // interval = 20
+
+      // At sol 19, should not recalculate
+      manager.recalculateCentralityIfStale(19, 20);
+
+      // At sol 20, should recalculate
+      manager.createRelationship("a", "c", 20);
+      manager.recalculateCentralityIfStale(20, 20);
+
+      // Centrality should now reflect 3 nodes
+      expect(manager.getCentrality("c")).toBeGreaterThan(0);
+    });
+
+    it("serializes and deserializes centrality cache", () => {
+      const manager = new RelationshipManager();
+      manager.createRelationship("a", "b", 0);
+      manager.recalculateCentrality(10);
+
+      const json = manager.toJSON();
+      const restored = RelationshipManager.fromJSON(json);
+
+      expect(restored.getCentrality("a")).toBe(manager.getCentrality("a"));
+      expect(restored.getLastCentralitySol()).toBe(10);
+    });
+  });
 });
