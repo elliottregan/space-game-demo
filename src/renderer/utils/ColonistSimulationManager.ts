@@ -154,17 +154,16 @@ export class ColonistSimulationManager {
     }
 
     // Determine how much to reheat based on changes
-    const needsReheat = hasNewColonists || hasRemovedColonists;
+    const hasStructuralChanges = hasNewColonists || hasRemovedColonists;
 
     if (this._isAnimating) {
-      // When animating, gently reheat only if there are structural changes
-      if (needsReheat) {
-        this.simulation?.alpha(0.15).restart();
-      }
-      // If no structural changes, let simulation continue naturally (no reheat)
+      // Always give a small alpha bump when data changes while animating
+      // This ensures the simulation responds to relationship strength changes
+      const alpha = hasStructuralChanges ? 0.15 : 0.05;
+      this.simulation?.alpha(alpha).restart();
     } else {
       // Run synchronous ticks
-      const tickCount = needsReheat || this.positions.size === 0 ? 100 : 30;
+      const tickCount = hasStructuralChanges || this.positions.size === 0 ? 100 : 30;
       this.simulation?.tick(tickCount);
 
       // Store positions
