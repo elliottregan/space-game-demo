@@ -20,6 +20,7 @@ export const STARTING_CONDITIONS: StartingCondition[] = [
       BuildingId.HABITAT,
       BuildingId.BASIC_FARM,
       BuildingId.OXYGEN_GENERATOR,
+      BuildingId.WATER_EXTRACTOR,
     ],
   },
   {
