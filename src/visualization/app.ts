@@ -138,6 +138,10 @@ function setupDragAndDrop(): void {
     }
 
     const file = files[0];
+    if (!file) {
+      render();
+      return;
+    }
     if (!file.name.endsWith(".json")) {
       showError("Please drop a JSON file");
       return;
@@ -194,10 +198,10 @@ function formatFilename(filename: string): string {
 function renderDragOverlay(): string {
   if (!isDragging) return "";
   return `
-    <div class="drag-overlay">
-      <div class="drag-overlay-content">
-        <div class="drag-overlay-icon">📊</div>
-        <div class="drag-overlay-text">Drop to load analysis</div>
+    <div class="drop-overlay">
+      <div class="drop-overlay-content">
+        <div class="drop-overlay-icon">📊</div>
+        <div class="drop-overlay-text">Drop to load analysis</div>
       </div>
     </div>
   `;
@@ -239,9 +243,9 @@ function renderLoadedState(): string {
       <div class="batch-selectors">
         <div class="batch-selector">
           <label>Batch A:</label>
-          <div class="file-display">
-            <span class="file-name">${formatFilename(fileNameA)}</span>
-            <button class="clear-btn" id="clear-a" title="Clear">×</button>
+          <div class="file-info">
+            <span class="file-info-name">${formatFilename(fileNameA)}</span>
+            <button class="file-info-btn" id="clear-a" title="Clear">×</button>
           </div>
         </div>
         <div class="batch-selector">
@@ -249,13 +253,13 @@ function renderLoadedState(): string {
           ${
             batchB
               ? `
-            <div class="file-display">
-              <span class="file-name">${formatFilename(fileNameB)}</span>
-              <button class="clear-btn" id="clear-b" title="Clear">×</button>
+            <div class="file-info">
+              <span class="file-info-name">${formatFilename(fileNameB)}</span>
+              <button class="file-info-btn" id="clear-b" title="Clear">×</button>
             </div>
           `
               : `
-            <button class="add-batch-btn" id="add-batch-b">+ Add comparison</button>
+            <button class="add-compare-btn" id="add-batch-b">+ Add comparison</button>
           `
           }
         </div>
