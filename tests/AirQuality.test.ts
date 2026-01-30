@@ -7,6 +7,7 @@ import {
 } from "../src/core/balance/AirQualityBalance";
 import { AirQualityManager } from "../src/core/systems/AirQualityManager";
 import { RESOURCE_KEYS } from "../src/core/models/Resources";
+import { GameState } from "../src/core/GameState";
 
 describe("AirQualityBalance constants", () => {
   it("should have BASE_OXYGEN_PER_COLONIST defined", () => {
@@ -159,5 +160,26 @@ describe("Resources without oxygen", () => {
 
   it("should have exactly 4 resource keys", () => {
     expect(RESOURCE_KEYS).toEqual(["food", "water", "power", "materials"]);
+  });
+});
+
+describe("GameState air quality integration", () => {
+  it("should have airQuality manager", () => {
+    const gameState = new GameState();
+    expect(gameState.airQuality).toBeDefined();
+  });
+
+  it("should serialize and deserialize airQuality", () => {
+    const gameState = new GameState();
+    // Simulate some ticks to change air quality
+    for (let i = 0; i < 5; i++) {
+      gameState.tick();
+    }
+
+    const json = gameState.toJSON();
+    expect(json.airQuality).toBeDefined();
+
+    const restored = GameState.fromJSON(json);
+    expect(restored.airQuality.getAirQuality()).toBe(gameState.airQuality.getAirQuality());
   });
 });

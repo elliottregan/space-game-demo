@@ -6,6 +6,7 @@ import { INITIAL_RELATIONSHIPS, NPCS, PROJECTS } from "./data/npcs";
 import { TECHNOLOGIES } from "./data/technologies";
 import { BuildingId } from "./models/Building";
 import type { GameEvent } from "./models/GameEvent";
+import { AirQualityManager } from "./systems/AirQualityManager";
 import { BuildingManager } from "./systems/BuildingManager";
 import { ColonyManager } from "./systems/ColonyManager";
 import { EventManager } from "./systems/EventManager";
@@ -30,6 +31,7 @@ export class GameState {
   victory: VictoryManager;
   operations: OperationsManager;
   npcInfluence: NPCInfluenceManager;
+  airQuality: AirQualityManager;
 
   private tickRunner: TickRunner;
   private eventLog: GameEvent[] = [];
@@ -64,6 +66,7 @@ export class GameState {
     this.victory = new VictoryManager();
     this.operations = new OperationsManager();
     this.npcInfluence = new NPCInfluenceManager(NPCS, INITIAL_RELATIONSHIPS, PROJECTS);
+    this.airQuality = new AirQualityManager();
 
     // Initialize tick runner
     this.tickRunner = createStandardTickRunner();
@@ -227,6 +230,7 @@ export class GameState {
       victory: this.victory.toJSON(),
       operations: this.operations.toJSON(),
       npcInfluence: this.npcInfluence.toJSON(),
+      airQuality: this.airQuality.toJSON(),
       autoAssignNewColonists: this.autoAssignNewColonists,
     };
   }
@@ -255,6 +259,10 @@ export class GameState {
         INITIAL_RELATIONSHIPS,
         PROJECTS,
       );
+    }
+
+    if (data.airQuality) {
+      state.airQuality = AirQualityManager.fromJSON(data.airQuality);
     }
 
     if (data.autoAssignNewColonists !== undefined) {
