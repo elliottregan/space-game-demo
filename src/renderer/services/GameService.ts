@@ -94,6 +94,9 @@ interface GameUIState {
     councils: Council[];
     relationshipMatrix: readonly (readonly number[])[];
   };
+  airQuality: number;
+  airQualityProduction: number;
+  airQualityConsumption: number;
 }
 
 /**
@@ -207,6 +210,9 @@ class GameService {
         councils: [],
         relationshipMatrix: [],
       },
+      airQuality: 1,
+      airQualityProduction: 0,
+      airQualityConsumption: 0,
     };
   }
 
@@ -307,6 +313,12 @@ class GameService {
       councils: [...npc.councils],
       relationshipMatrix: npc.relationshipMatrix,
     };
+
+    // Air Quality
+    const airQualityData = this.facade.airQuality.snapshot();
+    this.state.airQuality = airQualityData.airQuality;
+    this.state.airQualityProduction = airQualityData.production;
+    this.state.airQualityConsumption = airQualityData.consumption;
   }
 
   /**

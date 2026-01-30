@@ -4,6 +4,7 @@
 import { GameState } from "../core/GameState";
 import { RESOURCE_KEYS } from "../core/models/Resources";
 import {
+  AirQualityFacade,
   BuildingsFacade,
   ColonyFacade,
   EventsFacade,
@@ -56,6 +57,7 @@ export class GameAPI {
   private _npc: NPCFacade | null = null;
   private _events: EventsFacade | null = null;
   private _game: GameFlowFacade | null = null;
+  private _airQuality: AirQualityFacade | null = null;
 
   constructor() {
     this.gameState = new GameState();
@@ -73,6 +75,7 @@ export class GameAPI {
     this._npc = null;
     this._events = null;
     this._game = null;
+    this._airQuality = null;
   }
 
   // ==========================================================================
@@ -278,6 +281,16 @@ export class GameAPI {
       );
     }
     return this._game;
+  }
+
+  /**
+   * Air quality queries (read-only).
+   */
+  get airQuality(): AirQualityFacade {
+    if (!this._airQuality) {
+      this._airQuality = new AirQualityFacade(this.gameState);
+    }
+    return this._airQuality;
   }
 
   // ==========================================================================
