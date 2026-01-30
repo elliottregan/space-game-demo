@@ -30,6 +30,7 @@ export const COLONY_MORALE = {
 
 export const COLONY_HEALTH = {
   GROWTH_REQUIREMENT: 80,
+  GROWTH_BONUS_MAX: 0.5, // 50% bonus to birth rate at max health (100)
   LOW_WARNING_THRESHOLD: 50,
   DEATH_RISK_THRESHOLD: 20,
   DEATH_CHANCE: 0.05,

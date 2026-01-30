@@ -172,15 +172,24 @@ export class ColonyManager {
       this.health > COLONY_HEALTH.GROWTH_REQUIREMENT &&
       this.morale > COLONY_MORALE.GROWTH_REQUIREMENT;
 
-    if (canGrow && rng.chance(POPULATION_GROWTH_RATE)) {
-      const newColonist = this.addColonist();
-      events.push({
-        type: "COLONIST_BORN",
-        colonistId: newColonist.id,
-        colonistName: newColonist.name,
-        severity: "info",
-        message: `A new colonist has joined: ${newColonist.name}!`,
-      });
+    if (canGrow) {
+      // Scale growth rate based on health (0 bonus at 80, max bonus at 100)
+      const healthBonus =
+        ((this.health - COLONY_HEALTH.GROWTH_REQUIREMENT) /
+          (100 - COLONY_HEALTH.GROWTH_REQUIREMENT)) *
+        COLONY_HEALTH.GROWTH_BONUS_MAX;
+      const adjustedGrowthRate = POPULATION_GROWTH_RATE * (1 + healthBonus);
+
+      if (rng.chance(adjustedGrowthRate)) {
+        const newColonist = this.addColonist();
+        events.push({
+          type: "COLONIST_BORN",
+          colonistId: newColonist.id,
+          colonistName: newColonist.name,
+          severity: "info",
+          message: `A new colonist has joined: ${newColonist.name}!`,
+        });
+      }
     }
   }
 
