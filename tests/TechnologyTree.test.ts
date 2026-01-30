@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
-import { TechnologyTree } from '../src/core/systems/TechnologyTree';
-import { ResourceManager } from '../src/core/systems/ResourceManager';
-import { TECHNOLOGIES } from '../src/core/data/technologies';
-import { TechnologyId } from '../src/core/models/Technology';
+import { describe, it, expect, beforeEach } from "bun:test";
+import { TechnologyTree } from "../src/core/systems/TechnologyTree";
+import { ResourceManager } from "../src/core/systems/ResourceManager";
+import { TECHNOLOGIES } from "../src/core/data/technologies";
+import { TechnologyId } from "../src/core/models/Technology";
 
-describe('TechnologyTree', () => {
+describe("TechnologyTree", () => {
   let tree: TechnologyTree;
   let resources: ResourceManager;
 
@@ -12,38 +12,37 @@ describe('TechnologyTree', () => {
     tree = new TechnologyTree(TECHNOLOGIES);
     resources = new ResourceManager({
       food: 500,
-      oxygen: 500,
       water: 500,
       power: 500,
-      materials: 500
+      materials: 500,
     });
   });
 
-  it('should allow researching techs with no prerequisites', () => {
+  it("should allow researching techs with no prerequisites", () => {
     expect(tree.canResearch(TechnologyId.HYDROPONICS)).toBe(true);
     expect(tree.canResearch(TechnologyId.WATER_RECYCLING)).toBe(true);
     expect(tree.canResearch(TechnologyId.ADVANCED_MATERIALS)).toBe(true);
   });
 
-  it('should not allow researching techs with unmet prerequisites', () => {
+  it("should not allow researching techs with unmet prerequisites", () => {
     expect(tree.canResearch(TechnologyId.ROBOTICS)).toBe(false);
     expect(tree.canResearch(TechnologyId.GENERATION_SHIP)).toBe(false);
   });
 
-  it('should start research', () => {
+  it("should start research", () => {
     const result = tree.startResearch(TechnologyId.HYDROPONICS, resources);
     expect(result).toBe(true);
     expect(tree.getCurrentResearch()).not.toBeNull();
     expect(tree.getCurrentResearch()?.techId).toBe(TechnologyId.HYDROPONICS);
   });
 
-  it('should not allow multiple simultaneous research', () => {
+  it("should not allow multiple simultaneous research", () => {
     tree.startResearch(TechnologyId.HYDROPONICS, resources);
     const result = tree.startResearch(TechnologyId.WATER_RECYCLING, resources);
     expect(result).toBe(false);
   });
 
-  it('should complete research after required sols', () => {
+  it("should complete research after required sols", () => {
     tree.startResearch(TechnologyId.WATER_RECYCLING, resources);
 
     const tech = tree.getTech(TechnologyId.WATER_RECYCLING)!;
@@ -55,7 +54,7 @@ describe('TechnologyTree', () => {
     expect(tree.getCurrentResearch()).toBeNull();
   });
 
-  it('should emit event on research completion', () => {
+  it("should emit event on research completion", () => {
     tree.startResearch(TechnologyId.WATER_RECYCLING, resources);
 
     const tech = tree.getTech(TechnologyId.WATER_RECYCLING)!;
@@ -64,12 +63,12 @@ describe('TechnologyTree', () => {
       events = tree.tick();
     }
 
-    const completeEvent = events.find(e => e.type === 'RESEARCH_COMPLETE');
+    const completeEvent = events.find((e) => e.type === "RESEARCH_COMPLETE");
     expect(completeEvent).toBeDefined();
     expect(completeEvent?.techId).toBe(TechnologyId.WATER_RECYCLING);
   });
 
-  it('should allow researching dependent tech after prerequisite is complete', () => {
+  it("should allow researching dependent tech after prerequisite is complete", () => {
     tree.startResearch(TechnologyId.ADVANCED_MATERIALS, resources);
 
     const tech = tree.getTech(TechnologyId.ADVANCED_MATERIALS)!;
@@ -80,8 +79,8 @@ describe('TechnologyTree', () => {
     expect(tree.canResearch(TechnologyId.ROBOTICS)).toBe(true);
   });
 
-  describe('Research Queue', () => {
-    it('should track progress per tech in a map', () => {
+  describe("Research Queue", () => {
+    it("should track progress per tech in a map", () => {
       tree.startResearch(TechnologyId.HYDROPONICS, resources);
 
       // Advance 10 sols
@@ -92,7 +91,7 @@ describe('TechnologyTree', () => {
       expect(tree.getResearchProgress(TechnologyId.HYDROPONICS)).toBe(10);
     });
 
-    it('should increment progress in the map during tick', () => {
+    it("should increment progress in the map during tick", () => {
       tree.startResearch(TechnologyId.HYDROPONICS, resources);
       tree.tick();
       tree.tick();
@@ -101,14 +100,14 @@ describe('TechnologyTree', () => {
       expect(tree.getCurrentResearchId()).toBe(TechnologyId.HYDROPONICS);
     });
 
-    it('should set currentResearchId and add to queue on startResearch', () => {
+    it("should set currentResearchId and add to queue on startResearch", () => {
       tree.startResearch(TechnologyId.HYDROPONICS, resources);
 
       expect(tree.getCurrentResearchId()).toBe(TechnologyId.HYDROPONICS);
       expect(tree.getResearchQueue()).toEqual([TechnologyId.HYDROPONICS]);
     });
 
-    it('should resume progress if tech was partially researched before', () => {
+    it("should resume progress if tech was partially researched before", () => {
       tree.startResearch(TechnologyId.HYDROPONICS, resources);
 
       // Advance 10 sols
@@ -125,7 +124,7 @@ describe('TechnologyTree', () => {
       expect(tree.getResearchProgress(TechnologyId.HYDROPONICS)).toBe(10);
     });
 
-    it('should preserve progress when cancelling research', () => {
+    it("should preserve progress when cancelling research", () => {
       tree.startResearch(TechnologyId.HYDROPONICS, resources);
 
       for (let i = 0; i < 20; i++) {
@@ -139,7 +138,7 @@ describe('TechnologyTree', () => {
       expect(tree.getResearchQueue()).toEqual([]);
     });
 
-    it('should return prerequisite chain in topological order', () => {
+    it("should return prerequisite chain in topological order", () => {
       // generation_ship needs: fusion_drive, cryosleep, closed_ecosystem
       // fusion_drive needs: nuclear_fission, advanced_materials
       // cryosleep needs: advanced_medicine
@@ -156,13 +155,21 @@ describe('TechnologyTree', () => {
       expect(chain).toContain(TechnologyId.HYDROPONICS);
 
       // Prerequisites must come before dependents
-      expect(chain.indexOf(TechnologyId.HYDROPONICS)).toBeLessThan(chain.indexOf(TechnologyId.GENETICS));
-      expect(chain.indexOf(TechnologyId.GENETICS)).toBeLessThan(chain.indexOf(TechnologyId.ADVANCED_MEDICINE));
-      expect(chain.indexOf(TechnologyId.ADVANCED_MATERIALS)).toBeLessThan(chain.indexOf(TechnologyId.FUSION_DRIVE));
-      expect(chain.indexOf(TechnologyId.FUSION_DRIVE)).toBeLessThan(chain.indexOf(TechnologyId.GENERATION_SHIP));
+      expect(chain.indexOf(TechnologyId.HYDROPONICS)).toBeLessThan(
+        chain.indexOf(TechnologyId.GENETICS),
+      );
+      expect(chain.indexOf(TechnologyId.GENETICS)).toBeLessThan(
+        chain.indexOf(TechnologyId.ADVANCED_MEDICINE),
+      );
+      expect(chain.indexOf(TechnologyId.ADVANCED_MATERIALS)).toBeLessThan(
+        chain.indexOf(TechnologyId.FUSION_DRIVE),
+      );
+      expect(chain.indexOf(TechnologyId.FUSION_DRIVE)).toBeLessThan(
+        chain.indexOf(TechnologyId.GENERATION_SHIP),
+      );
     });
 
-    it('should exclude already researched techs from chain', () => {
+    it("should exclude already researched techs from chain", () => {
       // Research hydroponics first
       tree.startResearch(TechnologyId.HYDROPONICS, resources);
       const tech = tree.getTech(TechnologyId.HYDROPONICS)!;
@@ -176,7 +183,7 @@ describe('TechnologyTree', () => {
       expect(chain).toEqual([TechnologyId.GENETICS]);
     });
 
-    it('should queue all prerequisites when calling queueResearch on locked tech', () => {
+    it("should queue all prerequisites when calling queueResearch on locked tech", () => {
       // genetics needs hydroponics
       tree.queueResearch(TechnologyId.GENETICS, resources);
 
@@ -184,7 +191,7 @@ describe('TechnologyTree', () => {
       expect(tree.getCurrentResearchId()).toBe(TechnologyId.HYDROPONICS);
     });
 
-    it('should merge queues when changing target', () => {
+    it("should merge queues when changing target", () => {
       // Start with genetics (needs hydroponics)
       tree.queueResearch(TechnologyId.GENETICS, resources);
       expect(tree.getResearchQueue()).toEqual([TechnologyId.HYDROPONICS, TechnologyId.GENETICS]);
@@ -199,15 +206,22 @@ describe('TechnologyTree', () => {
       tree.queueResearch(TechnologyId.ADVANCED_MEDICINE, resources);
 
       // hydroponics still in queue (shared), genetics still needed, advanced_medicine added
-      expect(tree.getResearchQueue()).toEqual([TechnologyId.HYDROPONICS, TechnologyId.GENETICS, TechnologyId.ADVANCED_MEDICINE]);
+      expect(tree.getResearchQueue()).toEqual([
+        TechnologyId.HYDROPONICS,
+        TechnologyId.GENETICS,
+        TechnologyId.ADVANCED_MEDICINE,
+      ]);
       // Progress preserved
       expect(tree.getResearchProgress(TechnologyId.HYDROPONICS)).toBe(10);
     });
 
-    it('should remove techs not in new chain when changing target', () => {
+    it("should remove techs not in new chain when changing target", () => {
       // Start with robotics (needs advanced_materials)
       tree.queueResearch(TechnologyId.ROBOTICS, resources);
-      expect(tree.getResearchQueue()).toEqual([TechnologyId.ADVANCED_MATERIALS, TechnologyId.ROBOTICS]);
+      expect(tree.getResearchQueue()).toEqual([
+        TechnologyId.ADVANCED_MATERIALS,
+        TechnologyId.ROBOTICS,
+      ]);
 
       // Change to genetics (needs hydroponics)
       tree.queueResearch(TechnologyId.GENETICS, resources);
@@ -216,7 +230,7 @@ describe('TechnologyTree', () => {
       expect(tree.getResearchQueue()).toEqual([TechnologyId.HYDROPONICS, TechnologyId.GENETICS]);
     });
 
-    it('should auto-start next tech in queue when current completes', () => {
+    it("should auto-start next tech in queue when current completes", () => {
       tree.queueResearch(TechnologyId.GENETICS, resources);
       expect(tree.getResearchQueue()).toEqual([TechnologyId.HYDROPONICS, TechnologyId.GENETICS]);
 
@@ -231,7 +245,7 @@ describe('TechnologyTree', () => {
       expect(tree.getResearchQueue()).toEqual([TechnologyId.GENETICS]);
     });
 
-    it('should pause queue if resources insufficient for next tech', () => {
+    it("should pause queue if resources insufficient for next tech", () => {
       // asteroid_mining costs 200 materials
       // Set up: research advanced_materials and robotics first
       tree.queueResearch(TechnologyId.ROBOTICS, resources);
@@ -250,7 +264,10 @@ describe('TechnologyTree', () => {
 
       // Now queue asteroid_mining with insufficient resources
       const poorResources = new ResourceManager({
-        food: 100, oxygen: 100, water: 100, power: 100, materials: 50
+        food: 100,
+        water: 100,
+        power: 100,
+        materials: 50,
       });
 
       tree.queueResearch(TechnologyId.ASTEROID_MINING, poorResources);
@@ -260,7 +277,7 @@ describe('TechnologyTree', () => {
       expect(tree.getCurrentResearchId()).toBeNull();
     });
 
-    it('should return TechResearch object from getCurrentResearch for compatibility', () => {
+    it("should return TechResearch object from getCurrentResearch for compatibility", () => {
       tree.startResearch(TechnologyId.HYDROPONICS, resources);
 
       for (let i = 0; i < 10; i++) {
@@ -274,7 +291,7 @@ describe('TechnologyTree', () => {
       expect(research?.requiredSols).toBe(45);
     });
 
-    it('should serialize and restore queue and progress', () => {
+    it("should serialize and restore queue and progress", () => {
       tree.queueResearch(TechnologyId.GENETICS, resources);
 
       // Advance 15 sols
@@ -287,7 +304,10 @@ describe('TechnologyTree', () => {
 
       expect(restored.getCurrentResearchId()).toBe(TechnologyId.HYDROPONICS);
       expect(restored.getResearchProgress(TechnologyId.HYDROPONICS)).toBe(15);
-      expect(restored.getResearchQueue()).toEqual([TechnologyId.HYDROPONICS, TechnologyId.GENETICS]);
+      expect(restored.getResearchQueue()).toEqual([
+        TechnologyId.HYDROPONICS,
+        TechnologyId.GENETICS,
+      ]);
     });
   });
 });

@@ -18,7 +18,6 @@ export interface BuildingSnapshot {
   readonly pending: readonly Readonly<Building>[];
   readonly definitions: readonly Readonly<BuildingDefinition>[];
   readonly moraleBoost: number;
-  readonly totalOxygenContribution: number;
 }
 
 // Re-export core types

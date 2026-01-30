@@ -1,6 +1,7 @@
 // src/facade/domains/index.ts
 // Re-export all domain facades
 
+export { AirQualityFacade } from "./AirQualityFacade";
 export { BuildingsFacade } from "./BuildingsFacade";
 export { ColonyFacade } from "./ColonyFacade";
 export { EventsFacade } from "./EventsFacade";

@@ -11,10 +11,16 @@ export const STARTING_CONDITIONS: StartingCondition[] = [
   {
     id: StartingConditionId.DEFAULT,
     name: "Fresh Start",
-    description: "14 colonists with basic supplies. No infrastructure.",
+    description: "14 colonists with basic supplies and minimal life support.",
     population: STARTING_POPULATION,
     resources: STARTING_RESOURCES,
-    preBuiltBuildings: [],
+    preBuiltBuildings: [
+      BuildingId.SOLAR_PANEL,
+      BuildingId.SOLAR_PANEL,
+      BuildingId.HABITAT,
+      BuildingId.BASIC_FARM,
+      BuildingId.OXYGEN_GENERATOR,
+    ],
   },
   {
     id: StartingConditionId.ESTABLISHED_BASE,

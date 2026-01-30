@@ -54,7 +54,6 @@ interface GameUIState {
   morale: number;
   socialCohesion: number;
   moraleBoost: number;
-  totalOxygenContribution: number;
   colonists: Colonist[];
   colonistMorale: Record<string, ColonistMoraleData>;
   skillDefinitions: SkillDefinition[];
@@ -103,6 +102,9 @@ interface GameUIState {
     councils: Council[];
     relationshipMatrix: readonly (readonly number[])[];
   };
+  airQuality: number;
+  airQualityProduction: number;
+  airQualityConsumption: number;
 }
 
 /**
@@ -168,7 +170,7 @@ class GameService {
   private createInitialState(): GameUIState {
     return {
       currentSol: 0,
-      resources: { food: 0, oxygen: 0, water: 0, power: 0, materials: 0 },
+      resources: { food: 0, water: 0, power: 0, materials: 0 },
       production: {},
       consumption: {},
       netFlow: {},
@@ -177,7 +179,6 @@ class GameService {
       morale: 100,
       socialCohesion: 0,
       moraleBoost: 0,
-      totalOxygenContribution: 0,
       colonists: [],
       colonistMorale: {},
       skillDefinitions: [],
@@ -217,6 +218,9 @@ class GameService {
         councils: [],
         relationshipMatrix: [],
       },
+      airQuality: 1,
+      airQualityProduction: 0,
+      airQualityConsumption: 0,
     };
   }
 
@@ -275,7 +279,6 @@ class GameService {
     }));
     this.state.buildingDefinitions = [...buildings.definitions];
     this.state.moraleBoost = buildings.moraleBoost;
-    this.state.totalOxygenContribution = buildings.totalOxygenContribution;
 
     // Technology
     const techs = this.facade.technology.snapshot();
@@ -318,6 +321,12 @@ class GameService {
       councils: [...npc.councils],
       relationshipMatrix: npc.relationshipMatrix,
     };
+
+    // Air Quality
+    const airQualityData = this.facade.airQuality.snapshot();
+    this.state.airQuality = airQualityData.airQuality;
+    this.state.airQualityProduction = airQualityData.production;
+    this.state.airQualityConsumption = airQualityData.consumption;
   }
 
   /**

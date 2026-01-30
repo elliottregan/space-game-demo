@@ -14,7 +14,6 @@ describe("Building Modes", () => {
     buildings = new BuildingManager(BUILDINGS);
     resources = new ResourceManager({
       food: 500,
-      oxygen: 500,
       water: 500,
       power: 500,
       materials: 500,
@@ -72,7 +71,6 @@ describe("Building Breakdown", () => {
     buildings = new BuildingManager(BUILDINGS);
     resources = new ResourceManager({
       food: 500,
-      oxygen: 500,
       water: 500,
       power: 500,
       materials: 500,

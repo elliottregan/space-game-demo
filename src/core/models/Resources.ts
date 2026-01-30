@@ -1,6 +1,5 @@
 export interface Resources {
   food: number;
-  oxygen: number;
   water: number;
   power: number;
   materials: number;
@@ -8,10 +7,9 @@ export interface Resources {
 
 export interface ResourceDelta {
   food?: number;
-  oxygen?: number;
   water?: number;
   power?: number;
   materials?: number;
 }
 
-export const RESOURCE_KEYS: (keyof Resources)[] = ["food", "oxygen", "water", "power", "materials"];
+export const RESOURCE_KEYS: (keyof Resources)[] = ["food", "water", "power", "materials"];

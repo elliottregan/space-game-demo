@@ -115,12 +115,9 @@ export class VictoryManager {
     }
 
     const resourceState = resources.getResources();
-    if (resourceState.food === 0 || resourceState.oxygen === 0) {
+    if (resourceState.food === 0) {
       this.status = "defeat";
-      this.reason =
-        resourceState.food === 0
-          ? "Food supplies depleted. The colony has starved."
-          : "Oxygen supplies depleted. The colony has suffocated.";
+      this.reason = "Food supplies depleted. The colony has starved.";
       events.push({
         type: "DEFEAT",
         reason: this.reason,

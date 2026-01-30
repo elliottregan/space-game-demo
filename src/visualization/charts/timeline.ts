@@ -52,7 +52,6 @@ const CHART_CONFIGS: ChartConfig[] = [
     height: 180,
     metrics: [
       { key: "food", accessor: (d) => d.food, color: COLORS.food },
-      { key: "oxygen", accessor: (d) => d.oxygen, color: COLORS.oxygen },
       { key: "water", accessor: (d) => d.water, color: COLORS.water },
       { key: "power", accessor: (d) => d.power, color: COLORS.power },
     ],

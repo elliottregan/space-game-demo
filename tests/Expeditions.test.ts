@@ -13,7 +13,10 @@ describe("Expeditions", () => {
   beforeEach(() => {
     operations = new OperationsManager();
     resources = new ResourceManager({
-      food: 500, oxygen: 500, water: 500, power: 500, materials: 500,
+      food: 500,
+      water: 500,
+      power: 500,
+      materials: 500,
     });
     colony = new ColonyManager(10);
   });
@@ -24,13 +27,19 @@ describe("Expeditions", () => {
 
   test("canStartExpedition fails with insufficient materials", () => {
     resources = new ResourceManager({
-      food: 500, oxygen: 500, water: 500, power: 500, materials: 10,
+      food: 500,
+      water: 500,
+      power: 500,
+      materials: 10,
     });
     expect(operations.canStartExpedition("survey", resources, colony)).toBe(false);
   });
 
   test("startExpedition deducts resources", () => {
-    const crewIds = colony.getColonists().slice(0, 2).map(c => c.id);
+    const crewIds = colony
+      .getColonists()
+      .slice(0, 2)
+      .map((c) => c.id);
     operations.startExpedition("survey", crewIds, resources, colony, 0);
 
     const remaining = resources.getResources();
@@ -41,18 +50,39 @@ describe("Expeditions", () => {
     const colonists = colony.getColonists();
 
     // Start first expedition
-    operations.startExpedition("survey", [colonists[0]!.id, colonists[1]!.id], resources, colony, 0);
+    operations.startExpedition(
+      "survey",
+      [colonists[0]!.id, colonists[1]!.id],
+      resources,
+      colony,
+      0,
+    );
 
     // Start second expedition
-    operations.startExpedition("survey", [colonists[2]!.id, colonists[3]!.id], resources, colony, 0);
+    operations.startExpedition(
+      "survey",
+      [colonists[2]!.id, colonists[3]!.id],
+      resources,
+      colony,
+      0,
+    );
 
     // Third should fail
-    const result = operations.startExpedition("survey", [colonists[4]!.id, colonists[5]!.id], resources, colony, 0);
+    const result = operations.startExpedition(
+      "survey",
+      [colonists[4]!.id, colonists[5]!.id],
+      resources,
+      colony,
+      0,
+    );
     expect(result).toBe(false);
   });
 
   test("expedition resolves after duration", () => {
-    const crewIds = colony.getColonists().slice(0, 2).map(c => c.id);
+    const crewIds = colony
+      .getColonists()
+      .slice(0, 2)
+      .map((c) => c.id);
     operations.startExpedition("survey", crewIds, resources, colony, 0);
 
     // Tick for duration

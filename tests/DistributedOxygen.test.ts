@@ -10,21 +10,15 @@ describe("Distributed Oxygen System", () => {
     gameState = new GameState();
   });
 
-  describe("Oxygen deficit efficiency penalty", () => {
-    it("should apply 50% efficiency penalty when oxygen is negative", () => {
+  describe("Air quality efficiency penalty", () => {
+    it("should apply 50% efficiency penalty when air quality efficiency is set low", () => {
       gameState.resources.add({ materials: 1000 });
 
       // Research needed techs
       gameState.technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
       gameState.technology.completeResearch(TechnologyId.ROBOTICS);
 
-      // Build factory (-1) without any positive oxygen buildings
-      // Need to build multiple factories to go negative
-      gameState.buildings.startBuilding(
-        BuildingId.AUTOMATED_FACTORY,
-        gameState.resources,
-        gameState.technology,
-      );
+      // Build factory
       gameState.buildings.startBuilding(
         BuildingId.AUTOMATED_FACTORY,
         gameState.resources,
@@ -36,14 +30,13 @@ describe("Distributed Oxygen System", () => {
         gameState.tick();
       }
 
-      // Total oxygen contribution should be -2
-      const total = gameState.buildings.getTotalOxygenContribution();
-      expect(total).toBe(-2);
-
-      // Get effective production - should be penalized
+      // Get effective production - should be penalized when air quality efficiency is low
       const factories = gameState.buildings
         .getActiveBuildings()
         .filter((b) => b.definitionId === BuildingId.AUTOMATED_FACTORY);
+
+      // Set air quality efficiency to 50%
+      gameState.buildings.setAirQualityEfficiency(0.5);
 
       const effectiveProd = gameState.buildings.getEffectiveProduction(factories[0]!.id);
 
@@ -51,24 +44,14 @@ describe("Distributed Oxygen System", () => {
       expect(effectiveProd.materials).toBe(7.5);
     });
 
-    it("should not apply penalty when oxygen is positive", () => {
+    it("should not apply penalty when air quality efficiency is full", () => {
       gameState.resources.add({ materials: 1000 });
 
       // Research needed tech for automated factory
       gameState.technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
       gameState.technology.completeResearch(TechnologyId.ROBOTICS);
 
-      // Build habitats (+2 each) to get positive oxygen, and automated factory (truly automated)
-      gameState.buildings.startBuilding(
-        BuildingId.HABITAT,
-        gameState.resources,
-        gameState.technology,
-      );
-      gameState.buildings.startBuilding(
-        BuildingId.HABITAT,
-        gameState.resources,
-        gameState.technology,
-      );
+      // Build automated factory (truly automated)
       gameState.buildings.startBuilding(
         BuildingId.AUTOMATED_FACTORY,
         gameState.resources,
@@ -80,17 +63,16 @@ describe("Distributed Oxygen System", () => {
         gameState.tick();
       }
 
-      const total = gameState.buildings.getTotalOxygenContribution();
-      // 2 habitats (+2 each) + 1 factory (-1) = +3
-      expect(total).toBeGreaterThan(0);
-
       const factories = gameState.buildings
         .getActiveBuildings()
         .filter((b) => b.definitionId === BuildingId.AUTOMATED_FACTORY);
 
+      // Air quality efficiency defaults to 1.0
+      gameState.buildings.setAirQualityEfficiency(1.0);
+
       const effectiveProd = gameState.buildings.getEffectiveProduction(factories[0]!.id);
 
-      // Base production is 15 materials, no penalty (automated, no workers needed, oxygen positive)
+      // Base production is 15 materials, no penalty (automated, no workers needed, air quality full)
       expect(effectiveProd.materials).toBe(15);
     });
   });
@@ -111,21 +93,26 @@ describe("Distributed Oxygen System", () => {
       expect(solar?.oxygenContribution).toBe(0);
     });
 
-    it("should have oxygen_generator building with production", () => {
+    it("should have oxygen_generator building with oxygen contribution", () => {
       const oxygenGen = gameState.buildings.getDefinition("oxygen_generator" as BuildingId);
       expect(oxygenGen).toBeDefined();
-      expect(oxygenGen?.production?.oxygen).toBe(5);
+      expect(oxygenGen?.oxygenContribution).toBe(5);
     });
   });
 
   describe("BuildingManager.getTotalOxygenContribution", () => {
-    it("should return 0 when no buildings exist", () => {
+    it("should return starting buildings oxygen contribution", () => {
+      // Default starting condition has: 1 habitat (+2), 1 farm (+2), 1 oxygen generator (+5) = 9
       const total = gameState.buildings.getTotalOxygenContribution();
-      expect(total).toBe(0);
+      expect(total).toBe(9);
     });
 
     it("should sum oxygen contributions from active buildings", () => {
-      // Build a habitat (+2) and basic_farm (+2)
+      // Starting contribution is 9 (habitat +2, farm +2, oxygen generator +5)
+      const startingOxygen = gameState.buildings.getTotalOxygenContribution();
+      expect(startingOxygen).toBe(9);
+
+      // Build another habitat (+2) and basic_farm (+2)
       gameState.resources.add({ materials: 500 });
 
       gameState.buildings.startBuilding(
@@ -145,10 +132,11 @@ describe("Distributed Oxygen System", () => {
       }
 
       const total = gameState.buildings.getTotalOxygenContribution();
-      expect(total).toBe(4); // 2 + 2
+      expect(total).toBe(13); // 9 + 2 + 2
     });
 
     it("should include negative contributions", () => {
+      // Starting contribution is 9
       gameState.resources.add({ materials: 500 });
 
       // Research advanced_materials for research_lab
@@ -171,23 +159,15 @@ describe("Distributed Oxygen System", () => {
       }
 
       const total = gameState.buildings.getTotalOxygenContribution();
-      expect(total).toBe(1); // 2 + (-1) = 1
+      expect(total).toBe(10); // 9 + 2 + (-1) = 10
     });
 
     it("should not count broken buildings", () => {
-      gameState.resources.add({ materials: 500 });
+      // Starting contribution is 9
+      const startingOxygen = gameState.buildings.getTotalOxygenContribution();
+      expect(startingOxygen).toBe(9);
 
-      gameState.buildings.startBuilding(
-        BuildingId.HABITAT,
-        gameState.resources,
-        gameState.technology,
-      );
-
-      // Fast-forward construction
-      for (let i = 0; i < 10; i++) {
-        gameState.tick();
-      }
-
+      // Get a starting habitat and break it
       const buildings = gameState.buildings.getActiveBuildings();
       const habitat = buildings.find((b) => b.definitionId === BuildingId.HABITAT);
 
@@ -195,10 +175,14 @@ describe("Distributed Oxygen System", () => {
       gameState.buildings.breakBuilding(habitat!.id, gameState.resources);
 
       const total = gameState.buildings.getTotalOxygenContribution();
-      expect(total).toBe(0);
+      expect(total).toBe(7); // 9 - 2 = 7 (broken habitat doesn't contribute)
     });
 
     it("should not count pending buildings", () => {
+      // Starting contribution is 9
+      const startingOxygen = gameState.buildings.getTotalOxygenContribution();
+      expect(startingOxygen).toBe(9);
+
       gameState.resources.add({ materials: 500 });
 
       gameState.buildings.startBuilding(
@@ -207,9 +191,9 @@ describe("Distributed Oxygen System", () => {
         gameState.technology,
       );
 
-      // Don't advance time - building is still pending
+      // Don't advance time - new building is still pending
       const total = gameState.buildings.getTotalOxygenContribution();
-      expect(total).toBe(0);
+      expect(total).toBe(9); // Still 9, pending building doesn't count
     });
   });
 });

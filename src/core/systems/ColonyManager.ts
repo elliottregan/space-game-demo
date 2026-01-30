@@ -202,10 +202,6 @@ export class ColonyManager {
       this.morale = Math.max(0, this.morale - SHORTAGE_THRESHOLDS.FOOD_MORALE_PENALTY);
       this.health = Math.max(0, this.health - SHORTAGE_THRESHOLDS.FOOD_HEALTH_PENALTY);
     }
-
-    if (resourceState.oxygen < population * SHORTAGE_THRESHOLDS.OXYGEN_MULTIPLIER) {
-      this.health = Math.max(0, this.health - SHORTAGE_THRESHOLDS.OXYGEN_HEALTH_PENALTY);
-    }
   }
 
   private applyPositiveConditionEffects(
@@ -213,12 +209,7 @@ export class ColonyManager {
     buildings?: BuildingManager,
   ): void {
     const netFlow = resources.getNetFlow();
-    // Include oxygen contribution from buildings (added via resources.add, not tracked in production)
-    const oxygenContribution = buildings?.getTotalOxygenContribution() ?? 0;
-    const hasPositiveFlow =
-      (netFlow.food || 0) > 0 &&
-      (netFlow.oxygen || 0) + oxygenContribution > 0 &&
-      (netFlow.water || 0) > 0;
+    const hasPositiveFlow = (netFlow.food || 0) > 0 && (netFlow.water || 0) > 0;
 
     if (!hasPositiveFlow) return;
 
@@ -364,14 +355,12 @@ export class ColonyManager {
     // Clear previous consumption and set new based on population
     resources.removeConsumption({
       food: resources.getConsumption().food || 0,
-      oxygen: resources.getConsumption().oxygen || 0,
       water: resources.getConsumption().water || 0,
       power: resources.getConsumption().power || 0,
     });
 
     resources.addConsumption({
       food: population * COLONIST_NEEDS.food,
-      oxygen: population * COLONIST_NEEDS.oxygen,
       water: population * COLONIST_NEEDS.water,
       power: population * COLONIST_NEEDS.power,
     });

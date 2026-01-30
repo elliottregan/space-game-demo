@@ -10,7 +10,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     description: "Basic living quarters for colonists",
     cost: { materials: 50 },
     constructionTime: 10,
-    consumption: { power: 2, oxygen: 1 },
+    consumption: { power: 2 },
     capacity: 4, // Houses 4 colonists
     oxygenContribution: 2,
     purpose: BuildingPurpose.Residential,
@@ -86,11 +86,10 @@ export const BUILDINGS: BuildingDefinition[] = [
     description: "Electrolyzes water to produce breathable oxygen",
     cost: { materials: 55 },
     constructionTime: 12,
-    production: { oxygen: 5 },
     consumption: { water: 2, power: 3 },
     workerSlots: 2,
     workerRole: ColonistRole.ENGINEERING,
-    oxygenContribution: 0,
+    oxygenContribution: 5,
     purpose: BuildingPurpose.Industrial,
   },
 

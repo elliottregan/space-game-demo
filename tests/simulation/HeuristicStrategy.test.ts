@@ -14,10 +14,10 @@ import { EventId } from "../../src/core/models/GameEvent";
 // Helper to create mock API with defaults
 function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
   const defaultResourceSnapshot: ResourceSnapshot = {
-    current: { food: 100, oxygen: 100, water: 100, power: 100, materials: 100 },
-    production: { food: 10, oxygen: 10, water: 10, power: 10, materials: 10 },
-    consumption: { food: 5, oxygen: 5, water: 5, power: 5, materials: 5 },
-    netFlow: { food: 5, oxygen: 5, water: 5, power: 5, materials: 5 },
+    current: { food: 100, water: 100, power: 100, materials: 100 },
+    production: { food: 10, water: 10, power: 10, materials: 10 },
+    consumption: { food: 5, water: 5, power: 5, materials: 5 },
+    netFlow: { food: 5, water: 5, power: 5, materials: 5 },
   };
 
   const defaultColonySnapshot: ColonySnapshot = {
@@ -56,14 +56,31 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
       }),
       build: mock((defId: string) => {
         if (overrides.buildCalled) overrides.buildCalled(defId);
-        return successResult({ id: "b1", definitionId: defId, status: "pending" as const, mode: "normal" as const, progress: 0 });
+        return successResult({
+          id: "b1",
+          definitionId: defId,
+          status: "pending" as const,
+          mode: "normal" as const,
+          progress: 0,
+        });
       }),
-      snapshot: mock(() => overrides.buildingsSnapshot ?? {
-        active: [{ id: "b0", definitionId: BuildingId.HYDROPONIC_GARDEN, status: "active" as const, mode: "normal" as const, progress: 100 }],
-        pending: [],
-        definitions: [],
-        moraleBoost: 0,
-      }),
+      snapshot: mock(
+        () =>
+          overrides.buildingsSnapshot ?? {
+            active: [
+              {
+                id: "b0",
+                definitionId: BuildingId.HYDROPONIC_GARDEN,
+                status: "active" as const,
+                mode: "normal" as const,
+                progress: 100,
+              },
+            ],
+            pending: [],
+            definitions: [],
+            moraleBoost: 0,
+          },
+      ),
       getById: mock(() => undefined),
       getDefinition: mock(() => undefined),
       canDo: mock(() => allowed),
@@ -112,13 +129,23 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
       }),
     },
     politics: {
-      snapshot: mock(() => ({ factions: [], averageSupport: 50, decisions: [], availableDecisions: [] })),
+      snapshot: mock(() => ({
+        factions: [],
+        averageSupport: 50,
+        decisions: [],
+        availableDecisions: [],
+      })),
       getFaction: mock(() => undefined),
       canMakeDecision: mock(() => allowed),
       makeDecision: mock(() => successResult(undefined)),
     },
     operations: {
-      snapshot: mock(() => ({ policies: {}, policyCooldownRemaining: 0, expeditions: [], sites: [] })),
+      snapshot: mock(() => ({
+        policies: {},
+        policyCooldownRemaining: 0,
+        expeditions: [],
+        sites: [],
+      })),
       canChangePolicy: mock(() => allowed),
       setPolicy: mock(() => successResult(undefined)),
       canLaunchExpedition: mock(() => allowed),
@@ -135,8 +162,14 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
     game: {
       currentSol: mock(() => 0),
       advanceSol: mock(() => successResult({ events: [] })),
-      advanceSols: mock(() => successResult({ solsAdvanced: 1, events: [], stopReason: undefined })),
-      victoryState: mock(() => ({ status: "playing" as const, type: undefined, reason: undefined })),
+      advanceSols: mock(() =>
+        successResult({ solsAdvanced: 1, events: [], stopReason: undefined }),
+      ),
+      victoryState: mock(() => ({
+        status: "playing" as const,
+        type: undefined,
+        reason: undefined,
+      })),
       isGameOver: mock(() => false),
       save: mock(() => "{}"),
     },
@@ -167,10 +200,10 @@ describe("HeuristicStrategy", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         resourceSnapshot: {
-          current: { food: 40, oxygen: 100, water: 100, power: 100, materials: 100 },
-          production: { food: 10, oxygen: 10 },
-          consumption: { food: 5, oxygen: 5 },
-          netFlow: { food: 5, oxygen: 5 },
+          current: { food: 40, water: 100, power: 100, materials: 100 },
+          production: { food: 10 },
+          consumption: { food: 5 },
+          netFlow: { food: 5 },
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -181,14 +214,21 @@ describe("HeuristicStrategy", () => {
       expect(buildCalls).toContain(BuildingId.BASIC_FARM);
     });
 
-    it("builds oxygen generator when oxygen < 50", () => {
+    it("builds oxygen generator when oxygen contribution < 6", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         resourceSnapshot: {
-          current: { food: 100, oxygen: 30, water: 100, power: 100, materials: 100 },
-          production: { food: 10, oxygen: 10 },
-          consumption: { food: 5, oxygen: 5 },
-          netFlow: { food: 5, oxygen: 5 },
+          current: { food: 100, water: 100, power: 100, materials: 100 },
+          production: { food: 10 },
+          consumption: { food: 5 },
+          netFlow: { food: 5 },
+        },
+        buildingsSnapshot: {
+          active: [],
+          pending: [],
+          definitions: [],
+          moraleBoost: 0,
+          totalOxygenContribution: 2, // Low oxygen contribution
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -203,10 +243,10 @@ describe("HeuristicStrategy", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         resourceSnapshot: {
-          current: { food: 100, oxygen: 100, water: 100, power: 100, materials: 100 },
-          production: { food: 5, oxygen: 10 },
-          consumption: { food: 5, oxygen: 5 },
-          netFlow: { food: 0, oxygen: 5 },
+          current: { food: 100, water: 100, power: 100, materials: 100 },
+          production: { food: 5 },
+          consumption: { food: 5 },
+          netFlow: { food: 0 },
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -217,14 +257,21 @@ describe("HeuristicStrategy", () => {
       expect(buildCalls).toContain(BuildingId.BASIC_FARM);
     });
 
-    it("builds oxygen generator when oxygen production <= consumption", () => {
+    it("builds oxygen generator when oxygen contribution is negative", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         resourceSnapshot: {
-          current: { food: 100, oxygen: 100, water: 100, power: 100, materials: 100 },
-          production: { food: 10, oxygen: 3 },
-          consumption: { food: 5, oxygen: 5 },
-          netFlow: { food: 5, oxygen: -2 },
+          current: { food: 100, water: 100, power: 100, materials: 100 },
+          production: { food: 10 },
+          consumption: { food: 5 },
+          netFlow: { food: 5 },
+        },
+        buildingsSnapshot: {
+          active: [],
+          pending: [],
+          definitions: [],
+          moraleBoost: 0,
+          totalOxygenContribution: -2, // Negative oxygen contribution
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -239,10 +286,10 @@ describe("HeuristicStrategy", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         resourceSnapshot: {
-          current: { food: 40, oxygen: 100, water: 100, power: 100, materials: 0 },
-          production: { food: 10, oxygen: 10 },
-          consumption: { food: 5, oxygen: 5 },
-          netFlow: { food: 5, oxygen: 5 },
+          current: { food: 40, water: 100, power: 100, materials: 0 },
+          production: { food: 10 },
+          consumption: { food: 5 },
+          netFlow: { food: 5 },
         },
         canBuild: () => ({ allowed: false, reason: "Insufficient resources" }),
         buildCalled: (defId) => buildCalls.push(defId),
@@ -266,7 +313,14 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         hasActiveEvent: true,
         activeEvent: {
-          definition: { id: EventId.DUST_STORM, name: "Test", description: "Test", minSol: 0, chance: 1, choices },
+          definition: {
+            id: EventId.DUST_STORM,
+            name: "Test",
+            description: "Test",
+            minSol: 0,
+            chance: 1,
+            choices,
+          },
           active: { eventId: EventId.DUST_STORM, triggeredAt: 0, resolved: false },
           choices,
         },
@@ -282,14 +336,25 @@ describe("HeuristicStrategy", () => {
     it("avoids choices that cause population loss", () => {
       const resolvedChoices: string[] = [];
       const choices: EventChoice[] = [
-        { id: "pop_loss", text: "Lose people", effects: { population: -2, resources: { materials: 200 } } },
+        {
+          id: "pop_loss",
+          text: "Lose people",
+          effects: { population: -2, resources: { materials: 200 } },
+        },
         { id: "safe", text: "Safe choice", effects: { resources: { materials: 50 } } },
       ];
 
       const api = createMockAPI({
         hasActiveEvent: true,
         activeEvent: {
-          definition: { id: EventId.DUST_STORM, name: "Test", description: "Test", minSol: 0, chance: 1, choices },
+          definition: {
+            id: EventId.DUST_STORM,
+            name: "Test",
+            description: "Test",
+            minSol: 0,
+            chance: 1,
+            choices,
+          },
           active: { eventId: EventId.DUST_STORM, triggeredAt: 0, resolved: false },
           choices,
         },
@@ -313,7 +378,14 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         hasActiveEvent: true,
         activeEvent: {
-          definition: { id: EventId.DUST_STORM, name: "Test", description: "Test", minSol: 0, chance: 1, choices },
+          definition: {
+            id: EventId.DUST_STORM,
+            name: "Test",
+            description: "Test",
+            minSol: 0,
+            chance: 1,
+            choices,
+          },
           active: { eventId: EventId.DUST_STORM, triggeredAt: 0, resolved: false },
           choices,
         },
@@ -336,7 +408,14 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         hasActiveEvent: true,
         activeEvent: {
-          definition: { id: EventId.DUST_STORM, name: "Test", description: "Test", minSol: 0, chance: 1, choices },
+          definition: {
+            id: EventId.DUST_STORM,
+            name: "Test",
+            description: "Test",
+            minSol: 0,
+            chance: 1,
+            choices,
+          },
           active: { eventId: EventId.DUST_STORM, triggeredAt: 0, resolved: false },
           choices,
         },
@@ -357,12 +436,40 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         techSnapshot: {
           all: [
-            { id: TechnologyId.NUCLEAR_FISSION, name: "Expensive", description: "", prerequisites: [], cost: { sols: 100 }, unlocks: [] },
-            { id: TechnologyId.HYDROPONICS, name: "Cheap", description: "", prerequisites: [], cost: { sols: 30 }, unlocks: [] },
+            {
+              id: TechnologyId.NUCLEAR_FISSION,
+              name: "Expensive",
+              description: "",
+              prerequisites: [],
+              cost: { sols: 100 },
+              unlocks: [],
+            },
+            {
+              id: TechnologyId.HYDROPONICS,
+              name: "Cheap",
+              description: "",
+              prerequisites: [],
+              cost: { sols: 30 },
+              unlocks: [],
+            },
           ],
           available: [
-            { id: TechnologyId.NUCLEAR_FISSION, name: "Expensive", description: "", prerequisites: [], cost: { sols: 100 }, unlocks: [] },
-            { id: TechnologyId.HYDROPONICS, name: "Cheap", description: "", prerequisites: [], cost: { sols: 30 }, unlocks: [] },
+            {
+              id: TechnologyId.NUCLEAR_FISSION,
+              name: "Expensive",
+              description: "",
+              prerequisites: [],
+              cost: { sols: 100 },
+              unlocks: [],
+            },
+            {
+              id: TechnologyId.HYDROPONICS,
+              name: "Cheap",
+              description: "",
+              prerequisites: [],
+              cost: { sols: 30 },
+              unlocks: [],
+            },
           ],
           researched: [],
           currentResearch: null,
@@ -384,7 +491,14 @@ describe("HeuristicStrategy", () => {
         techSnapshot: {
           all: [],
           available: [
-            { id: TechnologyId.ROBOTICS, name: "Available", description: "", prerequisites: [], cost: { sols: 50 }, unlocks: [] },
+            {
+              id: TechnologyId.ROBOTICS,
+              name: "Available",
+              description: "",
+              prerequisites: [],
+              cost: { sols: 50 },
+              unlocks: [],
+            },
           ],
           researched: [],
           currentResearch: { techId: TechnologyId.HYDROPONICS, progress: 10, requiredSols: 50 },
@@ -404,10 +518,10 @@ describe("HeuristicStrategy", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         resourceSnapshot: {
-          current: { food: 100, oxygen: 100, water: 100, power: 100, materials: 100 },
-          production: { food: 10, oxygen: 10, power: 15 },
-          consumption: { food: 5, oxygen: 5, power: 10 },
-          netFlow: { food: 5, oxygen: 5, power: 5 },
+          current: { food: 100, water: 100, power: 100, materials: 100 },
+          production: { food: 10, power: 15 },
+          consumption: { food: 5, power: 10 },
+          netFlow: { food: 5, power: 5 },
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -423,10 +537,10 @@ describe("HeuristicStrategy", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         resourceSnapshot: {
-          current: { food: 100, oxygen: 100, water: 100, power: 100, materials: 50 },
-          production: { food: 10, oxygen: 10, power: 50 },
-          consumption: { food: 5, oxygen: 5, power: 10 },
-          netFlow: { food: 5, oxygen: 5, power: 40, materials: 0 },
+          current: { food: 100, water: 100, power: 100, materials: 50 },
+          production: { food: 10, power: 50 },
+          consumption: { food: 5, power: 10 },
+          netFlow: { food: 5, power: 40, materials: 0 },
         },
         canBuild: (defId) => {
           if (defId === BuildingId.MINING_STATION) return { allowed: true };
@@ -457,10 +571,10 @@ describe("HeuristicStrategy", () => {
           unhoused: [],
         },
         resourceSnapshot: {
-          current: { food: 100, oxygen: 100, water: 100, power: 100, materials: 100 },
-          production: { food: 10, oxygen: 10, power: 50 },
-          consumption: { food: 5, oxygen: 5, power: 10 },
-          netFlow: { food: 5, oxygen: 5, power: 40, materials: 5 },
+          current: { food: 100, water: 100, power: 100, materials: 100 },
+          production: { food: 10, power: 50 },
+          consumption: { food: 5, power: 10 },
+          netFlow: { food: 5, power: 40, materials: 5 },
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -484,10 +598,10 @@ describe("HeuristicStrategy", () => {
           unhoused: [],
         },
         resourceSnapshot: {
-          current: { food: 100, oxygen: 100, water: 100, power: 100, materials: 100 },
-          production: { food: 10, oxygen: 10, power: 50 },
-          consumption: { food: 5, oxygen: 5, power: 10 },
-          netFlow: { food: 5, oxygen: 5, power: 40, materials: 5 },
+          current: { food: 100, water: 100, power: 100, materials: 100 },
+          production: { food: 10, power: 50 },
+          consumption: { food: 5, power: 10 },
+          netFlow: { food: 5, power: 40, materials: 5 },
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -511,10 +625,10 @@ describe("HeuristicStrategy", () => {
           unhoused: [],
         },
         resourceSnapshot: {
-          current: { food: 100, oxygen: 100, water: 100, power: 100, materials: 100 },
-          production: { food: 10, oxygen: 10, power: 50 },
-          consumption: { food: 5, oxygen: 5, power: 10 },
-          netFlow: { food: 5, oxygen: 5, power: 40, materials: 5 },
+          current: { food: 100, water: 100, power: 100, materials: 100 },
+          production: { food: 10, power: 50 },
+          consumption: { food: 5, power: 10 },
+          netFlow: { food: 5, power: 40, materials: 5 },
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -531,10 +645,10 @@ describe("HeuristicStrategy", () => {
       const researchCalls: string[] = [];
       const api = createMockAPI({
         resourceSnapshot: {
-          current: { food: 100, oxygen: 100, water: 100, power: 100, materials: 1000 },
-          production: { food: 20, oxygen: 20, power: 100 },
-          consumption: { food: 10, oxygen: 10, power: 30 },
-          netFlow: { food: 10, oxygen: 10, power: 70, materials: 10 },
+          current: { food: 100, water: 100, power: 100, materials: 1000 },
+          production: { food: 20, power: 100 },
+          consumption: { food: 10, power: 30 },
+          netFlow: { food: 10, power: 70, materials: 10 },
         },
         // Simulate late game: population at 100, so Growth doesn't trigger
         colonySnapshot: {
@@ -574,14 +688,21 @@ describe("HeuristicStrategy", () => {
 
       const api = createMockAPI({
         resourceSnapshot: {
-          current: { food: 30, oxygen: 100, water: 100, power: 100, materials: 100 },
-          production: { food: 10, oxygen: 10 },
-          consumption: { food: 5, oxygen: 5 },
-          netFlow: { food: 5, oxygen: 5 },
+          current: { food: 30, water: 100, power: 100, materials: 100 },
+          production: { food: 10 },
+          consumption: { food: 5 },
+          netFlow: { food: 5 },
         },
         hasActiveEvent: true,
         activeEvent: {
-          definition: { id: EventId.DUST_STORM, name: "Test", description: "Test", minSol: 0, chance: 1, choices: [{ id: "choice", text: "Choice", effects: {} }] },
+          definition: {
+            id: EventId.DUST_STORM,
+            name: "Test",
+            description: "Test",
+            minSol: 0,
+            chance: 1,
+            choices: [{ id: "choice", text: "Choice", effects: {} }],
+          },
           active: { eventId: EventId.DUST_STORM, triggeredAt: 0, resolved: false },
           choices: [{ id: "choice", text: "Choice", effects: {} }],
         },
@@ -603,14 +724,21 @@ describe("HeuristicStrategy", () => {
 
       const api = createMockAPI({
         resourceSnapshot: {
-          current: { food: 100, oxygen: 100, water: 100, power: 100, materials: 100 },
-          production: { food: 10, oxygen: 10, power: 5 },
-          consumption: { food: 5, oxygen: 5, power: 10 },
-          netFlow: { food: 5, oxygen: 5, power: -5 },
+          current: { food: 100, water: 100, power: 100, materials: 100 },
+          production: { food: 10, power: 5 },
+          consumption: { food: 5, power: 10 },
+          netFlow: { food: 5, power: -5 },
         },
         hasActiveEvent: true,
         activeEvent: {
-          definition: { id: EventId.DUST_STORM, name: "Test", description: "Test", minSol: 0, chance: 1, choices: [{ id: "choice", text: "Choice", effects: {} }] },
+          definition: {
+            id: EventId.DUST_STORM,
+            name: "Test",
+            description: "Test",
+            minSol: 0,
+            chance: 1,
+            choices: [{ id: "choice", text: "Choice", effects: {} }],
+          },
           active: { eventId: EventId.DUST_STORM, triggeredAt: 0, resolved: false },
           choices: [{ id: "choice", text: "Choice", effects: {} }],
         },

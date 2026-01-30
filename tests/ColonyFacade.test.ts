@@ -77,7 +77,7 @@ describe("ColonyFacade", () => {
     it("should return success:true when training starts", () => {
       const colonists = api.colony.snapshot().colonists;
       const trainable = colonists.find(
-        (c) => c.role !== ColonistRole.ENGINEERING && !c.trainingTarget
+        (c) => c.role !== ColonistRole.ENGINEERING && !c.trainingTarget,
       );
 
       if (trainable) {
@@ -114,9 +114,7 @@ describe("ColonyFacade", () => {
 
     it("should verify training actually started on colonist", () => {
       const colonists = api.colony.snapshot().colonists;
-      const trainable = colonists.find(
-        (c) => c.role !== ColonistRole.FARMING && !c.trainingTarget
-      );
+      const trainable = colonists.find((c) => c.role !== ColonistRole.FARMING && !c.trainingTarget);
 
       if (trainable) {
         api.colony.trainColonist(trainable.id, ColonistRole.FARMING);
@@ -134,7 +132,7 @@ describe("ColonyFacade", () => {
     it("should return success:true when cancelled", () => {
       const colonists = api.colony.snapshot().colonists;
       const trainable = colonists.find(
-        (c) => c.role !== ColonistRole.ENGINEERING && !c.trainingTarget
+        (c) => c.role !== ColonistRole.ENGINEERING && !c.trainingTarget,
       );
 
       if (trainable) {
@@ -323,6 +321,9 @@ describe("ColonyFacade", () => {
   // ==========================================================================
   describe("assignToBuilding", () => {
     it("should assign colonist to building", () => {
+      // Disable auto-assign to have more control
+      api.colony.setAutoAssignNewColonists(false);
+
       // Build a farm
       api.buildings.build(BuildingId.BASIC_FARM);
 
@@ -331,15 +332,23 @@ describe("ColonyFacade", () => {
         api.game.advanceSol();
       }
 
+      // Find any farm with available slots
       const activeBuildings = api.buildings.snapshot().active;
-      const farm = activeBuildings.find((b) => b.definitionId === BuildingId.BASIC_FARM);
+      const farms = activeBuildings.filter((b) => b.definitionId === BuildingId.BASIC_FARM);
+      const farm = farms.find((f) => f.assignedWorkers.length < 2); // Farm has 2 worker slots
 
-      // Clear auto-assigned workers and find an unassigned colonist
-      for (const workerId of [...farm!.assignedWorkers]) {
-        api.colony.unassignFromBuilding(workerId);
+      // Find an unassigned colonist
+      let colonists = api.colony.snapshot().colonists;
+      let colonist = colonists.find((c) => !c.assignedBuildingId);
+
+      // If no unassigned colonist, unassign one
+      if (!colonist) {
+        const assignedColonist = colonists[0]!;
+        api.colony.unassignFromBuilding(assignedColonist.id);
+        colonists = api.colony.snapshot().colonists;
+        colonist = colonists.find((c) => c.id === assignedColonist.id)!;
       }
 
-      const colonist = api.colony.snapshot().colonists[0]!;
       const result = api.colony.assignToBuilding(colonist.id, farm!.id);
       expect(result.success).toBe(true);
     });

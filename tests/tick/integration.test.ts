@@ -33,10 +33,23 @@ describe("TickRunner integration", () => {
   });
 
   test("tick() stops when game is over", () => {
-    // Fast-forward to trigger victory
-    for (let i = 0; i < 1000 && !state.victory.isGameOver(); i++) {
+    // Force a game over by depleting food to trigger starvation
+    // Remove all current resources
+    const current = state.resources.getResources();
+    state.resources.deduct(current);
+
+    // Remove all production and add high consumption to ensure resource depletion
+    const production = state.resources.getProduction();
+    state.resources.removeProduction(production);
+    state.resources.addConsumption({ food: 100, water: 100 });
+
+    // Fast-forward to trigger defeat (starvation)
+    for (let i = 0; i < 500 && !state.victory.isGameOver(); i++) {
       state.tick();
     }
+
+    // Ensure we actually reached game over
+    expect(state.victory.isGameOver()).toBe(true);
 
     const solAtGameOver = state.currentSol;
     state.tick();

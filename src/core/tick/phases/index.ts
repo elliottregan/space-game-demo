@@ -1,7 +1,8 @@
 import { TickRunner } from "../TickRunner";
 
 // Pre-tick phases
-import { updateLaborPoolBonus, applyOxygenContribution } from "./pretick";
+import { updateLaborPoolBonus } from "./pretick";
+import { calculateAirQuality } from "./airQuality";
 // Resource phases
 import { applyResourceFlows, checkResourceDepletion } from "./resources";
 // Building phases
@@ -36,7 +37,8 @@ import { processRandomEvents } from "./events";
 import { checkVictoryConditions } from "./victory";
 
 // Re-export all phases
-export { updateLaborPoolBonus, applyOxygenContribution } from "./pretick";
+export { updateLaborPoolBonus } from "./pretick";
+export { calculateAirQuality } from "./airQuality";
 export { applyResourceFlows, checkResourceDepletion } from "./resources";
 export {
   processBuildingsTick,
@@ -64,7 +66,7 @@ export { checkVictoryConditions } from "./victory";
  * Create a TickRunner with all standard game phases registered.
  *
  * Phase execution order:
- * 1. Pre-tick: Labor pool bonus, oxygen contribution
+ * 1. Pre-tick: Labor pool bonus
  * 2. Resources: Apply flows, check depletion
  * 3. Buildings: Construction, repairs, recycling, maintenance
  * 4. Workforce: Bonding, training, experience
@@ -80,7 +82,7 @@ export function createStandardTickRunner(): TickRunner {
 
   // 1. Pre-tick phases
   runner.register(updateLaborPoolBonus);
-  runner.register(applyOxygenContribution);
+  runner.register(calculateAirQuality);
 
   // 2. Resource phases
   runner.register(applyResourceFlows);

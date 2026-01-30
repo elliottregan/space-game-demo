@@ -3,6 +3,8 @@
 
 import { BuildingId } from "./buildings";
 
+// Air quality types
+export type { AirQualitySnapshot } from "./airQuality";
 export type {
   Building,
   BuildingDefinition,
