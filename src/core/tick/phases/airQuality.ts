@@ -20,7 +20,7 @@ export const calculateAirQuality = definePhase({
   id: "airQuality:calculate",
   name: "Calculate Air Quality",
   reads: ["buildings", "colony"],
-  writes: ["derived.airQuality", "derived.airQualityEffects"],
+  writes: ["derived.airQuality", "derived.airQualityEffects", "buildings"],
   execute(ctx: TickContext): GameEvent[] {
     const events: GameEvent[] = [];
 
@@ -60,6 +60,9 @@ export const calculateAirQuality = definePhase({
     }
 
     ctx.derived.airQualityEffects = { health, morale, efficiency };
+
+    // Apply efficiency to buildings
+    ctx.buildings.setAirQualityEfficiency(efficiency);
 
     // Generate warning events
     if (airQuality < 0.5) {
