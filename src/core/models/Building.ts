@@ -25,6 +25,7 @@ export enum BuildingId {
   GYMNASIUM = "gymnasium",
   HYDROPONIC_GARDEN = "hydroponic_garden",
   OBSERVATORY_DOME = "observatory_dome",
+  ASSEMBLY_HALL = "assembly_hall",
 }
 
 export enum BuildingPurpose {
