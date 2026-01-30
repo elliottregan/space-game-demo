@@ -4,7 +4,7 @@ import type { Colonist } from "../../../core/models/Colonist";
 import type { Guild } from "../../../core/models/Guild";
 import { WEAK_TIE_THRESHOLD } from "../../../core/balance/WorkforceBalance";
 import type { CoworkerRelationship } from "../../../core/systems/WorkforceManager";
-import { computeColonistForceLayout } from "../../utils/colonistForceLayout";
+import { ColonistSimulationManager } from "../../utils/ColonistSimulationManager";
 import {
   type ColonistGraphData,
   type ColonistGraphLink,
@@ -47,6 +47,7 @@ function updateDimensions() {
       width: Math.max(200, rect.width),
       height: Math.max(200, rect.height),
     };
+    simulationManager?.resize(dimensions.value.width, dimensions.value.height);
   }
 }
 
@@ -59,15 +60,18 @@ const relationshipStrengths = computed(() => {
   return map;
 });
 
-// Compute force layout positions
-const layoutPositions = computed(() => {
-  return computeColonistForceLayout({
-    colonists: props.colonists,
-    relationships: relationshipStrengths.value,
-    width: dimensions.value.width,
-    height: dimensions.value.height,
-  });
-});
+// Simulation manager
+let simulationManager: ColonistSimulationManager | null = null;
+
+// Reactive positions from simulation
+const layoutPositions = ref<{ id: string; x: number; y: number }[]>([]);
+
+function updateSimulation() {
+  if (!simulationManager) return;
+  simulationManager.update(props.colonists, relationshipStrengths.value);
+  layoutPositions.value = simulationManager.getPositions();
+  simulationManager.startAnimation();
+}
 
 // Build coworker pairs from buildings
 const coworkerPairs = computed(() => {
@@ -278,6 +282,22 @@ let resizeObserver: ResizeObserver | null = null;
 
 onMounted(() => {
   updateDimensions();
+
+  // Create simulation manager
+  simulationManager = new ColonistSimulationManager(
+    dimensions.value.width,
+    dimensions.value.height,
+  );
+
+  // Set up tick callback for animation
+  simulationManager.setOnTick(() => {
+    if (simulationManager) {
+      layoutPositions.value = simulationManager.getPositions();
+    }
+  });
+
+  // Initial update
+  updateSimulation();
   render();
 
   if (containerRef.value) {
@@ -291,8 +311,11 @@ onMounted(() => {
 
 onUnmounted(() => {
   resizeObserver?.disconnect();
+  simulationManager?.destroy();
+  simulationManager = null;
 });
 
+watch([() => props.colonists, relationshipStrengths], updateSimulation, { deep: true });
 watch([graphData, () => props.selectedColonistId], render);
 watch(dimensions, render);
 </script>
