@@ -1,5 +1,7 @@
 import type { GameEvent } from "../models/GameEvent";
 import { TechnologyId } from "../models/Technology";
+import { ProjectId } from "../models/NPCInfluence";
+import { getProject } from "../data/projects";
 import type { ColonyManager } from "./ColonyManager";
 import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
@@ -76,31 +78,6 @@ export class VictoryManager {
       this.colonyCharterProgress = 0;
     }
 
-    // Generation Ship - extended victory path (~2900 sols)
-    if (technology.isResearched(TechnologyId.GENERATION_SHIP)) {
-      this.status = "victory";
-      this.reason = "Generation Ship completed! Humanity can now reach the stars!";
-      events.push({
-        type: "VICTORY",
-        reason: this.reason,
-        severity: "info",
-        message: this.reason,
-      });
-      return events;
-    }
-
-    if (colony.getPopulation() >= 100) {
-      this.status = "victory";
-      this.reason = "Colony has reached 100 population! Mars is thriving!";
-      events.push({
-        type: "VICTORY",
-        reason: this.reason,
-        severity: "info",
-        message: this.reason,
-      });
-      return events;
-    }
-
     // Defeat conditions
     if (colony.getPopulation() < 5) {
       this.status = "defeat";
@@ -128,6 +105,27 @@ export class VictoryManager {
     }
 
     return events;
+  }
+
+  /**
+   * Check if a passed project triggers a capstone victory.
+   * Returns a victory event if the project is a capstone, null otherwise.
+   */
+  checkCapstoneVictory(projectId: ProjectId): GameEvent | null {
+    const project = getProject(projectId);
+    if (!project?.isCapstone) {
+      return null;
+    }
+
+    this.status = "victory";
+    this.reason = `${project.name} achieved! ${project.description}`;
+
+    return {
+      type: "VICTORY",
+      reason: this.reason,
+      severity: "info",
+      message: this.reason,
+    };
   }
 
   getState(): VictoryState {
