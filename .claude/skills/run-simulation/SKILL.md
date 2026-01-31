@@ -19,62 +19,49 @@ Run Monte Carlo simulations of the game using the heuristic AI strategy to valid
 - When asked to verify game is winnable
 - When debugging why the AI loses or wins too fast
 
-## Available Scripts
-
-| Script | Command | Purpose |
-|--------|---------|---------|
-| `simulate` | `bun run simulate` | Quick Monte Carlo runs with summary stats |
-| `simulate:analyze` | `bun run simulate:analyze` | Detailed analysis with histograms and patterns |
-
-## Quick Simulation
-
-Run basic simulation with default settings (100 runs):
+## Command
 
 ```bash
-bun run simulate
+bun run simulate [options]
 ```
 
-### Options
+## Options
 
 | Flag | Description |
 |------|-------------|
 | `--runs N, -r N` | Number of simulation runs (default: 100) |
-| `--seed N, -s N` | Seed for reproducibility |
-| `--output FILE, -o` | Write results to JSON file |
-| `--verbose, -v` | Print progress during simulation |
+| `--seed N, -s N` | Starting seed for reproducibility (default: 1) |
+| `--log LEVEL, -l` | Output level: `silent`, `default`, `verbose` |
+| `--help, -h` | Show help message |
 
-### Common Invocations
+### Log Levels
+
+| Level | Console | TXT File | JSON File |
+|-------|---------|----------|-----------|
+| `silent` | Yes | No | No |
+| `default` | Yes | Yes | No |
+| `verbose` | Yes | Yes | Yes (large) |
+
+## Common Invocations
 
 ```bash
-# Quick sanity check
-bun run simulate --runs 50
+# Fast iteration (5 runs, no files)
+bun run simulate --runs 5 --log silent
 
-# Full test with reproducible seed
+# Quick sanity check (50 runs, no files)
+bun run simulate --runs 50 --log silent
+
+# Standard run (100 runs, saves txt report)
+bun run simulate
+
+# Full analysis with json for visualization
+bun run simulate --runs 200 --log verbose
+
+# Reproducible run with specific seed
 bun run simulate --runs 500 --seed 42
-
-# Debug a specific run
-bun run simulate --runs 1 --seed 12345 --verbose
-
-# Export results for comparison
-bun run simulate --runs 100 --output results.json
 ```
 
-## Detailed Analysis
-
-Run detailed analysis with victory time distribution, technology patterns, and building stats:
-
-```bash
-bun run simulate:analyze
-```
-
-### Options
-
-| Flag | Description |
-|------|-------------|
-| `--runs N, -r N` | Number of simulation runs (default: 200) |
-| `--seed N, -s N` | Starting seed (default: 1) |
-
-### Output Sections
+## Output Sections
 
 1. **Victory Time Distribution** - Min, median, P90, P95, max victory times with histogram
 2. **Peak Population Analysis** - Population statistics across all runs
@@ -82,6 +69,12 @@ bun run simulate:analyze
 4. **Building Construction Patterns** - Average building counts per game
 5. **Outlier Analysis** - Slow victories (>550 sols) analysis
 6. **Critical Path Analysis** - Theoretical minimum vs actual minimum times
+7. **Victory vs Defeat Comparison** - Key differences between winning and losing runs
+8. **Correlation Analysis** - What factors correlate with victory
+9. **Bottleneck Analysis** - What blocks the AI most often
+10. **Event Impact Analysis** - Event frequency and effect on outcomes
+11. **Crisis Timeline Analysis** - When resource/morale crises occur
+12. **Social Cohesion Analysis** - Relationship network health metrics
 
 ## Interpreting Results
 
@@ -89,17 +82,18 @@ bun run simulate:analyze
 
 | Metric | Healthy Range |
 |--------|---------------|
-| Win Rate | 90-100% |
-| Average Time to Win | 480-550 sols |
+| Win Rate | 80-95% |
+| Median Victory | 500-1000 sols |
 | Fastest Win | ~487 sols (theoretical minimum) |
-| P90 Victory Time | <600 sols |
+| P90 Victory Time | <700 sols |
 
 ### Warning Signs
 
 | Issue | Possible Cause |
 |-------|----------------|
-| Win rate <90% | Early game too harsh, resource rates too low |
-| Avg time >600 sols | Victory conditions too difficult |
+| Win rate <70% | Early game too harsh, resource rates too low |
+| Win rate 100% | Game too easy, needs more challenge |
+| Avg time >1000 sols | Victory conditions too difficult |
 | Many starvation defeats | Food production insufficient |
 | Many suffocation defeats | Oxygen production insufficient |
 | High variance in times | Random events too impactful |
@@ -109,19 +103,33 @@ bun run simulate:analyze
 After making a balance change:
 
 ```bash
-# 1. Quick check - is the game still winnable?
-bun run simulate --runs 100
+# 1. Fast check - does it still compile and run?
+bun run simulate --runs 5 --log silent
 
-# 2. If win rate looks good, run detailed analysis
-bun run simulate:analyze --runs 200
+# 2. Quick validation - is the game still winnable?
+bun run simulate --runs 50 --log silent
 
-# 3. Compare with previous results if you saved them
-bun run simulate --runs 500 --output after-change.json
+# 3. Standard run - save results for review
+bun run simulate
+
+# 4. Full analysis with visualization data
+bun run simulate --runs 200 --log verbose
+
+# 5. Start visualizer to explore results
+bun run visualize
 ```
+
+## Output Files
+
+Results are saved to `logs/simulations/` with timestamps:
+
+- `simulation-{timestamp}-r{runs}-s{seed}.txt` - Human-readable report
+- `simulation-{timestamp}-r{runs}-s{seed}.json` - Full data for visualization (verbose only)
 
 ## Technical Notes
 
 - Simulations use `HeuristicStrategy` which mimics reasonable player decisions
 - Each run uses an incrementing seed for reproducibility
-- Games are capped at 10,000 sols to prevent infinite loops
+- Games are capped at 5,000 sols to prevent infinite loops
+- Uses parallel workers for faster execution on multi-core systems
 - Victory conditions: Colony Charter (30 pop sustained), Population (100), Generation Ship
