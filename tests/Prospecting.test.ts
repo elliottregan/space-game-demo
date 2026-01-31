@@ -18,11 +18,12 @@ describe("Prospecting", () => {
     });
   });
 
-  test("getSites returns all sites including initial water sites", () => {
-    // OperationsManager now starts with 2 initial water sites for early-game water production
+  test("getSites returns all sites including initial water and mineral sites", () => {
+    // OperationsManager now starts with 2 water sites + 1 mineral site for early-game production
     const sites = operations.getSites();
-    expect(sites.length).toBe(2);
-    expect(sites.every((s) => s.resourceType === "water")).toBe(true);
+    expect(sites.length).toBe(3);
+    expect(sites.filter((s) => s.resourceType === "water").length).toBe(2);
+    expect(sites.filter((s) => s.resourceType === "minerals").length).toBe(1);
     expect(sites.every((s) => !s.revealed)).toBe(true);
   });
 

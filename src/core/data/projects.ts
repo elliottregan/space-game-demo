@@ -10,7 +10,7 @@ export const PROJECTS: Project[] = [
     description: "Begin construction of an interstellar colony ship.",
     type: NPCFaction.EarthLoyalists,
     proposalCost: { materials: 100 },
-    requiredSupport: 0.5,
+    requiredSupport: 0.35,
     effects: { unlockBuilding: "shipyard" },
   },
   {

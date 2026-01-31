@@ -191,6 +191,15 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
       clearFailedProposal: mock((projectId: string) => {
         if (overrides.clearFailedProposalCalled) overrides.clearFailedProposalCalled(projectId);
       }),
+      canLobby: mock((colonistId: string, faction: string, boost: number) => {
+        if (overrides.canLobby) return overrides.canLobby(colonistId, faction, boost);
+        return { canLobby: false, cost: 100, reason: "Cannot lobby" };
+      }),
+      lobbyCouncilMember: mock((colonistId: string, faction: string, boost: number) => {
+        if (overrides.lobbyCouncilMemberCalled)
+          overrides.lobbyCouncilMemberCalled(colonistId, faction, boost);
+        return successResult({ newAffinity: 0.5 });
+      }),
     },
     game: {
       currentSol: mock(() => overrides.currentSol ?? 100), // Default to 100 to bypass bootstrap
@@ -248,6 +257,16 @@ interface MockedAPI {
   proposeProjectCalled?: (projectId: string) => void;
   voteProjection?: { votesFor: number; votesAgainst: number; wouldPass: boolean };
   clearFailedProposalCalled?: (projectId: string) => void;
+  canLobby?: (
+    colonistId: string,
+    faction: string,
+    boost: number,
+  ) => {
+    canLobby: boolean;
+    cost: number;
+    reason?: string;
+  };
+  lobbyCouncilMemberCalled?: (colonistId: string, faction: string, boost: number) => void;
 }
 
 describe("HeuristicStrategy", () => {

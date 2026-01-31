@@ -37,6 +37,8 @@ export class OperationsManager {
     // This allows heuristic strategy to build water extractors without expeditions
     this.addInitialWaterSite("moderate");
     this.addInitialWaterSite("poor");
+    // Add initial mineral deposit for early-game materials production
+    this.addInitialMineralSite("moderate");
   }
 
   /**
@@ -66,6 +68,27 @@ export class OperationsManager {
     this.sites.push({
       id: `site_initial_water_${this.nextSiteId++}`,
       resourceType: "water",
+      quality,
+      revealed: false,
+      developed: false,
+      developmentProgress: 0,
+      reserves,
+      estimatedReserves,
+      remainingReserves: reserves,
+      linkedBuildingId: null,
+    });
+  }
+
+  /**
+   * Add an initial mineral site with specified quality.
+   * Used during game initialization to provide starting mineral deposits.
+   */
+  private addInitialMineralSite(quality: "poor" | "moderate" | "rich"): void {
+    const { reserves, estimatedReserves } = this.calculateReserves("materials", quality);
+
+    this.sites.push({
+      id: `site_initial_minerals_${this.nextSiteId++}`,
+      resourceType: "minerals",
       quality,
       revealed: false,
       developed: false,
