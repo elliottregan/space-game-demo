@@ -840,6 +840,8 @@ describe("HeuristicStrategy", () => {
           requiredSupport: 0.35,
         }),
         proposeProjectCalled: (projectId) => proposedProjects.push(projectId),
+        // Sol 60 is after commitmentMinSol range (25-50) but before fallback (100)
+        currentSol: 60,
       });
 
       const strategy = new HeuristicStrategy(api);

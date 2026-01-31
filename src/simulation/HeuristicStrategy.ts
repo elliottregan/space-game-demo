@@ -5,6 +5,7 @@ import { BuildingId } from "../core/models/Building";
 import type { EventChoice } from "../core/models/GameEvent";
 import { NPCFaction, type ProjectId } from "../core/models/NPCInfluence";
 import { getProjectsByFaction } from "../core/data/projects";
+import { rng } from "../core/utils/random";
 import type { GameAPI } from "../facade/GameAPI";
 import type { IdeologySnapshot } from "../facade/types/ideology";
 import type { BlockedDecision, EventOccurrence } from "./types";
@@ -21,6 +22,11 @@ import type { BlockedDecision, EventOccurrence } from "./types";
  * 5. Growth - Expand population when stable
  * 6. Ideology Victory - Work toward faction capstone victory
  */
+export interface StrategyOptions {
+  /** Force commitment to a specific faction (for testing victory paths) */
+  targetFaction?: NPCFaction;
+}
+
 export class HeuristicStrategy {
   private blockedDecisions: BlockedDecision[] = [];
   private eventsOccurred: EventOccurrence[] = [];
@@ -31,9 +37,22 @@ export class HeuristicStrategy {
   // Ideology victory state
   private committedFaction: NPCFaction | null = null;
   private readonly COMMITMENT_THRESHOLD = 0.5; // 50% council support to commit
+  private commitmentMinSol: number; // Set randomly in constructor for variety
+  private readonly COMMITMENT_FALLBACK_SOL = 100; // If no majority by this sol, commit to leading faction
   private readonly LOBBY_AFFINITY_BOOST = 0.15; // Standard lobby boost per action
 
-  constructor(private api: GameAPI) {}
+  // Strategy options
+  private readonly targetFaction: NPCFaction | null;
+
+  constructor(
+    private api: GameAPI,
+    options?: StrategyOptions,
+  ) {
+    this.targetFaction = options?.targetFaction ?? null;
+    // Randomize commitment timing for variety (sol 25-50)
+    // This creates natural variation in which faction dominates when commitment happens
+    this.commitmentMinSol = rng.int(25, 50);
+  }
 
   /**
    * Get all blocked decisions recorded during this game.
@@ -752,13 +771,32 @@ export class HeuristicStrategy {
   /**
    * Check if any faction has reached the commitment threshold.
    * Returns the faction to commit to, or null if still opportunistic.
+   * If targetFaction is set, commits immediately to that faction.
+   * Otherwise waits until COMMITMENT_MIN_SOL, then commits if a faction has 50%+.
+   * If no faction has 50%+ by COMMITMENT_FALLBACK_SOL, commits to the leading faction.
    */
   private checkFactionCommitment(snapshot: IdeologySnapshot): NPCFaction | null {
+    // If a target faction is specified, commit immediately
+    if (this.targetFaction) {
+      return this.targetFaction;
+    }
+
+    const currentSol = this.api.game.currentSol();
+
+    // Wait for council to stabilize before committing opportunistically
+    if (currentSol < this.commitmentMinSol) {
+      return null;
+    }
+
     const council = snapshot.council;
     if (council.length === 0) return null;
 
     const counts = snapshot.councilFactionCounts;
     const totalSeats = council.length;
+
+    // Track the leading faction
+    let leadingFaction: NPCFaction | null = null;
+    let maxSeats = 0;
 
     // Check each faction's council representation
     for (const faction of [
@@ -769,19 +807,37 @@ export class HeuristicStrategy {
       const seats = counts[faction] ?? 0;
       const ratio = seats / totalSeats;
 
+      // Track leader
+      if (seats > maxSeats) {
+        maxSeats = seats;
+        leadingFaction = faction;
+      }
+
+      // Commit if threshold met
       if (ratio >= this.COMMITMENT_THRESHOLD) {
         return faction;
       }
+    }
+
+    // Fallback: if past the fallback sol and no one has 50%, commit to leader
+    if (currentSol >= this.COMMITMENT_FALLBACK_SOL && leadingFaction) {
+      return leadingFaction;
     }
 
     return null;
   }
 
   /**
-   * Get the faction with the most council seats (for opportunistic lobbying).
-   * Returns null if no faction has any seats.
+   * Get the faction to lobby for during opportunistic phase.
+   * If targetFaction is set, always returns that faction.
+   * Otherwise returns the faction with the most council seats.
    */
   private getLeadingFaction(snapshot: IdeologySnapshot): NPCFaction | null {
+    // If targeting a specific faction, always lobby for it
+    if (this.targetFaction) {
+      return this.targetFaction;
+    }
+
     const counts = snapshot.councilFactionCounts;
 
     let leadingFaction: NPCFaction | null = null;

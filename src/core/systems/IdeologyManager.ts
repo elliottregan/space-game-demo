@@ -6,6 +6,7 @@ import type { RelationshipManager } from "./RelationshipManager";
 import type { ColonistMoraleManager } from "./ColonistMoraleManager";
 import * as IdeologyBalance from "../balance/IdeologyBalance";
 import { getProject, getProjectsByFaction } from "../data/projects";
+import { rng } from "../utils/random";
 
 /**
  * A council member selected from high-influence colonists.
@@ -77,6 +78,7 @@ export class IdeologyManager {
   /**
    * Get the primary faction for a colonist's ideology.
    * Returns null if all affinities are below the neutral threshold.
+   * When multiple factions are tied for highest, randomly selects one.
    */
   static getPrimaryFaction(ideology: ColonistIdeology): NPCFaction | null {
     const { earthLoyalist, marsIndependence, corporateInterests } = ideology;
@@ -84,9 +86,14 @@ export class IdeologyManager {
 
     if (max < IdeologyBalance.IDEOLOGY_NEUTRAL_THRESHOLD) return null;
 
-    if (earthLoyalist === max) return NPCFaction.EarthLoyalists;
-    if (marsIndependence === max) return NPCFaction.MarsIndependence;
-    return NPCFaction.CorporateInterests;
+    // Collect all factions tied for the maximum
+    const tiedFactions: NPCFaction[] = [];
+    if (earthLoyalist === max) tiedFactions.push(NPCFaction.EarthLoyalists);
+    if (marsIndependence === max) tiedFactions.push(NPCFaction.MarsIndependence);
+    if (corporateInterests === max) tiedFactions.push(NPCFaction.CorporateInterests);
+
+    // Randomly select from tied factions
+    return tiedFactions[rng.int(0, tiedFactions.length - 1)]!;
   }
 
   /**
