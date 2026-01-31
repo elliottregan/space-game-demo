@@ -154,17 +154,16 @@ function detectCohesionCrisis(
  * Map victory reason string to VictoryType.
  */
 function mapVictoryType(reason?: string): VictoryType {
-  if (!reason) return "population";
+  if (!reason) return "colony_charter";
 
   const lowerReason = reason.toLowerCase();
 
   if (lowerReason.includes("colony charter")) return "colony_charter";
-  if (lowerReason.includes("generation ship")) return "generation_ship";
-  if (lowerReason.includes("100 population") || lowerReason.includes("thriving")) {
-    return "population";
-  }
+  if (lowerReason.includes("return mission")) return "return_mission";
+  if (lowerReason.includes("declaration of sovereignty")) return "declaration_of_sovereignty";
+  if (lowerReason.includes("planetary acquisition")) return "planetary_acquisition";
 
-  return "population";
+  return "colony_charter";
 }
 
 /**

@@ -5,13 +5,11 @@ import { BuildingId } from "../../src/core/models/Building";
 import { TechnologyId } from "../../src/core/models/Technology";
 
 // Helper to create test run results
-function createVictoryResult(
-  overrides: Partial<RunResult> = {}
-): RunResult {
+function createVictoryResult(overrides: Partial<RunResult> = {}): RunResult {
   return {
     seed: Math.floor(Math.random() * 100000),
     outcome: "victory",
-    victoryType: "population",
+    victoryType: "colony_charter",
     finalSol: 250,
     peakPopulation: 100,
     techsResearched: [TechnologyId.HYDROPONICS],
@@ -20,9 +18,7 @@ function createVictoryResult(
   };
 }
 
-function createDefeatResult(
-  overrides: Partial<RunResult> = {}
-): RunResult {
+function createDefeatResult(overrides: Partial<RunResult> = {}): RunResult {
   return {
     seed: Math.floor(Math.random() * 100000),
     outcome: "defeat",
@@ -137,13 +133,13 @@ describe("MetricsCollector", () => {
       });
 
       it("tracks victory breakdown by type", () => {
-        collector.recordRun(createVictoryResult({ victoryType: "population" }));
-        collector.recordRun(createVictoryResult({ victoryType: "population" }));
-        collector.recordRun(createVictoryResult({ victoryType: "generation_ship" }));
+        collector.recordRun(createVictoryResult({ victoryType: "colony_charter" }));
+        collector.recordRun(createVictoryResult({ victoryType: "colony_charter" }));
+        collector.recordRun(createVictoryResult({ victoryType: "return_mission" }));
 
         const stats = collector.getStats();
-        expect(stats.victoryBreakdown.population).toBe(2);
-        expect(stats.victoryBreakdown.generation_ship).toBe(1);
+        expect(stats.victoryBreakdown.colony_charter).toBe(2);
+        expect(stats.victoryBreakdown.return_mission).toBe(1);
       });
     });
 
@@ -246,8 +242,8 @@ describe("MetricsCollector", () => {
     it("prints summary with victories and defeats", () => {
       const consoleSpy = spyOn(console, "log");
 
-      collector.recordRun(createVictoryResult({ finalSol: 200, victoryType: "population" }));
-      collector.recordRun(createVictoryResult({ finalSol: 300, victoryType: "generation_ship" }));
+      collector.recordRun(createVictoryResult({ finalSol: 200, victoryType: "colony_charter" }));
+      collector.recordRun(createVictoryResult({ finalSol: 300, victoryType: "return_mission" }));
       collector.recordRun(createDefeatResult({ defeatReason: "starvation" }));
 
       collector.printSummary();
@@ -261,8 +257,8 @@ describe("MetricsCollector", () => {
       expect(calls.some((c) => c.includes("Average Time to Win"))).toBe(true);
       expect(calls.some((c) => c.includes("Fastest Win"))).toBe(true);
       expect(calls.some((c) => c.includes("Starvation"))).toBe(true);
-      expect(calls.some((c) => c.includes("Population (100)"))).toBe(true);
-      expect(calls.some((c) => c.includes("Generation Ship"))).toBe(true);
+      expect(calls.some((c) => c.includes("Colony Charter"))).toBe(true);
+      expect(calls.some((c) => c.includes("Return Mission"))).toBe(true);
 
       consoleSpy.mockRestore();
     });
@@ -289,8 +285,8 @@ describe("MetricsCollector", () => {
     it("handles all victories (no defeat breakdown)", () => {
       const consoleSpy = spyOn(console, "log");
 
-      collector.recordRun(createVictoryResult({ victoryType: "population" }));
-      collector.recordRun(createVictoryResult({ victoryType: "population" }));
+      collector.recordRun(createVictoryResult({ victoryType: "colony_charter" }));
+      collector.recordRun(createVictoryResult({ victoryType: "colony_charter" }));
 
       collector.printSummary();
 

@@ -3,8 +3,10 @@
 
 import { BuildingId } from "../core/models/Building";
 import type { EventChoice } from "../core/models/GameEvent";
-import { TechnologyId } from "../core/models/Technology";
+import { NPCFaction, type ProjectId } from "../core/models/NPCInfluence";
+import { getProjectsByFaction } from "../core/data/projects";
 import type { GameAPI } from "../facade/GameAPI";
+import type { IdeologySnapshot } from "../facade/types/ideology";
 import type { BlockedDecision, EventOccurrence } from "./types";
 
 /**
@@ -14,10 +16,10 @@ import type { BlockedDecision, EventOccurrence } from "./types";
  * Priorities (in order):
  * 1. Survival - Ensure food and oxygen are maintained
  * 2. Event Resolution - Handle active events
- * 3. Morale - Build recreation buildings to maintain morale for Colony Charter
+ * 3. Morale - Build recreation buildings to maintain morale
  * 4. Infrastructure - Research, power, materials
  * 5. Growth - Expand population when stable
- * 6. Victory Push - Research generation ship when available
+ * 6. Ideology Victory - Work toward faction capstone victory
  */
 export class HeuristicStrategy {
   private blockedDecisions: BlockedDecision[] = [];
@@ -25,6 +27,10 @@ export class HeuristicStrategy {
 
   // Per-tick cache for hasBuilding() - avoids repeated snapshot() and O(n) searches
   private cachedBuildingIds: Set<BuildingId> | null = null;
+
+  // Ideology victory state
+  private committedFaction: NPCFaction | null = null;
+  private readonly COMMITMENT_THRESHOLD = 0.5; // 50% council support to commit
 
   constructor(private api: GameAPI) {}
 
@@ -122,7 +128,7 @@ export class HeuristicStrategy {
     if (this.handleMorale()) return;
     if (this.handleInfrastructure()) return;
     if (this.handleGrowth()) return;
-    this.handleVictoryPush();
+    this.handleIdeologyVictory();
   }
 
   /**
@@ -594,30 +600,144 @@ export class HeuristicStrategy {
   }
 
   /**
-   * Priority 6 - Victory Push: Research generation ship when available.
+   * Priority 6 - Ideology Victory: Work toward faction capstone victory.
+   *
+   * Strategy:
+   * 1. If no faction committed, check if any has ≥50% council seats
+   * 2. Once committed, propose prerequisite projects (if vote would pass)
+   * 3. Clear failed proposals when vote projection becomes favorable
+   * 4. Propose capstone when prerequisites complete and ≥65% council support
+   *
    * @returns true if an action was taken
    */
-  private handleVictoryPush(): boolean {
-    // IF "generation_ship" available -> research it
-    const canResearchGenShip = this.api.technology.canResearch(TechnologyId.GENERATION_SHIP);
-    if (canResearchGenShip.allowed) {
-      this.api.technology.startResearch(TechnologyId.GENERATION_SHIP);
-      return true;
-    } else {
-      // Only record if generation ship is in the available list (prerequisites met)
-      const techSnapshot = this.api.technology.snapshot();
-      const genShipAvailable = techSnapshot.available.some(
-        (t) => t.id === TechnologyId.GENERATION_SHIP,
-      );
-      if (genShipAvailable) {
-        this.recordBlockedDecision(
-          "victory",
-          "research_generation_ship",
-          canResearchGenShip.reason ?? "unknown",
-        );
+  private handleIdeologyVictory(): boolean {
+    const ideologySnapshot = this.api.ideology.snapshot();
+    const council = ideologySnapshot.council;
+
+    if (council.length === 0) return false; // No council yet
+
+    // Step 1: Check/update faction commitment
+    if (!this.committedFaction) {
+      this.committedFaction = this.checkFactionCommitment(ideologySnapshot);
+      if (!this.committedFaction) return false; // Still opportunistic
+    }
+
+    // Step 2: Try to advance toward capstone
+    return this.advanceFactionVictory(this.committedFaction);
+  }
+
+  /**
+   * Check if any faction has reached the commitment threshold.
+   * Returns the faction to commit to, or null if still opportunistic.
+   */
+  private checkFactionCommitment(snapshot: IdeologySnapshot): NPCFaction | null {
+    const council = snapshot.council;
+    if (council.length === 0) return null;
+
+    const counts = snapshot.councilFactionCounts;
+    const totalSeats = council.length;
+
+    // Check each faction's council representation
+    for (const faction of [
+      NPCFaction.EarthLoyalists,
+      NPCFaction.MarsIndependence,
+      NPCFaction.CorporateInterests,
+    ]) {
+      const seats = counts[faction] ?? 0;
+      const ratio = seats / totalSeats;
+
+      if (ratio >= this.COMMITMENT_THRESHOLD) {
+        return faction;
       }
     }
 
+    return null;
+  }
+
+  /**
+   * Attempt to advance toward the committed faction's capstone victory.
+   * @returns true if an action was taken
+   */
+  private advanceFactionVictory(faction: NPCFaction): boolean {
+    const completedProjects = this.api.ideology.getCompletedProjects();
+    const failedProposals = this.api.ideology.getFailedProposals();
+    const pendingProposals = this.api.ideology.getPendingProposals();
+
+    // Get faction's projects (non-capstone prerequisites first)
+    const factionProjects = getProjectsByFaction(faction);
+    const prerequisites = factionProjects.filter((p) => !p.isCapstone);
+    const capstone = factionProjects.find((p) => p.isCapstone);
+
+    if (!capstone) return false;
+
+    // Step 1: Clear failed proposals that now have favorable vote projection
+    if (this.clearRetryableProposals(faction, failedProposals)) {
+      return true;
+    }
+
+    // Step 2: Check if we can propose a prerequisite
+    for (const project of prerequisites) {
+      if (completedProjects.includes(project.id)) continue;
+      if (pendingProposals.some((p) => p.projectId === project.id)) continue;
+      if (failedProposals.includes(project.id)) continue;
+
+      if (this.tryProposeProject(project.id, faction)) {
+        return true;
+      }
+    }
+
+    // Step 3: Check if capstone is ready
+    if (this.tryProposeCapstone(capstone.id)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Attempt to propose a project if vote projection is favorable.
+   * @returns true if proposal was submitted
+   */
+  private tryProposeProject(projectId: ProjectId, faction: NPCFaction): boolean {
+    const eligibility = this.api.ideology.canProposeProject(projectId);
+    if (!eligibility.canPropose) return false;
+
+    // Check vote projection before committing resources
+    const projection = this.api.ideology.getVoteProjection(faction);
+    if (!projection.wouldPass) return false;
+
+    const result = this.api.ideology.proposeProject(projectId);
+    return result.success;
+  }
+
+  /**
+   * Attempt to propose the capstone if all conditions are met.
+   * Capstone requires 65% council support, checked via canProposeProject.
+   */
+  private tryProposeCapstone(projectId: ProjectId): boolean {
+    // canProposeProject checks prerequisites and council support for capstones
+    const eligibility = this.api.ideology.canProposeProject(projectId);
+    if (!eligibility.canPropose) return false;
+
+    const result = this.api.ideology.proposeProject(projectId);
+    return result.success;
+  }
+
+  /**
+   * Clear failed proposals that now have favorable vote projection.
+   * @returns true if any proposal was cleared (action taken)
+   */
+  private clearRetryableProposals(
+    faction: NPCFaction,
+    failedProposals: readonly ProjectId[],
+  ): boolean {
+    const projection = this.api.ideology.getVoteProjection(faction);
+    if (!projection.wouldPass) return false;
+
+    for (const projectId of failedProposals) {
+      this.api.ideology.clearFailedProposal(projectId);
+      return true; // One action per tick
+    }
     return false;
   }
 }
