@@ -693,3 +693,44 @@ body {
   border-color: var(--g-accent-cyan, #5f9ea0);
   color: var(--g-accent-cyan, #5f9ea0);
 }
+
+/* Server file list */
+.server-files {
+  margin-top: var(--g-space-lg, 24px);
+  padding-top: var(--g-space-lg, 24px);
+  border-top: 1px solid var(--g-color-border);
+}
+
+.server-files h3 {
+  font-size: 0.875rem;
+  color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--g-space-md, 16px);
+}
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-xs, 4px);
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.file-list-item {
+  background: var(--g-color-bg-elevated);
+  color: var(--g-color-text);
+  border: 1px solid var(--g-color-border);
+  padding: 0.5rem 1rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.file-list-item:hover {
+  border-color: var(--g-accent-cyan, #5f9ea0);
+  color: var(--g-accent-cyan, #5f9ea0);
+  background: var(--g-color-bg-surface);
+}

@@ -11,11 +11,67 @@ let fileNameB: string = "";
 let currentPage: "charts" | "stats" = "charts";
 let isDragging = false;
 let errorMessage: string | null = null;
+let apiAvailable = false;
+let availableLogs: string[] = [];
 
 // DOM Elements
 const app = document.getElementById("app")!;
 const fileInputA = document.getElementById("file-input-a") as HTMLInputElement;
 const fileInputB = document.getElementById("file-input-b") as HTMLInputElement;
+
+/**
+ * Check if the API server is available and fetch log list.
+ */
+async function checkApiAvailability(): Promise<void> {
+  try {
+    const response = await fetch("/api/logs", { method: "GET" });
+    if (response.ok) {
+      apiAvailable = true;
+      availableLogs = await response.json();
+    }
+  } catch {
+    // API not available (e.g., running as static site)
+    apiAvailable = false;
+    availableLogs = [];
+  }
+}
+
+/**
+ * Load analysis data from the server API.
+ */
+async function loadFromApi(filename: string): Promise<AnalysisOutput> {
+  const response = await fetch(`/api/logs/${filename}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${filename}`);
+  }
+  const data: unknown = await response.json();
+  if (!validateAnalysisOutput(data)) {
+    throw new Error("Invalid analysis file format");
+  }
+  return data;
+}
+
+/**
+ * Handle selecting a file from the server list.
+ */
+async function handleServerFileSelect(filename: string, target: "a" | "b"): Promise<void> {
+  try {
+    const data = await loadFromApi(filename);
+    if (target === "a") {
+      batchA = data;
+      fileNameA = filename;
+    } else {
+      batchB = data;
+      fileNameB = filename;
+    }
+    render();
+    if (currentPage === "charts") {
+      renderCharts();
+    }
+  } catch (err) {
+    showError(err instanceof Error ? err.message : "Failed to load file");
+  }
+}
 
 /**
  * Validate that data matches the AnalysisOutput structure.
@@ -183,8 +239,9 @@ function setupFileInputs(): void {
  * Format filename for display.
  */
 function formatFilename(filename: string): string {
-  // analysis-2026-01-27T08-12-40-r200-s1.json -> 2026-01-27 08:12 (200 runs, seed 1)
-  const match = filename.match(/analysis-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-\d{2}-r(\d+)-s(\d+)/);
+  // simulation-2026-01-27T08-12-40-r200-s1.json -> 2026-01-27 08:12 (200 runs, seed 1)
+  // Also supports legacy analysis- prefix
+  const match = filename.match(/(?:simulation|analysis)-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-\d{2}-r(\d+)-s(\d+)/);
   if (match) {
     const [, date, hour, minute, runs, seed] = match;
     return `${date} ${hour}:${minute} (${runs} runs, seed ${seed})`;
@@ -220,6 +277,31 @@ function renderErrorToast(): string {
 }
 
 /**
+ * Render the server file list.
+ */
+function renderServerFileList(): string {
+  if (!apiAvailable || availableLogs.length === 0) return "";
+
+  return `
+    <div class="server-files">
+      <h3>Recent Simulations</h3>
+      <div class="file-list">
+        ${availableLogs
+          .slice(0, 10)
+          .map(
+            (file) => `
+          <button class="file-list-item" data-file="${file}" data-target="a">
+            ${formatFilename(file)}
+          </button>
+        `,
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+/**
  * Render the empty state (no files loaded).
  */
 function renderEmptyState(): string {
@@ -229,6 +311,7 @@ function renderEmptyState(): string {
       <div class="drop-zone-text">Drop simulation analysis JSON here</div>
       <div class="drop-zone-hint">or</div>
       <button class="browse-btn" id="browse-btn">Browse files</button>
+      ${renderServerFileList()}
     </div>
   `;
 }
@@ -306,6 +389,34 @@ function attachEventListeners(): void {
   // Add batch B button
   document.getElementById("add-batch-b")?.addEventListener("click", () => {
     fileInputB?.click();
+  });
+
+  // Server file list items
+  document.querySelectorAll(".file-list-item").forEach((item) => {
+    item.addEventListener("click", () => {
+      const file = item.getAttribute("data-file");
+      const target = item.getAttribute("data-target") as "a" | "b";
+      if (file) {
+        handleServerFileSelect(file, target);
+      }
+    });
+  });
+
+  // Server file selector dropdowns
+  document.getElementById("server-file-a")?.addEventListener("change", (e) => {
+    const select = e.target as HTMLSelectElement;
+    if (select.value) {
+      handleServerFileSelect(select.value, "a");
+      select.value = "";
+    }
+  });
+
+  document.getElementById("server-file-b")?.addEventListener("change", (e) => {
+    const select = e.target as HTMLSelectElement;
+    if (select.value) {
+      handleServerFileSelect(select.value, "b");
+      select.value = "";
+    }
   });
 }
 
@@ -1153,9 +1264,11 @@ function renderCharts(): void {
 /**
  * Initialize the app.
  */
-function init(): void {
+async function init(): Promise<void> {
   setupDragAndDrop();
   setupFileInputs();
+  // Check API availability before first render
+  await checkApiAvailability();
   render();
 }
 
