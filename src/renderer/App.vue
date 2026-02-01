@@ -4,6 +4,7 @@ import EventLogSidebar from "./components/EventLogSidebar.vue";
 import EventModal from "./components/EventModal.vue";
 import GameHeader from "./components/GameHeader.vue";
 import GameOverModal from "./components/GameOverModal.vue";
+import { ResourcePanel } from "./components/ResourcePanel";
 import TabNav from "./components/TabNav.vue";
 import { gameService } from "./services/GameService";
 
@@ -18,6 +19,7 @@ const hasActiveEvent = computed(() => state.activeEvent !== null);
 <template>
   <div class="game-container">
     <GameHeader :is-game-over="isGameOver" :has-active-event="hasActiveEvent" />
+    <ResourcePanel />
     <TabNav />
 
     <main class="game-main">

@@ -107,22 +107,9 @@ const housingStats = computed<GridStat[]>(() => {
 <template>
   <GPanel title="Colony Status" accent="olive">
     <GStatsBar :stats="colonyStats" />
-
-    <div v-if="state.totalOxygenContribution < 0" class="oxygen-warning">
-      Low oxygen! Building efficiency reduced by 50%
-    </div>
-
     <GStatsGrid title="Workforce" :stats="workforceStats" />
     <GStatsGrid title="Housing" :stats="housingStats" />
   </GPanel>
 </template>
 
-<style scoped>
-.oxygen-warning {
-  font-size: 0.8em;
-  color: var(--g-color-negative);
-  background: rgba(198, 40, 40, 0.1);
-  padding: var(--g-space-xs) var(--g-space-sm);
-  margin: var(--g-space-md) 0;
-}
-</style>
+<style scoped></style>

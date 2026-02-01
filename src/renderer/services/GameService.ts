@@ -89,6 +89,9 @@ interface GameUIState {
   airQuality: number;
   airQualityProduction: number;
   airQualityConsumption: number;
+  airQualityHealthEffect: number;
+  airQualityMoraleEffect: number;
+  airQualityEfficiency: number;
   ideology: {
     council: CouncilMemberSnapshot[];
     councilFactionCounts: Record<string, number>;
@@ -199,6 +202,9 @@ class GameService {
       airQuality: 1,
       airQualityProduction: 0,
       airQualityConsumption: 0,
+      airQualityHealthEffect: 0,
+      airQualityMoraleEffect: 0,
+      airQualityEfficiency: 1,
       ideology: {
         council: [],
         councilFactionCounts: {},
@@ -301,6 +307,9 @@ class GameService {
     this.state.airQuality = airQualityData.airQuality;
     this.state.airQualityProduction = airQualityData.production;
     this.state.airQualityConsumption = airQualityData.consumption;
+    this.state.airQualityHealthEffect = airQualityData.healthEffect;
+    this.state.airQualityMoraleEffect = airQualityData.moraleEffect;
+    this.state.airQualityEfficiency = airQualityData.efficiencyMultiplier;
 
     // Ideology
     const ideologyData = this.facade.ideology.snapshot();

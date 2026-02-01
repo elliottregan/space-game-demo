@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import { highlightState } from "../../directives/ResourceHighlight";
 import { gameService } from "../../services/GameService";
-import { GPanel, ResourceBadge } from "../../ui";
+import { ResourceBadge } from "../../ui";
 
 // Reactive state for template bindings (auto-updates when API syncs)
 const state = gameService.getState();
@@ -16,7 +16,6 @@ const resources = computed(
   () =>
     [
       { key: "food", name: "Food" },
-      { key: "oxygen", name: "Oxygen" },
       { key: "water", name: "Water" },
       { key: "power", name: "Power" },
       { key: "materials", name: "Materials" },
@@ -60,57 +59,54 @@ function getDelta(key: string): number {
 </script>
 
 <template>
-  <GPanel title="Resources" accent="red">
-    <div class="resource-list">
-      <div
-        v-for="resource in resources"
-        :key="resource.key"
-        v-resource-glow.pulse="resource.key"
-        class="resource-item"
+  <div class="resource-bar">
+    <div
+      v-for="resource in resources"
+      :key="resource.key"
+      v-resource-glow.pulse="resource.key"
+      class="resource-item"
+    >
+      <ResourceBadge
+        :resource="resource.key"
+        :amount="(state.resources as Record<string, number>)[resource.key]"
+        :rate="getNetFlow(resource.key)"
+      />
+      <span
+        v-if="hasDelta(resource.key)"
+        class="projected-value"
+        :class="{
+          'projected-positive': getDelta(resource.key) > 0,
+          'projected-negative': getDelta(resource.key) < 0,
+          'projected-danger': (getProjectedValue(resource.key) ?? 0) < 0,
+        }"
       >
-        <ResourceBadge
-          :resource="resource.key"
-          :amount="(state.resources as Record<string, number>)[resource.key]"
-          :rate="getNetFlow(resource.key)"
-        />
-        <span
-          v-if="hasDelta(resource.key)"
-          class="projected-value"
-          :class="{
-            'projected-positive': getDelta(resource.key) > 0,
-            'projected-negative': getDelta(resource.key) < 0,
-            'projected-danger': (getProjectedValue(resource.key) ?? 0) < 0,
-          }"
-        >
-          → {{ formatNumber(getProjectedValue(resource.key) ?? 0) }}
-        </span>
-      </div>
+        → {{ formatNumber(getProjectedValue(resource.key) ?? 0) }}
+      </span>
     </div>
-  </GPanel>
+  </div>
 </template>
 
 <style scoped>
-.resource-list {
+.resource-bar {
   display: flex;
-  flex-direction: column;
-}
-
-.resource-list .resource-item + .resource-item {
-  border-top: var(--g-border-width) solid var(--g-color-border-strong);
+  gap: var(--g-space-md);
+  padding: var(--g-space-sm) var(--g-space-md);
+  background: var(--g-color-bg-elevated);
+  border: var(--g-border-width) solid var(--g-color-border);
+  border-radius: var(--g-radius-md);
+  margin-bottom: var(--g-space-md);
 }
 
 .resource-item {
   display: flex;
   align-items: center;
   gap: var(--g-space-sm);
-  padding: var(--g-space-sm);
 }
 
 .projected-value {
   font-family: var(--g-font-mono);
   font-size: var(--g-font-size-sm);
   opacity: 0.9;
-  margin-left: auto;
   transition: all var(--g-transition-fast);
   color: inherit;
 }

@@ -1,14 +1,14 @@
 <script setup lang="ts">
+import { AirQualityPanel } from "./AirQualityPanel";
 import { BuildingPanel } from "./BuildingPanel";
 import { ColonyPanel } from "./ColonyPanel";
-import { ResourcePanel } from "./ResourcePanel";
 </script>
 
 <template>
   <div class="main-tab">
     <div class="main-tab-left">
-      <ResourcePanel />
       <ColonyPanel />
+      <AirQualityPanel />
     </div>
     <div class="main-tab-right">
       <BuildingPanel />
