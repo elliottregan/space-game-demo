@@ -70,7 +70,7 @@ const breakdownItems = computed<BreakdownItem[]>(() => {
 </script>
 
 <template>
-  <GPanel title="Power Grid" accent="yellow">
+  <GPanel title="Power Grid" accent="amber">
     <div class="power-content">
       <GMetricBar
         label="Grid Capacity"
