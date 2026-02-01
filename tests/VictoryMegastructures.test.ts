@@ -27,7 +27,8 @@ describe("Victory Megastructures Integration", () => {
     state.resources.add({ materials: 1000 });
 
     // Complete the capstone project
-    state.ideology.completeProject(ProjectId.RETURN_MISSION);
+    // Generation Ship is unlocked by Corporate Interests' PLANETARY_ACQUISITION
+    state.ideology.completeProject(ProjectId.PLANETARY_ACQUISITION);
 
     // Now should be able to build
     const canBuild = state.buildings.canBuild(
@@ -43,7 +44,8 @@ describe("Victory Megastructures Integration", () => {
     const state = new GameState();
 
     // Setup: complete project and give resources
-    state.ideology.completeProject(ProjectId.RETURN_MISSION);
+    // Generation Ship is now unlocked by Corporate Interests' PLANETARY_ACQUISITION
+    state.ideology.completeProject(ProjectId.PLANETARY_ACQUISITION);
     state.resources.add({ materials: 1000 });
 
     // Start building
@@ -74,7 +76,8 @@ describe("Victory Megastructures Integration", () => {
     const state = new GameState();
 
     // Setup for Space Elevator
-    state.ideology.completeProject(ProjectId.PLANETARY_ACQUISITION);
+    // Space Elevator is now unlocked by Earth Loyalists' RETURN_MISSION
+    state.ideology.completeProject(ProjectId.RETURN_MISSION);
     state.resources.add({ materials: 500 });
 
     // Start building

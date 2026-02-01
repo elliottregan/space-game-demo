@@ -319,7 +319,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 40,
     oxygenContribution: 10,
     purpose: BuildingPurpose.Industrial,
-    requiredProject: ProjectId.RETURN_MISSION,
+    requiredProject: ProjectId.PLANETARY_ACQUISITION,
     isVictoryBuilding: true,
   },
   {
@@ -343,7 +343,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 30,
     oxygenContribution: 5,
     purpose: BuildingPurpose.Industrial,
-    requiredProject: ProjectId.PLANETARY_ACQUISITION,
+    requiredProject: ProjectId.RETURN_MISSION,
     isVictoryBuilding: true,
   },
 ];

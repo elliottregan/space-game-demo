@@ -21,7 +21,7 @@ const factionConfig = computed(() => {
       return {
         name: "Earth Loyalists",
         color: "var(--color-info)",
-        megastructureId: BuildingId.GENERATION_SHIP,
+        megastructureId: BuildingId.SPACE_ELEVATOR,
       };
     case NPCFaction.MarsIndependence:
       return {
@@ -33,7 +33,7 @@ const factionConfig = computed(() => {
       return {
         name: "Corporate Interests",
         color: "var(--color-warning)",
-        megastructureId: BuildingId.SPACE_ELEVATOR,
+        megastructureId: BuildingId.GENERATION_SHIP,
       };
   }
 });

@@ -18,7 +18,7 @@ describe("Project-gated buildings", () => {
 
     manager.setIdeologyManager(ideology);
 
-    // Generation Ship requires RETURN_MISSION project
+    // Generation Ship requires PLANETARY_ACQUISITION project (Corporate Interests)
     const canBuild = manager.canBuild(BuildingId.GENERATION_SHIP, resources, technology);
     expect(canBuild).toBe(false);
   });
@@ -32,7 +32,7 @@ describe("Project-gated buildings", () => {
     manager.setIdeologyManager(ideology);
 
     // Complete the required project
-    ideology.completeProject(ProjectId.RETURN_MISSION);
+    ideology.completeProject(ProjectId.PLANETARY_ACQUISITION);
 
     const canBuild = manager.canBuild(BuildingId.GENERATION_SHIP, resources, technology);
     expect(canBuild).toBe(true);
