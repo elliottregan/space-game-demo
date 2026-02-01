@@ -14,8 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `bun run format:check` - Check formatting with oxfmt
 - `bun test` - Run all tests
 - `bun test tests/ResourceManager.test.ts` - Run single test file
-- `bun run simulate` - Run game simulation
-- `bun run simulate:analyze` - Analyze simulation results
+- `bun run simulate` - Run game simulation (use `--help` for options)
 - `bun run visualize` - Start visualization server for simulation analysis
 
 ## Architecture
@@ -88,19 +87,34 @@ Monte Carlo simulations test game balance by running automated playthroughs with
 ### Running Simulations
 
 ```bash
-# Quick simulation (5 runs, fast)
-bun run scripts/simulate.ts --runs 5 --verbose
+# Default: 100 runs, saves txt report to logs/simulations/
+bun run simulate
 
-# Full analysis with detailed output (saves to logs/simulations/)
-bun run scripts/analyze-simulation.ts --runs 100 --seed 42
+# Fast iteration (5 runs, no files)
+bun run simulate --runs 5 --log silent
+
+# Quick test (no files written)
+bun run simulate --runs 50 --log silent
+
+# Full analysis with json output for visualization
+bun run simulate --runs 200 --log verbose
 
 # Start visualization server for results
 bun run visualize
 ```
 
+### Simulation Options
+
+- `--runs N, -r N` - Number of simulation runs (default: 100)
+- `--seed N, -s N` - Starting seed for reproducibility (default: 1)
+- `--log LEVEL, -l` - Output level:
+  - `silent` - Console only, no files
+  - `default` - Console + txt file
+  - `verbose` - Console + txt + json (large files for visualization)
+
 ### Analysis Output
 
-`simulate:analyze` produces reports including:
+The simulation produces reports including:
 - **Victory Time Distribution** - Min/median/mean/P90/max sols to win
 - **Peak Population Analysis** - Population growth statistics
 - **Technology Research Frequency** - Which techs get researched
@@ -109,7 +123,7 @@ bun run visualize
 - **Event Impact Analysis** - Event frequency and effect on outcomes
 - **Crisis Timeline** - When resource/morale crises occur
 
-Results saved to `logs/simulations/` as both `.txt` (human-readable) and `.json` (data).
+Results saved to `logs/simulations/` as `.txt` (always with default/verbose) and `.json` (verbose only).
 
 ### Key Metrics to Watch
 

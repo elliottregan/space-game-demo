@@ -9,30 +9,17 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 const LOGS_DIR = "logs/simulations";
 
 /**
- * List available JSON analysis files.
+ * List available JSON analysis files (both .json and .json.gz).
  */
 async function listLogs(): Promise<string[]> {
   try {
     const files = await readdir(LOGS_DIR);
     return files
-      .filter((f) => f.endsWith(".json"))
+      .filter((f) => f.endsWith(".json") || f.endsWith(".json.gz"))
       .sort()
       .reverse(); // Newest first
   } catch {
     return [];
-  }
-}
-
-/**
- * Read a specific log file.
- */
-async function readLog(filename: string): Promise<string | null> {
-  try {
-    const filepath = join(LOGS_DIR, filename);
-    const file = Bun.file(filepath);
-    return await file.text();
-  } catch {
-    return null;
   }
 }
 
@@ -54,13 +41,29 @@ const server = Bun.serve({
     // API: Get specific log
     if (path.startsWith("/api/logs/")) {
       const filename = path.slice("/api/logs/".length);
-      if (!filename.endsWith(".json")) {
+      if (!filename.endsWith(".json") && !filename.endsWith(".json.gz")) {
         return new Response("Invalid file type", { status: 400 });
       }
-      const content = await readLog(filename);
-      if (!content) {
+
+      const filepath = join(LOGS_DIR, filename);
+      const file = Bun.file(filepath);
+      if (!(await file.exists())) {
         return new Response("Not found", { status: 404 });
       }
+
+      // For .gz files, serve with Content-Encoding so browser decompresses
+      if (filename.endsWith(".gz")) {
+        const content = await file.arrayBuffer();
+        return new Response(content, {
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Encoding": "gzip",
+          },
+        });
+      }
+
+      // Regular JSON file
+      const content = await file.text();
       return new Response(content, {
         headers: { "Content-Type": "application/json" },
       });

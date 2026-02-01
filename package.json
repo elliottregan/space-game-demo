@@ -15,7 +15,6 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "simulate": "bun run scripts/simulate.ts",
-    "simulate:analyze": "bun run scripts/analyze-simulation.ts",
     "visualize": "bun run scripts/visualize.ts",
     "build:visualizer": "vite build --config vite.visualizer.config.ts",
     "preview:visualizer": "vite preview --config vite.visualizer.config.ts",
