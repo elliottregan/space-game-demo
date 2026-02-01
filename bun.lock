@@ -11,6 +11,7 @@
         "d3-scale": "^4.0.2",
         "d3-selection": "^3.0.0",
         "d3-shape": "^3.2.0",
+        "lucide-vue-next": "^0.563.0",
         "vue": "^3.5.27",
         "vue-router": "^4.6.4",
       },
@@ -291,6 +292,8 @@
     "lefthook-windows-arm64": ["lefthook-windows-arm64@2.0.16", "", { "os": "win32", "cpu": "arm64" }, "sha512-U61bNWzD6Vd2kjuJ7b4voPfTQ4mlBFOyTpCU3k/h0YjpKDQEFT1T5fDKkDothdnw/JVDSgrclIcfAY7Jyr/UIg=="],
 
     "lefthook-windows-x64": ["lefthook-windows-x64@2.0.16", "", { "os": "win32", "cpu": "x64" }, "sha512-dCHi2+hebhPI0LQUGRNjPMsGRyXhrTN3Y/b8M4HO8KVyGamKB3Yemf67ya81tZopDkxNVy5XUBXLYWKGhnAfLQ=="],
+
+    "lucide-vue-next": ["lucide-vue-next@0.563.0", "", { "peerDependencies": { "vue": ">=3.0.1" } }, "sha512-zsE/lCKtmaa7bGfhSpN84br1K9YoQ5pCN+2oKWjQQG3Lo6ufUUKBuHSjNFI6RvUevxaajNXb8XwFUKeTXG3sIA=="],
 
     "magic-string": ["magic-string@0.30.21", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.5" } }, "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ=="],
 
