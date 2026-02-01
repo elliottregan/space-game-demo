@@ -57,8 +57,10 @@ export class VictoryManager {
   }
 
   /**
-   * Check if a passed project triggers a capstone victory.
-   * Returns a victory event if the project is a capstone, null otherwise.
+   * Check if a passed project is a capstone.
+   * Returns a milestone event if the project is a capstone, null otherwise.
+   * NOTE: Capstones no longer trigger victory - they unlock megastructure buildings.
+   * Victory is achieved by building the megastructure (checked in checkBuildingVictory).
    */
   checkCapstoneVictory(projectId: ProjectId): GameEvent | null {
     const project = getProject(projectId);
@@ -66,14 +68,12 @@ export class VictoryManager {
       return null;
     }
 
-    this.status = "victory";
-    this.reason = `${project.name} achieved! ${project.description}`;
-
+    // Don't set victory status - capstones unlock megastructures but don't win the game
     return {
-      type: "VICTORY",
-      reason: this.reason,
+      type: "capstone_completed",
+      reason: `${project.name} achieved! ${project.description}`,
       severity: "info",
-      message: this.reason,
+      message: `${project.name} achieved! You can now build your faction's megastructure to win.`,
     };
   }
 

@@ -11,25 +11,29 @@ describe("VictoryManager", () => {
   });
 
   describe("checkCapstoneVictory", () => {
-    test("returns victory for Return Mission capstone", () => {
+    test("returns capstone_completed event for Return Mission capstone", () => {
       const result = manager.checkCapstoneVictory(ProjectId.RETURN_MISSION);
       expect(result).not.toBeNull();
-      expect(result?.type).toBe("VICTORY");
+      expect(result?.type).toBe("capstone_completed");
       expect(result?.message).toContain("Return Mission");
+      // Capstones no longer trigger victory - they unlock megastructures
+      expect(manager.getState().status).toBe("playing");
     });
 
-    test("returns victory for Declaration of Sovereignty capstone", () => {
+    test("returns capstone_completed event for Declaration of Sovereignty capstone", () => {
       const result = manager.checkCapstoneVictory(ProjectId.DECLARATION_OF_SOVEREIGNTY);
       expect(result).not.toBeNull();
-      expect(result?.type).toBe("VICTORY");
+      expect(result?.type).toBe("capstone_completed");
       expect(result?.message).toContain("Declaration of Sovereignty");
+      expect(manager.getState().status).toBe("playing");
     });
 
-    test("returns victory for Planetary Acquisition capstone", () => {
+    test("returns capstone_completed event for Planetary Acquisition capstone", () => {
       const result = manager.checkCapstoneVictory(ProjectId.PLANETARY_ACQUISITION);
       expect(result).not.toBeNull();
-      expect(result?.type).toBe("VICTORY");
+      expect(result?.type).toBe("capstone_completed");
       expect(result?.message).toContain("Planetary Acquisition");
+      expect(manager.getState().status).toBe("playing");
     });
 
     test("returns null for non-capstone project", () => {

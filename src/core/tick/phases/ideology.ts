@@ -52,11 +52,11 @@ export const processProjectVotes = definePhase({
       if (!project) continue;
 
       if (result.passed) {
-        // Check for capstone victory
-        const victoryEvent = ctx.victory.checkCapstoneVictory(result.projectId);
-        if (victoryEvent) {
-          events.push(victoryEvent);
-          return events; // Stop processing, game is won
+        // Check for capstone completion (unlocks megastructure building)
+        const capstoneEvent = ctx.victory.checkCapstoneVictory(result.projectId);
+        if (capstoneEvent) {
+          events.push(capstoneEvent);
+          // Don't return - capstones unlock megastructures but don't win the game
         }
 
         // Apply morale effects for passed projects

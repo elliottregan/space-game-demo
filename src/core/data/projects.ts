@@ -68,7 +68,7 @@ export const PROJECTS: Project[] = [
     name: "AI-Assisted Governance",
     description: "Implement AI systems to help with colony decision-making.",
     type: NPCFaction.CorporateInterests,
-    proposalCost: { materials: 50, power: 50 },
+    proposalCost: { materials: 80 },
     requiredSupport: 0.35,
     effects: { unlockTech: "advanced_ai" },
   },
@@ -106,7 +106,7 @@ export const PROJECTS: Project[] = [
       ProjectId.IMMIGRATION_PROGRAM,
     ],
     requiredCouncilSupport: 0.65,
-    effects: { unlockBuilding: BuildingId.GENERATION_SHIP },
+    effects: { unlockBuilding: BuildingId.SPACE_ELEVATOR },
   },
   {
     id: ProjectId.DECLARATION_OF_SOVEREIGNTY,
@@ -138,7 +138,7 @@ export const PROJECTS: Project[] = [
       ProjectId.AI_GOVERNANCE,
     ],
     requiredCouncilSupport: 0.65,
-    effects: { unlockBuilding: BuildingId.SPACE_ELEVATOR },
+    effects: { unlockBuilding: BuildingId.GENERATION_SHIP },
   },
 ];
 

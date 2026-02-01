@@ -2,6 +2,7 @@
 // Orchestrates Monte Carlo simulation runs for playtest analysis
 
 import { availableParallelism } from "node:os";
+import { NPCFaction } from "../core/models/NPCInfluence";
 import { rng } from "../core/utils/random";
 import { GameAPI } from "../facade/GameAPI";
 import { HeuristicStrategy } from "./HeuristicStrategy";
@@ -25,6 +26,16 @@ import type {
  * Prevents infinite loops in edge cases.
  */
 const MAX_SOLS = 5000;
+
+/**
+ * Factions available for strategy targeting.
+ * Used to distribute simulation runs across victory paths.
+ */
+const ALL_FACTIONS = [
+  NPCFaction.EarthLoyalists,
+  NPCFaction.MarsIndependence,
+  NPCFaction.CorporateInterests,
+] as const;
 
 /**
  * Interval at which resource snapshots are taken.
@@ -250,8 +261,12 @@ export class SimulationRunner {
     // Create fresh GameAPI instance
     const api = new GameAPI();
 
-    // Create strategy for decision making
-    const strategy = new HeuristicStrategy(api);
+    // Select target faction based on seed for balanced victory distribution
+    // This ensures ~1/3 of runs target each faction while remaining deterministic
+    const targetFaction = ALL_FACTIONS[seed % ALL_FACTIONS.length];
+
+    // Create strategy for decision making with target faction
+    const strategy = new HeuristicStrategy(api, { targetFaction });
 
     // Initialize tracking - use lightweight snapshots to skip expensive calculations
     let peakPopulation = api.colony.snapshot({ lightweight: true }).population;
