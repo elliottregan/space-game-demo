@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { ColonistRole } from "../../../core/models/Colonist";
 import { gameService } from "../../services/GameService";
 import { GButton, GPanel } from "../../ui";
+import { BuildingPanel } from "../BuildingPanel";
 import BuildingRoleGroup from "./BuildingRoleGroup.vue";
 import ColonistPool from "./ColonistPool.vue";
 
@@ -111,6 +112,7 @@ function handleToggleAutoAssign(e: Event) {
 
 <template>
   <div class="operations-page">
+    <BuildingPanel />
     <GPanel title="Workforce Assignment" accent="amber">
       <div class="workforce-controls">
         <div class="workforce-left">
