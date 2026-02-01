@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { Home, CircleOff } from "lucide-vue-next";
+import { Home, CircleOff, Crown } from "lucide-vue-next";
 import {
   ColonistRole,
   MASTERY_DISPLAY_NAMES,
@@ -14,6 +14,9 @@ const state = gameService.getState();
 
 // Build colonist data with all relevant details
 const colonistData = computed(() => {
+  // Build set of council member IDs
+  const councilMemberIds = new Set(state.ideology.council.map((m) => m.colonistId));
+
   // Build map of colonist ID → assigned building info
   const assignments = new Map<string, { buildingName: string; role: ColonistRole }>();
   for (const building of state.buildings) {
@@ -68,7 +71,11 @@ const colonistData = computed(() => {
         housed: !!c.housingId,
         centrality: moraleData?.centrality ?? 0,
         connections,
+        isCouncilMember: councilMemberIds.has(c.id),
         primaryFaction,
+        earthLoyalist: c.ideology?.earthLoyalist ?? 0,
+        marsIndependence: c.ideology?.marsIndependence ?? 0,
+        corporateInterests: c.ideology?.corporateInterests ?? 0,
         conviction: c.ideology?.conviction ?? 0,
       };
     })
@@ -77,34 +84,6 @@ const colonistData = computed(() => {
       return b.centrality - a.centrality;
     });
 });
-
-// oxlint-disable-next-line no-unused-vars
-function getFactionColor(faction: NPCFaction | null): string {
-  switch (faction) {
-    case NPCFaction.EarthLoyalists:
-      return "var(--color-info)";
-    case NPCFaction.MarsIndependence:
-      return "var(--color-positive)";
-    case NPCFaction.CorporateInterests:
-      return "var(--color-warning)";
-    default:
-      return "var(--g-color-text-muted)";
-  }
-}
-
-// oxlint-disable-next-line no-unused-vars
-function getFactionAbbrev(faction: NPCFaction | null): string {
-  switch (faction) {
-    case NPCFaction.EarthLoyalists:
-      return "EL";
-    case NPCFaction.MarsIndependence:
-      return "MI";
-    case NPCFaction.CorporateInterests:
-      return "CI";
-    default:
-      return "-";
-  }
-}
 
 // oxlint-disable-next-line no-unused-vars
 function getCentralityColor(centrality: number): string {
@@ -127,15 +106,26 @@ function getConnectionColor(connections: number): string {
   <GPanel title="Colonists" accent="cyan">
     <div class="colonist-table">
       <div class="table-header">
+        <span class="col-council" title="Council Member"></span>
         <span class="col-name">Name</span>
         <span class="col-job">Job</span>
         <span class="col-mastery">Mastery</span>
         <span class="col-housed">Housing</span>
         <span class="col-connections">Connections</span>
         <span class="col-centrality">Centrality</span>
-        <span class="col-faction">Faction</span>
+        <span class="col-faction col-el" title="Earth Loyalists">EL</span>
+        <span class="col-faction col-mi" title="Mars Independence">MI</span>
+        <span class="col-faction col-ci" title="Corporate Interests">CI</span>
       </div>
       <div v-for="colonist in colonistData" :key="colonist.id" class="colonist-row">
+        <span class="col-council">
+          <Crown
+            v-if="colonist.isCouncilMember"
+            :size="12"
+            class="icon-council"
+            title="Council Member"
+          />
+        </span>
         <span class="col-name" :title="colonist.name">{{ colonist.name }}</span>
         <span
           class="col-job"
@@ -158,11 +148,22 @@ function getConnectionColor(connections: number): string {
           {{ (colonist.centrality * 100).toFixed(0) }}
         </span>
         <span
-          class="col-faction"
-          :style="{ color: getFactionColor(colonist.primaryFaction) }"
-          :title="colonist.primaryFaction ?? 'Neutral'"
+          class="col-faction col-el"
+          :class="{ primary: colonist.primaryFaction === 'earth_loyalists' }"
         >
-          {{ getFactionAbbrev(colonist.primaryFaction) }}
+          {{ (colonist.earthLoyalist * 100).toFixed(0) }}
+        </span>
+        <span
+          class="col-faction col-mi"
+          :class="{ primary: colonist.primaryFaction === 'mars_independence' }"
+        >
+          {{ (colonist.marsIndependence * 100).toFixed(0) }}
+        </span>
+        <span
+          class="col-faction col-ci"
+          :class="{ primary: colonist.primaryFaction === 'corporate_interests' }"
+        >
+          {{ (colonist.corporateInterests * 100).toFixed(0) }}
         </span>
       </div>
     </div>
@@ -209,6 +210,17 @@ function getConnectionColor(connections: number): string {
 
 .colonist-row:hover {
   background: var(--g-color-bg-surface);
+}
+
+.col-council {
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-council {
+  color: var(--color-warning);
 }
 
 .col-name {
@@ -262,9 +274,25 @@ function getConnectionColor(connections: number): string {
 }
 
 .col-faction {
-  width: 60px;
+  width: 36px;
   text-align: center;
+  color: var(--g-color-text-muted);
+}
+
+.col-faction.primary {
   font-weight: bold;
+}
+
+.col-el {
+  color: var(--color-info);
+}
+
+.col-mi {
+  color: var(--color-positive);
+}
+
+.col-ci {
+  color: var(--color-warning);
 }
 
 .table-hint {
