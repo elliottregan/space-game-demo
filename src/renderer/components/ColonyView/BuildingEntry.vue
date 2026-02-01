@@ -56,11 +56,14 @@ function formatResourceDelta(delta: Record<string, number> | undefined): string 
     </GEntityHeader>
 
     <div class="building-stats" v-if="building.status === 'active'">
+      <span v-if="definition?.moraleBoost" class="morale-boost">
+        +{{ definition.moraleBoost }} Morale
+      </span>
       <span v-if="definition?.production" class="production">
-        Production: {{ formatResourceDelta(definition.production) }}
+        {{ formatResourceDelta(definition.production) }}
       </span>
       <span v-if="definition?.consumption" class="consumption">
-        Consumption: {{ formatResourceDelta(definition.consumption) }}
+        {{ formatResourceDelta(definition.consumption) }}
       </span>
       <span class="efficiency">
         Efficiency: {{ building.condition >= 50 ? 100 : Math.round(building.condition * 2) }}%
@@ -115,6 +118,10 @@ function formatResourceDelta(delta: Record<string, number> | undefined): string 
   color: var(--g-color-text-muted);
   margin-bottom: var(--g-space-sm);
   flex-wrap: wrap;
+}
+
+.morale-boost {
+  color: var(--g-color-positive);
 }
 
 .production {

@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { gameService } from "../../services/GameService";
 import { GPanel } from "../../ui";
 import { ColonistDetailPanel, ColonistGraph } from "../ColonistGraph";
+import { RecreationPanel } from "../RecreationPanel";
 import BuildingSection from "./BuildingSection.vue";
 import ColonyStatsBar from "./ColonyStatsBar.vue";
 import HousingSection from "./HousingSection.vue";
@@ -94,14 +95,7 @@ const buildingsForGraph = computed(() =>
       :unhoused="state.unhoused"
     />
 
-    <BuildingSection
-      v-if="buildingsByCategory.recreation.length > 0"
-      title="Recreation"
-      :buildings="buildingsByCategory.recreation"
-      :building-definitions="state.buildingDefinitions"
-      :colonists="state.colonists"
-      :skill-definitions="state.skillDefinitions"
-    />
+    <RecreationPanel />
 
     <BuildingSection
       v-if="buildingsByCategory.research.length > 0"
