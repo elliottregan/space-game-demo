@@ -6,13 +6,13 @@ import { NPCFaction, type Project, ProjectId } from "../models/NPCInfluence.ts";
 export const PROJECTS: Project[] = [
   // Earth Loyalists projects
   {
-    id: ProjectId.GENERATION_SHIP,
-    name: "Build Generation Ship",
-    description: "Begin construction of an interstellar colony ship.",
+    id: ProjectId.IMMIGRATION_PROGRAM,
+    name: "Immigration Program",
+    description: "Establish formal immigration pathways to bring more settlers from Earth.",
     type: NPCFaction.EarthLoyalists,
-    proposalCost: { materials: 100 },
+    proposalCost: { materials: 80 },
     requiredSupport: 0.35,
-    effects: { unlockBuilding: "shipyard" },
+    effects: { unlockBuilding: "immigration_center" },
   },
   {
     id: ProjectId.EARTH_MEMORIAL,
@@ -103,7 +103,7 @@ export const PROJECTS: Project[] = [
     prerequisites: [
       ProjectId.EARTH_MEMORIAL,
       ProjectId.HERITAGE_ARCHIVE,
-      ProjectId.GENERATION_SHIP,
+      ProjectId.IMMIGRATION_PROGRAM,
     ],
     requiredCouncilSupport: 0.65,
     effects: { unlockBuilding: BuildingId.GENERATION_SHIP },

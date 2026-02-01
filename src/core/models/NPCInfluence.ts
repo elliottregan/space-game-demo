@@ -53,7 +53,7 @@ export const ALL_NPC_IDS: readonly NPCId[] = [
  * Using a string enum for type safety while maintaining string serialization.
  */
 export enum ProjectId {
-  GENERATION_SHIP = "generation_ship",
+  IMMIGRATION_PROGRAM = "immigration_program",
   EARTH_MEMORIAL = "earth_memorial",
   HERITAGE_ARCHIVE = "heritage_archive",
   UNIVERSAL_HOUSING = "universal_housing",
@@ -71,7 +71,7 @@ export enum ProjectId {
 
 /** All project IDs as an array for iteration */
 export const ALL_PROJECT_IDS: readonly ProjectId[] = [
-  ProjectId.GENERATION_SHIP,
+  ProjectId.IMMIGRATION_PROGRAM,
   ProjectId.EARTH_MEMORIAL,
   ProjectId.HERITAGE_ARCHIVE,
   ProjectId.UNIVERSAL_HOUSING,

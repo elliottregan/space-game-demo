@@ -8,7 +8,7 @@ import { NPCFaction } from "./NPCInfluence";
  */
 export enum ProjectId {
   // Earth Loyalists
-  GENERATION_SHIP = "generation_ship",
+  IMMIGRATION_PROGRAM = "immigration_program",
   EARTH_MEMORIAL = "earth_memorial",
   HERITAGE_ARCHIVE = "heritage_archive",
   // Mars Independence

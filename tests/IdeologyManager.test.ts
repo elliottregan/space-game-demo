@@ -472,7 +472,7 @@ describe("IdeologyManager", () => {
         // Complete all Earth Loyalist prerequisites
         manager.completeProject(ProjectId.EARTH_MEMORIAL);
         manager.completeProject(ProjectId.HERITAGE_ARCHIVE);
-        manager.completeProject(ProjectId.GENERATION_SHIP);
+        manager.completeProject(ProjectId.IMMIGRATION_PROGRAM);
 
         // But council is mostly Mars Independence
         const colonists = [
@@ -507,7 +507,7 @@ describe("IdeologyManager", () => {
       test("returns true when prerequisites met and council support sufficient", () => {
         manager.completeProject(ProjectId.EARTH_MEMORIAL);
         manager.completeProject(ProjectId.HERITAGE_ARCHIVE);
-        manager.completeProject(ProjectId.GENERATION_SHIP);
+        manager.completeProject(ProjectId.IMMIGRATION_PROGRAM);
 
         // Council is mostly Earth Loyalists
         const colonists = [
