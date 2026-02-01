@@ -65,6 +65,17 @@ export const PROJECT_MORALE_STRONGLY_OPPOSED = -0.1;
 /** Conviction threshold above which opposition is "strong" */
 export const PROJECT_MORALE_CONVICTION_THRESHOLD = 0.6;
 
+// ============ Project Conviction Effects ============
+
+/** Conviction boost for council members who voted for a passed project */
+export const PROJECT_CONVICTION_BOOST_VOTER = 0.1;
+
+/** Conviction boost for colonists with strong affinity (>=0.7) to project faction */
+export const PROJECT_CONVICTION_BOOST_STRONG_SUPPORTER = 0.08;
+
+/** Conviction boost for colonists with moderate affinity (0.4-0.7) to project faction */
+export const PROJECT_CONVICTION_BOOST_SUPPORTER = 0.04;
+
 // ============ New Colonist Defaults ============
 
 /** Default ideology for new colonists (neutral with low conviction) */

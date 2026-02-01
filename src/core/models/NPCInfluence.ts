@@ -53,7 +53,7 @@ export const ALL_NPC_IDS: readonly NPCId[] = [
  * Using a string enum for type safety while maintaining string serialization.
  */
 export enum ProjectId {
-  GENERATION_SHIP = "generation_ship",
+  IMMIGRATION_PROGRAM = "immigration_program",
   EARTH_MEMORIAL = "earth_memorial",
   HERITAGE_ARCHIVE = "heritage_archive",
   UNIVERSAL_HOUSING = "universal_housing",
@@ -71,7 +71,7 @@ export enum ProjectId {
 
 /** All project IDs as an array for iteration */
 export const ALL_PROJECT_IDS: readonly ProjectId[] = [
-  ProjectId.GENERATION_SHIP,
+  ProjectId.IMMIGRATION_PROGRAM,
   ProjectId.EARTH_MEMORIAL,
   ProjectId.HERITAGE_ARCHIVE,
   ProjectId.UNIVERSAL_HOUSING,
@@ -110,6 +110,20 @@ export interface Project {
     resources?: ResourceDelta;
     unlockTech?: string;
     unlockBuilding?: string;
+    /** Morale boost for colonists who support this faction (added to base effect) */
+    supporterMoraleBoost?: number;
+    /** Conviction boost for colonists who support this faction (added to base effect) */
+    supporterConvictionBoost?: number;
+    /** Colony-wide morale boost (applies to all colonists) */
+    colonyMoraleBoost?: number;
+    /** Immediate population bonus (new colonists) */
+    populationBonus?: number;
+    /** Production multiplier bonus (e.g., 0.1 = +10% production) */
+    productionBonus?: number;
+    /** Food production bonus per sol */
+    foodBonus?: number;
+    /** Materials production bonus per sol */
+    materialsBonus?: number;
   };
   /** True if this is a capstone victory project */
   isCapstone?: boolean;

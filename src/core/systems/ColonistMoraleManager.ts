@@ -265,6 +265,16 @@ export class ColonistMoraleManager {
   }
 
   /**
+   * Adjust morale for all tracked colonists by a delta amount.
+   * Used for colony-wide events that affect everyone.
+   */
+  adjustAllColonistsMorale(delta: number): void {
+    for (const colonistId of this.moraleState.keys()) {
+      this.adjustColonistMorale(colonistId, delta);
+    }
+  }
+
+  /**
    * Remove a colonist from morale tracking.
    */
   removeColonist(colonistId: string): void {

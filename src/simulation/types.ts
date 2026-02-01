@@ -15,16 +15,13 @@ export interface SimulationConfig {
 
 /**
  * Victory condition types.
- * - colony_charter: Colony Charter achieved (pop 50+, morale 60+ sustained)
- * - return_mission: Earth Loyalists capstone passed
- * - declaration_of_sovereignty: Mars Independence capstone passed
- * - planetary_acquisition: Corporate Interests capstone passed
+ * Victory is achieved by completing a faction capstone project, then building
+ * the corresponding megastructure.
+ * - return_mission: Earth Loyalists capstone → Space Elevator
+ * - declaration_of_sovereignty: Mars Independence capstone → United Mars Station
+ * - planetary_acquisition: Corporate Interests capstone → Generation Ship
  */
-export type VictoryType =
-  | "colony_charter"
-  | "return_mission"
-  | "declaration_of_sovereignty"
-  | "planetary_acquisition";
+export type VictoryType = "return_mission" | "declaration_of_sovereignty" | "planetary_acquisition";
 
 /**
  * Defeat condition types.

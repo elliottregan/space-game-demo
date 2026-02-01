@@ -2,7 +2,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { NPCFaction, ProjectId } from "../../../core/models/NPCInfluence";
+import { BuildingId } from "../../../core/models/Building";
 import { PROJECTS, getProjectsByFaction } from "../../../core/data/projects";
+import { BUILDINGS } from "../../../core/data/buildings";
 import { gameService } from "../../services/GameService";
 import { GBadge } from "../../ui";
 
@@ -12,15 +14,27 @@ const props = defineProps<{
 
 const state = gameService.getState();
 
-// Faction display config
+// Faction display config with megastructure
 const factionConfig = computed(() => {
   switch (props.faction) {
     case NPCFaction.EarthLoyalists:
-      return { name: "Earth Loyalists", color: "var(--color-info)" };
+      return {
+        name: "Earth Loyalists",
+        color: "var(--color-info)",
+        megastructureId: BuildingId.SPACE_ELEVATOR,
+      };
     case NPCFaction.MarsIndependence:
-      return { name: "Mars Independence", color: "var(--color-positive)" };
+      return {
+        name: "Mars Independence",
+        color: "var(--color-positive)",
+        megastructureId: BuildingId.UNITED_MARS_STATION,
+      };
     case NPCFaction.CorporateInterests:
-      return { name: "Corporate Interests", color: "var(--color-warning)" };
+      return {
+        name: "Corporate Interests",
+        color: "var(--color-warning)",
+        megastructureId: BuildingId.GENERATION_SHIP,
+      };
   }
 });
 
@@ -91,6 +105,40 @@ const hasCouncilMajority = computed(() => {
   return seatsNeeded.value === 0 && totalSeats.value > 0;
 });
 
+// Megastructure state
+const megastructureDef = computed(() => {
+  return BUILDINGS.find((b) => b.id === factionConfig.value.megastructureId);
+});
+
+const isCapstoneCompleted = computed(() => {
+  const capstone = capstoneProject.value;
+  return capstone ? state.ideology.completedProjects.includes(capstone.id) : false;
+});
+
+const megastructureBuilding = computed(() => {
+  const megaId = factionConfig.value.megastructureId;
+  // Check pending (under construction)
+  const pending = state.pendingBuildings.find((b) => b.definitionId === megaId);
+  if (pending) return { building: pending, status: "building" as const };
+  // Check active (completed)
+  const active = state.buildings.find((b) => b.definitionId === megaId);
+  if (active) return { building: active, status: "complete" as const };
+  return null;
+});
+
+const megastructureProgress = computed(() => {
+  if (!megastructureBuilding.value || megastructureBuilding.value.status !== "building")
+    return null;
+  const building = megastructureBuilding.value.building;
+  const def = megastructureDef.value;
+  if (!def) return null;
+  return {
+    current: building.constructionProgress,
+    total: def.constructionTime,
+    percent: Math.round((building.constructionProgress / def.constructionTime) * 100),
+  };
+});
+
 // Get pending vote info
 function getPendingVoteSols(projectId: ProjectId): number | null {
   const pending = state.ideology.pendingProposals.find((p) => p.projectId === projectId);
@@ -102,6 +150,21 @@ function getPendingVoteSols(projectId: ProjectId): number | null {
 const nextStep = computed(() => {
   const support = getFactionSupport();
   const capstone = capstoneProject.value;
+  const megaDef = megastructureDef.value;
+
+  // Check if megastructure is being built
+  if (megastructureBuilding.value?.status === "building" && megastructureProgress.value) {
+    return {
+      action: `Building ${megaDef?.name}`,
+      detail: `(${megastructureProgress.value.percent}%)`,
+      type: "building" as const,
+    };
+  }
+
+  // Check if capstone completed - ready to build megastructure
+  if (isCapstoneCompleted.value && megaDef && !megastructureBuilding.value) {
+    return { action: `Build ${megaDef.name} to win!`, type: "ready" as const };
+  }
 
   // Check if capstone is pending
   if (capstone) {
@@ -114,9 +177,14 @@ const nextStep = computed(() => {
     }
   }
 
-  // Check if capstone is ready
-  if (passedCount.value >= 3 && hasCouncilMajority.value && capstone) {
-    return { action: `Propose ${capstone.name} to win!`, type: "ready" as const };
+  // Check if capstone is ready to propose
+  if (
+    passedCount.value >= 3 &&
+    hasCouncilMajority.value &&
+    capstone &&
+    !isCapstoneCompleted.value
+  ) {
+    return { action: `Propose ${capstone.name}`, type: "ready" as const };
   }
 
   // Check if projects incomplete
@@ -188,11 +256,54 @@ const nextStep = computed(() => {
         <div class="capstone-label">CAPSTONE</div>
         <div
           class="project-row capstone"
-          :class="{ ready: passedCount >= 3 && hasCouncilMajority }"
+          :class="{
+            ready: passedCount >= 3 && hasCouncilMajority && !isCapstoneCompleted,
+            passed: isCapstoneCompleted,
+          }"
         >
+          <span class="project-icon">
+            <template v-if="isCapstoneCompleted">✓</template>
+            <template v-else>○</template>
+          </span>
           <span class="project-name">{{ capstoneProject.name }}</span>
         </div>
         <div class="capstone-reqs">Requires: {{ passedCount }}/3 projects, 65% council</div>
+      </div>
+
+      <!-- Megastructure -->
+      <div v-if="megastructureDef" class="megastructure-section">
+        <div class="megastructure-label">VICTORY BUILDING</div>
+        <div
+          class="megastructure-row"
+          :class="{
+            locked: !isCapstoneCompleted,
+            ready: isCapstoneCompleted && !megastructureBuilding,
+            building: megastructureBuilding?.status === 'building',
+            complete: megastructureBuilding?.status === 'complete',
+          }"
+        >
+          <span class="project-icon">
+            <template v-if="megastructureBuilding?.status === 'complete'">★</template>
+            <template v-else-if="megastructureBuilding?.status === 'building'">◐</template>
+            <template v-else-if="isCapstoneCompleted">○</template>
+            <template v-else>🔒</template>
+          </span>
+          <span class="megastructure-name">{{ megastructureDef.name }}</span>
+        </div>
+        <div v-if="megastructureProgress" class="megastructure-progress">
+          <div class="progress-bar">
+            <div class="progress-fill" :style="{ width: `${megastructureProgress.percent}%` }" />
+          </div>
+          <span class="progress-text">
+            {{ megastructureProgress.current }}/{{ megastructureProgress.total }} sols
+          </span>
+        </div>
+        <div v-else class="megastructure-cost">
+          Cost: {{ megastructureDef.cost.materials }} materials
+          <template v-if="megastructureDef.cost.power"
+            >, {{ megastructureDef.cost.power }} power</template
+          >
+        </div>
       </div>
     </div>
 
@@ -330,6 +441,85 @@ const nextStep = computed(() => {
   margin-top: 2px;
 }
 
+/* Megastructure */
+.megastructure-section {
+  margin-top: var(--g-space-sm);
+  padding-top: var(--g-space-sm);
+  border-top: 1px dashed var(--g-color-border);
+}
+
+.megastructure-label {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--faction-color);
+  letter-spacing: 0.1em;
+  font-weight: bold;
+}
+
+.megastructure-row {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-xs);
+  padding: var(--g-space-xs) 0;
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-sm);
+  font-weight: bold;
+}
+
+.megastructure-row.locked {
+  color: var(--g-color-text-muted);
+}
+
+.megastructure-row.ready {
+  color: var(--faction-color);
+}
+
+.megastructure-row.building {
+  color: var(--color-info);
+}
+
+.megastructure-row.complete {
+  color: var(--color-positive);
+}
+
+.megastructure-name {
+  flex: 1;
+}
+
+.megastructure-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-sm);
+  margin-top: var(--g-space-xs);
+}
+
+.progress-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--g-color-bg-base);
+  border: 1px solid var(--g-color-border);
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--faction-color);
+  transition: width 0.3s;
+}
+
+.progress-text {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  white-space: nowrap;
+}
+
+.megastructure-cost {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  margin-top: 2px;
+}
+
 /* Council */
 .council-section {
   margin-top: var(--g-space-sm);
@@ -409,5 +599,9 @@ const nextStep = computed(() => {
 
 .next-step.locked .step-action {
   color: var(--color-warning);
+}
+
+.next-step.building .step-action {
+  color: var(--color-info);
 }
 </style>

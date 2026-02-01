@@ -12,7 +12,6 @@ const DEFEAT_REASON_NAMES: Record<string, string> = {
 
 /** Display names for victory types. */
 const VICTORY_TYPE_NAMES: Record<string, string> = {
-  colony_charter: "Colony Charter",
   return_mission: "Return Mission (Earth Loyalists)",
   declaration_of_sovereignty: "Declaration of Sovereignty (Mars Independence)",
   planetary_acquisition: "Planetary Acquisition (Corporate Interests)",

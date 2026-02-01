@@ -19,8 +19,10 @@ import {
   calculateStaffingEfficiency,
 } from "../utils/workerEfficiency";
 import type { ColonyManager } from "./ColonyManager";
+import type { IdeologyManager } from "./IdeologyManager";
 import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
+import type { VictoryManager } from "./VictoryManager";
 import type { WorkforceManager } from "./WorkforceManager";
 
 export class BuildingManager {
@@ -31,6 +33,8 @@ export class BuildingManager {
   private colonyManager: ColonyManager | null = null;
   private technologyTree: TechnologyTree | null = null;
   private workforceManager: WorkforceManager | null = null;
+  private ideologyManager: IdeologyManager | null = null;
+  private victoryManager: VictoryManager | null = null;
   private airQualityEfficiency: number = 1;
   private powerGridEfficiency: number = 1;
 
@@ -52,6 +56,14 @@ export class BuildingManager {
 
   setPowerGridEfficiency(multiplier: number): void {
     this.powerGridEfficiency = Math.max(0, Math.min(1, multiplier));
+  }
+
+  setIdeologyManager(ideology: IdeologyManager): void {
+    this.ideologyManager = ideology;
+  }
+
+  setVictoryManager(victory: VictoryManager): void {
+    this.victoryManager = victory;
   }
 
   constructor(defs: BuildingDefinition[]) {
@@ -146,6 +158,14 @@ export class BuildingManager {
         severity: "info",
         message: `${def.name} construction complete!`,
       });
+
+      // Check for victory building completion
+      if (def.isVictoryBuilding && this.victoryManager) {
+        const victoryEvent = this.victoryManager.checkBuildingVictory(building.definitionId);
+        if (victoryEvent) {
+          events.push(victoryEvent);
+        }
+      }
     }
   }
 
@@ -339,6 +359,13 @@ export class BuildingManager {
 
     if (def.requiredTech && !technology.isResearched(def.requiredTech)) {
       return false;
+    }
+
+    // Check project requirements for victory buildings
+    if (def.requiredProject) {
+      if (!this.ideologyManager || !this.ideologyManager.isProjectCompleted(def.requiredProject)) {
+        return false;
+      }
     }
 
     return resources.canAfford(def.cost);

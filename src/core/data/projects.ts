@@ -1,17 +1,23 @@
 // src/core/data/projects.ts
 
+import { BuildingId } from "../models/Building.ts";
 import { NPCFaction, type Project, ProjectId } from "../models/NPCInfluence.ts";
 
 export const PROJECTS: Project[] = [
   // Earth Loyalists projects
   {
-    id: ProjectId.GENERATION_SHIP,
-    name: "Build Generation Ship",
-    description: "Begin construction of an interstellar colony ship.",
+    id: ProjectId.IMMIGRATION_PROGRAM,
+    name: "Immigration Program",
+    description: "Establish formal immigration pathways to bring more settlers from Earth.",
     type: NPCFaction.EarthLoyalists,
-    proposalCost: { materials: 100 },
+    proposalCost: { materials: 80 },
     requiredSupport: 0.35,
-    effects: { unlockBuilding: "shipyard" },
+    effects: {
+      unlockBuilding: "immigration_center",
+      populationBonus: 3,
+      supporterMoraleBoost: 0.1,
+      supporterConvictionBoost: 0.05,
+    },
   },
   {
     id: ProjectId.EARTH_MEMORIAL,
@@ -20,6 +26,11 @@ export const PROJECTS: Project[] = [
     type: NPCFaction.EarthLoyalists,
     proposalCost: { materials: 40 },
     requiredSupport: 0.2,
+    effects: {
+      colonyMoraleBoost: 0.05,
+      supporterMoraleBoost: 0.15,
+      supporterConvictionBoost: 0.1,
+    },
   },
   {
     id: ProjectId.HERITAGE_ARCHIVE,
@@ -28,7 +39,11 @@ export const PROJECTS: Project[] = [
     type: NPCFaction.EarthLoyalists,
     proposalCost: { materials: 50 },
     requiredSupport: 0.35,
-    effects: { unlockBuilding: "archive" },
+    effects: {
+      unlockBuilding: "archive",
+      supporterMoraleBoost: 0.1,
+      supporterConvictionBoost: 0.08,
+    },
   },
 
   // Mars Independence projects
@@ -39,7 +54,12 @@ export const PROJECTS: Project[] = [
     type: NPCFaction.MarsIndependence,
     proposalCost: { materials: 80 },
     requiredSupport: 0.35,
-    effects: { unlockBuilding: "housing_complex" },
+    effects: {
+      unlockBuilding: "housing_complex",
+      colonyMoraleBoost: 0.08,
+      supporterMoraleBoost: 0.1,
+      supporterConvictionBoost: 0.05,
+    },
   },
   {
     id: ProjectId.HEALTHCARE_EXPANSION,
@@ -48,7 +68,12 @@ export const PROJECTS: Project[] = [
     type: NPCFaction.MarsIndependence,
     proposalCost: { materials: 60, water: 30 },
     requiredSupport: 0.35,
-    effects: { unlockBuilding: "medical_center" },
+    effects: {
+      unlockBuilding: "medical_center",
+      colonyMoraleBoost: 0.05,
+      supporterMoraleBoost: 0.1,
+      supporterConvictionBoost: 0.05,
+    },
   },
   {
     id: ProjectId.DEMOCRATIC_ASSEMBLY,
@@ -58,7 +83,12 @@ export const PROJECTS: Project[] = [
     type: NPCFaction.MarsIndependence,
     proposalCost: { materials: 70 },
     requiredSupport: 0.35,
-    effects: { unlockBuilding: "assembly_hall" },
+    effects: {
+      unlockBuilding: "assembly_hall",
+      colonyMoraleBoost: 0.1,
+      supporterMoraleBoost: 0.15,
+      supporterConvictionBoost: 0.1,
+    },
   },
 
   // Corporate Interests projects
@@ -67,9 +97,13 @@ export const PROJECTS: Project[] = [
     name: "AI-Assisted Governance",
     description: "Implement AI systems to help with colony decision-making.",
     type: NPCFaction.CorporateInterests,
-    proposalCost: { materials: 50, power: 50 },
+    proposalCost: { materials: 80 },
     requiredSupport: 0.35,
-    effects: { unlockTech: "advanced_ai" },
+    effects: {
+      unlockTech: "advanced_ai",
+      productionBonus: 0.1,
+      supporterConvictionBoost: 0.08,
+    },
   },
   {
     id: ProjectId.MINING_CONCESSION,
@@ -78,7 +112,11 @@ export const PROJECTS: Project[] = [
     type: NPCFaction.CorporateInterests,
     proposalCost: { materials: 60 },
     requiredSupport: 0.35,
-    effects: { unlockBuilding: "efficient_mine" },
+    effects: {
+      unlockBuilding: "efficient_mine",
+      materialsBonus: 2,
+      supporterConvictionBoost: 0.05,
+    },
   },
   {
     id: ProjectId.LABOR_EFFICIENCY,
@@ -87,6 +125,11 @@ export const PROJECTS: Project[] = [
     type: NPCFaction.CorporateInterests,
     proposalCost: { materials: 40 },
     requiredSupport: 0.2,
+    effects: {
+      productionBonus: 0.15,
+      supporterConvictionBoost: 0.1,
+      colonyMoraleBoost: -0.05, // Controversial - slight morale penalty
+    },
   },
 
   // Capstone Victory Projects
@@ -102,9 +145,10 @@ export const PROJECTS: Project[] = [
     prerequisites: [
       ProjectId.EARTH_MEMORIAL,
       ProjectId.HERITAGE_ARCHIVE,
-      ProjectId.GENERATION_SHIP,
+      ProjectId.IMMIGRATION_PROGRAM,
     ],
     requiredCouncilSupport: 0.65,
+    effects: { unlockBuilding: BuildingId.SPACE_ELEVATOR },
   },
   {
     id: ProjectId.DECLARATION_OF_SOVEREIGNTY,
@@ -120,6 +164,7 @@ export const PROJECTS: Project[] = [
       ProjectId.DEMOCRATIC_ASSEMBLY,
     ],
     requiredCouncilSupport: 0.65,
+    effects: { unlockBuilding: BuildingId.UNITED_MARS_STATION },
   },
   {
     id: ProjectId.PLANETARY_ACQUISITION,
@@ -135,6 +180,7 @@ export const PROJECTS: Project[] = [
       ProjectId.AI_GOVERNANCE,
     ],
     requiredCouncilSupport: 0.65,
+    effects: { unlockBuilding: BuildingId.GENERATION_SHIP },
   },
 ];
 

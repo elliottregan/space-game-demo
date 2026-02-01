@@ -869,14 +869,14 @@ describe("HeuristicStrategy", () => {
           requiredSupport: 0.35,
         }),
         proposeProjectCalled: (projectId) => proposedProjects.push(projectId),
-        // Sol 60 is after commitmentMinSol range (25-50) but before fallback (100)
-        currentSol: 60,
+        // Sol 10 is before commitmentMinSol range (15-30) so no commitment yet
+        currentSol: 10,
       });
 
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      // No faction has reached 50% commitment threshold, so no proposals
+      // No faction has reached 40% commitment threshold and we're before min sol, so no proposals
       expect(proposedProjects).toHaveLength(0);
     });
   });

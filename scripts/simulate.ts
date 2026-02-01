@@ -248,14 +248,25 @@ function runSingleGame(seed: number): RunResult {
   const finalSol = api.game.currentSol();
   const outcome = victoryState.status === "victory" ? "victory" : "defeat";
 
-  let victoryType: "colony_charter" | "population" | "generation_ship" | undefined;
+  let victoryType:
+    | "return_mission"
+    | "declaration_of_sovereignty"
+    | "planetary_acquisition"
+    | undefined;
   let defeatReason: "starvation" | "suffocation" | "population_collapse" | undefined;
 
   if (outcome === "victory") {
     const reason = victoryState.reason?.toLowerCase() ?? "";
-    if (reason.includes("colony charter")) victoryType = "colony_charter";
-    else if (reason.includes("generation ship")) victoryType = "generation_ship";
-    else victoryType = "population";
+    // Megastructure victories
+    if (reason.includes("space elevator")) victoryType = "return_mission";
+    else if (reason.includes("united mars station")) victoryType = "declaration_of_sovereignty";
+    else if (reason.includes("generation ship")) victoryType = "planetary_acquisition";
+    // Capstone project victories (legacy)
+    else if (reason.includes("return mission")) victoryType = "return_mission";
+    else if (reason.includes("declaration of sovereignty"))
+      victoryType = "declaration_of_sovereignty";
+    else if (reason.includes("planetary acquisition")) victoryType = "planetary_acquisition";
+    else victoryType = "return_mission"; // Default fallback
   } else {
     const reason = victoryState.reason?.toLowerCase() ?? "";
     if (reason.includes("food") || reason.includes("starv")) defeatReason = "starvation";
@@ -1639,12 +1650,11 @@ async function main(): Promise<void> {
   // 6. Critical Path Analysis
   output("\n[Critical Path Analysis]");
   output("-".repeat(40));
-  output("  Colony Charter requires:");
-  output("    - hydroponics (60 sols)");
-  output("    - water_recycling (45 sols)");
-  output("    - advanced_materials (75 sols)");
-  output("    = 180 sols minimum for tech");
-  output("    + 300 sols sustained = 480 sols theoretical minimum");
+  output("  Megastructure Victory requires:");
+  output("    - Pass 3 faction projects");
+  output("    - Gain 65% council seats for faction");
+  output("    - Pass capstone project");
+  output("    - Build megastructure (300-400 materials, 30-40 sols)");
   if (victoryTimes.length > 0) {
     output(`  Actual minimum achieved: ${Math.min(...victoryTimes)} sols`);
     output(`  Gap: ${Math.min(...victoryTimes) - 480} sols (setup/building time)`);

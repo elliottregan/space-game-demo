@@ -17,8 +17,8 @@ const factions = [
       <FactionTrack v-for="faction in factions" :key="faction" :faction="faction" />
     </div>
     <p class="hint">
-      Pass 3 faction projects, then secure 65% of council seats to propose the capstone victory
-      project.
+      Pass 3 faction projects → Secure 65% council seats → Pass capstone project → Build
+      megastructure to win!
     </p>
   </GPanel>
 </template>

@@ -77,6 +77,8 @@ export class GameState {
     this.airQuality = new AirQualityManager();
     this.powerGrid = new PowerGridManager();
     this.ideology = new IdeologyManager();
+    this.buildings.setIdeologyManager(this.ideology);
+    this.buildings.setVictoryManager(this.victory);
 
     // Initialize tick runner
     this.tickRunner = createStandardTickRunner();
@@ -324,7 +326,10 @@ export class GameState {
 
     if (data.ideology) {
       state.ideology = IdeologyManager.fromJSON(data.ideology);
+      state.buildings.setIdeologyManager(state.ideology);
     }
+
+    state.buildings.setVictoryManager(state.victory);
 
     if (data.autoAssignNewColonists !== undefined) {
       state.autoAssignNewColonists = data.autoAssignNewColonists;

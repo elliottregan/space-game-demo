@@ -2,6 +2,7 @@
 // Orchestrates Monte Carlo simulation runs for playtest analysis
 
 import { availableParallelism } from "node:os";
+import { NPCFaction } from "../core/models/NPCInfluence";
 import { rng } from "../core/utils/random";
 import { GameAPI } from "../facade/GameAPI";
 import { HeuristicStrategy } from "./HeuristicStrategy";
@@ -25,6 +26,16 @@ import type {
  * Prevents infinite loops in edge cases.
  */
 const MAX_SOLS = 5000;
+
+/**
+ * Factions available for strategy targeting.
+ * Used to distribute simulation runs across victory paths.
+ */
+const ALL_FACTIONS = [
+  NPCFaction.EarthLoyalists,
+  NPCFaction.MarsIndependence,
+  NPCFaction.CorporateInterests,
+] as const;
 
 /**
  * Interval at which resource snapshots are taken.
@@ -250,8 +261,12 @@ export class SimulationRunner {
     // Create fresh GameAPI instance
     const api = new GameAPI();
 
-    // Create strategy for decision making
-    const strategy = new HeuristicStrategy(api);
+    // Select target faction based on seed for balanced victory distribution
+    // This ensures ~1/3 of runs target each faction while remaining deterministic
+    const targetFaction = ALL_FACTIONS[seed % ALL_FACTIONS.length];
+
+    // Create strategy for decision making with target faction
+    const strategy = new HeuristicStrategy(api, { targetFaction });
 
     // Initialize tracking - use lightweight snapshots to skip expensive calculations
     let peakPopulation = api.colony.snapshot({ lightweight: true }).population;
@@ -612,18 +627,24 @@ export class SimulationRunner {
 
   /**
    * Map victory reason string to VictoryType.
+   * Victory is achieved by building megastructures after completing capstone projects.
    */
   private mapVictoryType(reason?: string): VictoryType {
-    if (!reason) return "colony_charter";
+    if (!reason) return "return_mission"; // Default fallback
 
     const lowerReason = reason.toLowerCase();
 
-    if (lowerReason.includes("colony charter")) return "colony_charter";
+    // Capstone project victories (legacy - before megastructures were required)
     if (lowerReason.includes("return mission")) return "return_mission";
     if (lowerReason.includes("declaration of sovereignty")) return "declaration_of_sovereignty";
     if (lowerReason.includes("planetary acquisition")) return "planetary_acquisition";
 
-    return "colony_charter";
+    // Megastructure victories (new victory condition)
+    if (lowerReason.includes("space elevator")) return "return_mission";
+    if (lowerReason.includes("united mars station")) return "declaration_of_sovereignty";
+    if (lowerReason.includes("generation ship")) return "planetary_acquisition";
+
+    return "return_mission"; // Default fallback
   }
 
   /**
