@@ -75,7 +75,6 @@ const displayLabel = computed(() => {
   font-family: var(--g-font-mono);
   font-size: var(--g-font-size-sm);
   color: var(--g-color-text-muted);
-  min-width: 3em;
   text-align: right;
 }
 

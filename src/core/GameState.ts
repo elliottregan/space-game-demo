@@ -221,6 +221,7 @@ export class GameState {
         events: this.events,
         victory: this.victory,
         ideology: this.ideology,
+        airQualityManager: this.airQuality,
       },
       { autoAssignNewColonists: this.autoAssignNewColonists },
     );

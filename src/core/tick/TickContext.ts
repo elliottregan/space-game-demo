@@ -1,3 +1,4 @@
+import type { AirQualityManager } from "../systems/AirQualityManager";
 import type { BuildingManager } from "../systems/BuildingManager";
 import type { ColonistMoraleManager } from "../systems/ColonistMoraleManager";
 import type { ColonyManager } from "../systems/ColonyManager";
@@ -55,6 +56,7 @@ export interface TickContext {
   events: EventManager;
   victory: VictoryManager;
   ideology: IdeologyManager;
+  airQualityManager: AirQualityManager;
 
   /** Derived values computed during tick */
   derived: DerivedValues;
@@ -80,6 +82,7 @@ export function createTickContext(
     events: EventManager;
     victory: VictoryManager;
     ideology: IdeologyManager;
+    airQualityManager: AirQualityManager;
   },
   settings: TickSettings,
 ): TickContext {

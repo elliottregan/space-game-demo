@@ -1,44 +1,50 @@
 <script setup lang="ts">
 import type { Component } from "vue";
 import { computed } from "vue";
-import { BarChart3, CircleOff, Cog, FlaskConical, Home, Sprout, User } from "lucide-vue-next";
+import {
+  BarChart3,
+  CircleOff,
+  Cog,
+  FlaskConical,
+  Heart,
+  Home,
+  Smile,
+  Sprout,
+  User,
+  Users,
+} from "lucide-vue-next";
 import { ColonistRole } from "../../../core/models/Colonist";
 import { gameService } from "../../services/GameService";
-import type { GridStat, Stat } from "../../ui";
-import { GPanel, GStatsBar, GStatsGrid } from "../../ui";
+import type { GridStat } from "../../ui";
+import { GMetricBar, GMiniStat, GPanel, GStatsGrid } from "../../ui";
 import {
-  getCohesionVariant,
-  getHealthVariant,
-  getMoraleVariant,
+  COHESION_POSITIVE_THRESHOLD,
+  COHESION_WARNING_THRESHOLD,
+  HEALTH_POSITIVE_THRESHOLD,
+  HEALTH_WARNING_THRESHOLD,
+  MORALE_POSITIVE_THRESHOLD,
+  MORALE_WARNING_THRESHOLD,
 } from "../../utils/displayThresholds";
 
 // Reactive state for template bindings (auto-updates when API syncs)
 const state = gameService.getState();
 
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-const colonyStats = computed<Stat[]>(() => {
-  const stats: Stat[] = [
-    { label: "Population", value: state.population },
-    { label: "Health", progress: state.health, variant: getHealthVariant(state.health) },
-    { label: "Morale", progress: state.morale, variant: getMoraleVariant(state.morale) },
-    {
-      label: "Cohesion",
-      progress: Math.round(state.socialCohesion * 100),
-      variant: getCohesionVariant(state.socialCohesion),
-    },
-  ];
+const healthThresholds = {
+  warning: HEALTH_POSITIVE_THRESHOLD / 100,
+  critical: HEALTH_WARNING_THRESHOLD / 100,
+};
 
-  if (state.moraleBoost > 0) {
-    stats.push({
-      label: "Recreation Bonus",
-      value: state.moraleBoost,
-      variant: "positive",
-      prefix: "+",
-    });
-  }
+// Morale is 0-100, convert to 0-1 for GMetricBar
+const moraleThresholds = {
+  warning: MORALE_POSITIVE_THRESHOLD / 100,
+  critical: MORALE_WARNING_THRESHOLD / 100,
+};
 
-  return stats;
-});
+// Cohesion is already 0-1
+const cohesionThresholds = {
+  warning: COHESION_POSITIVE_THRESHOLD,
+  critical: COHESION_WARNING_THRESHOLD,
+};
 
 const roleConfig: Record<ColonistRole, { icon: Component; label: string }> = {
   [ColonistRole.UNASSIGNED]: { icon: User, label: "Unassigned" },
@@ -101,17 +107,63 @@ const housingStats = computed<GridStat[]>(() => {
 
   return [
     { key: "housed", icon: Home, count: housed, label: "Housed" },
-    { key: "unhoused", icon: CircleOff, count: unhoused, label: "Unhoused" },
+    {
+      key: "unhoused",
+      icon: CircleOff,
+      count: unhoused,
+      label: "Unhoused",
+    },
   ];
 });
 </script>
 
 <template>
   <GPanel title="Colony Status" accent="olive">
-    <GStatsBar :stats="colonyStats" />
+    <div class="metric-bars">
+      <GMetricBar
+        label="Health"
+        :value="state.health / 100"
+        :icon="Heart"
+        :thresholds="healthThresholds"
+      />
+      <GMetricBar
+        label="Morale"
+        :value="state.morale / 100"
+        :icon="Smile"
+        :thresholds="moraleThresholds"
+      />
+      <GMetricBar
+        label="Cohesion"
+        :value="state.socialCohesion"
+        :icon="Users"
+        :thresholds="cohesionThresholds"
+      />
+    </div>
+    <div class="stats-grid">
+      <GMiniStat label="Population" :value="state.population" />
+      <GMiniStat
+        v-if="state.moraleBoost > 0"
+        label="Rec Bonus"
+        :value="state.moraleBoost"
+        mode="difference"
+      />
+    </div>
     <GStatsGrid title="Workforce" :stats="workforceStats" />
     <GStatsGrid title="Housing" :stats="housingStats" />
   </GPanel>
 </template>
 
-<style scoped></style>
+<style scoped>
+.metric-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-md);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--g-space-md);
+  margin-top: var(--g-space-md);
+}
+</style>

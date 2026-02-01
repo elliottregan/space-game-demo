@@ -20,7 +20,7 @@ export const calculateAirQuality = definePhase({
   id: "airQuality:calculate",
   name: "Calculate Air Quality",
   reads: ["buildings", "colony"],
-  writes: ["derived.airQuality", "derived.airQualityEffects", "buildings"],
+  writes: ["derived.airQuality", "derived.airQualityEffects", "buildings", "airQualityManager"],
   execute(ctx: TickContext): GameEvent[] {
     const events: GameEvent[] = [];
 
@@ -31,15 +31,8 @@ export const calculateAirQuality = definePhase({
     const population = ctx.colony.getPopulation();
     const consumption = population * BASE_OXYGEN_PER_COLONIST;
 
-    // Calculate air quality
-    let airQuality: number;
-    if (consumption <= 0) {
-      airQuality = 1;
-    } else if (production <= 0) {
-      airQuality = 0;
-    } else {
-      airQuality = Math.max(0, Math.min(1, production / consumption));
-    }
+    // Calculate air quality using the manager (updates its internal state)
+    const airQuality = ctx.airQualityManager.calculate(production, consumption);
 
     ctx.derived.airQuality = airQuality;
 

@@ -7,19 +7,12 @@ import {
   BASE_OXYGEN_PER_COLONIST,
 } from "../../../core/balance/AirQualityBalance";
 import { gameService } from "../../services/GameService";
-import { GPanel, GProgress } from "../../ui";
+import { GBreakdownList, GMetricBar, GPanel } from "../../ui";
+import type { BreakdownItem } from "../../ui";
 
 const state = gameService.getState();
 
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-const airQualityPercent = computed(() => Math.round(state.airQuality * 100));
-
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-const airQualityVariant = computed(() => {
-  if (state.airQuality >= AIR_QUALITY_COMFORTABLE) return "positive";
-  if (state.airQuality >= AIR_QUALITY_CRITICAL) return "warning";
-  return "negative";
-});
+const airQualityThresholds = { warning: AIR_QUALITY_COMFORTABLE, critical: AIR_QUALITY_CRITICAL };
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const hasEffects = computed(() => {
@@ -35,8 +28,7 @@ const efficiencyPercent = computed(() => Math.round(state.airQualityEfficiency *
 
 // Building oxygen contributions grouped by type
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-const buildingContributions = computed(() => {
-  const contributions: { name: string; count: number; contribution: number }[] = [];
+const breakdownItems = computed<BreakdownItem[]>(() => {
   const buildingCounts = new Map<string, { name: string; count: number; contribution: number }>();
 
   for (const building of state.buildings) {
@@ -58,34 +50,38 @@ const buildingContributions = computed(() => {
     }
   }
 
-  for (const entry of buildingCounts.values()) {
-    contributions.push(entry);
-  }
-
   // Sort by contribution (producers first, then consumers)
-  return contributions.sort((a, b) => b.contribution - a.contribution);
-});
+  const sorted = [...buildingCounts.values()].sort((a, b) => b.contribution - a.contribution);
 
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-const colonistConsumption = computed(() => ({
-  count: state.population,
-  consumption: state.population * BASE_OXYGEN_PER_COLONIST,
-}));
+  const items: BreakdownItem[] = sorted.map((entry) => ({
+    key: entry.name,
+    name: entry.name,
+    count: entry.count,
+    value: entry.contribution,
+  }));
+
+  // Add colonist consumption as separator row
+  items.push({
+    key: "colonists",
+    name: "Colonists",
+    count: state.population,
+    value: -(state.population * BASE_OXYGEN_PER_COLONIST),
+    separator: true,
+  });
+
+  return items;
+});
 </script>
 
 <template>
   <GPanel title="Life Support" accent="cyan">
     <div class="oxygen-content">
-      <div class="air-quality-section">
-        <div class="air-quality-header">
-          <Wind :size="16" class="oxygen-icon" />
-          <span class="air-quality-label">Air Quality</span>
-          <span class="air-quality-value" :class="`text-${airQualityVariant}`">
-            {{ airQualityPercent }}%
-          </span>
-        </div>
-        <GProgress :percent="airQualityPercent" :variant="airQualityVariant" />
-      </div>
+      <GMetricBar
+        label="Air Quality"
+        :value="state.airQuality"
+        :icon="Wind"
+        :thresholds="airQualityThresholds"
+      />
 
       <div class="oxygen-stats">
         <div class="stat">
@@ -102,34 +98,7 @@ const colonistConsumption = computed(() => ({
         </div>
       </div>
 
-      <div class="breakdown-section">
-        <div class="breakdown-title">Breakdown</div>
-        <div class="breakdown-list">
-          <div
-            v-for="building in buildingContributions"
-            :key="building.name"
-            class="breakdown-item"
-          >
-            <span class="breakdown-name">
-              {{ building.name }}
-              <span class="breakdown-count">x{{ building.count }}</span>
-            </span>
-            <span
-              class="breakdown-value"
-              :class="building.contribution > 0 ? 'positive' : 'negative'"
-            >
-              {{ building.contribution > 0 ? "+" : "" }}{{ building.contribution }}
-            </span>
-          </div>
-          <div class="breakdown-item colonist-row">
-            <span class="breakdown-name">
-              Colonists
-              <span class="breakdown-count">x{{ colonistConsumption.count }}</span>
-            </span>
-            <span class="breakdown-value negative"> -{{ colonistConsumption.consumption }} </span>
-          </div>
-        </div>
-      </div>
+      <GBreakdownList title="Breakdown" :items="breakdownItems" />
 
       <div v-if="hasEffects" class="effects-section">
         <div class="effects-title">Low Oxygen Effects</div>
@@ -161,45 +130,6 @@ const colonistConsumption = computed(() => ({
   display: flex;
   flex-direction: column;
   gap: var(--g-space-md);
-}
-
-.air-quality-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--g-space-xs);
-}
-
-.air-quality-header {
-  display: flex;
-  align-items: center;
-  gap: var(--g-space-sm);
-}
-
-.oxygen-icon {
-  color: var(--g-color-info);
-}
-
-.air-quality-label {
-  font-size: var(--g-font-size-sm);
-  color: var(--g-color-text-muted);
-}
-
-.air-quality-value {
-  margin-left: auto;
-  font-family: var(--g-font-mono);
-  font-weight: bold;
-}
-
-.text-positive {
-  color: var(--g-color-positive);
-}
-
-.text-warning {
-  color: var(--g-color-warning);
-}
-
-.text-negative {
-  color: var(--g-color-negative);
 }
 
 .oxygen-stats {
@@ -265,60 +195,5 @@ const colonistConsumption = computed(() => ({
 
 .effect-value.negative {
   color: var(--g-color-negative);
-}
-
-.breakdown-section {
-  border-top: 1px solid var(--g-color-border);
-  padding-top: var(--g-space-md);
-}
-
-.breakdown-title {
-  font-size: var(--g-font-size-xs);
-  color: var(--g-color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: var(--g-space-sm);
-}
-
-.breakdown-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--g-space-xs);
-}
-
-.breakdown-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: var(--g-font-size-sm);
-}
-
-.breakdown-name {
-  display: flex;
-  align-items: center;
-  gap: var(--g-space-xs);
-}
-
-.breakdown-count {
-  color: var(--g-color-text-muted);
-  font-size: var(--g-font-size-xs);
-}
-
-.breakdown-value {
-  font-family: var(--g-font-mono);
-}
-
-.breakdown-value.positive {
-  color: var(--g-color-positive);
-}
-
-.breakdown-value.negative {
-  color: var(--g-color-negative);
-}
-
-.colonist-row {
-  border-top: 1px dashed var(--g-color-border);
-  padding-top: var(--g-space-xs);
-  margin-top: var(--g-space-xs);
 }
 </style>
