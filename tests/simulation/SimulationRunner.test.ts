@@ -176,9 +176,9 @@ describe("SimulationRunner", () => {
       // If there are victories, they should be categorized
       if (stats.winRate > 0) {
         const hasCategories =
-          stats.victoryBreakdown["colony_charter"] !== undefined ||
-          stats.victoryBreakdown["population"] !== undefined ||
-          stats.victoryBreakdown["generation_ship"] !== undefined;
+          stats.victoryBreakdown["return_mission"] !== undefined ||
+          stats.victoryBreakdown["declaration_of_sovereignty"] !== undefined ||
+          stats.victoryBreakdown["planetary_acquisition"] !== undefined;
         expect(hasCategories).toBe(true);
       }
     });
