@@ -1,5 +1,6 @@
 import { type BuildingDefinition, BuildingId, BuildingPurpose } from "../models/Building";
 import { ColonistRole } from "../models/Colonist";
+import { ProjectId } from "../models/NPCInfluence";
 import { TechnologyId } from "../models/Technology";
 
 export const BUILDINGS: BuildingDefinition[] = [
@@ -306,5 +307,43 @@ export const BUILDINGS: BuildingDefinition[] = [
     oxygenContribution: 0,
     purpose: BuildingPurpose.Social,
     bondingStrength: 1.2,
+  },
+
+  // Victory Megastructures (unlocked by capstone projects)
+  {
+    id: BuildingId.GENERATION_SHIP,
+    name: "Generation Ship",
+    description:
+      "A massive interstellar vessel capable of carrying colonists to distant stars. Completing this proves Mars can seed the galaxy.",
+    cost: { materials: 400 },
+    constructionTime: 40,
+    oxygenContribution: 10,
+    purpose: BuildingPurpose.Industrial,
+    requiredProject: ProjectId.RETURN_MISSION,
+    isVictoryBuilding: true,
+  },
+  {
+    id: BuildingId.UNITED_MARS_STATION,
+    name: "United Mars Station",
+    description:
+      "An orbital station symbolizing Martian unity and independence. A beacon of sovereignty visible from Earth.",
+    cost: { materials: 350 },
+    constructionTime: 35,
+    oxygenContribution: 8,
+    purpose: BuildingPurpose.Industrial,
+    requiredProject: ProjectId.DECLARATION_OF_SOVEREIGNTY,
+    isVictoryBuilding: true,
+  },
+  {
+    id: BuildingId.SPACE_ELEVATOR,
+    name: "Space Elevator",
+    description:
+      "A tether to orbit enabling cheap access to space. The ultimate infrastructure for economic dominance.",
+    cost: { materials: 300, power: 100 },
+    constructionTime: 30,
+    oxygenContribution: 5,
+    purpose: BuildingPurpose.Industrial,
+    requiredProject: ProjectId.PLANETARY_ACQUISITION,
+    isVictoryBuilding: true,
   },
 ];
