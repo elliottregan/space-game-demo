@@ -159,8 +159,8 @@ describe("Resources without oxygen", () => {
     expect(RESOURCE_KEYS).not.toContain("oxygen");
   });
 
-  it("should have exactly 4 resource keys", () => {
-    expect(RESOURCE_KEYS).toEqual(["food", "water", "power", "materials"]);
+  it("should have exactly 3 resource keys (power is now a grid metric)", () => {
+    expect(RESOURCE_KEYS).toEqual(["food", "water", "materials"]);
   });
 });
 

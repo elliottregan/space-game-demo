@@ -3,13 +3,11 @@ import type { Resources } from "../models/Resources";
 export const COLONIST_NEEDS = {
   food: 0.5,
   water: 0.2,
-  power: 0.1,
 } as const;
 
 export const STARTING_RESOURCES: Resources = {
   food: 280,
   water: 200,
-  power: 500,
   materials: 500,
 };
 

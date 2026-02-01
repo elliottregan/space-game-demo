@@ -21,8 +21,8 @@ describe("GameState", () => {
     const resources = gameState.resources.getResources();
     expect(resources.food).toBe(280);
     expect(resources.water).toBe(200);
-    expect(resources.power).toBe(500);
     expect(resources.materials).toBe(500);
+    // Note: power is no longer a stockpiled resource - it's a grid strain metric
   });
 
   it("should have starting population", () => {

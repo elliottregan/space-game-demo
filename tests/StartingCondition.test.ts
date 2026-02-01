@@ -57,10 +57,11 @@ describe("GameState with StartingConditions", () => {
     const production = state.resources.getProduction();
     const consumption = state.resources.getConsumption();
 
-    // Solar panel produces power
-    expect(production.power).toBeGreaterThan(0);
-    // Farms consume water and power
+    // Farms produce food
+    expect(production.food).toBeGreaterThan(0);
+    // Farms and oxygen generators consume water
     expect(consumption.water).toBeGreaterThan(0);
+    // Power is now a grid metric, not a stockpiled resource
   });
 });
 

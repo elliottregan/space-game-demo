@@ -3,6 +3,7 @@
 
 export { AirQualityFacade } from "./AirQualityFacade";
 export { BuildingsFacade } from "./BuildingsFacade";
+export { PowerGridFacade } from "./PowerGridFacade";
 export { ColonyFacade } from "./ColonyFacade";
 export { EventsFacade } from "./EventsFacade";
 export { GameFlowFacade } from "./GameFlowFacade";

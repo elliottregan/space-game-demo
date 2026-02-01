@@ -5,6 +5,7 @@ import type { ColonyManager } from "../systems/ColonyManager";
 import type { EventManager } from "../systems/EventManager";
 import type { IdeologyManager } from "../systems/IdeologyManager";
 import type { OperationsManager } from "../systems/OperationsManager";
+import type { PowerGridManager } from "../systems/PowerGridManager";
 import type { ResourceManager } from "../systems/ResourceManager";
 import type { TechnologyTree } from "../systems/TechnologyTree";
 import type { VictoryManager } from "../systems/VictoryManager";
@@ -28,6 +29,8 @@ export interface DerivedValues {
   laborPoolBonus: number;
   airQuality: number;
   airQualityEffects: { health: number; morale: number; efficiency: number } | null;
+  powerGrid: number;
+  powerGridEffects: { efficiency: number } | null;
 }
 
 /**
@@ -57,6 +60,7 @@ export interface TickContext {
   victory: VictoryManager;
   ideology: IdeologyManager;
   airQualityManager: AirQualityManager;
+  powerGridManager: PowerGridManager;
 
   /** Derived values computed during tick */
   derived: DerivedValues;
@@ -83,6 +87,7 @@ export function createTickContext(
     victory: VictoryManager;
     ideology: IdeologyManager;
     airQualityManager: AirQualityManager;
+    powerGridManager: PowerGridManager;
   },
   settings: TickSettings,
 ): TickContext {
@@ -94,6 +99,8 @@ export function createTickContext(
       laborPoolBonus: 0,
       airQuality: 1,
       airQualityEffects: null,
+      powerGrid: 1,
+      powerGridEffects: null,
     },
     settings,
   };

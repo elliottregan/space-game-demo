@@ -44,6 +44,10 @@ export interface BuildingDefinition {
   constructionTime: number;
   production?: ResourceDelta;
   consumption?: ResourceDelta;
+  /** Power produced per sol (for power generation buildings) */
+  powerProduction?: number;
+  /** Power consumed per sol (for most buildings) */
+  powerConsumption?: number;
   workerSlots?: number;
   workerRole?: ColonistRole;
   requiredTech?: TechnologyId;

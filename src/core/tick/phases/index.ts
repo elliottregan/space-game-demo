@@ -3,6 +3,7 @@ import { TickRunner } from "../TickRunner";
 // Pre-tick phases
 import { updateLaborPoolBonus } from "./pretick";
 import { calculateAirQuality } from "./airQuality";
+import { calculatePowerGrid } from "./powerGrid";
 // Resource phases
 import { applyResourceFlows, checkResourceDepletion } from "./resources";
 // Building phases
@@ -37,6 +38,7 @@ import { checkVictoryConditions } from "./victory";
 // Re-export all phases
 export { updateLaborPoolBonus } from "./pretick";
 export { calculateAirQuality } from "./airQuality";
+export { calculatePowerGrid } from "./powerGrid";
 export { applyResourceFlows, checkResourceDepletion } from "./resources";
 export {
   processBuildingsTick,
@@ -79,6 +81,7 @@ export function createStandardTickRunner(): TickRunner {
   // 1. Pre-tick phases
   runner.register(updateLaborPoolBonus);
   runner.register(calculateAirQuality);
+  runner.register(calculatePowerGrid);
 
   // 2. Resource phases
   runner.register(applyResourceFlows);

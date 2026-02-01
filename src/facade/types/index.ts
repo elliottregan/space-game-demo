@@ -5,6 +5,8 @@ import { BuildingId } from "./buildings";
 
 // Air quality types
 export type { AirQualitySnapshot } from "./airQuality";
+// Power grid types
+export type { PowerGridSnapshot } from "./powerGrid";
 export type {
   Building,
   BuildingDefinition,

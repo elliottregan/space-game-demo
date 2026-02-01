@@ -13,6 +13,7 @@ import { ColonyManager } from "./systems/ColonyManager";
 import { EventManager } from "./systems/EventManager";
 import { IdeologyManager } from "./systems/IdeologyManager";
 import { OperationsManager } from "./systems/OperationsManager";
+import { PowerGridManager } from "./systems/PowerGridManager";
 import { ResourceManager } from "./systems/ResourceManager";
 import { TechnologyTree } from "./systems/TechnologyTree";
 import { VictoryManager } from "./systems/VictoryManager";
@@ -33,6 +34,7 @@ export class GameState {
   victory: VictoryManager;
   operations: OperationsManager;
   airQuality: AirQualityManager;
+  powerGrid: PowerGridManager;
   ideology: IdeologyManager;
 
   private tickRunner: TickRunner;
@@ -73,6 +75,7 @@ export class GameState {
     this.victory = new VictoryManager();
     this.operations = new OperationsManager();
     this.airQuality = new AirQualityManager();
+    this.powerGrid = new PowerGridManager();
     this.ideology = new IdeologyManager();
 
     // Initialize tick runner
@@ -222,6 +225,7 @@ export class GameState {
         victory: this.victory,
         ideology: this.ideology,
         airQualityManager: this.airQuality,
+        powerGridManager: this.powerGrid,
       },
       { autoAssignNewColonists: this.autoAssignNewColonists },
     );
@@ -283,6 +287,7 @@ export class GameState {
       victory: this.victory.toJSON(),
       operations: this.operations.toJSON(),
       airQuality: this.airQuality.toJSON(),
+      powerGrid: this.powerGrid.toJSON(),
       ideology: this.ideology.toJSON(),
       autoAssignNewColonists: this.autoAssignNewColonists,
     };
@@ -311,6 +316,10 @@ export class GameState {
 
     if (data.airQuality) {
       state.airQuality = AirQualityManager.fromJSON(data.airQuality);
+    }
+
+    if (data.powerGrid) {
+      state.powerGrid = PowerGridManager.fromJSON(data.powerGrid);
     }
 
     if (data.ideology) {

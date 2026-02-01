@@ -24,7 +24,7 @@ function createBuildingDefinition(overrides: Partial<BuildingDefinition> = {}): 
     id: BuildingId.HABITAT,
     name: "Test Building",
     description: "A test building",
-    cost: { materials: 100, power: 50 },
+    cost: { materials: 100 },
     constructionTime: 10,
     ...overrides,
   };
@@ -46,10 +46,10 @@ function createBuilding(overrides: Partial<Building> = {}): Building {
 
 describe("scaleCost", () => {
   it("scales all resource values by the multiplier", () => {
-    const cost = { materials: 100, power: 50 };
+    const cost = { materials: 100, food: 50 };
     const result = scaleCost(cost, 0.5);
     expect(result.materials).toBe(50);
-    expect(result.power).toBe(25);
+    expect(result.food).toBe(25);
   });
 
   it("uses Math.ceil as default rounding function", () => {
@@ -77,7 +77,7 @@ describe("scaleCost", () => {
   });
 
   it("skips zero and undefined values", () => {
-    const cost = { materials: 100, power: 0, food: undefined };
+    const cost = { materials: 100, food: undefined };
     const result = scaleCost(cost, 0.5);
     expect(result.materials).toBe(50);
     expect(result.power).toBeUndefined();
@@ -98,10 +98,10 @@ describe("calculateRepairCost", () => {
   });
 
   it("applies to all resource types in cost", () => {
-    const def = createBuildingDefinition({ cost: { materials: 100, power: 50 } });
+    const def = createBuildingDefinition({ cost: { materials: 100, food: 50 } });
     const result = calculateRepairCost(def);
     expect(result.materials).toBe(Math.ceil(100 * REPAIR_COST_MULTIPLIER));
-    expect(result.power).toBe(Math.ceil(50 * REPAIR_COST_MULTIPLIER));
+    expect(result.food).toBe(Math.ceil(50 * REPAIR_COST_MULTIPLIER));
   });
 });
 
@@ -211,9 +211,9 @@ describe("applyRushRecyclingPenalty", () => {
   });
 
   it("applies to all resource types", () => {
-    const recycleValue = { materials: 100, power: 50 };
+    const recycleValue = { materials: 100, food: 50 };
     const result = applyRushRecyclingPenalty(recycleValue);
     expect(result.materials).toBe(Math.floor(100 * (1 - RUSH_RECYCLING_PENALTY)));
-    expect(result.power).toBe(Math.floor(50 * (1 - RUSH_RECYCLING_PENALTY)));
+    expect(result.food).toBe(Math.floor(50 * (1 - RUSH_RECYCLING_PENALTY)));
   });
 });

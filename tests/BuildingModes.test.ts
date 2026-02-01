@@ -15,7 +15,6 @@ describe("Building Modes", () => {
     resources = new ResourceManager({
       food: 500,
       water: 500,
-      power: 500,
       materials: 500,
     });
   });
@@ -49,17 +48,18 @@ describe("Building Modes", () => {
   });
 
   test("getEffectiveProduction applies mode multiplier", () => {
-    const building = buildings.startBuilding(BuildingId.SOLAR_PANEL, resources, {
+    // Use Basic Farm which produces food (a stockpiled resource)
+    const building = buildings.startBuilding(BuildingId.BASIC_FARM, resources, {
       isResearched: () => true,
     } as never);
     // Complete construction
-    for (let i = 0; i < 10; i++) buildings.tick(resources);
+    for (let i = 0; i < 15; i++) buildings.tick(resources);
 
     const normalProd = buildings.getEffectiveProduction(building!.id);
     buildings.setBuildingMode(building!.id, "overdrive", resources);
     const overdriveProd = buildings.getEffectiveProduction(building!.id);
 
-    expect(overdriveProd.power).toBe(normalProd.power! * 1.5);
+    expect(overdriveProd.food).toBe(normalProd.food! * 1.5);
   });
 });
 
@@ -72,7 +72,6 @@ describe("Building Breakdown", () => {
     resources = new ResourceManager({
       food: 500,
       water: 500,
-      power: 500,
       materials: 500,
     });
   });

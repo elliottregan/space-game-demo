@@ -584,12 +584,11 @@ export class HeuristicStrategy {
       }
     }
 
-    // Resource effects - sum up net resources
+    // Resource effects - sum up net stockpiled resources (power is grid-based, not scored here)
     if (choice.effects.resources) {
       const resources = choice.effects.resources;
       score += resources.food ?? 0;
       score += resources.water ?? 0;
-      score += resources.power ?? 0;
       score += resources.materials ?? 0;
     }
 
@@ -685,10 +684,10 @@ export class HeuristicStrategy {
     // Establish materials production early via basic mines
     if (this.handleMaterialsProduction()) return true;
 
-    // Build solar panel if power production is insufficient
-    const powerProduction = resources.production.power ?? 0;
-    const powerConsumption = resources.consumption.power ?? 0;
-    if (powerProduction < powerConsumption + 20) {
+    // Build solar panel if power grid is strained (< 80% comfortable threshold)
+    const powerGrid = this.api.powerGrid.snapshot();
+    if (powerGrid.gridStrain < 0.9) {
+      // Want some headroom above the 0.8 comfortable threshold
       if (this.tryBuild(BuildingId.SOLAR_PANEL, "infrastructure")) return true;
     }
 

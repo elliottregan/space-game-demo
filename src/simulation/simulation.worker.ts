@@ -275,11 +275,12 @@ function runSingleGame(seed: number): RunResult {
         (c) => !colony.coworkerRelationships.has(c.id),
       ).length;
 
+      const powerGrid = api.powerGrid.snapshot();
       resourceTimeline.push({
         sol: currentSol,
         food: resources.current.food,
         water: resources.current.water,
-        power: resources.current.power,
+        powerGrid: powerGrid.gridStrain,
         materials: resources.current.materials,
         population: currentPop,
         morale: colony.morale,
@@ -292,7 +293,6 @@ function runSingleGame(seed: number): RunResult {
         sol: currentSol,
         netFood: (resources.production.food ?? 0) - (resources.consumption.food ?? 0),
         netWater: (resources.production.water ?? 0) - (resources.consumption.water ?? 0),
-        netPower: (resources.production.power ?? 0) - (resources.consumption.power ?? 0),
         netMaterials:
           (resources.production.materials ?? 0) - (resources.consumption.materials ?? 0),
       });
@@ -350,7 +350,7 @@ function runSingleGame(seed: number): RunResult {
       sol: finalSol,
       food: resources.current.food,
       water: resources.current.water,
-      power: resources.current.power,
+      powerGrid: api.powerGrid.snapshot().gridStrain,
       materials: resources.current.materials,
       population: colony.population,
       morale: colony.morale,
