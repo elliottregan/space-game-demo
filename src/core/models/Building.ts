@@ -1,4 +1,5 @@
 import type { ColonistRole } from "./Colonist";
+import type { ProjectId } from "./NPCInfluence";
 import type { ResourceDelta } from "./Resources";
 import type { TechnologyId } from "./Technology";
 
@@ -26,6 +27,10 @@ export enum BuildingId {
   HYDROPONIC_GARDEN = "hydroponic_garden",
   OBSERVATORY_DOME = "observatory_dome",
   ASSEMBLY_HALL = "assembly_hall",
+  // Victory megastructures
+  GENERATION_SHIP = "generation_ship",
+  UNITED_MARS_STATION = "united_mars_station",
+  SPACE_ELEVATOR = "space_elevator",
 }
 
 export enum BuildingPurpose {
@@ -58,6 +63,8 @@ export interface BuildingDefinition {
   oxygenContribution?: number; // Oxygen units contributed per sol when active
   purpose?: BuildingPurpose;
   bondingStrength?: number; // Multiplier for relationship growth rate (default 1.0)
+  requiredProject?: ProjectId; // Project that must be passed to unlock
+  isVictoryBuilding?: boolean; // Completing this building wins the game
 }
 
 export interface Building {
