@@ -339,7 +339,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     name: "Space Elevator",
     description:
       "A tether to orbit enabling cheap access to space. The ultimate infrastructure for economic dominance.",
-    cost: { materials: 300, power: 100 },
+    cost: { materials: 300 },
     constructionTime: 30,
     oxygenContribution: 5,
     purpose: BuildingPurpose.Industrial,

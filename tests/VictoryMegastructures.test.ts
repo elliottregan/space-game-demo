@@ -8,7 +8,7 @@ describe("Victory Megastructures Integration", () => {
     const state = new GameState();
 
     // Give plenty of resources
-    state.resources.add({ materials: 1000, power: 500 });
+    state.resources.add({ materials: 1000 });
 
     // Try to build Generation Ship without completing project
     const canBuild = state.buildings.canBuild(
@@ -24,7 +24,7 @@ describe("Victory Megastructures Integration", () => {
     const state = new GameState();
 
     // Give plenty of resources
-    state.resources.add({ materials: 1000, power: 500 });
+    state.resources.add({ materials: 1000 });
 
     // Complete the capstone project
     state.ideology.completeProject(ProjectId.RETURN_MISSION);
@@ -75,7 +75,7 @@ describe("Victory Megastructures Integration", () => {
 
     // Setup for Space Elevator
     state.ideology.completeProject(ProjectId.PLANETARY_ACQUISITION);
-    state.resources.add({ materials: 500, power: 200 });
+    state.resources.add({ materials: 500 });
 
     // Start building
     state.buildings.startBuilding(BuildingId.SPACE_ELEVATOR, state.resources, state.technology);
