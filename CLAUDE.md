@@ -71,6 +71,7 @@ Buildings have three resource-related properties:
 - When updating `reactive()` object properties, modify in-place (delete then assign) rather than replacing the entire nested object for reliable reactivity
 - Semantic CSS variables defined in `App.vue` `:root`: `--color-positive`, `--color-negative`, `--color-danger`, `--color-warning`, `--color-info`, `--color-muted`
 - Use `// oxlint-disable-next-line no-unused-vars` for template-only functions
+- Icons: use `lucide-vue-next` - import individually like `import { Camera, Heart } from 'lucide-vue-next'`
 
 ## Testing
 
