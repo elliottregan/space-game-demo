@@ -1,7 +1,9 @@
 import type { GameEvent } from "../models/GameEvent";
 import { TechnologyId } from "../models/Technology";
 import { ProjectId } from "../models/NPCInfluence";
+import { BuildingId } from "../models/Building";
 import { getProject } from "../data/projects";
+import { BUILDINGS } from "../data/buildings";
 import type { ColonyManager } from "./ColonyManager";
 import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
@@ -119,6 +121,27 @@ export class VictoryManager {
 
     this.status = "victory";
     this.reason = `${project.name} achieved! ${project.description}`;
+
+    return {
+      type: "VICTORY",
+      reason: this.reason,
+      severity: "info",
+      message: this.reason,
+    };
+  }
+
+  /**
+   * Check if a completed building triggers victory.
+   * Returns a victory event if the building is a victory building, null otherwise.
+   */
+  checkBuildingVictory(buildingId: BuildingId): GameEvent | null {
+    const def = BUILDINGS.find((b) => b.id === buildingId);
+    if (!def?.isVictoryBuilding) {
+      return null;
+    }
+
+    this.status = "victory";
+    this.reason = `${def.name} completed! ${def.description}`;
 
     return {
       type: "VICTORY",
