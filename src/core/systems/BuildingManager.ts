@@ -32,6 +32,7 @@ export class BuildingManager {
   private technologyTree: TechnologyTree | null = null;
   private workforceManager: WorkforceManager | null = null;
   private airQualityEfficiency: number = 1;
+  private powerGridEfficiency: number = 1;
 
   setColonyManager(colony: ColonyManager): void {
     this.colonyManager = colony;
@@ -47,6 +48,10 @@ export class BuildingManager {
 
   setAirQualityEfficiency(multiplier: number): void {
     this.airQualityEfficiency = Math.max(0, Math.min(1, multiplier));
+  }
+
+  setPowerGridEfficiency(multiplier: number): void {
+    this.powerGridEfficiency = Math.max(0, Math.min(1, multiplier));
   }
 
   constructor(defs: BuildingDefinition[]) {
@@ -568,7 +573,7 @@ export class BuildingManager {
 
   /**
    * Calculate the combined efficiency multiplier for a building.
-   * Factors: air quality, staffing, worker efficiency, team cohesion.
+   * Factors: air quality, power grid, staffing, worker efficiency, team cohesion.
    */
   private getBuildingEfficiencyMultiplier(buildingId: string): number {
     const building = this.buildings.get(buildingId);
@@ -576,6 +581,7 @@ export class BuildingManager {
 
     return combineMultipliers(
       this.airQualityEfficiency,
+      this.powerGridEfficiency,
       this.getStaffingEfficiency(buildingId),
       this.getWorkerEfficiency(buildingId),
       this.getTeamCohesionMultiplier(buildingId),
@@ -685,6 +691,22 @@ export class BuildingManager {
 
   getTotalOxygenContribution(): number {
     return this.sumActiveBuildings((def) => def.oxygenContribution);
+  }
+
+  /**
+   * Get total power production from all active, non-broken buildings.
+   * Used by PowerGridManager to calculate grid strain.
+   */
+  getTotalPowerProduction(): number {
+    return this.sumActiveBuildings((def) => def.powerProduction);
+  }
+
+  /**
+   * Get total power consumption from all active, non-broken buildings.
+   * Used by PowerGridManager to calculate grid strain.
+   */
+  getTotalPowerConsumption(): number {
+    return this.sumActiveBuildings((def) => def.powerConsumption);
   }
 
   setConstructionSpeedBonus(bonus: number): void {

@@ -13,7 +13,7 @@ describe("TechnologyTree", () => {
     resources = new ResourceManager({
       food: 500,
       water: 500,
-      power: 500,
+
       materials: 500,
     });
   });
@@ -266,7 +266,7 @@ describe("TechnologyTree", () => {
       const poorResources = new ResourceManager({
         food: 100,
         water: 100,
-        power: 100,
+
         materials: 50,
       });
 

@@ -83,7 +83,7 @@ describe("Social Building Assignment", () => {
     const resources = new ResourceManager({
       food: 500,
       water: 500,
-      power: 500,
+
       materials: 500,
     });
 
@@ -104,7 +104,7 @@ describe("Social Building Assignment", () => {
     const resources = new ResourceManager({
       food: 500,
       water: 500,
-      power: 500,
+
       materials: 500,
     });
 
@@ -131,7 +131,7 @@ describe("Social Building Assignment", () => {
     const resources = new ResourceManager({
       food: 500,
       water: 500,
-      power: 500,
+
       materials: 500,
     });
 
@@ -152,7 +152,7 @@ describe("Social Building Assignment", () => {
     const resources = new ResourceManager({
       food: 500,
       water: 500,
-      power: 500,
+
       materials: 500,
     });
 
@@ -180,7 +180,7 @@ describe("Third Spaces Integration", () => {
     const resources = new ResourceManager({
       food: 500,
       water: 500,
-      power: 500,
+
       materials: 500,
     });
 

@@ -10,8 +10,8 @@ describe("visitSocialBuildings phase", () => {
   function setupGameWithActiveBuilding(buildingId: BuildingId): GameState {
     const game = new GameState();
     // Give plenty of resources
-    game.resources.add({ materials: 500, power: 500, food: 500, water: 500 });
-    game.resources.addProduction({ food: 50, water: 50, power: 50, oxygen: 50 });
+    game.resources.add({ materials: 500, food: 500, water: 500 });
+    game.resources.addProduction({ food: 50, water: 50, oxygen: 50 });
 
     // Build and complete the building
     game.buildings.startBuilding(buildingId, game.resources, game.technology);
@@ -64,8 +64,8 @@ describe("visitSocialBuildings phase", () => {
 
   it("multiple buildings stack", () => {
     const game = new GameState();
-    game.resources.add({ materials: 500, power: 500 });
-    game.resources.addProduction({ food: 50, water: 50, power: 50, oxygen: 50 });
+    game.resources.add({ materials: 500 });
+    game.resources.addProduction({ food: 50, water: 50, oxygen: 50 });
 
     // Build both buildings
     game.buildings.startBuilding(BuildingId.COMMON_ROOM, game.resources, game.technology);

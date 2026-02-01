@@ -17,7 +17,7 @@ describe("ColonistMoraleManager", () => {
       food: 100,
       water: 100,
       oxygen: 100,
-      power: 100,
+
       materials: 100,
     });
     relationshipManager = new RelationshipManager();
@@ -57,7 +57,7 @@ describe("ColonistMoraleManager", () => {
         food: 5, // Below critical threshold (10)
         water: 5,
         oxygen: 5,
-        power: 100,
+
         materials: 100,
       });
 
@@ -102,7 +102,7 @@ describe("ColonistMoraleManager", () => {
         food: 5,
         water: 5,
         oxygen: 5,
-        power: 100,
+
         materials: 100,
       });
 

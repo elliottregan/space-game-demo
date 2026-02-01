@@ -12,7 +12,7 @@ describe("Building Recycling", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -30,7 +30,7 @@ describe("Building Recycling", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -54,7 +54,7 @@ describe("Building Recycling", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -84,7 +84,7 @@ describe("Building Recycling", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -109,7 +109,7 @@ describe("Building Recycling", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -135,7 +135,7 @@ describe("Building Recycling", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -152,7 +152,7 @@ describe("Building Recycling", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -169,7 +169,7 @@ describe("Building Recycling", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -206,7 +206,7 @@ describe("Building Recycling", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -239,7 +239,7 @@ describe("Building Recycling", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -256,7 +256,7 @@ describe("Building Recycling", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -288,7 +288,7 @@ describe("Building Repurposing", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -314,7 +314,7 @@ describe("Building Repurposing", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -341,7 +341,7 @@ describe("Building Repurposing", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -384,7 +384,7 @@ describe("Building Repurposing", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -418,7 +418,7 @@ describe("Building Repurposing", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -461,7 +461,7 @@ describe("Building Repurposing", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -489,7 +489,7 @@ describe("Building Repurposing", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });
@@ -519,7 +519,7 @@ describe("Building Repurposing", () => {
     const manager = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({
       materials: 1000,
-      power: 100,
+
       food: 100,
       water: 100,
     });

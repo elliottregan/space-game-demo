@@ -196,11 +196,12 @@ function runSingleGame(seed: number): RunResult {
 
     // Take periodic snapshots
     if (currentSol % SNAPSHOT_INTERVAL === 0) {
+      const powerGrid = api.powerGrid.snapshot();
       resourceTimeline.push({
         sol: currentSol,
         food: resources.current.food,
         water: resources.current.water,
-        power: resources.current.power,
+        powerGrid: powerGrid.gridStrain,
         materials: resources.current.materials,
         population: currentPop,
         morale: colony.morale,
@@ -213,7 +214,6 @@ function runSingleGame(seed: number): RunResult {
         sol: currentSol,
         netFood: (resources.production.food ?? 0) - (resources.consumption.food ?? 0),
         netWater: (resources.production.water ?? 0) - (resources.consumption.water ?? 0),
-        netPower: (resources.production.power ?? 0) - (resources.consumption.power ?? 0),
         netMaterials:
           (resources.production.materials ?? 0) - (resources.consumption.materials ?? 0),
       });
@@ -293,7 +293,7 @@ function runSingleGame(seed: number): RunResult {
       sol: finalSol,
       food: resources.current.food,
       water: resources.current.water,
-      power: resources.current.power,
+      powerGrid: api.powerGrid.snapshot().gridStrain,
       materials: resources.current.materials,
       population: colony.population,
       morale: colony.morale,
@@ -963,7 +963,7 @@ function aggregateTimelines(results: RunResult[]): AggregatedSnapshot[] {
       sol,
       food: computePercentileValue(snapshots.map((s) => s.food)),
       water: computePercentileValue(snapshots.map((s) => s.water)),
-      power: computePercentileValue(snapshots.map((s) => s.power)),
+      powerGrid: computePercentileValue(snapshots.map((s) => s.powerGrid)),
       materials: computePercentileValue(snapshots.map((s) => s.materials)),
       population: computePercentileValue(snapshots.map((s) => s.population)),
       morale: computePercentileValue(snapshots.map((s) => s.morale)),
@@ -1037,7 +1037,7 @@ async function writeJsonOutput(results: RunResult[], runs: number, seed: number)
       sol,
       food: avg(snapshots.map((s) => s.food)),
       water: avg(snapshots.map((s) => s.water)),
-      power: avg(snapshots.map((s) => s.power)),
+      powerGrid: avg(snapshots.map((s) => s.powerGrid)),
       materials: avg(snapshots.map((s) => s.materials)),
       population: avg(snapshots.map((s) => s.population)),
       morale: avg(snapshots.map((s) => s.morale)),

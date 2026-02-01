@@ -8,7 +8,7 @@ describe("ResourceManager", () => {
     manager = new ResourceManager({
       food: 100,
       water: 100,
-      power: 100,
+
       materials: 100,
     });
   });
@@ -35,7 +35,7 @@ describe("ResourceManager", () => {
     const lowManager = new ResourceManager({
       food: 15,
       water: 100,
-      power: 100,
+
       materials: 100,
     });
 
@@ -57,10 +57,10 @@ describe("ResourceManager", () => {
   });
 
   it("should deduct resources on purchase", () => {
-    manager.deduct({ materials: 50, power: 10 });
+    manager.deduct({ materials: 50 });
     const resources = manager.getResources();
     expect(resources.materials).toBe(50);
-    expect(resources.power).toBe(90);
+    // Note: power is no longer a stockpiled resource - it's a grid metric
   });
 
   it("should calculate net flow correctly", () => {

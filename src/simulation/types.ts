@@ -113,7 +113,8 @@ export interface ResourceSnapshot {
   sol: number;
   food: number;
   water: number;
-  power: number;
+  /** Power grid strain (0-1) - not a stockpiled resource */
+  powerGrid: number;
   materials: number;
   population: number;
   morale: number;
@@ -139,7 +140,8 @@ export interface AggregatedSnapshot {
   sol: number;
   food: PercentileValue;
   water: PercentileValue;
-  power: PercentileValue;
+  /** Power grid strain (0-1) - not a stockpiled resource */
+  powerGrid: PercentileValue;
   materials: PercentileValue;
   population: PercentileValue;
   morale: PercentileValue;
@@ -155,7 +157,6 @@ export interface ResourceFlowSnapshot {
   sol: number;
   netFood: number;
   netWater: number;
-  netPower: number;
   netMaterials: number;
 }
 

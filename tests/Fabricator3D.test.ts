@@ -87,7 +87,7 @@ describe("3D Fabricator", () => {
     it("consumes 8 power per sol", () => {
       const def = api.buildings.getDefinition(BuildingId.FABRICATOR_3D);
       expect(def).toBeDefined();
-      expect(def?.consumption?.power).toBe(8);
+      expect(def?.powerConsumption).toBe(8);
     });
 
     it("produces materials when defined", () => {

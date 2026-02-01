@@ -16,7 +16,7 @@ describe("Housing Assignment", () => {
     resources = new ResourceManager({
       food: 500,
       water: 500,
-      power: 500,
+
       materials: 500,
     });
   });

@@ -11,13 +11,13 @@ const state = gameService.getState();
 // biome-ignore lint/correctness/noUnusedVariables: reserved for future API usage
 const api = gameService.api;
 
+// Stockpiled resources (power is now a grid metric, not stockpiled)
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const resources = computed(
   () =>
     [
       { key: "food", name: "Food" },
       { key: "water", name: "Water" },
-      { key: "power", name: "Power" },
       { key: "materials", name: "Materials" },
     ] as const,
 );
@@ -56,10 +56,24 @@ function hasDelta(key: string): boolean {
 function getDelta(key: string): number {
   return currentDeltas.value[key] || 0;
 }
+
+// Power grid helpers
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function getPowerGridPercent(): number {
+  return Math.round(state.powerGrid * 100);
+}
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function getPowerGridClass(): string {
+  if (state.powerGridIsCritical) return "power-critical";
+  if (!state.powerGridIsComfortable) return "power-strained";
+  return "power-comfortable";
+}
 </script>
 
 <template>
   <div class="resource-bar">
+    <!-- Stockpiled resources -->
     <div
       v-for="resource in resources"
       :key="resource.key"
@@ -82,6 +96,16 @@ function getDelta(key: string): number {
       >
         → {{ formatNumber(getProjectedValue(resource.key) ?? 0) }}
       </span>
+    </div>
+
+    <!-- Power Grid (not stockpiled - shown as grid strain) -->
+    <div class="resource-item power-grid-item" :class="getPowerGridClass()">
+      <span class="power-icon">⚡</span>
+      <span class="power-label">Power</span>
+      <span class="power-value">{{ getPowerGridPercent() }}%</span>
+      <span class="power-flow"
+        >({{ state.powerGridProduction }}/{{ state.powerGridConsumption }})</span
+      >
     </div>
   </div>
 </template>
@@ -124,5 +148,59 @@ function getDelta(key: string): number {
   font-weight: bold;
   background: rgba(198, 40, 40, 0.1);
   padding: 0 var(--g-space-xs);
+}
+
+/* Power Grid styles */
+.power-grid-item {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-sm);
+  padding: var(--g-space-xs) var(--g-space-sm);
+  border-radius: var(--g-radius-sm);
+  border: 1px solid var(--g-color-border);
+}
+
+.power-icon {
+  font-size: 1.1em;
+}
+
+.power-label {
+  color: var(--g-color-text-muted);
+  margin-right: var(--g-space-xs);
+}
+
+.power-value {
+  font-weight: bold;
+}
+
+.power-flow {
+  color: var(--g-color-text-muted);
+  font-size: 0.9em;
+}
+
+.power-comfortable {
+  background: rgba(76, 175, 80, 0.1);
+  border-color: var(--g-color-positive);
+}
+
+.power-comfortable .power-value {
+  color: var(--g-color-positive);
+}
+
+.power-strained {
+  background: rgba(255, 193, 7, 0.1);
+  border-color: var(--g-color-warning);
+}
+
+.power-strained .power-value {
+  color: var(--g-color-warning);
+}
+
+.power-critical {
+  background: rgba(198, 40, 40, 0.1);
+  border-color: var(--g-color-negative);
+}
+
+.power-critical .power-value {
+  color: var(--g-color-negative);
 }
 </style>

@@ -15,7 +15,7 @@ describe("Expeditions", () => {
     resources = new ResourceManager({
       food: 500,
       water: 500,
-      power: 500,
+
       materials: 500,
     });
     colony = new ColonyManager(10);
@@ -29,7 +29,7 @@ describe("Expeditions", () => {
     resources = new ResourceManager({
       food: 500,
       water: 500,
-      power: 500,
+
       materials: 10,
     });
     expect(operations.canStartExpedition("survey", resources, colony)).toBe(false);

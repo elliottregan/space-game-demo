@@ -12,6 +12,7 @@ import {
   IdeologyFacade,
   OperationsFacade,
   PoliticsFacade,
+  PowerGridFacade,
   ResourcesFacade,
   TechnologyFacade,
 } from "./domains";
@@ -57,6 +58,7 @@ export class GameAPI {
   private _events: EventsFacade | null = null;
   private _game: GameFlowFacade | null = null;
   private _airQuality: AirQualityFacade | null = null;
+  private _powerGrid: PowerGridFacade | null = null;
   private _ideology: IdeologyFacade | null = null;
 
   constructor() {
@@ -75,6 +77,7 @@ export class GameAPI {
     this._events = null;
     this._game = null;
     this._airQuality = null;
+    this._powerGrid = null;
     this._ideology = null;
   }
 
@@ -281,6 +284,16 @@ export class GameAPI {
       this._airQuality = new AirQualityFacade(this.gameState);
     }
     return this._airQuality;
+  }
+
+  /**
+   * Power grid queries (read-only).
+   */
+  get powerGrid(): PowerGridFacade {
+    if (!this._powerGrid) {
+      this._powerGrid = new PowerGridFacade(this.gameState);
+    }
+    return this._powerGrid;
   }
 
   /**
