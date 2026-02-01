@@ -1,7 +1,7 @@
 // src/core/systems/IdeologyManager.ts
 
 import type { Colonist, ColonistIdeology } from "../models/Colonist";
-import { NPCFaction, type ProjectId } from "../models/NPCInfluence";
+import { NPCFaction, type Project, type ProjectId } from "../models/NPCInfluence";
 import type { RelationshipManager } from "./RelationshipManager";
 import type { ColonistMoraleManager } from "./ColonistMoraleManager";
 import * as IdeologyBalance from "../balance/IdeologyBalance";
@@ -370,16 +370,21 @@ export class IdeologyManager {
 
   /**
    * Apply morale and conviction effects when a project passes.
-   * - Morale boost/penalty based on faction affinity
+   * - Morale boost/penalty based on faction affinity (base effects)
+   * - Project-specific supporter morale/conviction boosts (from project.effects)
    * - Conviction boost for council members who voted for it
-   * - Conviction boost for colonists who support the faction
    */
   applyProjectMoraleEffects(
-    projectFaction: NPCFaction,
+    project: Project,
     colonists: Colonist[],
     moraleManager: ColonistMoraleManager,
   ): void {
+    const projectFaction = project.type;
     const factionKey = IdeologyManager.factionToKey(projectFaction);
+
+    // Get project-specific boosts (or use 0 if not specified)
+    const projectMoraleBoost = project.effects?.supporterMoraleBoost ?? 0;
+    const projectConvictionBoost = project.effects?.supporterConvictionBoost ?? 0;
 
     // Build a set of council member IDs who voted for this project
     const voterIds = new Set<string>();
@@ -398,13 +403,15 @@ export class IdeologyManager {
       let moraleDelta = 0;
       let convictionDelta = 0;
 
-      // Morale effects based on affinity
+      // Morale effects based on affinity (base + project-specific)
       if (affinity >= 0.7) {
-        moraleDelta = IdeologyBalance.PROJECT_MORALE_STRONG_SUPPORTER;
-        convictionDelta = IdeologyBalance.PROJECT_CONVICTION_BOOST_STRONG_SUPPORTER;
+        moraleDelta = IdeologyBalance.PROJECT_MORALE_STRONG_SUPPORTER + projectMoraleBoost;
+        convictionDelta =
+          IdeologyBalance.PROJECT_CONVICTION_BOOST_STRONG_SUPPORTER + projectConvictionBoost;
       } else if (affinity >= 0.4) {
-        moraleDelta = IdeologyBalance.PROJECT_MORALE_SUPPORTER;
-        convictionDelta = IdeologyBalance.PROJECT_CONVICTION_BOOST_SUPPORTER;
+        moraleDelta = IdeologyBalance.PROJECT_MORALE_SUPPORTER + projectMoraleBoost * 0.5;
+        convictionDelta =
+          IdeologyBalance.PROJECT_CONVICTION_BOOST_SUPPORTER + projectConvictionBoost * 0.5;
       } else if (primaryFaction && primaryFaction !== projectFaction) {
         // They belong to a different faction
         moraleDelta =

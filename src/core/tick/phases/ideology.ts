@@ -59,8 +59,28 @@ export const processProjectVotes = definePhase({
           // Don't return - capstones unlock megastructures but don't win the game
         }
 
-        // Apply morale effects for passed projects
-        ctx.ideology.applyProjectMoraleEffects(project.type, colonists, ctx.colonistMorale);
+        // Apply morale and conviction effects for passed projects
+        ctx.ideology.applyProjectMoraleEffects(project, colonists, ctx.colonistMorale);
+
+        // Apply colony-wide morale boost if specified
+        if (project.effects?.colonyMoraleBoost) {
+          ctx.colonistMorale.adjustAllColonistsMorale(project.effects.colonyMoraleBoost);
+        }
+
+        // Apply population bonus if specified
+        if (project.effects?.populationBonus && project.effects.populationBonus > 0) {
+          for (let i = 0; i < project.effects.populationBonus; i++) {
+            ctx.colony.addColonist();
+          }
+        }
+
+        // Apply resource production bonuses if specified
+        if (project.effects?.foodBonus) {
+          ctx.resources.addProduction({ food: project.effects.foodBonus });
+        }
+        if (project.effects?.materialsBonus) {
+          ctx.resources.addProduction({ materials: project.effects.materialsBonus });
+        }
 
         events.push({
           type: "project_passed",

@@ -12,7 +12,12 @@ export const PROJECTS: Project[] = [
     type: NPCFaction.EarthLoyalists,
     proposalCost: { materials: 80 },
     requiredSupport: 0.35,
-    effects: { unlockBuilding: "immigration_center" },
+    effects: {
+      unlockBuilding: "immigration_center",
+      populationBonus: 3,
+      supporterMoraleBoost: 0.1,
+      supporterConvictionBoost: 0.05,
+    },
   },
   {
     id: ProjectId.EARTH_MEMORIAL,
@@ -21,6 +26,11 @@ export const PROJECTS: Project[] = [
     type: NPCFaction.EarthLoyalists,
     proposalCost: { materials: 40 },
     requiredSupport: 0.2,
+    effects: {
+      colonyMoraleBoost: 0.05,
+      supporterMoraleBoost: 0.15,
+      supporterConvictionBoost: 0.1,
+    },
   },
   {
     id: ProjectId.HERITAGE_ARCHIVE,
@@ -29,7 +39,11 @@ export const PROJECTS: Project[] = [
     type: NPCFaction.EarthLoyalists,
     proposalCost: { materials: 50 },
     requiredSupport: 0.35,
-    effects: { unlockBuilding: "archive" },
+    effects: {
+      unlockBuilding: "archive",
+      supporterMoraleBoost: 0.1,
+      supporterConvictionBoost: 0.08,
+    },
   },
 
   // Mars Independence projects
@@ -40,7 +54,12 @@ export const PROJECTS: Project[] = [
     type: NPCFaction.MarsIndependence,
     proposalCost: { materials: 80 },
     requiredSupport: 0.35,
-    effects: { unlockBuilding: "housing_complex" },
+    effects: {
+      unlockBuilding: "housing_complex",
+      colonyMoraleBoost: 0.08,
+      supporterMoraleBoost: 0.1,
+      supporterConvictionBoost: 0.05,
+    },
   },
   {
     id: ProjectId.HEALTHCARE_EXPANSION,
@@ -49,7 +68,12 @@ export const PROJECTS: Project[] = [
     type: NPCFaction.MarsIndependence,
     proposalCost: { materials: 60, water: 30 },
     requiredSupport: 0.35,
-    effects: { unlockBuilding: "medical_center" },
+    effects: {
+      unlockBuilding: "medical_center",
+      colonyMoraleBoost: 0.05,
+      supporterMoraleBoost: 0.1,
+      supporterConvictionBoost: 0.05,
+    },
   },
   {
     id: ProjectId.DEMOCRATIC_ASSEMBLY,
@@ -59,7 +83,12 @@ export const PROJECTS: Project[] = [
     type: NPCFaction.MarsIndependence,
     proposalCost: { materials: 70 },
     requiredSupport: 0.35,
-    effects: { unlockBuilding: "assembly_hall" },
+    effects: {
+      unlockBuilding: "assembly_hall",
+      colonyMoraleBoost: 0.1,
+      supporterMoraleBoost: 0.15,
+      supporterConvictionBoost: 0.1,
+    },
   },
 
   // Corporate Interests projects
@@ -70,7 +99,11 @@ export const PROJECTS: Project[] = [
     type: NPCFaction.CorporateInterests,
     proposalCost: { materials: 80 },
     requiredSupport: 0.35,
-    effects: { unlockTech: "advanced_ai" },
+    effects: {
+      unlockTech: "advanced_ai",
+      productionBonus: 0.1,
+      supporterConvictionBoost: 0.08,
+    },
   },
   {
     id: ProjectId.MINING_CONCESSION,
@@ -79,7 +112,11 @@ export const PROJECTS: Project[] = [
     type: NPCFaction.CorporateInterests,
     proposalCost: { materials: 60 },
     requiredSupport: 0.35,
-    effects: { unlockBuilding: "efficient_mine" },
+    effects: {
+      unlockBuilding: "efficient_mine",
+      materialsBonus: 2,
+      supporterConvictionBoost: 0.05,
+    },
   },
   {
     id: ProjectId.LABOR_EFFICIENCY,
@@ -88,6 +125,11 @@ export const PROJECTS: Project[] = [
     type: NPCFaction.CorporateInterests,
     proposalCost: { materials: 40 },
     requiredSupport: 0.2,
+    effects: {
+      productionBonus: 0.15,
+      supporterConvictionBoost: 0.1,
+      colonyMoraleBoost: -0.05, // Controversial - slight morale penalty
+    },
   },
 
   // Capstone Victory Projects

@@ -110,6 +110,20 @@ export interface Project {
     resources?: ResourceDelta;
     unlockTech?: string;
     unlockBuilding?: string;
+    /** Morale boost for colonists who support this faction (added to base effect) */
+    supporterMoraleBoost?: number;
+    /** Conviction boost for colonists who support this faction (added to base effect) */
+    supporterConvictionBoost?: number;
+    /** Colony-wide morale boost (applies to all colonists) */
+    colonyMoraleBoost?: number;
+    /** Immediate population bonus (new colonists) */
+    populationBonus?: number;
+    /** Production multiplier bonus (e.g., 0.1 = +10% production) */
+    productionBonus?: number;
+    /** Food production bonus per sol */
+    foodBonus?: number;
+    /** Materials production bonus per sol */
+    materialsBonus?: number;
   };
   /** True if this is a capstone victory project */
   isCapstone?: boolean;
