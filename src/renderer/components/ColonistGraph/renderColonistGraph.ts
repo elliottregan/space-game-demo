@@ -1,5 +1,5 @@
 import { select } from "d3-selection";
-import { type Colonist, ColonistRole } from "../../../core/models/Colonist";
+import type { Colonist, ColonistIdeology } from "../../../core/models/Colonist";
 import type { PositionedColonist } from "../../utils/ColonistSimulationManager";
 
 export interface ColonistGraphNode extends PositionedColonist {
@@ -33,6 +33,7 @@ export interface ColonistRenderOptions {
   height: number;
   selectedId: string | null;
   onNodeClick: (colonistId: string | null) => void;
+  showWeakTies?: boolean;
 }
 
 const NODE_RADIUS = 18;
@@ -52,20 +53,51 @@ function getThemeColors() {
   };
 }
 
-function getRoleColor(role: ColonistRole, colors: ReturnType<typeof getThemeColors>): string {
-  switch (role) {
-    case ColonistRole.RESEARCH:
-      return colors.info; // Blue
-    case ColonistRole.ENGINEERING:
-      return colors.warning; // Orange
-    case ColonistRole.FARMING:
-      return colors.positive; // Green
-    case ColonistRole.CIVIL_SCIENCE:
-      return "#9c27b0"; // Purple
-    case ColonistRole.UNASSIGNED:
-    default:
-      return colors.textMuted; // Gray
+function getIdeologyColor(
+  ideology: ColonistIdeology | undefined,
+  colors: ReturnType<typeof getThemeColors>,
+): string {
+  if (!ideology) {
+    return colors.textMuted; // Gray for colonists without ideology
   }
+
+  const { earthLoyalist, marsIndependence, corporateInterests } = ideology;
+
+  // Find the dominant faction
+  const max = Math.max(earthLoyalist, marsIndependence, corporateInterests);
+
+  // If all values are very low or equal, show as neutral
+  if (max < 0.2) {
+    return colors.textMuted;
+  }
+
+  // Determine dominant faction (with a threshold for "dominance")
+  const threshold = 0.15; // Must be this much higher than others to be dominant
+
+  if (
+    earthLoyalist >= max - 0.01 &&
+    earthLoyalist - marsIndependence >= threshold &&
+    earthLoyalist - corporateInterests >= threshold
+  ) {
+    return colors.info; // Blue for Earth Loyalists
+  }
+  if (
+    marsIndependence >= max - 0.01 &&
+    marsIndependence - earthLoyalist >= threshold &&
+    marsIndependence - corporateInterests >= threshold
+  ) {
+    return colors.positive; // Green for Mars Independence
+  }
+  if (
+    corporateInterests >= max - 0.01 &&
+    corporateInterests - earthLoyalist >= threshold &&
+    corporateInterests - marsIndependence >= threshold
+  ) {
+    return colors.warning; // Orange for Corporate Interests
+  }
+
+  // Mixed ideology - use a blend or neutral
+  return colors.textMuted;
 }
 
 function getLinkColor(
@@ -99,7 +131,7 @@ export function renderColonistGraph(
   data: ColonistGraphData,
   options: ColonistRenderOptions,
 ): void {
-  const { width, height, selectedId, onNodeClick } = options;
+  const { width, height, selectedId, onNodeClick, showWeakTies = false } = options;
   const svg = select(container);
   const colors = getThemeColors();
 
@@ -139,6 +171,9 @@ export function renderColonistGraph(
   const edgesGroup = svg.append("g").attr("class", "edges");
 
   for (const link of data.links) {
+    // Skip weak ties if not showing them
+    if (link.isWeakTie && !showWeakTies) continue;
+
     const source = nodePositions.get(link.source);
     const target = nodePositions.get(link.target);
     if (!source || !target) continue;
@@ -185,7 +220,7 @@ export function renderColonistGraph(
 
   for (const node of data.nodes) {
     const isSelected = node.id === selectedId;
-    const roleColor = getRoleColor(node.colonist.role, colors);
+    const ideologyColor = getIdeologyColor(node.colonist.ideology, colors);
 
     const nodeGroup = nodesGroup
       .append("g")
@@ -225,7 +260,7 @@ export function renderColonistGraph(
       .append("circle")
       .attr("r", NODE_RADIUS)
       .attr("fill", colors.bgSurface)
-      .attr("stroke", roleColor)
+      .attr("stroke", ideologyColor)
       .attr("stroke-width", isSelected ? 3 : 2);
 
     // Drop shadow for selected
@@ -267,7 +302,7 @@ export function renderColonistGraph(
       .append("text")
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "central")
-      .attr("fill", roleColor)
+      .attr("fill", ideologyColor)
       .attr("font-size", "11px")
       .attr("font-weight", "bold")
       .attr("font-family", "system-ui, sans-serif")

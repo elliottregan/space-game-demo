@@ -37,6 +37,9 @@ const emit = defineEmits<{
 const containerRef = ref<HTMLDivElement | null>(null);
 const svgRef = ref<SVGSVGElement | null>(null);
 
+// Display options
+const showWeakTies = ref(false);
+
 // Reactive dimensions from container
 const dimensions = ref({ width: 600, height: 400 });
 
@@ -274,6 +277,7 @@ function render() {
     height: dimensions.value.height,
     selectedId: props.selectedColonistId,
     onNodeClick: (id) => emit("select", id),
+    showWeakTies: showWeakTies.value,
   });
 }
 
@@ -327,7 +331,7 @@ onUnmounted(() => {
 });
 
 watch([() => props.colonists, relationshipStrengths], updateSimulation, { deep: true });
-watch([graphData, () => props.selectedColonistId], render);
+watch([graphData, () => props.selectedColonistId, showWeakTies], render);
 watch(dimensions, render);
 </script>
 
@@ -338,22 +342,22 @@ watch(dimensions, render);
     <!-- Legend -->
     <div class="legend">
       <div class="legend-section">
-        <span class="legend-title">Roles:</span>
+        <span class="legend-title">Ideology:</span>
         <div class="legend-item">
-          <span class="legend-dot research" />
-          <span>Research</span>
+          <span class="legend-dot earth-loyalist" />
+          <span>Earth</span>
         </div>
         <div class="legend-item">
-          <span class="legend-dot engineering" />
-          <span>Engineering</span>
+          <span class="legend-dot mars-independence" />
+          <span>Mars</span>
         </div>
         <div class="legend-item">
-          <span class="legend-dot farming" />
-          <span>Farming</span>
+          <span class="legend-dot corporate" />
+          <span>Corporate</span>
         </div>
         <div class="legend-item">
-          <span class="legend-dot civil_science" />
-          <span>Civil Science</span>
+          <span class="legend-dot neutral" />
+          <span>Neutral</span>
         </div>
       </div>
       <div class="legend-divider" />
@@ -375,10 +379,11 @@ watch(dimensions, render);
           <span class="legend-line guild" />
           <span>Guild</span>
         </div>
-        <div class="legend-item">
+        <label class="legend-item legend-checkbox">
+          <input v-model="showWeakTies" type="checkbox" />
           <span class="legend-line weak" />
-          <span>Weak Tie</span>
-        </div>
+          <span>Weak Ties</span>
+        </label>
       </div>
       <div class="legend-divider" />
       <div class="legend-section">
@@ -455,20 +460,20 @@ watch(dimensions, render);
   border-radius: 50%;
 }
 
-.legend-dot.research {
+.legend-dot.earth-loyalist {
   background: var(--g-color-info);
 }
 
-.legend-dot.engineering {
-  background: var(--g-color-warning);
-}
-
-.legend-dot.farming {
+.legend-dot.mars-independence {
   background: var(--g-color-positive);
 }
 
-.legend-dot.civil_science {
-  background: #9c27b0;
+.legend-dot.corporate {
+  background: var(--g-color-warning);
+}
+
+.legend-dot.neutral {
+  background: var(--g-color-text-muted);
 }
 
 .legend-line {
@@ -539,5 +544,16 @@ watch(dimensions, render);
   border-radius: 50%;
   border: 2px dashed #9c27b0;
   opacity: 0.7;
+}
+
+.legend-checkbox {
+  cursor: pointer;
+}
+
+.legend-checkbox input {
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  cursor: pointer;
 }
 </style>
