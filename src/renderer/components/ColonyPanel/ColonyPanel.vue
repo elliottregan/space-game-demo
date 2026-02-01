@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import type { Component } from "vue";
 import { computed } from "vue";
+import { BarChart3, CircleOff, Cog, FlaskConical, Home, Sprout, User } from "lucide-vue-next";
 import { ColonistRole } from "../../../core/models/Colonist";
 import { gameService } from "../../services/GameService";
 import type { GridStat, Stat } from "../../ui";
@@ -38,12 +40,12 @@ const colonyStats = computed<Stat[]>(() => {
   return stats;
 });
 
-const roleConfig: Record<ColonistRole, { icon: string; label: string }> = {
-  [ColonistRole.UNASSIGNED]: { icon: "👤", label: "Unassigned" },
-  [ColonistRole.RESEARCH]: { icon: "🔬", label: "Researchers" },
-  [ColonistRole.ENGINEERING]: { icon: "⚙️", label: "Engineers" },
-  [ColonistRole.CIVIL_SCIENCE]: { icon: "📊", label: "Scientists" },
-  [ColonistRole.FARMING]: { icon: "🌱", label: "Farmers" },
+const roleConfig: Record<ColonistRole, { icon: Component; label: string }> = {
+  [ColonistRole.UNASSIGNED]: { icon: User, label: "Unassigned" },
+  [ColonistRole.RESEARCH]: { icon: FlaskConical, label: "Researchers" },
+  [ColonistRole.ENGINEERING]: { icon: Cog, label: "Engineers" },
+  [ColonistRole.CIVIL_SCIENCE]: { icon: BarChart3, label: "Scientists" },
+  [ColonistRole.FARMING]: { icon: Sprout, label: "Farmers" },
 };
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -98,8 +100,8 @@ const housingStats = computed<GridStat[]>(() => {
   }
 
   return [
-    { key: "housed", icon: "🏠", count: housed, label: "Housed" },
-    { key: "unhoused", icon: "🚫", count: unhoused, label: "Unhoused" },
+    { key: "housed", icon: Home, count: housed, label: "Housed" },
+    { key: "unhoused", icon: CircleOff, count: unhoused, label: "Unhoused" },
   ];
 });
 </script>

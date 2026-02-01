@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import type { Component } from "vue";
+
 export interface GridStat {
   key: string;
-  icon: string;
+  icon: Component;
   count: number;
   label: string;
 }
@@ -17,7 +19,7 @@ defineProps<{
     <h3>{{ title }}</h3>
     <div class="stats-grid">
       <div v-for="stat in stats" :key="stat.key" class="stats-item">
-        <span class="stat-icon">{{ stat.icon }}</span>
+        <span class="stat-icon"><component :is="stat.icon" :size="16" /></span>
         <span class="stat-count">{{ stat.count }}</span>
         <span class="stat-label">{{ stat.label }}</span>
       </div>
