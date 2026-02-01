@@ -99,6 +99,14 @@ export class BuildingsFacade
       };
     }
 
+    // Check project requirements (for victory buildings)
+    if (def.requiredProject && !this.gameState.ideology.isProjectCompleted(def.requiredProject)) {
+      return {
+        allowed: false,
+        reason: `Requires capstone project to be passed first`,
+      };
+    }
+
     // Check resource cost
     const affordability = this.checkAffordability(def.cost);
     if (!affordability.allowed) {
