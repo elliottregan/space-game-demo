@@ -2,10 +2,12 @@
 import { CouncilPanel } from "./CouncilPanel";
 import { PoliticsPanel } from "./PoliticsPanel";
 import { ProjectsPanel } from "./ProjectsPanel";
+import { VictoryProgressPanel } from "./VictoryProgressPanel";
 </script>
 
 <template>
   <div class="politics-tab">
+    <VictoryProgressPanel />
     <div class="politics-grid">
       <div class="politics-col">
         <PoliticsPanel />
