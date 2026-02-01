@@ -1,5 +1,6 @@
 // src/core/data/projects.ts
 
+import { BuildingId } from "../models/Building.ts";
 import { NPCFaction, type Project, ProjectId } from "../models/NPCInfluence.ts";
 
 export const PROJECTS: Project[] = [
@@ -105,6 +106,7 @@ export const PROJECTS: Project[] = [
       ProjectId.GENERATION_SHIP,
     ],
     requiredCouncilSupport: 0.65,
+    effects: { unlockBuilding: BuildingId.GENERATION_SHIP },
   },
   {
     id: ProjectId.DECLARATION_OF_SOVEREIGNTY,
@@ -120,6 +122,7 @@ export const PROJECTS: Project[] = [
       ProjectId.DEMOCRATIC_ASSEMBLY,
     ],
     requiredCouncilSupport: 0.65,
+    effects: { unlockBuilding: BuildingId.UNITED_MARS_STATION },
   },
   {
     id: ProjectId.PLANETARY_ACQUISITION,
@@ -135,6 +138,7 @@ export const PROJECTS: Project[] = [
       ProjectId.AI_GOVERNANCE,
     ],
     requiredCouncilSupport: 0.65,
+    effects: { unlockBuilding: BuildingId.SPACE_ELEVATOR },
   },
 ];
 
