@@ -155,6 +155,52 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
       canInfluence: mock(() => allowed),
       influence: mock(() => successResult(undefined)),
     },
+    ideology: {
+      snapshot: mock(
+        () =>
+          overrides.ideologySnapshot ?? {
+            council: [],
+            councilFactionCounts: {
+              earth_loyalists: 0,
+              mars_independence: 0,
+              corporate_interests: 0,
+              neutral: 0,
+            },
+            factionSupport: { earthLoyalists: 0, marsIndependence: 0, corporateInterests: 0 },
+          },
+      ),
+      getCompletedProjects: mock(() => overrides.completedProjects ?? []),
+      getFailedProposals: mock(() => overrides.failedProposals ?? []),
+      getPendingProposals: mock(() => overrides.pendingProposals ?? []),
+      canProposeProject: mock((projectId: string) => {
+        if (overrides.canProposeProject) return overrides.canProposeProject(projectId);
+        return {
+          canPropose: false,
+          currentSupport: 0,
+          requiredSupport: 0.35,
+          reason: "Not available",
+        };
+      }),
+      proposeProject: mock((projectId: string) => {
+        if (overrides.proposeProjectCalled) overrides.proposeProjectCalled(projectId);
+        return successResult({ projectId, voteSol: 110 });
+      }),
+      getVoteProjection: mock(
+        () => overrides.voteProjection ?? { votesFor: 0, votesAgainst: 5, wouldPass: false },
+      ),
+      clearFailedProposal: mock((projectId: string) => {
+        if (overrides.clearFailedProposalCalled) overrides.clearFailedProposalCalled(projectId);
+      }),
+      canLobby: mock((colonistId: string, faction: string, boost: number) => {
+        if (overrides.canLobby) return overrides.canLobby(colonistId, faction, boost);
+        return { canLobby: false, cost: 100, reason: "Cannot lobby" };
+      }),
+      lobbyCouncilMember: mock((colonistId: string, faction: string, boost: number) => {
+        if (overrides.lobbyCouncilMemberCalled)
+          overrides.lobbyCouncilMemberCalled(colonistId, faction, boost);
+        return successResult({ newAffinity: 0.5 });
+      }),
+    },
     game: {
       currentSol: mock(() => overrides.currentSol ?? 100), // Default to 100 to bypass bootstrap
       advanceSol: mock(() => successResult({ events: [] })),
@@ -189,6 +235,38 @@ interface MockedAPI {
   activeEvent?: ActiveEventSnapshot | null;
   eventResolveCalled?: (choiceId: string) => void;
   currentSol?: number;
+  // Ideology mocking
+  ideologySnapshot?: {
+    council: Array<{ colonistId: string; name: string; faction: string | null }>;
+    councilFactionCounts: Record<string, number>;
+    factionSupport: {
+      earthLoyalists: number;
+      marsIndependence: number;
+      corporateInterests: number;
+    };
+  };
+  completedProjects?: string[];
+  failedProposals?: string[];
+  pendingProposals?: Array<{ projectId: string }>;
+  canProposeProject?: (projectId: string) => {
+    canPropose: boolean;
+    currentSupport: number;
+    requiredSupport: number;
+    reason?: string;
+  };
+  proposeProjectCalled?: (projectId: string) => void;
+  voteProjection?: { votesFor: number; votesAgainst: number; wouldPass: boolean };
+  clearFailedProposalCalled?: (projectId: string) => void;
+  canLobby?: (
+    colonistId: string,
+    faction: string,
+    boost: number,
+  ) => {
+    canLobby: boolean;
+    cost: number;
+    reason?: string;
+  };
+  lobbyCouncilMemberCalled?: (colonistId: string, faction: string, boost: number) => void;
 }
 
 describe("HeuristicStrategy", () => {
@@ -637,9 +715,9 @@ describe("HeuristicStrategy", () => {
     });
   });
 
-  describe("Priority 5 - Victory Push", () => {
-    it("researches generation_ship when available", () => {
-      const researchCalls: string[] = [];
+  describe("Priority 6 - Ideology Victory", () => {
+    it("does nothing when no council exists", () => {
+      const proposedProjects: string[] = [];
       const api = createMockAPI({
         resourceSnapshot: {
           current: { food: 100, water: 100, power: 100, materials: 1000 },
@@ -647,7 +725,6 @@ describe("HeuristicStrategy", () => {
           consumption: { food: 10, power: 30 },
           netFlow: { food: 10, power: 70, materials: 10 },
         },
-        // Simulate late game: population at 100, so Growth doesn't trigger
         colonySnapshot: {
           population: 100,
           health: 80,
@@ -657,24 +734,121 @@ describe("HeuristicStrategy", () => {
           housingAssignments: {},
           unhoused: [],
         },
-        techSnapshot: {
-          all: [],
-          available: [],
-          researched: [],
-          currentResearch: null,
-          researchQueue: [],
+        ideologySnapshot: {
+          council: [], // No council
+          councilFactionCounts: {
+            earth_loyalists: 0,
+            mars_independence: 0,
+            corporate_interests: 0,
+            neutral: 0,
+          },
+          factionSupport: { earthLoyalists: 0, marsIndependence: 0, corporateInterests: 0 },
         },
-        canResearch: (techId) => {
-          if (techId === TechnologyId.GENERATION_SHIP) return { allowed: true };
-          return { allowed: false, reason: "Not available" };
-        },
-        researchCalled: (techId) => researchCalls.push(techId),
+        proposeProjectCalled: (projectId) => proposedProjects.push(projectId),
       });
 
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(researchCalls).toContain(TechnologyId.GENERATION_SHIP);
+      expect(proposedProjects).toHaveLength(0);
+    });
+
+    it("commits to faction when it reaches 50% council seats", () => {
+      const proposedProjects: string[] = [];
+      const api = createMockAPI({
+        resourceSnapshot: {
+          current: { food: 100, water: 100, power: 100, materials: 1000 },
+          production: { food: 20, power: 100 },
+          consumption: { food: 10, power: 30 },
+          netFlow: { food: 10, power: 70, materials: 10 },
+        },
+        colonySnapshot: {
+          population: 100,
+          health: 80,
+          morale: 80,
+          colonists: [],
+          skillDefinitions: [],
+          housingAssignments: {},
+          unhoused: [],
+        },
+        ideologySnapshot: {
+          council: [
+            { colonistId: "c1", name: "Test1", faction: "earth_loyalists" },
+            { colonistId: "c2", name: "Test2", faction: "earth_loyalists" },
+            { colonistId: "c3", name: "Test3", faction: "mars_independence" },
+          ],
+          councilFactionCounts: {
+            earth_loyalists: 2,
+            mars_independence: 1,
+            corporate_interests: 0,
+            neutral: 0,
+          },
+          factionSupport: { earthLoyalists: 0.6, marsIndependence: 0.3, corporateInterests: 0.1 },
+        },
+        voteProjection: { votesFor: 2, votesAgainst: 1, wouldPass: true },
+        canProposeProject: () => ({ canPropose: true, currentSupport: 0.6, requiredSupport: 0.35 }),
+        proposeProjectCalled: (projectId) => proposedProjects.push(projectId),
+      });
+
+      const strategy = new HeuristicStrategy(api);
+      strategy.executeTick();
+
+      // Should propose an Earth Loyalists project since they have majority
+      expect(proposedProjects.length).toBeGreaterThan(0);
+    });
+
+    it("does not propose when below commitment threshold", () => {
+      const proposedProjects: string[] = [];
+      const api = createMockAPI({
+        resourceSnapshot: {
+          current: { food: 100, water: 100, power: 100, materials: 1000 },
+          production: { food: 20, power: 100 },
+          consumption: { food: 10, power: 30 },
+          netFlow: { food: 10, power: 70, materials: 10 },
+        },
+        colonySnapshot: {
+          population: 100,
+          health: 80,
+          morale: 80,
+          colonists: [],
+          skillDefinitions: [],
+          housingAssignments: {},
+          unhoused: [],
+        },
+        ideologySnapshot: {
+          council: [
+            { colonistId: "c1", name: "Test1", faction: "earth_loyalists" },
+            { colonistId: "c2", name: "Test2", faction: "mars_independence" },
+            { colonistId: "c3", name: "Test3", faction: "corporate_interests" },
+          ],
+          // No faction has 50% - all at 33%
+          councilFactionCounts: {
+            earth_loyalists: 1,
+            mars_independence: 1,
+            corporate_interests: 1,
+            neutral: 0,
+          },
+          factionSupport: {
+            earthLoyalists: 0.33,
+            marsIndependence: 0.33,
+            corporateInterests: 0.33,
+          },
+        },
+        canProposeProject: () => ({
+          canPropose: true,
+          currentSupport: 0.33,
+          requiredSupport: 0.35,
+        }),
+        proposeProjectCalled: (projectId) => proposedProjects.push(projectId),
+        // Sol 60 is after commitmentMinSol range (25-50) but before fallback (100)
+        currentSol: 60,
+      });
+
+      const strategy = new HeuristicStrategy(api);
+      strategy.executeTick();
+
+      // No faction has reached 50% commitment threshold, so no proposals
+      expect(proposedProjects).toHaveLength(0);
     });
   });
 

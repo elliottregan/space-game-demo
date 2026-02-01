@@ -5,6 +5,8 @@ import { NPCFaction, type ProjectId } from "../models/NPCInfluence";
 import type { RelationshipManager } from "./RelationshipManager";
 import type { ColonistMoraleManager } from "./ColonistMoraleManager";
 import * as IdeologyBalance from "../balance/IdeologyBalance";
+import { getProject, getProjectsByFaction } from "../data/projects";
+import { rng } from "../utils/random";
 
 /**
  * A council member selected from high-influence colonists.
@@ -76,6 +78,7 @@ export class IdeologyManager {
   /**
    * Get the primary faction for a colonist's ideology.
    * Returns null if all affinities are below the neutral threshold.
+   * When multiple factions are tied for highest, randomly selects one.
    */
   static getPrimaryFaction(ideology: ColonistIdeology): NPCFaction | null {
     const { earthLoyalist, marsIndependence, corporateInterests } = ideology;
@@ -83,9 +86,14 @@ export class IdeologyManager {
 
     if (max < IdeologyBalance.IDEOLOGY_NEUTRAL_THRESHOLD) return null;
 
-    if (earthLoyalist === max) return NPCFaction.EarthLoyalists;
-    if (marsIndependence === max) return NPCFaction.MarsIndependence;
-    return NPCFaction.CorporateInterests;
+    // Collect all factions tied for the maximum
+    const tiedFactions: NPCFaction[] = [];
+    if (earthLoyalist === max) tiedFactions.push(NPCFaction.EarthLoyalists);
+    if (marsIndependence === max) tiedFactions.push(NPCFaction.MarsIndependence);
+    if (corporateInterests === max) tiedFactions.push(NPCFaction.CorporateInterests);
+
+    // Randomly select from tied factions
+    return tiedFactions[rng.int(0, tiedFactions.length - 1)]!;
   }
 
   /**
@@ -596,6 +604,65 @@ export class IdeologyManager {
    */
   getFailedProposals(): readonly ProjectId[] {
     return [...this.failedProposals];
+  }
+
+  // ============ Capstone Projects ============
+
+  /**
+   * Get all passed projects for a specific faction.
+   */
+  getPassedProjectsForFaction(faction: NPCFaction): ProjectId[] {
+    const factionProjects = getProjectsByFaction(faction);
+    return factionProjects
+      .filter((p) => !p.isCapstone && this.completedProjects.has(p.id))
+      .map((p) => p.id);
+  }
+
+  /**
+   * Check if a project is a capstone victory project.
+   */
+  isCapstoneProject(projectId: ProjectId): boolean {
+    const project = getProject(projectId);
+    return project?.isCapstone === true;
+  }
+
+  /**
+   * Check if a capstone project can be proposed.
+   * Requires all prerequisites passed AND sufficient council support.
+   */
+  canProposeCapstone(faction: NPCFaction): { canPropose: boolean; reason?: string } {
+    // Find the capstone for this faction
+    const factionProjects = getProjectsByFaction(faction);
+    const capstone = factionProjects.find((p) => p.isCapstone);
+    if (!capstone) {
+      return { canPropose: false, reason: "No capstone project for faction" };
+    }
+
+    // Check prerequisites
+    const prerequisites = capstone.prerequisites ?? [];
+    const passedPrereqs = prerequisites.filter((p) => this.completedProjects.has(p));
+    if (passedPrereqs.length < prerequisites.length) {
+      return {
+        canPropose: false,
+        reason: `Prerequisites not met: ${passedPrereqs.length}/${prerequisites.length} projects passed`,
+      };
+    }
+
+    // Check council support
+    const requiredSupport = capstone.requiredCouncilSupport ?? 0.65;
+    const counts = this.getCouncilFactionCounts();
+    const factionSeats = counts[faction] ?? 0;
+    const totalSeats = this.council.length;
+    const supportRatio = totalSeats > 0 ? factionSeats / totalSeats : 0;
+
+    if (supportRatio < requiredSupport) {
+      return {
+        canPropose: false,
+        reason: `Insufficient council support: ${Math.round(supportRatio * 100)}% (need ${Math.round(requiredSupport * 100)}%)`,
+      };
+    }
+
+    return { canPropose: true };
   }
 
   // ============ Serialization ============

@@ -147,11 +147,11 @@ export const FOUNDING_RELATIONSHIPS: Record<string, number> = {
   "founding_chen_wei:founding_alex_okonkwo": 0.5,
   "founding_nova_silva:founding_alex_okonkwo": 0.4,
 
-  // Mars Independence internal (moderate bonds)
-  "founding_maria_santos:founding_james_liu": 0.6,
+  // Mars Independence internal (strong bonds - balanced with other factions)
+  "founding_maria_santos:founding_james_liu": 0.7,
   "founding_maria_santos:founding_aisha_patel": 0.5,
-  "founding_james_liu:founding_marcus_reed": 0.4,
-  "founding_aisha_patel:founding_marcus_reed": 0.3,
+  "founding_james_liu:founding_marcus_reed": 0.5,
+  "founding_aisha_patel:founding_marcus_reed": 0.4,
 
   // Corporate Interests internal (strong bonds)
   "founding_elena_volkov:founding_david_morrison": 0.7,

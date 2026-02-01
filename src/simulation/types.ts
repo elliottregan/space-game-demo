@@ -15,11 +15,16 @@ export interface SimulationConfig {
 
 /**
  * Victory condition types.
- * - colony_charter: Colony Charter achieved (pop 40+, morale 60+ sustained)
- * - population: Colony reached 100 population
- * - generation_ship: Generation Ship technology researched
+ * - colony_charter: Colony Charter achieved (pop 50+, morale 60+ sustained)
+ * - return_mission: Earth Loyalists capstone passed
+ * - declaration_of_sovereignty: Mars Independence capstone passed
+ * - planetary_acquisition: Corporate Interests capstone passed
  */
-export type VictoryType = "colony_charter" | "population" | "generation_ship";
+export type VictoryType =
+  | "colony_charter"
+  | "return_mission"
+  | "declaration_of_sovereignty"
+  | "planetary_acquisition";
 
 /**
  * Defeat condition types.

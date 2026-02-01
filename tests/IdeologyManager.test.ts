@@ -2,7 +2,7 @@ import { describe, expect, test, beforeEach } from "bun:test";
 import { IdeologyManager } from "../src/core/systems/IdeologyManager";
 import { RelationshipManager } from "../src/core/systems/RelationshipManager";
 import { ColonistMoraleManager } from "../src/core/systems/ColonistMoraleManager";
-import { NPCFaction } from "../src/core/models/NPCInfluence";
+import { NPCFaction, ProjectId } from "../src/core/models/NPCInfluence";
 import type { Colonist, ColonistIdeology } from "../src/core/models/Colonist";
 import { ColonistRole, MasteryLevel } from "../src/core/models/Colonist";
 
@@ -422,6 +422,134 @@ describe("IdeologyManager", () => {
       const result = manager.canLobby("nonexistent");
       expect(result.canLobby).toBe(false);
       expect(result.reason).toBe("Target is not a council member");
+    });
+  });
+
+  describe("capstone projects", () => {
+    let manager: IdeologyManager;
+    let relationshipManager: RelationshipManager;
+
+    beforeEach(() => {
+      manager = new IdeologyManager();
+      relationshipManager = new RelationshipManager();
+    });
+
+    describe("getPassedProjectsForFaction", () => {
+      test("returns empty array when no projects passed", () => {
+        expect(manager.getPassedProjectsForFaction(NPCFaction.EarthLoyalists)).toEqual([]);
+      });
+
+      test("returns only projects for specified faction", () => {
+        manager.completeProject(ProjectId.EARTH_MEMORIAL);
+        manager.completeProject(ProjectId.UNIVERSAL_HOUSING);
+
+        const earthProjects = manager.getPassedProjectsForFaction(NPCFaction.EarthLoyalists);
+        expect(earthProjects).toContain(ProjectId.EARTH_MEMORIAL);
+        expect(earthProjects).not.toContain(ProjectId.UNIVERSAL_HOUSING);
+      });
+    });
+
+    describe("canProposeCapstone", () => {
+      test("returns false when prerequisites not met", () => {
+        const colonists = [
+          createTestColonist("c1", "Colonist 1", {
+            earthLoyalist: 0.9,
+            marsIndependence: 0.1,
+            corporateInterests: 0.1,
+            conviction: 0.8,
+          }),
+        ];
+        relationshipManager.recalculateCentrality(0);
+        manager.selectCouncil(colonists, relationshipManager, 0);
+
+        expect(manager.canProposeCapstone(NPCFaction.EarthLoyalists)).toEqual({
+          canPropose: false,
+          reason: "Prerequisites not met: 0/3 projects passed",
+        });
+      });
+
+      test("returns false when council support insufficient", () => {
+        // Complete all Earth Loyalist prerequisites
+        manager.completeProject(ProjectId.EARTH_MEMORIAL);
+        manager.completeProject(ProjectId.HERITAGE_ARCHIVE);
+        manager.completeProject(ProjectId.GENERATION_SHIP);
+
+        // But council is mostly Mars Independence
+        const colonists = [
+          createTestColonist("c1", "Colonist 1", {
+            earthLoyalist: 0.1,
+            marsIndependence: 0.9,
+            corporateInterests: 0.1,
+            conviction: 0.8,
+          }),
+          createTestColonist("c2", "Colonist 2", {
+            earthLoyalist: 0.1,
+            marsIndependence: 0.9,
+            corporateInterests: 0.1,
+            conviction: 0.8,
+          }),
+          createTestColonist("c3", "Colonist 3", {
+            earthLoyalist: 0.9,
+            marsIndependence: 0.1,
+            corporateInterests: 0.1,
+            conviction: 0.8,
+          }),
+        ];
+        relationshipManager.recalculateCentrality(0);
+        manager.selectCouncil(colonists, relationshipManager, 0);
+
+        expect(manager.canProposeCapstone(NPCFaction.EarthLoyalists)).toEqual({
+          canPropose: false,
+          reason: "Insufficient council support: 33% (need 65%)",
+        });
+      });
+
+      test("returns true when prerequisites met and council support sufficient", () => {
+        manager.completeProject(ProjectId.EARTH_MEMORIAL);
+        manager.completeProject(ProjectId.HERITAGE_ARCHIVE);
+        manager.completeProject(ProjectId.GENERATION_SHIP);
+
+        // Council is mostly Earth Loyalists
+        const colonists = [
+          createTestColonist("c1", "Colonist 1", {
+            earthLoyalist: 0.9,
+            marsIndependence: 0.1,
+            corporateInterests: 0.1,
+            conviction: 0.8,
+          }),
+          createTestColonist("c2", "Colonist 2", {
+            earthLoyalist: 0.9,
+            marsIndependence: 0.1,
+            corporateInterests: 0.1,
+            conviction: 0.8,
+          }),
+          createTestColonist("c3", "Colonist 3", {
+            earthLoyalist: 0.9,
+            marsIndependence: 0.1,
+            corporateInterests: 0.1,
+            conviction: 0.8,
+          }),
+        ];
+        relationshipManager.recalculateCentrality(0);
+        manager.selectCouncil(colonists, relationshipManager, 0);
+
+        expect(manager.canProposeCapstone(NPCFaction.EarthLoyalists)).toEqual({
+          canPropose: true,
+        });
+      });
+    });
+
+    describe("isCapstoneProject", () => {
+      test("returns true for capstone projects", () => {
+        expect(manager.isCapstoneProject(ProjectId.RETURN_MISSION)).toBe(true);
+        expect(manager.isCapstoneProject(ProjectId.DECLARATION_OF_SOVEREIGNTY)).toBe(true);
+        expect(manager.isCapstoneProject(ProjectId.PLANETARY_ACQUISITION)).toBe(true);
+      });
+
+      test("returns false for regular projects", () => {
+        expect(manager.isCapstoneProject(ProjectId.EARTH_MEMORIAL)).toBe(false);
+        expect(manager.isCapstoneProject(ProjectId.UNIVERSAL_HOUSING)).toBe(false);
+      });
     });
   });
 });

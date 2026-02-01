@@ -140,6 +140,19 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
       };
     }
 
+    // Check capstone-specific requirements
+    if (project.isCapstone) {
+      const capstoneCheck = this.gameState.ideology.canProposeCapstone(project.type);
+      if (!capstoneCheck.canPropose) {
+        return {
+          canPropose: false,
+          currentSupport,
+          requiredSupport: project.requiredCouncilSupport ?? 0.65,
+          reason: capstoneCheck.reason,
+        };
+      }
+    }
+
     return {
       canPropose: true,
       currentSupport,

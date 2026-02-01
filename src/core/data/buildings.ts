@@ -290,4 +290,17 @@ export const BUILDINGS: BuildingDefinition[] = [
     oxygenContribution: 0,
     purpose: BuildingPurpose.Industrial,
   },
+  {
+    id: BuildingId.ASSEMBLY_HALL,
+    name: "Assembly Hall",
+    description:
+      "A democratic gathering space that boosts morale for independence-minded colonists.",
+    cost: { materials: 80 },
+    constructionTime: 15,
+    consumption: { power: 3 },
+    moraleBoost: 3,
+    oxygenContribution: 0,
+    purpose: BuildingPurpose.Social,
+    bondingStrength: 1.2,
+  },
 ];

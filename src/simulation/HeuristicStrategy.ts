@@ -3,8 +3,11 @@
 
 import { BuildingId } from "../core/models/Building";
 import type { EventChoice } from "../core/models/GameEvent";
-import { TechnologyId } from "../core/models/Technology";
+import { NPCFaction, type ProjectId } from "../core/models/NPCInfluence";
+import { getProjectsByFaction } from "../core/data/projects";
+import { rng } from "../core/utils/random";
 import type { GameAPI } from "../facade/GameAPI";
+import type { IdeologySnapshot } from "../facade/types/ideology";
 import type { BlockedDecision, EventOccurrence } from "./types";
 
 /**
@@ -14,11 +17,16 @@ import type { BlockedDecision, EventOccurrence } from "./types";
  * Priorities (in order):
  * 1. Survival - Ensure food and oxygen are maintained
  * 2. Event Resolution - Handle active events
- * 3. Morale - Build recreation buildings to maintain morale for Colony Charter
+ * 3. Morale - Build recreation buildings to maintain morale
  * 4. Infrastructure - Research, power, materials
  * 5. Growth - Expand population when stable
- * 6. Victory Push - Research generation ship when available
+ * 6. Ideology Victory - Work toward faction capstone victory
  */
+export interface StrategyOptions {
+  /** Force commitment to a specific faction (for testing victory paths) */
+  targetFaction?: NPCFaction;
+}
+
 export class HeuristicStrategy {
   private blockedDecisions: BlockedDecision[] = [];
   private eventsOccurred: EventOccurrence[] = [];
@@ -26,7 +34,25 @@ export class HeuristicStrategy {
   // Per-tick cache for hasBuilding() - avoids repeated snapshot() and O(n) searches
   private cachedBuildingIds: Set<BuildingId> | null = null;
 
-  constructor(private api: GameAPI) {}
+  // Ideology victory state
+  private committedFaction: NPCFaction | null = null;
+  private readonly COMMITMENT_THRESHOLD = 0.5; // 50% council support to commit
+  private commitmentMinSol: number; // Set randomly in constructor for variety
+  private readonly COMMITMENT_FALLBACK_SOL = 100; // If no majority by this sol, commit to leading faction
+  private readonly LOBBY_AFFINITY_BOOST = 0.15; // Standard lobby boost per action
+
+  // Strategy options
+  private readonly targetFaction: NPCFaction | null;
+
+  constructor(
+    private api: GameAPI,
+    options?: StrategyOptions,
+  ) {
+    this.targetFaction = options?.targetFaction ?? null;
+    // Randomize commitment timing for variety (sol 25-50)
+    // This creates natural variation in which faction dominates when commitment happens
+    this.commitmentMinSol = rng.int(25, 50);
+  }
 
   /**
    * Get all blocked decisions recorded during this game.
@@ -63,6 +89,7 @@ export class HeuristicStrategy {
 
   /**
    * Try to build a building. Returns true if built, records blocked decision if not.
+   * When committed to a faction, reserves materials for ideology projects.
    */
   private tryBuild(
     buildingId: BuildingId,
@@ -70,14 +97,58 @@ export class HeuristicStrategy {
     recordIfBlocked = true,
   ): boolean {
     const canBuild = this.api.buildings.canBuild(buildingId);
-    if (canBuild.allowed) {
-      this.api.buildings.build(buildingId);
-      return true;
+    if (!canBuild.allowed) {
+      if (recordIfBlocked) {
+        this.recordBlockedDecision(category, `build_${buildingId}`, canBuild.reason ?? "unknown");
+      }
+      return false;
     }
-    if (recordIfBlocked) {
-      this.recordBlockedDecision(category, `build_${buildingId}`, canBuild.reason ?? "unknown");
+
+    // When committed to a faction, reserve materials for ideology projects
+    if (this.committedFaction) {
+      const def = this.api.buildings.getDefinition(buildingId);
+      const buildCost = def?.cost?.materials ?? 0;
+      if (buildCost > 0) {
+        const currentMaterials = this.api.resources.snapshot().current.materials;
+        const reserve = this.getProjectMaterialsReserve();
+        if (currentMaterials - buildCost < reserve) {
+          // Don't build - would drop below materials reserve for projects
+          return false;
+        }
+      }
     }
-    return false;
+
+    this.api.buildings.build(buildingId);
+    return true;
+  }
+
+  /**
+   * Calculate materials to reserve for the next ideology project.
+   * Returns the cost of the cheapest unproposed project for our committed faction.
+   */
+  private getProjectMaterialsReserve(): number {
+    if (!this.committedFaction) return 0;
+
+    const completedProjects = this.api.ideology.getCompletedProjects();
+    const pendingProposals = this.api.ideology.getPendingProposals();
+    const failedProposals = this.api.ideology.getFailedProposals();
+
+    const factionProjects = getProjectsByFaction(this.committedFaction);
+    const prerequisites = factionProjects.filter((p) => !p.isCapstone);
+
+    let minCost = 0;
+    for (const project of prerequisites) {
+      if (completedProjects.includes(project.id)) continue;
+      if (pendingProposals.some((p) => p.projectId === project.id)) continue;
+      if (failedProposals.includes(project.id)) continue;
+
+      const cost = project.proposalCost?.materials ?? 0;
+      if (cost > 0 && (minCost === 0 || cost < minCost)) {
+        minCost = cost;
+      }
+    }
+
+    return minCost;
   }
 
   /**
@@ -122,7 +193,7 @@ export class HeuristicStrategy {
     if (this.handleMorale()) return;
     if (this.handleInfrastructure()) return;
     if (this.handleGrowth()) return;
-    this.handleVictoryPush();
+    this.handleIdeologyVictory();
   }
 
   /**
@@ -353,6 +424,71 @@ export class HeuristicStrategy {
   }
 
   /**
+   * Handle materials production by building basic mines on mineral deposits.
+   * @returns true if an action was taken
+   */
+  private handleMaterialsProduction(): boolean {
+    const resources = this.api.resources.snapshot();
+    const materialsProd = resources.production.materials ?? 0;
+
+    // Already have materials production
+    if (materialsProd > 0) return false;
+
+    const operations = this.api.operations.snapshot();
+
+    // Single pass to categorize mineral sites
+    let developedAvailable: (typeof operations.sites)[0] | null = null;
+    let revealedUndeveloped: (typeof operations.sites)[0] | null = null;
+    let unrevealed: (typeof operations.sites)[0] | null = null;
+
+    for (const site of operations.sites) {
+      if (site.resourceType !== "minerals") continue;
+
+      if (site.developed && !site.linkedBuildingId && !developedAvailable) {
+        developedAvailable = site;
+      } else if (site.revealed && !site.developed && !revealedUndeveloped) {
+        revealedUndeveloped = site;
+      } else if (!site.revealed && !unrevealed) {
+        unrevealed = site;
+      }
+
+      if (developedAvailable && revealedUndeveloped && unrevealed) break;
+    }
+
+    // Priority 1: Build basic mine on available developed deposit
+    if (developedAvailable) {
+      const canBuild = this.api.buildings.canBuild(BuildingId.BASIC_MINE);
+      if (canBuild.allowed) {
+        const result = this.api.buildings.build(BuildingId.BASIC_MINE);
+        if (result.success && result.data) {
+          this.api.buildings.linkToDeposit(result.data.id, developedAvailable.id);
+          return true;
+        }
+      }
+    }
+
+    // Priority 2: Develop a revealed mineral site
+    if (revealedUndeveloped) {
+      const canDevelop = this.api.operations.canDevelopSite(revealedUndeveloped.id);
+      if (canDevelop.allowed) {
+        this.api.operations.developSite(revealedUndeveloped.id);
+        return true;
+      }
+    }
+
+    // Priority 3: Reveal an unrevealed mineral site
+    if (unrevealed) {
+      const canReveal = this.api.operations.canRevealSite(unrevealed.id);
+      if (canReveal.allowed) {
+        this.api.operations.revealSite(unrevealed.id);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * Priority 2 - Event Resolution: Handle active events.
    * @returns true if an event was resolved
    */
@@ -546,6 +682,9 @@ export class HeuristicStrategy {
       }
     }
 
+    // Establish materials production early via basic mines
+    if (this.handleMaterialsProduction()) return true;
+
     // Build solar panel if power production is insufficient
     const powerProduction = resources.production.power ?? 0;
     const powerConsumption = resources.consumption.power ?? 0;
@@ -553,7 +692,7 @@ export class HeuristicStrategy {
       if (this.tryBuild(BuildingId.SOLAR_PANEL, "infrastructure")) return true;
     }
 
-    // Build mining station if materials are low (requires asteroid_mining tech)
+    // Build mining station for more materials (requires asteroid_mining tech)
     if (resources.current.materials < 100) {
       if (this.tryBuild(BuildingId.MINING_STATION, "infrastructure")) return true;
     }
@@ -594,27 +733,253 @@ export class HeuristicStrategy {
   }
 
   /**
-   * Priority 6 - Victory Push: Research generation ship when available.
+   * Priority 6 - Ideology Victory: Work toward faction capstone victory.
+   *
+   * Strategy:
+   * 1. If no faction committed, check if any has ≥50% council seats
+   * 2. If still opportunistic, lobby for the leading faction to build support
+   * 3. Once committed, propose prerequisite projects (accept failed votes)
+   * 4. Clear failed proposals when vote projection becomes favorable
+   * 5. Lobby council members when stuck to build faction support
+   * 6. Propose capstone when prerequisites complete and ≥65% council support
+   *
    * @returns true if an action was taken
    */
-  private handleVictoryPush(): boolean {
-    // IF "generation_ship" available -> research it
-    const canResearchGenShip = this.api.technology.canResearch(TechnologyId.GENERATION_SHIP);
-    if (canResearchGenShip.allowed) {
-      this.api.technology.startResearch(TechnologyId.GENERATION_SHIP);
+  private handleIdeologyVictory(): boolean {
+    const ideologySnapshot = this.api.ideology.snapshot();
+    const council = ideologySnapshot.council;
+
+    if (council.length === 0) return false; // No council yet
+
+    // Step 1: Check/update faction commitment
+    if (!this.committedFaction) {
+      this.committedFaction = this.checkFactionCommitment(ideologySnapshot);
+      if (!this.committedFaction) {
+        // Still opportunistic - lobby for the leading faction to build support
+        const leadingFaction = this.getLeadingFaction(ideologySnapshot);
+        if (leadingFaction) {
+          return this.tryLobbyForFaction(leadingFaction);
+        }
+        return false;
+      }
+    }
+
+    // Step 2: Try to advance toward capstone
+    return this.advanceFactionVictory(this.committedFaction);
+  }
+
+  /**
+   * Check if any faction has reached the commitment threshold.
+   * Returns the faction to commit to, or null if still opportunistic.
+   * If targetFaction is set, commits immediately to that faction.
+   * Otherwise waits until COMMITMENT_MIN_SOL, then commits if a faction has 50%+.
+   * If no faction has 50%+ by COMMITMENT_FALLBACK_SOL, commits to the leading faction.
+   */
+  private checkFactionCommitment(snapshot: IdeologySnapshot): NPCFaction | null {
+    // If a target faction is specified, commit immediately
+    if (this.targetFaction) {
+      return this.targetFaction;
+    }
+
+    const currentSol = this.api.game.currentSol();
+
+    // Wait for council to stabilize before committing opportunistically
+    if (currentSol < this.commitmentMinSol) {
+      return null;
+    }
+
+    const council = snapshot.council;
+    if (council.length === 0) return null;
+
+    const counts = snapshot.councilFactionCounts;
+    const totalSeats = council.length;
+
+    // Track the leading faction
+    let leadingFaction: NPCFaction | null = null;
+    let maxSeats = 0;
+
+    // Check each faction's council representation
+    for (const faction of [
+      NPCFaction.EarthLoyalists,
+      NPCFaction.MarsIndependence,
+      NPCFaction.CorporateInterests,
+    ]) {
+      const seats = counts[faction] ?? 0;
+      const ratio = seats / totalSeats;
+
+      // Track leader
+      if (seats > maxSeats) {
+        maxSeats = seats;
+        leadingFaction = faction;
+      }
+
+      // Commit if threshold met
+      if (ratio >= this.COMMITMENT_THRESHOLD) {
+        return faction;
+      }
+    }
+
+    // Fallback: if past the fallback sol and no one has 50%, commit to leader
+    if (currentSol >= this.COMMITMENT_FALLBACK_SOL && leadingFaction) {
+      return leadingFaction;
+    }
+
+    return null;
+  }
+
+  /**
+   * Get the faction to lobby for during opportunistic phase.
+   * If targetFaction is set, always returns that faction.
+   * Otherwise returns the faction with the most council seats.
+   */
+  private getLeadingFaction(snapshot: IdeologySnapshot): NPCFaction | null {
+    // If targeting a specific faction, always lobby for it
+    if (this.targetFaction) {
+      return this.targetFaction;
+    }
+
+    const counts = snapshot.councilFactionCounts;
+
+    let leadingFaction: NPCFaction | null = null;
+    let maxSeats = 0;
+
+    for (const faction of [
+      NPCFaction.EarthLoyalists,
+      NPCFaction.MarsIndependence,
+      NPCFaction.CorporateInterests,
+    ]) {
+      const seats = counts[faction] ?? 0;
+      if (seats > maxSeats) {
+        maxSeats = seats;
+        leadingFaction = faction;
+      }
+    }
+
+    return leadingFaction;
+  }
+
+  /**
+   * Attempt to advance toward the committed faction's capstone victory.
+   * @returns true if an action was taken
+   */
+  private advanceFactionVictory(faction: NPCFaction): boolean {
+    const completedProjects = this.api.ideology.getCompletedProjects();
+    const failedProposals = this.api.ideology.getFailedProposals();
+    const pendingProposals = this.api.ideology.getPendingProposals();
+
+    // Get faction's projects (non-capstone prerequisites first)
+    const factionProjects = getProjectsByFaction(faction);
+    const prerequisites = factionProjects.filter((p) => !p.isCapstone);
+    const capstone = factionProjects.find((p) => p.isCapstone);
+
+    if (!capstone) return false;
+
+    // Step 1: Clear failed proposals that now have favorable vote projection
+    if (this.clearRetryableProposals(faction, failedProposals)) {
       return true;
-    } else {
-      // Only record if generation ship is in the available list (prerequisites met)
-      const techSnapshot = this.api.technology.snapshot();
-      const genShipAvailable = techSnapshot.available.some(
-        (t) => t.id === TechnologyId.GENERATION_SHIP,
+    }
+
+    // Step 2: Check if we can propose a prerequisite
+    for (const project of prerequisites) {
+      if (completedProjects.includes(project.id)) continue;
+      if (pendingProposals.some((p) => p.projectId === project.id)) continue;
+      if (failedProposals.includes(project.id)) continue;
+
+      if (this.tryProposeProject(project.id)) {
+        return true;
+      }
+    }
+
+    // Step 3: Check if capstone is ready
+    if (this.tryProposeCapstone(capstone.id)) {
+      return true;
+    }
+
+    // Step 4: Lobby council members to build faction support
+    if (this.tryLobbyForFaction(faction)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Attempt to propose a project.
+   * Proposes even if vote projection suggests it might fail - accept failed votes
+   * and retry when council composition becomes favorable.
+   * @returns true if proposal was submitted
+   */
+  private tryProposeProject(projectId: ProjectId): boolean {
+    const eligibility = this.api.ideology.canProposeProject(projectId);
+    if (!eligibility.canPropose) return false;
+
+    const result = this.api.ideology.proposeProject(projectId);
+    return result.success;
+  }
+
+  /**
+   * Attempt to propose the capstone if all conditions are met.
+   * Capstone requires 65% council support, checked via canProposeProject.
+   */
+  private tryProposeCapstone(projectId: ProjectId): boolean {
+    // canProposeProject checks prerequisites and council support for capstones
+    const eligibility = this.api.ideology.canProposeProject(projectId);
+    if (!eligibility.canPropose) return false;
+
+    const result = this.api.ideology.proposeProject(projectId);
+    return result.success;
+  }
+
+  /**
+   * Clear failed proposals that now have favorable vote projection.
+   * @returns true if any proposal was cleared (action taken)
+   */
+  private clearRetryableProposals(
+    faction: NPCFaction,
+    failedProposals: readonly ProjectId[],
+  ): boolean {
+    const projection = this.api.ideology.getVoteProjection(faction);
+    if (!projection.wouldPass) return false;
+
+    for (const projectId of failedProposals) {
+      this.api.ideology.clearFailedProposal(projectId);
+      return true; // One action per tick
+    }
+    return false;
+  }
+
+  /**
+   * Try to lobby a council member to increase faction support.
+   * Targets council members who aren't already aligned with our faction.
+   * @returns true if lobbying was successful
+   */
+  private tryLobbyForFaction(faction: NPCFaction): boolean {
+    const ideologySnapshot = this.api.ideology.snapshot();
+    const council = ideologySnapshot.council;
+
+    if (council.length === 0) return false;
+
+    // Find council members who might be swayed
+    // Target those not already aligned with our faction
+    const candidates = council.filter((member) => member.faction !== faction);
+
+    // Try to lobby candidates (already sorted by influence from getCouncil)
+    for (const candidate of candidates) {
+      const eligibility = this.api.ideology.canLobby(
+        candidate.colonistId,
+        faction,
+        this.LOBBY_AFFINITY_BOOST,
       );
-      if (genShipAvailable) {
-        this.recordBlockedDecision(
-          "victory",
-          "research_generation_ship",
-          canResearchGenShip.reason ?? "unknown",
+
+      if (eligibility.canLobby) {
+        const result = this.api.ideology.lobbyCouncilMember(
+          candidate.colonistId,
+          faction,
+          this.LOBBY_AFFINITY_BOOST,
         );
+        if (result.success) {
+          return true;
+        }
       }
     }
 

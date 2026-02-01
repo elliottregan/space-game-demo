@@ -58,7 +58,7 @@ describe("Deposit Balance Constants", () => {
 
   test("DEPLETION_THRESHOLDS defines warning levels", () => {
     expect(DEPLETION_THRESHOLDS.warning).toBe(0.25);
-    expect(DEPLETION_THRESHOLDS.critical).toBe(0.10);
+    expect(DEPLETION_THRESHOLDS.critical).toBe(0.1);
   });
 });
 
@@ -89,9 +89,9 @@ import { OperationsManager } from "../src/core/systems/OperationsManager";
 describe("OperationsManager Deposit Generation", () => {
   test("generateProspectingSite creates site with reserves", () => {
     const manager = new OperationsManager();
-    // Manager starts with 2 initial water sites
+    // Manager starts with 2 water sites + 1 mineral site
     const initialCount = manager.getSites().length;
-    expect(initialCount).toBe(2);
+    expect(initialCount).toBe(3);
 
     manager.addUnrevealedSite();
     const sites = manager.getSites();
@@ -223,16 +223,12 @@ describe("Resource Events", () => {
   });
 
   test("geological survey event reveals deposits", () => {
-    const surveyEvent = RANDOM_EVENTS.find(
-      (e) => e.id === "geological_survey"
-    );
+    const surveyEvent = RANDOM_EVENTS.find((e) => e.id === "geological_survey");
     expect(surveyEvent).toBeDefined();
   });
 
   test("equipment windfall event provides supplies", () => {
-    const windfallEvent = RANDOM_EVENTS.find(
-      (e) => e.id === "equipment_windfall"
-    );
+    const windfallEvent = RANDOM_EVENTS.find((e) => e.id === "equipment_windfall");
     expect(windfallEvent).toBeDefined();
     expect(windfallEvent!.choices[0]!.effects?.resources?.materials).toBe(30);
   });
