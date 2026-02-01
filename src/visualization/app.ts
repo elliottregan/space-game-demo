@@ -93,27 +93,25 @@ function validateAnalysisOutput(data: unknown): data is AnalysisOutput {
 }
 
 /**
- * Load and parse a JSON file.
+ * Load and parse a JSON file (supports both .json and .json.gz).
  */
-function loadFile(file: File): Promise<AnalysisOutput> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const text = reader.result as string;
-        const data: unknown = JSON.parse(text);
-        if (!validateAnalysisOutput(data)) {
-          reject(new Error("Invalid analysis file format"));
-          return;
-        }
-        resolve(data);
-      } catch {
-        reject(new Error("Failed to parse JSON file"));
-      }
-    };
-    reader.onerror = () => reject(new Error("Failed to read file"));
-    reader.readAsText(file);
-  });
+async function loadFile(file: File): Promise<AnalysisOutput> {
+  let text: string;
+
+  if (file.name.endsWith(".gz")) {
+    // Decompress gzipped files using Compression Streams API
+    const ds = new DecompressionStream("gzip");
+    const decompressed = file.stream().pipeThrough(ds);
+    text = await new Response(decompressed).text();
+  } else {
+    text = await file.text();
+  }
+
+  const data: unknown = JSON.parse(text);
+  if (!validateAnalysisOutput(data)) {
+    throw new Error("Invalid analysis file format");
+  }
+  return data;
 }
 
 /**
@@ -198,8 +196,8 @@ function setupDragAndDrop(): void {
       render();
       return;
     }
-    if (!file.name.endsWith(".json")) {
-      showError("Please drop a JSON file");
+    if (!file.name.endsWith(".json") && !file.name.endsWith(".json.gz")) {
+      showError("Please drop a JSON or JSON.GZ file");
       return;
     }
 
@@ -308,7 +306,7 @@ function renderEmptyState(): string {
   return `
     <div class="drop-zone" id="drop-zone">
       <div class="drop-zone-icon">📊</div>
-      <div class="drop-zone-text">Drop simulation analysis JSON here</div>
+      <div class="drop-zone-text">Drop simulation JSON or JSON.GZ here</div>
       <div class="drop-zone-hint">or</div>
       <button class="browse-btn" id="browse-btn">Browse files</button>
       ${renderServerFileList()}

@@ -976,12 +976,12 @@ function aggregateTimelines(results: RunResult[]): AggregatedSnapshot[] {
 }
 
 /**
- * Write analysis data as JSON for visualization.
+ * Write analysis data as gzipped JSON for visualization.
  */
 async function writeJsonOutput(results: RunResult[], runs: number, seed: number): Promise<string> {
   const now = new Date();
   const timestamp = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
-  const filename = `simulation-${timestamp}-r${runs}-s${seed}.json`;
+  const filename = `simulation-${timestamp}-r${runs}-s${seed}.json.gz`;
   const filepath = `logs/simulations/${filename}`;
 
   const victories = results.filter((r) => r.outcome === "victory");
@@ -1096,7 +1096,9 @@ async function writeJsonOutput(results: RunResult[], runs: number, seed: number)
     },
   };
 
-  await Bun.write(filepath, JSON.stringify(analysisOutput, null, 2));
+  const jsonData = JSON.stringify(analysisOutput);
+  const compressed = Bun.gzipSync(jsonData);
+  await Bun.write(filepath, compressed);
   return filepath;
 }
 
