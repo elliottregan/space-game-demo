@@ -369,9 +369,10 @@ export class IdeologyManager {
   // ============ Project Morale Effects ============
 
   /**
-   * Apply morale effects when a project passes.
-   * Colonists who support the faction get a morale boost.
-   * Colonists who oppose the faction get a morale penalty.
+   * Apply morale and conviction effects when a project passes.
+   * - Morale boost/penalty based on faction affinity
+   * - Conviction boost for council members who voted for it
+   * - Conviction boost for colonists who support the faction
    */
   applyProjectMoraleEffects(
     projectFaction: NPCFaction,
@@ -380,6 +381,14 @@ export class IdeologyManager {
   ): void {
     const factionKey = IdeologyManager.factionToKey(projectFaction);
 
+    // Build a set of council member IDs who voted for this project
+    const voterIds = new Set<string>();
+    for (const member of this.council) {
+      if (member.faction === projectFaction) {
+        voterIds.add(member.colonistId);
+      }
+    }
+
     for (const colonist of colonists) {
       if (!colonist.ideology) continue;
 
@@ -387,11 +396,15 @@ export class IdeologyManager {
       const primaryFaction = IdeologyManager.getPrimaryFaction(colonist.ideology);
 
       let moraleDelta = 0;
+      let convictionDelta = 0;
 
+      // Morale effects based on affinity
       if (affinity >= 0.7) {
         moraleDelta = IdeologyBalance.PROJECT_MORALE_STRONG_SUPPORTER;
+        convictionDelta = IdeologyBalance.PROJECT_CONVICTION_BOOST_STRONG_SUPPORTER;
       } else if (affinity >= 0.4) {
         moraleDelta = IdeologyBalance.PROJECT_MORALE_SUPPORTER;
+        convictionDelta = IdeologyBalance.PROJECT_CONVICTION_BOOST_SUPPORTER;
       } else if (primaryFaction && primaryFaction !== projectFaction) {
         // They belong to a different faction
         moraleDelta =
@@ -400,8 +413,22 @@ export class IdeologyManager {
             : IdeologyBalance.PROJECT_MORALE_OPPOSED;
       }
 
+      // Extra conviction boost for council members who voted for the project
+      if (voterIds.has(colonist.id)) {
+        convictionDelta = Math.max(convictionDelta, IdeologyBalance.PROJECT_CONVICTION_BOOST_VOTER);
+      }
+
+      // Apply morale effect
       if (moraleDelta !== 0) {
         moraleManager.adjustColonistMorale(colonist.id, moraleDelta);
+      }
+
+      // Apply conviction boost (capped at 1.0)
+      if (convictionDelta > 0) {
+        colonist.ideology.conviction = Math.min(
+          1.0,
+          colonist.ideology.conviction + convictionDelta,
+        );
       }
     }
   }
