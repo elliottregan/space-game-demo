@@ -111,6 +111,18 @@ export class GuildManager {
   }
 
   /**
+   * Get all guild names currently in use.
+   * Used to avoid duplicate names during guild formation.
+   */
+  getUsedGuildNames(): Set<string> {
+    const names = new Set<string>();
+    for (const guild of this.guilds.values()) {
+      names.add(guild.name);
+    }
+    return names;
+  }
+
+  /**
    * Check if two colonists share a guild.
    */
   shareGuild(colonistA: Colonist, colonistB: Colonist): boolean {

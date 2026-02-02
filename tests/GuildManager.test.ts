@@ -84,6 +84,24 @@ describe("GuildManager", () => {
     });
   });
 
+  describe("getUsedGuildNames", () => {
+    it("should return set of all guild names", () => {
+      manager.createGuild("Alpha Guild", GuildType.SOCIAL, ["c1", "c2"], 10);
+      manager.createGuild("Beta Guild", GuildType.PROFESSIONAL, ["c3", "c4"], 20);
+
+      const names = manager.getUsedGuildNames();
+
+      expect(names.has("Alpha Guild")).toBe(true);
+      expect(names.has("Beta Guild")).toBe(true);
+      expect(names.size).toBe(2);
+    });
+
+    it("should return empty set when no guilds exist", () => {
+      const names = manager.getUsedGuildNames();
+      expect(names.size).toBe(0);
+    });
+  });
+
   describe("serialization", () => {
     it("should serialize and deserialize correctly", () => {
       manager.createGuild("Test Guild", GuildType.PROFESSIONAL, ["c1", "c2"], 10);
