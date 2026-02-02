@@ -119,9 +119,12 @@ export function renderBaseGrid(
     cellMap.set(`${cell.position.x},${cell.position.y}`, cell);
   }
 
-  // Render grid cells
-  const cellGroup = svg.append("g").attr("class", "grid-cells");
+  // Create layer groups - order matters for z-index
+  const tileLayer = svg.append("g").attr("class", "tile-layer");
+  const depositLayer = svg.append("g").attr("class", "deposit-layer");
+  const buildingLayer = svg.append("g").attr("class", "building-layer");
 
+  // First pass: Render all tiles (bottom layer)
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       const screen = gridToScreen(x, y, width, height);
@@ -138,28 +141,30 @@ export function renderBaseGrid(
         .map((p) => p.join(","))
         .join(" ");
 
-      const cellG = cellGroup
-        .append("g")
-        .attr("class", "grid-cell")
-        .attr("data-x", x)
-        .attr("data-y", y);
-
-      // Base tile
-      cellG
+      tileLayer
         .append("polygon")
         .attr("points", points)
         .attr("fill", cell?.buildingId ? colors.bgSurface : colors.bgBase)
         .attr("stroke", isSelected ? colors.info : colors.border)
         .attr("stroke-width", isSelected ? 2 : 1)
+        .attr("data-x", x)
+        .attr("data-y", y)
         .style("cursor", "pointer")
         .on("click", () => onCellClick({ x, y }, !!cell?.buildingId))
         .on("mouseenter", () => onCellHover({ x, y }))
         .on("mouseleave", () => onCellHover(null));
+    }
+  }
 
-      // Deposit indicator
+  // Second pass: Render all deposits (middle layer)
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const screen = gridToScreen(x, y, width, height);
+      const cell = cellMap.get(`${x},${y}`);
+
       if (cell?.deposit && !cell.buildingId) {
         const depositColor = cell.deposit === DepositType.WATER ? colors.info : colors.warning;
-        cellG
+        depositLayer
           .append("circle")
           .attr("cx", screen.x)
           .attr("cy", screen.y)
@@ -168,11 +173,20 @@ export function renderBaseGrid(
           .attr("opacity", 0.6)
           .style("pointer-events", "none");
       }
+    }
+  }
+
+  // Third pass: Render all buildings and ghost previews (top layer)
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const screen = gridToScreen(x, y, width, height);
+      const cell = cellMap.get(`${x},${y}`);
+      const isSelected = data.selectedPosition?.x === x && data.selectedPosition?.y === y;
 
       // Building node
       if (cell?.buildingId) {
         const isPending = cell.status === "pending";
-        const nodeG = cellG
+        const nodeG = buildingLayer
           .append("g")
           .attr("class", "building-node")
           .attr("opacity", isPending ? 0.7 : 1)
@@ -235,7 +249,7 @@ export function renderBaseGrid(
 
       // Ghost preview for selected building to place
       if (!cell?.buildingId && data.selectedBuildingDefId && isSelected) {
-        const ghostG = cellG.append("g").attr("opacity", 0.6);
+        const ghostG = buildingLayer.append("g").attr("opacity", 0.6);
 
         ghostG
           .append("circle")
