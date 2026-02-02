@@ -123,8 +123,8 @@ describe("Isometric Utils", () => {
 
   describe("constants", () => {
     it("exports expected tile dimensions", () => {
-      expect(TILE_WIDTH).toBe(80);
-      expect(TILE_HEIGHT).toBe(48);
+      expect(TILE_WIDTH).toBe(140);
+      expect(TILE_HEIGHT).toBe(84);
     });
 
     it("exports grid size", () => {
