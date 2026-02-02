@@ -119,6 +119,8 @@ interface GameUIState {
     position: { x: number; y: number };
     powerState: PowerState;
     batteryLevel: number;
+    status: "pending" | "active" | "disabled" | "idle" | "recycling";
+    constructionProgress?: number; // 0-1 for pending buildings
   }>;
   gridDeposits: Array<{
     position: { x: number; y: number };
@@ -377,13 +379,16 @@ class GameService {
       pointOfNoReturn: this.facade.game.earthCrisisPointOfNoReturn(),
     };
 
-    // Grid state
+    // Grid state - include both active and pending (under construction) buildings
     const gridPlacements: GameUIState["gridBuildings"] = [];
-    for (const building of this.facade.buildings.snapshot().active) {
+    const buildingSnapshot = this.facade.buildings.snapshot();
+    const allGridBuildings = [...buildingSnapshot.active, ...buildingSnapshot.pending];
+    for (const building of allGridBuildings) {
       const pos = this.facade.game.getGridBuildingPosition(building.id);
       const placement = this.facade.game.getGridPlacement(building.id);
       if (pos && placement) {
         const def = this.facade.buildings.getDefinition(building.definitionId as BuildingId);
+        const constructionTime = def?.constructionTime ?? 1;
         gridPlacements.push({
           id: building.id,
           defId: building.definitionId,
@@ -391,6 +396,11 @@ class GameService {
           position: pos,
           powerState: placement.powerState,
           batteryLevel: placement.batteryLevel,
+          status: building.status,
+          constructionProgress:
+            building.status === "pending"
+              ? building.constructionProgress / constructionTime
+              : undefined,
         });
       }
     }

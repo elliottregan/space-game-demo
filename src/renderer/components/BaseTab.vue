@@ -18,6 +18,8 @@ const gridBuildings = computed(() =>
     position: b.position as GridPosition,
     powerState: b.powerState as PowerState,
     batteryLevel: b.batteryLevel,
+    status: b.status,
+    constructionProgress: b.constructionProgress,
   })),
 );
 

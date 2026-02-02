@@ -12,6 +12,8 @@ interface BuildingInfo {
   position: GridPosition;
   powerState: PowerState;
   batteryLevel: number;
+  status?: "pending" | "active" | "disabled" | "idle" | "recycling";
+  constructionProgress?: number;
 }
 
 interface DepositInfo {
@@ -70,6 +72,8 @@ const gridData = computed<BaseGridData>(() => {
         powerState: building?.powerState,
         batteryLevel: building?.batteryLevel,
         deposit: deposit?.type,
+        status: building?.status,
+        constructionProgress: building?.constructionProgress,
       });
     }
   }

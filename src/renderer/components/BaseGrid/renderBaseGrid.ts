@@ -42,6 +42,8 @@ export interface GridNodeData {
   deposit?: DepositType;
   powerState?: PowerState;
   batteryLevel?: number;
+  status?: "pending" | "active" | "disabled" | "idle" | "recycling";
+  constructionProgress?: number; // 0-1 for pending buildings
 }
 
 export interface BaseGridData {
@@ -169,9 +171,11 @@ export function renderBaseGrid(
 
       // Building node
       if (cell?.buildingId) {
+        const isPending = cell.status === "pending";
         const nodeG = cellG
           .append("g")
           .attr("class", "building-node")
+          .attr("opacity", isPending ? 0.7 : 1)
           .style("cursor", "pointer")
           .on("click", (event: MouseEvent) => {
             event.stopPropagation();
@@ -179,33 +183,47 @@ export function renderBaseGrid(
           });
 
         // Building circle
-        nodeG
+        const circle = nodeG
           .append("circle")
           .attr("cx", screen.x)
           .attr("cy", screen.y)
           .attr("r", 18)
           .attr("fill", colors.bgSurface)
-          .attr("stroke", getPowerStateColor(cell.powerState, colors))
+          .attr("stroke", isPending ? colors.info : getPowerStateColor(cell.powerState, colors))
           .attr("stroke-width", 2);
+
+        if (isPending) {
+          circle.attr("stroke-dasharray", "4,2");
+        }
 
         // Building icon
         if (cell.buildingDefId) {
-          renderIcon(nodeG, cell.buildingDefId, screen.x, screen.y, 18, colors.text);
+          renderIcon(
+            nodeG,
+            cell.buildingDefId,
+            screen.x,
+            screen.y,
+            18,
+            isPending ? colors.info : colors.text,
+          );
         }
 
-        // Building label
+        // Building label - show progress for pending, name for active
+        const labelText = isPending
+          ? `${Math.round((cell.constructionProgress ?? 0) * 100)}%`
+          : (cell.buildingName?.substring(0, 10) ?? "");
         nodeG
           .append("text")
           .attr("x", screen.x)
           .attr("y", screen.y + 32)
           .attr("text-anchor", "middle")
-          .attr("fill", colors.textMuted)
+          .attr("fill", isPending ? colors.info : colors.textMuted)
           .attr("font-size", "10px")
           .attr("font-family", "var(--g-font-mono)")
-          .text(cell.buildingName?.substring(0, 10) ?? "");
+          .text(labelText);
 
-        // Power state indicator (small dot)
-        if (cell.powerState && cell.powerState !== PowerState.POWERED) {
+        // Power state indicator (small dot) - only for non-pending buildings
+        if (!isPending && cell.powerState && cell.powerState !== PowerState.POWERED) {
           nodeG
             .append("circle")
             .attr("cx", screen.x + 12)
