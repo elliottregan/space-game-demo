@@ -8,7 +8,7 @@ const props = defineProps<{
 
 const severityColor = computed(() => {
   if (props.pointOfNoReturn) return "var(--g-color-negative)";
-  if (props.severity >= 75) return "var(--g-color-danger, #c62828)";
+  if (props.severity >= 75) return "var(--g-color-negative)";
   if (props.severity >= 50) return "var(--g-color-warning)";
   if (props.severity >= 25) return "#F57C00";
   return "var(--g-color-positive)";

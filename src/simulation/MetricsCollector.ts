@@ -8,6 +8,7 @@ const DEFEAT_REASON_NAMES: Record<string, string> = {
   starvation: "Starvation",
   suffocation: "Suffocation",
   population_collapse: "Population Collapse",
+  earth_collapse: "Earth Collapse",
 };
 
 /** Display names for victory types. */
@@ -49,6 +50,8 @@ export class MetricsCollector {
         victoryBreakdown: {},
         fastestWin: 0,
         slowestWin: 0,
+        earthCollapseLosses: 0,
+        avgSeverityAtVictory: 0,
       };
     }
 
@@ -82,6 +85,15 @@ export class MetricsCollector {
       }
     }
 
+    // Count earth collapse defeats
+    const earthCollapseLosses = defeatBreakdown["earth_collapse"] ?? 0;
+
+    // Calculate average earth crisis severity at victory
+    const victorySeverities = victories
+      .map((r) => r.earthCrisisSeverity)
+      .filter((s): s is number => s !== undefined);
+    const avgSeverityAtVictory = this.calculateMean(victorySeverities);
+
     return {
       totalRuns,
       winRate,
@@ -91,6 +103,8 @@ export class MetricsCollector {
       victoryBreakdown,
       fastestWin,
       slowestWin,
+      earthCollapseLosses,
+      avgSeverityAtVictory,
     };
   }
 
@@ -136,6 +150,13 @@ export class MetricsCollector {
           console.log(`  - ${this.formatVictoryType(type)}: ${percentage}%`);
         }
       }
+    }
+
+    // Earth crisis statistics
+    console.log("\nEarth Crisis Statistics:");
+    console.log(`  - Earth Collapse Losses: ${stats.earthCollapseLosses}`);
+    if (victories > 0) {
+      console.log(`  - Average Severity at Victory: ${stats.avgSeverityAtVictory.toFixed(1)}%`);
     }
   }
 

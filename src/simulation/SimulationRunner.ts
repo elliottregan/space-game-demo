@@ -485,6 +485,9 @@ export class SimulationRunner {
     const blockedDecisions = strategy.getBlockedDecisions();
     const eventsOccurred = strategy.getEventsOccurred();
 
+    // Capture earth crisis severity at game end
+    const earthCrisisSeverity = api.game.earthCrisisSeverity();
+
     // Convert to RunResult
     return this.buildRunResult(
       seed,
@@ -506,6 +509,7 @@ export class SimulationRunner {
         resourcesAtDeath,
         blockedDecisions,
         eventsOccurred,
+        earthCrisisSeverity,
       },
     );
   }
@@ -674,6 +678,7 @@ export class SimulationRunner {
       resourcesAtDeath?: ResourceSnapshot;
       blockedDecisions: import("./types").BlockedDecision[];
       eventsOccurred: import("./types").EventOccurrence[];
+      earthCrisisSeverity?: number;
     },
   ): RunResult {
     const outcome = victoryState.status === "victory" ? "victory" : "defeat";
@@ -719,6 +724,7 @@ export class SimulationRunner {
       eventsOccurred: enhanced?.eventsOccurred?.length ? enhanced.eventsOccurred : undefined,
       guildTimeline: enhanced?.guildTimeline?.length ? enhanced.guildTimeline : undefined,
       guildsFormed: enhanced?.guildsFormed,
+      earthCrisisSeverity: enhanced?.earthCrisisSeverity,
     };
   }
 
@@ -754,6 +760,7 @@ export class SimulationRunner {
 
     if (lowerReason.includes("food") || lowerReason.includes("starv")) return "starvation";
     if (lowerReason.includes("oxygen") || lowerReason.includes("suffocat")) return "suffocation";
+    if (lowerReason.includes("earth") && lowerReason.includes("climate")) return "earth_collapse";
     if (lowerReason.includes("population") || lowerReason.includes("below 5")) {
       return "population_collapse";
     }
