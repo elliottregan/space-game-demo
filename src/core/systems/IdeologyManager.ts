@@ -92,8 +92,8 @@ export class IdeologyManager {
     if (marsIndependence === max) tiedFactions.push(NPCFaction.MarsIndependence);
     if (corporateInterests === max) tiedFactions.push(NPCFaction.CorporateInterests);
 
-    // Randomly select from tied factions
-    return tiedFactions[rng.int(0, tiedFactions.length - 1)]!;
+    // Randomly select from tied factions (array always has at least 1 element here)
+    return tiedFactions[rng.int(0, tiedFactions.length - 1)] ?? NPCFaction.EarthLoyalists;
   }
 
   /**
@@ -156,12 +156,15 @@ export class IdeologyManager {
       }
     }
 
-    // Only imprint if there's a reasonably strong connection
-    if (!strongestNeighbor || strongestStrength < IdeologyBalance.IDEOLOGY_IMPRINTING_THRESHOLD) {
+    // Only imprint if there's a reasonably strong connection with ideology
+    if (
+      !strongestNeighbor?.ideology ||
+      strongestStrength < IdeologyBalance.IDEOLOGY_IMPRINTING_THRESHOLD
+    ) {
       return;
     }
 
-    const sourceIdeology = strongestNeighbor.ideology!;
+    const sourceIdeology = strongestNeighbor.ideology;
 
     // Blend toward the neighbor's ideology (partial imprinting)
     colonist.ideology.earthLoyalist =
@@ -200,12 +203,12 @@ export class IdeologyManager {
 
     // Calculate political influence for each colonist
     const candidates = colonists
-      .filter((c) => c.ideology) // Only colonists with ideology
+      .filter((c): c is Colonist & { ideology: ColonistIdeology } => !!c.ideology)
       .map((colonist) => {
         const centrality = relationshipManager.getCentrality(colonist.id);
-        const conviction = colonist.ideology!.conviction;
+        const conviction = colonist.ideology.conviction;
         const influence = centrality * conviction;
-        const faction = IdeologyManager.getPrimaryFaction(colonist.ideology!);
+        const faction = IdeologyManager.getPrimaryFaction(colonist.ideology);
 
         return {
           colonistId: colonist.id,
@@ -357,21 +360,28 @@ export class IdeologyManager {
     this.lastSpreadSol = currentSol;
 
     // Filter to colonists with ideology
-    const ideologicalColonists = colonists.filter((c) => c.ideology);
+    const ideologicalColonists = colonists.filter(
+      (c): c is Colonist & { ideology: ColonistIdeology } => !!c.ideology,
+    );
     if (ideologicalColonists.length === 0) return;
 
     // Create snapshot to avoid order-dependent updates
     const ideologySnapshot = new Map<string, ColonistIdeology>(
-      ideologicalColonists.map((c) => [c.id, { ...c.ideology! }]),
+      ideologicalColonists.map((c) => [c.id, { ...c.ideology }]),
     );
 
     for (const colonist of ideologicalColonists) {
+      const ideology = colonist.ideology; // Guaranteed by filter above
       const neighbors = relationshipManager.getNeighbors(colonist.id);
       if (neighbors.size === 0) continue;
 
       // Calculate weighted average of neighbor ideologies
       let totalWeight = 0;
-      const avgInfluence = { earthLoyalist: 0, marsIndependence: 0, corporateInterests: 0 };
+      const avgInfluence = {
+        earthLoyalist: 0,
+        marsIndependence: 0,
+        corporateInterests: 0,
+      };
 
       for (const neighborId of neighbors) {
         const neighborIdeology = ideologySnapshot.get(neighborId);
@@ -409,28 +419,21 @@ export class IdeologyManager {
       avgInfluence.corporateInterests /= totalWeight;
 
       // Resistance based on own conviction
-      const resistance =
-        colonist.ideology!.conviction * IdeologyBalance.CONVICTION_RESISTANCE_FACTOR;
+      const resistance = ideology.conviction * IdeologyBalance.CONVICTION_RESISTANCE_FACTOR;
       const effectiveRate = IdeologyBalance.IDEOLOGY_SPREAD_RATE * (1 - resistance);
 
       // Drift toward neighbor average
-      colonist.ideology!.earthLoyalist +=
-        effectiveRate * (avgInfluence.earthLoyalist - colonist.ideology!.earthLoyalist);
-      colonist.ideology!.marsIndependence +=
-        effectiveRate * (avgInfluence.marsIndependence - colonist.ideology!.marsIndependence);
-      colonist.ideology!.corporateInterests +=
-        effectiveRate * (avgInfluence.corporateInterests - colonist.ideology!.corporateInterests);
+      ideology.earthLoyalist +=
+        effectiveRate * (avgInfluence.earthLoyalist - ideology.earthLoyalist);
+      ideology.marsIndependence +=
+        effectiveRate * (avgInfluence.marsIndependence - ideology.marsIndependence);
+      ideology.corporateInterests +=
+        effectiveRate * (avgInfluence.corporateInterests - ideology.corporateInterests);
 
       // Clamp values to [0, 1]
-      colonist.ideology!.earthLoyalist = Math.max(0, Math.min(1, colonist.ideology!.earthLoyalist));
-      colonist.ideology!.marsIndependence = Math.max(
-        0,
-        Math.min(1, colonist.ideology!.marsIndependence),
-      );
-      colonist.ideology!.corporateInterests = Math.max(
-        0,
-        Math.min(1, colonist.ideology!.corporateInterests),
-      );
+      ideology.earthLoyalist = Math.max(0, Math.min(1, ideology.earthLoyalist));
+      ideology.marsIndependence = Math.max(0, Math.min(1, ideology.marsIndependence));
+      ideology.corporateInterests = Math.max(0, Math.min(1, ideology.corporateInterests));
     }
 
     // Evolve conviction after ideology spread
@@ -550,7 +553,11 @@ export class IdeologyManager {
     colonists: Colonist[],
     relationshipManager: RelationshipManager,
   ): {
-    pressure: { earthLoyalist: number; marsIndependence: number; corporateInterests: number };
+    pressure: {
+      earthLoyalist: number;
+      marsIndependence: number;
+      corporateInterests: number;
+    };
     totalWeight: number;
     neighborCount: number;
     convictionPressure: { growth: boolean; rate: number };
@@ -560,10 +567,17 @@ export class IdeologyManager {
     const neighbors = relationshipManager.getNeighbors(colonist.id);
     if (neighbors.size === 0) {
       return {
-        pressure: { earthLoyalist: 0, marsIndependence: 0, corporateInterests: 0 },
+        pressure: {
+          earthLoyalist: 0,
+          marsIndependence: 0,
+          corporateInterests: 0,
+        },
         totalWeight: 0,
         neighborCount: 0,
-        convictionPressure: { growth: false, rate: IdeologyBalance.CONVICTION_DECAY_RATE },
+        convictionPressure: {
+          growth: false,
+          rate: IdeologyBalance.CONVICTION_DECAY_RATE,
+        },
       };
     }
 
@@ -572,7 +586,11 @@ export class IdeologyManager {
 
     let totalWeight = 0;
     let neighborCount = 0;
-    const avgInfluence = { earthLoyalist: 0, marsIndependence: 0, corporateInterests: 0 };
+    const avgInfluence = {
+      earthLoyalist: 0,
+      marsIndependence: 0,
+      corporateInterests: 0,
+    };
 
     for (const neighborId of neighbors) {
       const neighbor = colonistMap.get(neighborId);
@@ -616,9 +634,9 @@ export class IdeologyManager {
       convictionPressure = { growth: false, rate: 0 };
     } else {
       const neighborFactionPressure =
-        primaryFaction === "earth"
+        primaryFaction === NPCFaction.EarthLoyalists
           ? avgInfluence.earthLoyalist
-          : primaryFaction === "mars"
+          : primaryFaction === NPCFaction.MarsIndependence
             ? avgInfluence.marsIndependence
             : avgInfluence.corporateInterests;
 
@@ -759,7 +777,10 @@ export class IdeologyManager {
     // Find the colonist
     const colonist = colonists.find((c) => c.id === colonistId);
     if (!colonist || !colonist.ideology) {
-      return { success: false, reason: "Colonist not found or has no ideology" };
+      return {
+        success: false,
+        reason: "Colonist not found or has no ideology",
+      };
     }
 
     // Apply the affinity boost
@@ -947,7 +968,10 @@ export class IdeologyManager {
    * Check if a capstone project can be proposed.
    * Requires all prerequisites passed AND sufficient council support.
    */
-  canProposeCapstone(faction: NPCFaction): { canPropose: boolean; reason?: string } {
+  canProposeCapstone(faction: NPCFaction): {
+    canPropose: boolean;
+    reason?: string;
+  } {
     // Find the capstone for this faction
     const factionProjects = getProjectsByFaction(faction);
     const capstone = factionProjects.find((p) => p.isCapstone);
