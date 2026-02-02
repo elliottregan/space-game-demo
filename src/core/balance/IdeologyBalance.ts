@@ -7,10 +7,10 @@
 // ============ Ideology Spread ============
 
 /** Rate at which ideology drifts toward neighbors per spread tick */
-export const IDEOLOGY_SPREAD_RATE = 0.02;
+export const IDEOLOGY_SPREAD_RATE = 0.04;
 
 /** Sols between ideology propagation ticks */
-export const IDEOLOGY_SPREAD_INTERVAL = 5;
+export const IDEOLOGY_SPREAD_INTERVAL = 1;
 
 /** How much conviction reduces influence susceptibility (0-1) */
 export const CONVICTION_RESISTANCE_FACTOR = 0.8;
