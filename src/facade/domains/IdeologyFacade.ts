@@ -66,6 +66,8 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
         return support.marsIndependence;
       case "corporate_interests":
         return support.corporateInterests;
+      default:
+        return 0;
     }
   }
 
@@ -229,6 +231,32 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
    */
   getCompletedProjects(): readonly ProjectId[] {
     return this.gameState.ideology.getCompletedProjects();
+  }
+
+  // ============ Ideological Pressure ============
+
+  /**
+   * Get the ideological pressure a colonist experiences from their neighbors.
+   * Returns the weighted average ideology neighbors are pushing toward,
+   * along with pressure strength and conviction growth/decay rate.
+   */
+  getIdeologicalPressure(colonistId: string): {
+    pressure: { earthLoyalist: number; marsIndependence: number; corporateInterests: number };
+    totalWeight: number;
+    neighborCount: number;
+    convictionPressure: { growth: boolean; rate: number };
+  } | null {
+    const colonist = this.gameState.colony.getColonists().find((c) => c.id === colonistId);
+    if (!colonist) return null;
+
+    const colonists = this.gameState.colony.getColonists();
+    const relationshipManager = this.gameState.workforce.getRelationshipManager();
+
+    return this.gameState.ideology.calculateIdeologicalPressure(
+      colonist,
+      colonists,
+      relationshipManager,
+    );
   }
 
   // ============ Lobbying ============

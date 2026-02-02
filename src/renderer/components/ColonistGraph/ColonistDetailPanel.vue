@@ -16,11 +16,19 @@ interface BuildingInfo {
   assignedWorkers: string[];
 }
 
+interface IdeologicalPressure {
+  pressure: { earthLoyalist: number; marsIndependence: number; corporateInterests: number };
+  totalWeight: number;
+  neighborCount: number;
+  convictionPressure: { growth: boolean; rate: number };
+}
+
 interface Props {
   colonist: Colonist;
   colonists: Colonist[];
   relationships: Map<string, CoworkerRelationship>;
   buildings: BuildingInfo[];
+  ideologicalPressure?: IdeologicalPressure | null;
 }
 
 const props = defineProps<Props>();
@@ -125,6 +133,62 @@ const ideologyData = computed<IdeologyDisplay[]>(() => {
 const convictionLevel = computed(() => {
   return props.colonist.ideology?.conviction ?? 0;
 });
+
+// Ideological pressure display data
+interface PressureDisplay {
+  label: string;
+  currentValue: number;
+  pressureValue: number;
+  delta: number;
+  cssClass: string;
+}
+
+const pressureData = computed<PressureDisplay[]>(() => {
+  const ideology = props.colonist.ideology;
+  const pressure = props.ideologicalPressure;
+  if (!ideology || !pressure || pressure.neighborCount === 0) return [];
+
+  return [
+    {
+      label: "Earth",
+      currentValue: ideology.earthLoyalist,
+      pressureValue: pressure.pressure.earthLoyalist,
+      delta: pressure.pressure.earthLoyalist - ideology.earthLoyalist,
+      cssClass: "earth",
+    },
+    {
+      label: "Mars",
+      currentValue: ideology.marsIndependence,
+      pressureValue: pressure.pressure.marsIndependence,
+      delta: pressure.pressure.marsIndependence - ideology.marsIndependence,
+      cssClass: "mars",
+    },
+    {
+      label: "Corporate",
+      currentValue: ideology.corporateInterests,
+      pressureValue: pressure.pressure.corporateInterests,
+      delta: pressure.pressure.corporateInterests - ideology.corporateInterests,
+      cssClass: "corporate",
+    },
+  ];
+});
+
+const convictionPressureText = computed(() => {
+  const pressure = props.ideologicalPressure;
+  if (!pressure || pressure.neighborCount === 0) return null;
+
+  const { growth, rate } = pressure.convictionPressure;
+  if (rate === 0) return null;
+
+  const ratePercent = (rate * 100).toFixed(1);
+  return growth ? `+${ratePercent}%/tick` : `-${ratePercent}%/tick`;
+});
+
+function formatDelta(delta: number): string {
+  if (Math.abs(delta) < 0.01) return "";
+  const sign = delta > 0 ? "+" : "";
+  return `${sign}${(delta * 100).toFixed(0)}%`;
+}
 </script>
 
 <template>
@@ -173,6 +237,39 @@ const convictionLevel = computed(() => {
             </div>
             <span class="ideology-value">{{ formatStrength(convictionLevel) }}</span>
           </div>
+        </div>
+      </div>
+
+      <!-- Ideological Pressure -->
+      <div v-if="pressureData.length > 0" class="pressure-section">
+        <div class="pressure-header">
+          <span class="pressure-title">Neighbor Pressure</span>
+          <span class="pressure-count">({{ ideologicalPressure?.neighborCount }} neighbors)</span>
+        </div>
+        <div class="pressure-list">
+          <div v-for="p in pressureData" :key="p.label" class="pressure-row">
+            <span class="pressure-label">{{ p.label }}</span>
+            <div class="pressure-indicator">
+              <span
+                v-if="p.delta !== 0"
+                :class="['pressure-delta', p.delta > 0 ? 'positive' : 'negative']"
+              >
+                {{ formatDelta(p.delta) }}
+              </span>
+              <span v-else class="pressure-delta neutral">-</span>
+            </div>
+          </div>
+        </div>
+        <div v-if="convictionPressureText" class="conviction-pressure">
+          <span class="pressure-label">Conviction</span>
+          <span
+            :class="[
+              'pressure-delta',
+              ideologicalPressure?.convictionPressure.growth ? 'positive' : 'negative',
+            ]"
+          >
+            {{ convictionPressureText }}
+          </span>
         </div>
       </div>
     </div>
@@ -536,5 +633,81 @@ const convictionLevel = computed(() => {
   margin-top: var(--g-space-xs);
   padding-top: var(--g-space-xs);
   border-top: 1px solid var(--g-color-border);
+}
+
+/* Pressure styles */
+.pressure-section {
+  margin-top: var(--g-space-xs);
+  padding-top: var(--g-space-xs);
+  border-top: 1px dashed var(--g-color-border);
+}
+
+.pressure-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--g-space-xs);
+  margin-bottom: var(--g-space-xs);
+}
+
+.pressure-title {
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  font-weight: bold;
+}
+
+.pressure-count {
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+}
+
+.pressure-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pressure-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pressure-label {
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+}
+
+.pressure-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-xs);
+}
+
+.pressure-delta {
+  font-size: var(--g-font-size-xs);
+  font-family: var(--g-font-mono);
+  min-width: 40px;
+  text-align: right;
+}
+
+.pressure-delta.positive {
+  color: var(--g-color-positive);
+}
+
+.pressure-delta.negative {
+  color: var(--g-color-danger);
+}
+
+.pressure-delta.neutral {
+  color: var(--g-color-text-muted);
+}
+
+.conviction-pressure {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--g-space-xs);
+  padding-top: var(--g-space-xs);
+  border-top: 1px dotted var(--g-color-border);
 }
 </style>

@@ -7,7 +7,7 @@
 // ============ Ideology Spread ============
 
 /** Rate at which ideology drifts toward neighbors per spread tick */
-export const IDEOLOGY_SPREAD_RATE = 0.005;
+export const IDEOLOGY_SPREAD_RATE = 0.02;
 
 /** Sols between ideology propagation ticks */
 export const IDEOLOGY_SPREAD_INTERVAL = 5;
@@ -22,7 +22,7 @@ export const CONVICTION_RESISTANCE_FACTOR = 0.8;
  * closely-bonded groups maintain distinct beliefs.
  * Set to 0 to disable threshold (all connections spread ideology).
  */
-export const IDEOLOGY_SPREAD_CONNECTION_THRESHOLD = 0.5;
+export const IDEOLOGY_SPREAD_CONNECTION_THRESHOLD = 0.2;
 
 /** Affinity threshold below which colonist is considered "neutral" */
 export const IDEOLOGY_NEUTRAL_THRESHOLD = 0.3;
@@ -109,6 +109,20 @@ export const IDEOLOGY_IMPRINTING_STRENGTH = 0.7;
  * New colonists only adopt ideology from strong connections (e.g., housemates).
  */
 export const IDEOLOGY_IMPRINTING_THRESHOLD = 0.3;
+
+// ============ Conviction Evolution ============
+
+/** Rate at which conviction grows when surrounded by like-minded colonists (per propagation tick) */
+export const CONVICTION_GROWTH_RATE = 0.02;
+
+/** Rate at which conviction decays when isolated from faction (per propagation tick) */
+export const CONVICTION_DECAY_RATE = 0.005;
+
+/** Minimum conviction floor - some baseline conviction always remains */
+export const CONVICTION_MIN = 0.1;
+
+/** Maximum conviction ceiling - never fully certain */
+export const CONVICTION_MAX = 0.95;
 
 // ============ Lobbying ============
 

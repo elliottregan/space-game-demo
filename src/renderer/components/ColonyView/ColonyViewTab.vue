@@ -47,6 +47,12 @@ const selectedColonist = computed(() => {
   return state.colonists.find((c) => c.id === selectedColonistId.value) ?? null;
 });
 
+// Get ideological pressure for selected colonist
+const selectedColonistPressure = computed(() => {
+  if (!selectedColonistId.value) return null;
+  return gameService.api.ideology.getIdeologicalPressure(selectedColonistId.value);
+});
+
 // Prepare building info for the graph
 const buildingsForGraph = computed(() =>
   state.buildings.map((b) => ({
@@ -83,6 +89,7 @@ const buildingsForGraph = computed(() =>
           :colonists="state.colonists"
           :relationships="state.coworkerRelationships"
           :buildings="buildingsForGraph"
+          :ideological-pressure="selectedColonistPressure"
         />
       </div>
     </GPanel>

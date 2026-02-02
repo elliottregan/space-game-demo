@@ -431,6 +431,203 @@ export class IdeologyManager {
         Math.min(1, colonist.ideology!.corporateInterests),
       );
     }
+
+    // Evolve conviction after ideology spread
+    this.evolveConviction(ideologicalColonists, relationshipManager);
+  }
+
+  /**
+   * Evolve conviction based on social reinforcement.
+   * Conviction grows when surrounded by like-minded colonists and
+   * decays when isolated from one's faction.
+   */
+  private evolveConviction(colonists: Colonist[], relationshipManager: RelationshipManager): void {
+    for (const colonist of colonists) {
+      if (!colonist.ideology) continue;
+
+      const primaryFaction = IdeologyManager.getPrimaryFaction(colonist.ideology);
+      if (!primaryFaction) {
+        // Neutral colonists don't evolve conviction
+        continue;
+      }
+
+      const neighbors = relationshipManager.getNeighbors(colonist.id);
+      if (neighbors.size === 0) {
+        // Isolated colonists decay toward minimum
+        colonist.ideology.conviction = Math.max(
+          IdeologyBalance.CONVICTION_MIN,
+          colonist.ideology.conviction - IdeologyBalance.CONVICTION_DECAY_RATE,
+        );
+        continue;
+      }
+
+      // Count matching neighbors and calculate their average conviction
+      let matchingCount = 0;
+      let matchingConvictionSum = 0;
+      let totalStrongNeighbors = 0;
+
+      for (const neighborId of neighbors) {
+        const relationshipStrength = relationshipManager.getRelationshipStrength(
+          colonist.id,
+          neighborId,
+        );
+
+        // Only consider strong connections
+        if (relationshipStrength < IdeologyBalance.IDEOLOGY_SPREAD_CONNECTION_THRESHOLD) {
+          continue;
+        }
+
+        totalStrongNeighbors++;
+
+        // Find neighbor's ideology
+        const neighbor = colonists.find((c) => c.id === neighborId);
+        if (!neighbor?.ideology) continue;
+
+        const neighborFaction = IdeologyManager.getPrimaryFaction(neighbor.ideology);
+        if (neighborFaction === primaryFaction) {
+          matchingCount++;
+          matchingConvictionSum += neighbor.ideology.conviction;
+        }
+      }
+
+      if (totalStrongNeighbors === 0) {
+        // No strong connections, decay
+        colonist.ideology.conviction = Math.max(
+          IdeologyBalance.CONVICTION_MIN,
+          colonist.ideology.conviction - IdeologyBalance.CONVICTION_DECAY_RATE,
+        );
+        continue;
+      }
+
+      const matchRatio = matchingCount / totalStrongNeighbors;
+
+      if (matchRatio > 0.5) {
+        // Majority match - conviction grows
+        const avgNeighborConviction = matchingCount > 0 ? matchingConvictionSum / matchingCount : 0;
+        const growth = IdeologyBalance.CONVICTION_GROWTH_RATE * avgNeighborConviction * matchRatio;
+        colonist.ideology.conviction = Math.min(
+          IdeologyBalance.CONVICTION_MAX,
+          colonist.ideology.conviction + growth,
+        );
+      } else {
+        // Minority match - conviction decays
+        const decay = IdeologyBalance.CONVICTION_DECAY_RATE * (1 - matchRatio);
+        colonist.ideology.conviction = Math.max(
+          IdeologyBalance.CONVICTION_MIN,
+          colonist.ideology.conviction - decay,
+        );
+      }
+    }
+  }
+
+  // ============ Ideological Pressure ============
+
+  /**
+   * Calculate the ideological pressure a colonist experiences from their neighbors.
+   * Returns the weighted average ideology neighbors are pushing toward,
+   * along with the total pressure strength.
+   */
+  calculateIdeologicalPressure(
+    colonist: Colonist,
+    colonists: Colonist[],
+    relationshipManager: RelationshipManager,
+  ): {
+    pressure: { earthLoyalist: number; marsIndependence: number; corporateInterests: number };
+    totalWeight: number;
+    neighborCount: number;
+    convictionPressure: { growth: boolean; rate: number };
+  } | null {
+    if (!colonist.ideology) return null;
+
+    const neighbors = relationshipManager.getNeighbors(colonist.id);
+    if (neighbors.size === 0) {
+      return {
+        pressure: { earthLoyalist: 0, marsIndependence: 0, corporateInterests: 0 },
+        totalWeight: 0,
+        neighborCount: 0,
+        convictionPressure: { growth: false, rate: IdeologyBalance.CONVICTION_DECAY_RATE },
+      };
+    }
+
+    const colonistMap = new Map(colonists.map((c) => [c.id, c]));
+    const primaryFaction = IdeologyManager.getPrimaryFaction(colonist.ideology);
+
+    let totalWeight = 0;
+    let neighborCount = 0;
+    let matchingCount = 0;
+    let matchingConvictionSum = 0;
+    const avgInfluence = { earthLoyalist: 0, marsIndependence: 0, corporateInterests: 0 };
+
+    for (const neighborId of neighbors) {
+      const neighbor = colonistMap.get(neighborId);
+      if (!neighbor?.ideology) continue;
+
+      const relationshipStrength = relationshipManager.getRelationshipStrength(
+        colonist.id,
+        neighborId,
+      );
+
+      // Skip weak connections
+      if (relationshipStrength < IdeologyBalance.IDEOLOGY_SPREAD_CONNECTION_THRESHOLD) {
+        continue;
+      }
+
+      neighborCount++;
+
+      const neighborCentrality = relationshipManager.getCentrality(neighborId);
+      const neighborConviction = neighbor.ideology.conviction;
+
+      // Weight = relationship × (centrality + baseline) × conviction
+      const weight = relationshipStrength * (neighborCentrality + 0.1) * neighborConviction;
+      totalWeight += weight;
+
+      avgInfluence.earthLoyalist += weight * neighbor.ideology.earthLoyalist;
+      avgInfluence.marsIndependence += weight * neighbor.ideology.marsIndependence;
+      avgInfluence.corporateInterests += weight * neighbor.ideology.corporateInterests;
+
+      // Track faction matching for conviction pressure
+      if (primaryFaction) {
+        const neighborFaction = IdeologyManager.getPrimaryFaction(neighbor.ideology);
+        if (neighborFaction === primaryFaction) {
+          matchingCount++;
+          matchingConvictionSum += neighbor.ideology.conviction;
+        }
+      }
+    }
+
+    // Normalize
+    if (totalWeight > 0) {
+      avgInfluence.earthLoyalist /= totalWeight;
+      avgInfluence.marsIndependence /= totalWeight;
+      avgInfluence.corporateInterests /= totalWeight;
+    }
+
+    // Calculate conviction pressure
+    let convictionPressure: { growth: boolean; rate: number };
+    if (!primaryFaction || neighborCount === 0) {
+      convictionPressure = { growth: false, rate: 0 };
+    } else {
+      const matchRatio = matchingCount / neighborCount;
+      if (matchRatio > 0.5) {
+        const avgNeighborConviction = matchingCount > 0 ? matchingConvictionSum / matchingCount : 0;
+        convictionPressure = {
+          growth: true,
+          rate: IdeologyBalance.CONVICTION_GROWTH_RATE * avgNeighborConviction * matchRatio,
+        };
+      } else {
+        convictionPressure = {
+          growth: false,
+          rate: IdeologyBalance.CONVICTION_DECAY_RATE * (1 - matchRatio),
+        };
+      }
+    }
+
+    return {
+      pressure: avgInfluence,
+      totalWeight,
+      neighborCount,
+      convictionPressure,
+    };
   }
 
   // ============ Project Morale Effects ============
