@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import type {
   Building,
   BuildingDefinition,
@@ -8,6 +8,8 @@ import type {
   SkillDefinition,
 } from "../../../facade";
 import WorkerSlot from "./WorkerSlot.vue";
+
+const isDragOver = ref(false);
 
 const props = defineProps<{
   building: Building;
@@ -74,8 +76,27 @@ function formatResourceDelta(delta: Record<string, number> | undefined): string 
     .join(", ");
 }
 
-function onDrop(colonistId: string) {
-  emit("assign", colonistId, props.building.id);
+function onDragOver(e: DragEvent) {
+  if (isValidDropTarget.value) {
+    e.preventDefault();
+    isDragOver.value = true;
+  }
+}
+
+function onDragLeave(e: DragEvent) {
+  // Only set to false if we're leaving the building card, not entering a child
+  const relatedTarget = e.relatedTarget as Node | null;
+  if (!relatedTarget || !e.currentTarget || !(e.currentTarget as Node).contains(relatedTarget)) {
+    isDragOver.value = false;
+  }
+}
+
+function onDrop(e: DragEvent) {
+  isDragOver.value = false;
+  const colonistId = e.dataTransfer?.getData("text/plain");
+  if (colonistId && isValidDropTarget.value) {
+    emit("assign", colonistId, props.building.id);
+  }
 }
 
 function onUnassign(colonistId: string) {
@@ -88,9 +109,13 @@ function onUnassign(colonistId: string) {
     class="building-card"
     :class="{
       'has-bonus': skillBonus !== null,
-      'valid-target': isValidDropTarget,
+      'valid-target': isValidDropTarget && isDragActive,
+      'drag-over': isDragOver,
       full: emptySlots === 0,
     }"
+    @dragover="onDragOver"
+    @dragleave="onDragLeave"
+    @drop="onDrop"
   >
     <div class="building-header">
       <span class="building-name">{{ definition.name }} #{{ building.id.split("_").pop() }}</span>
@@ -120,9 +145,8 @@ function onUnassign(colonistId: string) {
         :key="'empty-' + i"
         :skill-definitions="skillDefinitions"
         :worker-role="definition.workerRole || ''"
-        :is-valid-drop="isValidDropTarget"
+        :is-valid-drop="false"
         :is-drag-active="isDragActive"
-        @drop="onDrop"
       />
     </div>
   </div>
@@ -143,6 +167,17 @@ function onUnassign(colonistId: string) {
 
 .building-card.full {
   opacity: 0.7;
+}
+
+.building-card.valid-target {
+  border-color: var(--g-color-positive);
+  background: rgba(67, 160, 71, 0.05);
+}
+
+.building-card.drag-over {
+  border-color: var(--g-accent-cyan);
+  background: rgba(0, 188, 212, 0.1);
+  box-shadow: 0 0 0 2px var(--g-accent-cyan);
 }
 
 .building-header {

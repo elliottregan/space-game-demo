@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { BuildingPurpose } from "../../../core/models/Building";
 import type { BuildingDefinition } from "../../../facade";
 import { clearHighlights, highlightResources } from "../../directives/ResourceHighlight";
 import { gameService } from "../../services/GameService";
@@ -15,11 +16,13 @@ const state = gameService.getState();
 // Domain API for commands and one-off queries
 const api = gameService.api;
 
-const selectedCategory = ref<"all" | "available" | "built" | "recreation">("available");
+const selectedCategory = ref<BuildingPurpose>(BuildingPurpose.Industrial);
 
 // Computed properties use reactive state for proper Vue reactivity
 const availableBuildings = computed(() => {
   return state.buildingDefinitions.filter((def) => {
+    // Filter out victory buildings
+    if (def.isVictoryBuilding) return false;
     if (def.requiredTech) {
       return api.technology.isResearched(def.requiredTech);
     }
@@ -29,24 +32,24 @@ const availableBuildings = computed(() => {
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const filteredBuildings = computed(() => {
-  switch (selectedCategory.value) {
-    case "available":
-      return availableBuildings.value;
-    case "built":
-      return state.buildingDefinitions.filter(
-        (def) =>
-          state.buildings.some((b) => b.definitionId === def.id) ||
-          state.pendingBuildings.some((b) => b.definitionId === def.id),
-      );
-    case "recreation":
-      return availableBuildings.value.filter((def) => def.moraleBoost !== undefined);
-    default:
-      return state.buildingDefinitions;
-  }
+  return availableBuildings.value.filter(
+    (def) => (def.purpose || BuildingPurpose.Industrial) === selectedCategory.value,
+  );
 });
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-const activeBuildings = computed(() => state.buildings);
+const countsByPurpose = computed(() => {
+  const counts: Record<BuildingPurpose, number> = {
+    [BuildingPurpose.Residential]: 0,
+    [BuildingPurpose.Industrial]: 0,
+    [BuildingPurpose.Social]: 0,
+  };
+  for (const def of availableBuildings.value) {
+    const purpose = def.purpose || BuildingPurpose.Industrial;
+    counts[purpose]++;
+  }
+  return counts;
+});
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
 const pendingBuildings = computed(() => state.pendingBuildings);
@@ -123,7 +126,7 @@ function getConstructionTime(definitionId: string): number {
   <GPanel title="Buildings" accent="amber">
     <CategoryTabs
       :selected-category="selectedCategory"
-      :active-count="activeBuildings.length"
+      :counts="countsByPurpose"
       @update:selected-category="selectedCategory = $event"
     />
 

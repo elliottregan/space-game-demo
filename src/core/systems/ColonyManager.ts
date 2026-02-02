@@ -486,7 +486,12 @@ export class ColonyManager {
   assignHousing(buildingManager: BuildingManager): void {
     const habitats = buildingManager.getBuildings().filter((b) => {
       const def = buildingManager.getDefinition(b.definitionId);
-      return def?.capacity && def.capacity > 0 && b.status === "active";
+      return (
+        def?.capacity &&
+        def.capacity > 0 &&
+        def.purpose === BuildingPurpose.Residential &&
+        b.status === "active"
+      );
     });
 
     // Clear housing for colonists in non-existent or inactive habitats
