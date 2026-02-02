@@ -1,6 +1,7 @@
 // tests/BuildingsFacade.test.ts
 import { describe, it, expect, beforeEach } from "bun:test";
 import { BuildingId } from "../src/core/models/Building";
+import { TechnologyId } from "../src/core/models/Technology";
 import { GameAPI } from "../src/facade";
 
 describe("BuildingsFacade", () => {
@@ -26,6 +27,16 @@ describe("BuildingsFacade", () => {
     if (!building) return;
     for (const colonistId of [...building.assignedWorkers]) {
       api.colony.unassignFromBuilding(colonistId);
+    }
+  };
+
+  // Helper to research all prerequisites for a technology
+  const researchTech = (techId: TechnologyId) => {
+    // Queue research (automatically includes prerequisites)
+    api.technology.queueResearch(techId);
+    // Advance time until research is complete
+    while (!api.technology.isResearched(techId)) {
+      api.game.advanceSol();
     }
   };
 
@@ -173,18 +184,21 @@ describe("BuildingsFacade", () => {
   // ==========================================================================
   describe("Repurpose Operations", () => {
     it("canRepurpose returns true for valid target", () => {
+      // Research required tech for MINING_STATION first
+      researchTech(TechnologyId.ASTEROID_MINING);
+
       const buildingId = buildAndComplete(BuildingId.WATER_EXTRACTOR);
       expect(buildingId).not.toBeNull();
 
       // Must unassign workers before repurposing
       unassignAllWorkers(buildingId!);
 
-      const result = api.buildings.canRepurpose(buildingId!, BuildingId.STORAGE_DEPOT);
+      const result = api.buildings.canRepurpose(buildingId!, BuildingId.MINING_STATION);
       expect(result.allowed).toBe(true);
     });
 
     it("canRepurpose returns false when not found", () => {
-      const result = api.buildings.canRepurpose("nonexistent_building", BuildingId.STORAGE_DEPOT);
+      const result = api.buildings.canRepurpose("nonexistent_building", BuildingId.HABITAT);
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain("not found");
     });
@@ -210,17 +224,20 @@ describe("BuildingsFacade", () => {
     });
 
     it("repurpose starts repurposing", () => {
+      // Research required tech for MINING_STATION first
+      researchTech(TechnologyId.ASTEROID_MINING);
+
       const buildingId = buildAndComplete(BuildingId.WATER_EXTRACTOR);
       expect(buildingId).not.toBeNull();
 
       // Must unassign workers before repurposing
       unassignAllWorkers(buildingId!);
 
-      const result = api.buildings.repurpose(buildingId!, BuildingId.STORAGE_DEPOT);
+      const result = api.buildings.repurpose(buildingId!, BuildingId.MINING_STATION);
       expect(result.success).toBe(true);
 
       const building = api.buildings.getById(buildingId!);
-      expect(building?.definitionId).toBe(BuildingId.STORAGE_DEPOT);
+      expect(building?.definitionId).toBe(BuildingId.MINING_STATION);
       expect(building?.status).toBe("pending");
     });
 
@@ -304,6 +321,9 @@ describe("BuildingsFacade", () => {
     });
 
     it("routes repurpose action to canRepurpose", () => {
+      // Research required tech for MINING_STATION first
+      researchTech(TechnologyId.ASTEROID_MINING);
+
       const buildingId = buildAndComplete(BuildingId.WATER_EXTRACTOR);
       expect(buildingId).not.toBeNull();
 
@@ -313,7 +333,7 @@ describe("BuildingsFacade", () => {
       const result = api.buildings.canDo({
         action: "repurpose",
         buildingId: buildingId!,
-        targetDefId: BuildingId.STORAGE_DEPOT,
+        targetDefId: BuildingId.MINING_STATION,
       });
       expect(result.allowed).toBe(true);
     });
@@ -343,7 +363,7 @@ describe("BuildingsFacade", () => {
   // ==========================================================================
   describe("getRepurposeCost()", () => {
     it("returns cost for valid target", () => {
-      const cost = api.buildings.getRepurposeCost(BuildingId.STORAGE_DEPOT);
+      const cost = api.buildings.getRepurposeCost(BuildingId.MINING_STATION);
       expect(cost).toBeDefined();
       expect(cost?.materials).toBeGreaterThan(0);
     });

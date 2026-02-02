@@ -292,7 +292,19 @@ describe("Building Repurposing", () => {
       food: 100,
       water: 100,
     });
-    const tech = new TechnologyTree(TECHNOLOGIES);
+    // Use fromJSON to pre-research required technologies for mining_station
+    const tech = TechnologyTree.fromJSON(
+      {
+        researched: [
+          TechnologyId.ADVANCED_MATERIALS,
+          TechnologyId.ROBOTICS,
+          TechnologyId.ASTEROID_MINING,
+        ],
+        currentResearch: null,
+        researchSpeedBonus: 0,
+      },
+      TECHNOLOGIES,
+    );
 
     const building = manager.startBuilding(BuildingId.WATER_EXTRACTOR, resources, tech);
 
@@ -303,7 +315,7 @@ describe("Building Repurposing", () => {
 
     const canRepurpose = manager.canRepurpose(
       building!.id,
-      BuildingId.STORAGE_DEPOT,
+      BuildingId.MINING_STATION,
       resources,
       tech,
     );
@@ -328,12 +340,7 @@ describe("Building Repurposing", () => {
     }
 
     // Solar panel has no repurposeTargets
-    const canRepurpose = manager.canRepurpose(
-      building!.id,
-      BuildingId.STORAGE_DEPOT,
-      resources,
-      tech,
-    );
+    const canRepurpose = manager.canRepurpose(building!.id, BuildingId.HABITAT, resources, tech);
     expect(canRepurpose).toBe(false);
   });
 
@@ -373,7 +380,7 @@ describe("Building Repurposing", () => {
 
     const canRepurpose = manager.canRepurpose(
       building!.id,
-      BuildingId.STORAGE_DEPOT,
+      BuildingId.WATER_EXTRACTOR,
       resources,
       tech,
     );
@@ -388,7 +395,19 @@ describe("Building Repurposing", () => {
       food: 100,
       water: 100,
     });
-    const tech = new TechnologyTree(TECHNOLOGIES);
+    // Use fromJSON to pre-research required technologies for mining_station
+    const tech = TechnologyTree.fromJSON(
+      {
+        researched: [
+          TechnologyId.ADVANCED_MATERIALS,
+          TechnologyId.ROBOTICS,
+          TechnologyId.ASTEROID_MINING,
+        ],
+        currentResearch: null,
+        researchSpeedBonus: 0,
+      },
+      TECHNOLOGIES,
+    );
 
     const building = manager.startBuilding(BuildingId.WATER_EXTRACTOR, resources, tech);
 
@@ -400,7 +419,7 @@ describe("Building Repurposing", () => {
     const materialsBefore = resources.getResources().materials;
     const success = manager.startRepurposing(
       building!.id,
-      BuildingId.STORAGE_DEPOT,
+      BuildingId.MINING_STATION,
       resources,
       tech,
     );
@@ -410,7 +429,7 @@ describe("Building Repurposing", () => {
 
     const updatedBuilding = manager.getBuilding(building!.id);
     expect(updatedBuilding?.status).toBe("pending"); // Back to pending while converting
-    expect(updatedBuilding?.definitionId).toBe(BuildingId.STORAGE_DEPOT); // Changed to target
+    expect(updatedBuilding?.definitionId).toBe(BuildingId.MINING_STATION); // Changed to target
     expect(updatedBuilding?.repurposeFromDefId).toBe(BuildingId.WATER_EXTRACTOR); // Tracks original
   });
 
@@ -422,7 +441,19 @@ describe("Building Repurposing", () => {
       food: 100,
       water: 100,
     });
-    const tech = new TechnologyTree(TECHNOLOGIES);
+    // Use fromJSON to pre-research required technologies for mining_station
+    const tech = TechnologyTree.fromJSON(
+      {
+        researched: [
+          TechnologyId.ADVANCED_MATERIALS,
+          TechnologyId.ROBOTICS,
+          TechnologyId.ASTEROID_MINING,
+        ],
+        currentResearch: null,
+        researchSpeedBonus: 0,
+      },
+      TECHNOLOGIES,
+    );
 
     const building = manager.startBuilding(BuildingId.WATER_EXTRACTOR, resources, tech);
 
@@ -431,30 +462,30 @@ describe("Building Repurposing", () => {
       manager.tick(resources);
     }
 
-    manager.startRepurposing(building!.id, BuildingId.STORAGE_DEPOT, resources, tech);
+    manager.startRepurposing(building!.id, BuildingId.MINING_STATION, resources, tech);
 
-    // storage_depot takes 8 sols, repurpose time = 50% = 4 sols
-    // So it should complete after 4 ticks
-    for (let i = 0; i < 3; i++) {
+    // mining_station takes 40 sols, repurpose time = 50% = 20 sols
+    // So it should complete after 20 ticks
+    for (let i = 0; i < 19; i++) {
       manager.tick(resources);
     }
 
     let updatedBuilding = manager.getBuilding(building!.id);
-    expect(updatedBuilding?.status).toBe("pending"); // Still pending after 3
+    expect(updatedBuilding?.status).toBe("pending"); // Still pending after 19
 
-    manager.tick(resources); // 4th tick
+    manager.tick(resources); // 20th tick
 
     updatedBuilding = manager.getBuilding(building!.id);
-    expect(updatedBuilding?.status).toBe("active"); // Complete after 4
+    expect(updatedBuilding?.status).toBe("active"); // Complete after 20
     expect(updatedBuilding?.repurposeFromDefId).toBeUndefined(); // Flag cleared
   });
 
   test("getRepurposeCost returns 30% of target cost", () => {
     const manager = new BuildingManager(BUILDINGS);
 
-    // storage_depot costs 40 materials, 30% = 12
-    const cost = manager.getRepurposeCost(BuildingId.STORAGE_DEPOT);
-    expect(cost?.materials).toBe(12);
+    // mining_station costs 300 materials, 30% = 90
+    const cost = manager.getRepurposeCost(BuildingId.MINING_STATION);
+    expect(cost?.materials).toBe(90);
   });
 
   test("startRepurposing changes building status to pending", () => {
@@ -465,7 +496,19 @@ describe("Building Repurposing", () => {
       food: 100,
       water: 100,
     });
-    const tech = new TechnologyTree(TECHNOLOGIES);
+    // Use fromJSON to pre-research required technologies for mining_station
+    const tech = TechnologyTree.fromJSON(
+      {
+        researched: [
+          TechnologyId.ADVANCED_MATERIALS,
+          TechnologyId.ROBOTICS,
+          TechnologyId.ASTEROID_MINING,
+        ],
+        currentResearch: null,
+        researchSpeedBonus: 0,
+      },
+      TECHNOLOGIES,
+    );
 
     const building = manager.startBuilding(BuildingId.WATER_EXTRACTOR, resources, tech);
 
@@ -477,12 +520,12 @@ describe("Building Repurposing", () => {
     // Building should be active
     expect(manager.getBuilding(building!.id)?.status).toBe("active");
 
-    manager.startRepurposing(building!.id, BuildingId.STORAGE_DEPOT, resources, tech);
+    manager.startRepurposing(building!.id, BuildingId.MINING_STATION, resources, tech);
 
     // Building status should change to pending during conversion
     expect(manager.getBuilding(building!.id)?.status).toBe("pending");
     // Definition should be updated to target
-    expect(manager.getBuilding(building!.id)?.definitionId).toBe(BuildingId.STORAGE_DEPOT);
+    expect(manager.getBuilding(building!.id)?.definitionId).toBe(BuildingId.MINING_STATION);
   });
 
   test("canRepurpose returns false for broken buildings", () => {
@@ -493,7 +536,19 @@ describe("Building Repurposing", () => {
       food: 100,
       water: 100,
     });
-    const tech = new TechnologyTree(TECHNOLOGIES);
+    // Use fromJSON to pre-research required technologies for mining_station
+    const tech = TechnologyTree.fromJSON(
+      {
+        researched: [
+          TechnologyId.ADVANCED_MATERIALS,
+          TechnologyId.ROBOTICS,
+          TechnologyId.ASTEROID_MINING,
+        ],
+        currentResearch: null,
+        researchSpeedBonus: 0,
+      },
+      TECHNOLOGIES,
+    );
 
     const building = manager.startBuilding(BuildingId.WATER_EXTRACTOR, resources, tech);
 
@@ -508,7 +563,7 @@ describe("Building Repurposing", () => {
     // Cannot repurpose broken buildings
     const canRepurpose = manager.canRepurpose(
       building!.id,
-      BuildingId.STORAGE_DEPOT,
+      BuildingId.MINING_STATION,
       resources,
       tech,
     );
@@ -523,7 +578,19 @@ describe("Building Repurposing", () => {
       food: 100,
       water: 100,
     });
-    const tech = new TechnologyTree(TECHNOLOGIES);
+    // Use fromJSON to pre-research required technologies for mining_station
+    const tech = TechnologyTree.fromJSON(
+      {
+        researched: [
+          TechnologyId.ADVANCED_MATERIALS,
+          TechnologyId.ROBOTICS,
+          TechnologyId.ASTEROID_MINING,
+        ],
+        currentResearch: null,
+        researchSpeedBonus: 0,
+      },
+      TECHNOLOGIES,
+    );
 
     const building = manager.startBuilding(BuildingId.WATER_EXTRACTOR, resources, tech);
 
@@ -538,7 +605,7 @@ describe("Building Repurposing", () => {
 
     expect(manager.getBuilding(building!.id)?.depositId).toBe("site_123");
 
-    manager.startRepurposing(building!.id, BuildingId.STORAGE_DEPOT, resources, tech);
+    manager.startRepurposing(building!.id, BuildingId.MINING_STATION, resources, tech);
 
     // depositId should be cleared during repurposing
     const updatedBuilding = manager.getBuilding(building!.id);
