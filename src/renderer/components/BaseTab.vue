@@ -7,6 +7,7 @@ import BaseGrid from "./BaseGrid/BaseGrid.vue";
 import BuildingContextMenu from "./BaseGrid/BuildingContextMenu.vue";
 import BuildingStatsCard from "./BaseGrid/BuildingStatsCard.vue";
 import BuildingIconDefs from "./BaseGrid/BuildingIconDefs.vue";
+import ColonyNeedsPanel from "./BaseGrid/ColonyNeedsPanel.vue";
 
 const state = computed(() => gameService.getState());
 
@@ -171,15 +172,19 @@ const placementHints = computed(() => ({
       </div>
     </header>
 
-    <div class="grid-container">
-      <BaseGrid
-        :buildings="gridBuildings"
-        :deposits="gridDeposits"
-        :selected-position="selectedPosition"
-        :selected-building-def-id="pendingBuildingDefId"
-        @cell-click="handleCellClick"
-        @cell-hover="handleCellHover"
-      />
+    <div class="base-content">
+      <ColonyNeedsPanel />
+
+      <div class="grid-container">
+        <BaseGrid
+          :buildings="gridBuildings"
+          :deposits="gridDeposits"
+          :selected-position="selectedPosition"
+          :selected-building-def-id="pendingBuildingDefId"
+          @cell-click="handleCellClick"
+          @cell-hover="handleCellHover"
+        />
+      </div>
     </div>
 
     <!-- Context menu for empty cells -->
@@ -244,6 +249,13 @@ const placementHints = computed(() => ({
   font-family: var(--g-font-mono);
   font-size: var(--g-font-size-sm);
   color: var(--g-color-text-muted);
+}
+
+.base-content {
+  display: flex;
+  flex: 1;
+  gap: var(--g-space-md);
+  overflow: hidden;
 }
 
 .grid-container {
