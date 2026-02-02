@@ -49,10 +49,14 @@ const availableBuildings = computed(() => {
   });
 });
 
-// Get selected building data
+// Get selected building data (check both active and pending buildings)
 const selectedBuilding = computed(() => {
   if (!selectedBuildingId.value) return null;
-  return state.value.buildings.find((b) => b.id === selectedBuildingId.value) ?? null;
+  return (
+    state.value.buildings.find((b) => b.id === selectedBuildingId.value) ??
+    state.value.pendingBuildings.find((b) => b.id === selectedBuildingId.value) ??
+    null
+  );
 });
 
 const selectedBuildingDef = computed(() => {
