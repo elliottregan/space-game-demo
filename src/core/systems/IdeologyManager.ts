@@ -467,8 +467,6 @@ export class IdeologyManager {
       // Calculate weighted average neighbor ideology for the primary faction
       let totalWeight = 0;
       let weightedFactionSum = 0;
-      let avgNeighborConviction = 0;
-      let convictionWeightSum = 0;
 
       for (const neighborId of neighbors) {
         const relationshipStrength = relationshipManager.getRelationshipStrength(
@@ -500,8 +498,6 @@ export class IdeologyManager {
               : neighbor.ideology.corporateInterests;
 
         weightedFactionSum += weight * neighborFactionValue;
-        convictionWeightSum += weight;
-        avgNeighborConviction += weight * neighborConviction;
       }
 
       if (totalWeight === 0) {
@@ -515,15 +511,6 @@ export class IdeologyManager {
 
       // Normalize
       const neighborFactionPressure = weightedFactionSum / totalWeight;
-      avgNeighborConviction = avgNeighborConviction / convictionWeightSum;
-
-      // Get colonist's current value for their primary faction
-      const colonistFactionValue =
-        primaryFaction === "earth"
-          ? colonist.ideology.earthLoyalist
-          : primaryFaction === "mars"
-            ? colonist.ideology.marsIndependence
-            : colonist.ideology.corporateInterests;
 
       // Conviction grows when neighbors support your faction (high pressure value)
       // Conviction decays when neighbors oppose your faction (low pressure value)
@@ -585,8 +572,6 @@ export class IdeologyManager {
 
     let totalWeight = 0;
     let neighborCount = 0;
-    let convictionWeightSum = 0;
-    let avgNeighborConviction = 0;
     const avgInfluence = { earthLoyalist: 0, marsIndependence: 0, corporateInterests: 0 };
 
     for (const neighborId of neighbors) {
@@ -616,10 +601,6 @@ export class IdeologyManager {
       avgInfluence.earthLoyalist += weight * neighbor.ideology.earthLoyalist;
       avgInfluence.marsIndependence += weight * neighbor.ideology.marsIndependence;
       avgInfluence.corporateInterests += weight * neighbor.ideology.corporateInterests;
-
-      // Track average neighbor conviction
-      convictionWeightSum += weight;
-      avgNeighborConviction += weight * neighborConviction;
     }
 
     // Normalize
@@ -627,7 +608,6 @@ export class IdeologyManager {
       avgInfluence.earthLoyalist /= totalWeight;
       avgInfluence.marsIndependence /= totalWeight;
       avgInfluence.corporateInterests /= totalWeight;
-      avgNeighborConviction /= convictionWeightSum;
     }
 
     // Calculate conviction pressure based on ideology pressure delta
@@ -635,14 +615,6 @@ export class IdeologyManager {
     if (!primaryFaction || neighborCount === 0) {
       convictionPressure = { growth: false, rate: 0 };
     } else {
-      // Get colonist's and neighbors' values for the primary faction
-      const colonistFactionValue =
-        primaryFaction === "earth"
-          ? colonist.ideology.earthLoyalist
-          : primaryFaction === "mars"
-            ? colonist.ideology.marsIndependence
-            : colonist.ideology.corporateInterests;
-
       const neighborFactionPressure =
         primaryFaction === "earth"
           ? avgInfluence.earthLoyalist
