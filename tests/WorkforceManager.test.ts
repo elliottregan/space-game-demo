@@ -1129,24 +1129,69 @@ describe("WorkforceManager", () => {
       expect(guild).toBeNull();
     });
 
-    it("should allow joining a guild", () => {
-      const guild = workforce.createGuild("Test Guild", "social" as any, ["c1", "c2"], 10);
-      const colonist = createColonist({ id: "c3" });
+    it("should allow joining a guild with valid relationship and matching characteristic", () => {
+      // Create colonists in same cohort (Social guild requirement)
+      const c1 = createColonist({ id: "c1", arrivalSol: 10 });
+      const c2 = createColonist({ id: "c2", arrivalSol: 12 });
+      const c3 = createColonist({ id: "c3", arrivalSol: 15 }); // Same cohort
+      const allColonists = [c1, c2, c3];
 
-      const result = workforce.joinGuild("c3", guild!.id, colonist);
+      // Create guild
+      const guild = workforce.createGuild("Test Guild", "social" as any, ["c1", "c2"], 10);
+
+      // Create relationship between c3 and c1 at join threshold (0.5)
+      workforce.createInitialRelationship("c3", "c1", 0.5);
+
+      const result = workforce.joinGuild("c3", guild!.id, c3, allColonists);
 
       expect(result).toBe(true);
       expect(guild!.memberIds).toContain("c3");
-      expect(colonist.guildIds).toContain(guild!.id);
+      expect(c3.guildIds).toContain(guild!.id);
+    });
+
+    it("should not allow joining without sufficient relationship", () => {
+      const c1 = createColonist({ id: "c1", arrivalSol: 10 });
+      const c2 = createColonist({ id: "c2", arrivalSol: 12 });
+      const c3 = createColonist({ id: "c3", arrivalSol: 15 });
+      const allColonists = [c1, c2, c3];
+
+      const guild = workforce.createGuild("Test Guild", "social" as any, ["c1", "c2"], 10);
+
+      // Create weak relationship (below 0.5 threshold)
+      workforce.createInitialRelationship("c3", "c1", 0.3);
+
+      const result = workforce.joinGuild("c3", guild!.id, c3, allColonists);
+
+      expect(result).toBe(false);
+    });
+
+    it("should not allow joining without matching characteristic", () => {
+      const c1 = createColonist({ id: "c1", arrivalSol: 10 });
+      const c2 = createColonist({ id: "c2", arrivalSol: 12 });
+      const c3 = createColonist({ id: "c3", arrivalSol: 100 }); // Different cohort
+      const allColonists = [c1, c2, c3];
+
+      const guild = workforce.createGuild("Test Guild", "social" as any, ["c1", "c2"], 10);
+
+      // Strong relationship but wrong cohort
+      workforce.createInitialRelationship("c3", "c1", 0.6);
+
+      const result = workforce.joinGuild("c3", guild!.id, c3, allColonists);
+
+      expect(result).toBe(false);
     });
 
     it("should not allow joining when guild is at max capacity", () => {
       // Create guild at max capacity (8 members)
       const members = Array.from({ length: 8 }, (_, i) => `m${i}`);
+      const allColonists = members.map((id) => createColonist({ id, arrivalSol: 10 }));
       const guild = workforce.createGuild("Full Guild", "social" as any, members, 10);
 
-      const colonist = createColonist({ id: "c1" });
-      const result = workforce.joinGuild("c1", guild!.id, colonist);
+      const colonist = createColonist({ id: "c1", arrivalSol: 10 });
+      allColonists.push(colonist);
+      workforce.createInitialRelationship("c1", "m0", 0.6);
+
+      const result = workforce.joinGuild("c1", guild!.id, colonist, allColonists);
 
       expect(result).toBe(false);
     });
@@ -1671,6 +1716,189 @@ describe("WorkforceManager", () => {
       expect(info.clusteringCoefficient).toBe(0);
       expect(info.isIsolated).toBe(true);
       expect(info.communityStrength).toBe(0);
+    });
+  });
+
+  // ==========================================================================
+  // Guild Formation tests
+  // ==========================================================================
+  describe("guild formation", () => {
+    it("should form guild when eligible colonists have strong relationships", () => {
+      const manager = new WorkforceManager();
+      const colonists: Colonist[] = [
+        {
+          id: "c1",
+          name: "Alice",
+          role: ColonistRole.ENGINEERING,
+          experience: 0,
+          masteryLevel: MasteryLevel.NOVICE,
+          skills: [],
+        },
+        {
+          id: "c2",
+          name: "Bob",
+          role: ColonistRole.ENGINEERING,
+          experience: 0,
+          masteryLevel: MasteryLevel.NOVICE,
+          skills: [],
+        },
+        {
+          id: "c3",
+          name: "Carol",
+          role: ColonistRole.FARMING,
+          experience: 0,
+          masteryLevel: MasteryLevel.NOVICE,
+          skills: [],
+        },
+        {
+          id: "c4",
+          name: "Dave",
+          role: ColonistRole.RESEARCH,
+          experience: 0,
+          masteryLevel: MasteryLevel.NOVICE,
+          skills: [],
+        },
+      ];
+
+      // Create strong relationships between c1 and c2
+      manager.createInitialRelationship("c1", "c2", 0.8);
+
+      // Mock RNG to always succeed
+      const originalChance = rng.chance;
+      rng.chance = () => true;
+
+      // Process at sol 10 (first check interval)
+      const events = manager.processGuildFormation(colonists, 10);
+
+      rng.chance = originalChance;
+
+      expect(events.length).toBe(1);
+      expect(events[0].type).toBe("GUILD_FORMED");
+      expect(manager.getGuilds().length).toBe(1);
+    });
+
+    it("should not form guild before check interval", () => {
+      const manager = new WorkforceManager();
+      const colonists: Colonist[] = [
+        {
+          id: "c1",
+          name: "Alice",
+          role: ColonistRole.ENGINEERING,
+          experience: 0,
+          masteryLevel: MasteryLevel.NOVICE,
+          skills: [],
+        },
+        {
+          id: "c2",
+          name: "Bob",
+          role: ColonistRole.ENGINEERING,
+          experience: 0,
+          masteryLevel: MasteryLevel.NOVICE,
+          skills: [],
+        },
+        {
+          id: "c3",
+          name: "Carol",
+          role: ColonistRole.FARMING,
+          experience: 0,
+          masteryLevel: MasteryLevel.NOVICE,
+          skills: [],
+        },
+        {
+          id: "c4",
+          name: "Dave",
+          role: ColonistRole.RESEARCH,
+          experience: 0,
+          masteryLevel: MasteryLevel.NOVICE,
+          skills: [],
+        },
+      ];
+
+      manager.createInitialRelationship("c1", "c2", 0.8);
+
+      // Process at sol 5 (before interval)
+      const events = manager.processGuildFormation(colonists, 5);
+
+      expect(events.length).toBe(0);
+    });
+
+    it("should skip if population below minimum", () => {
+      const manager = new WorkforceManager();
+      const colonists: Colonist[] = [
+        {
+          id: "c1",
+          name: "Alice",
+          role: ColonistRole.ENGINEERING,
+          experience: 0,
+          masteryLevel: MasteryLevel.NOVICE,
+          skills: [],
+        },
+        {
+          id: "c2",
+          name: "Bob",
+          role: ColonistRole.ENGINEERING,
+          experience: 0,
+          masteryLevel: MasteryLevel.NOVICE,
+          skills: [],
+        },
+      ];
+
+      manager.createInitialRelationship("c1", "c2", 0.8);
+
+      const events = manager.processGuildFormation(colonists, 10);
+
+      expect(events.length).toBe(0);
+    });
+
+    it("should update colonist guildIds when guild forms", () => {
+      const manager = new WorkforceManager();
+      const colonists: Colonist[] = [
+        {
+          id: "c1",
+          name: "Alice",
+          role: ColonistRole.ENGINEERING,
+          experience: 0,
+          masteryLevel: MasteryLevel.NOVICE,
+          skills: [],
+        },
+        {
+          id: "c2",
+          name: "Bob",
+          role: ColonistRole.ENGINEERING,
+          experience: 0,
+          masteryLevel: MasteryLevel.NOVICE,
+          skills: [],
+        },
+        {
+          id: "c3",
+          name: "Carol",
+          role: ColonistRole.FARMING,
+          experience: 0,
+          masteryLevel: MasteryLevel.NOVICE,
+          skills: [],
+        },
+        {
+          id: "c4",
+          name: "Dave",
+          role: ColonistRole.RESEARCH,
+          experience: 0,
+          masteryLevel: MasteryLevel.NOVICE,
+          skills: [],
+        },
+      ];
+
+      manager.createInitialRelationship("c1", "c2", 0.8);
+
+      const originalChance = rng.chance;
+      rng.chance = () => true;
+
+      manager.processGuildFormation(colonists, 10);
+
+      rng.chance = originalChance;
+
+      expect(colonists[0].guildIds?.length).toBe(1);
+      expect(colonists[1].guildIds?.length).toBe(1);
+      expect(colonists[0].guildIds?.[0]).toBe(colonists[1].guildIds?.[0]);
     });
   });
 

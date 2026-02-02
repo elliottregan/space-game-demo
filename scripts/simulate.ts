@@ -26,6 +26,9 @@ import type {
   SocialCohesionAnalysis,
   AggregatedSnapshot,
   PercentileValue,
+  GuildSnapshot,
+  AggregatedGuildSnapshot,
+  GuildAnalysis,
 } from "../src/simulation/types";
 import type { ColonistIdeology } from "../src/core/models/Colonist";
 
@@ -1139,6 +1142,99 @@ function computeIdeologyAnalysis(results: RunResult[]): IdeologyAnalysis {
 }
 
 /**
+ * Aggregate guild timelines across all runs with percentile bands.
+ */
+function aggregateGuildTimelines(results: RunResult[]): AggregatedGuildSnapshot[] {
+  // Find the meaningful game range
+  const victories = results.filter((r) => r.outcome === "victory");
+  const maxVictorySol = victories.length > 0 ? Math.max(...victories.map((r) => r.finalSol)) : 0;
+  const maxDefeatSol = Math.max(
+    ...results.filter((r) => r.outcome === "defeat").map((r) => r.finalSol),
+  );
+  const timelineLimit = maxVictorySol > 0 ? maxVictorySol : maxDefeatSol;
+
+  // Collect all guild snapshots by sol
+  const timelinesBySol = new Map<number, GuildSnapshot[]>();
+
+  for (const result of results) {
+    if (!result.guildTimeline) continue;
+    for (const snapshot of result.guildTimeline) {
+      if (snapshot.sol > timelineLimit) continue;
+      const existing = timelinesBySol.get(snapshot.sol) ?? [];
+      existing.push(snapshot);
+      timelinesBySol.set(snapshot.sol, existing);
+    }
+  }
+
+  const allSols = Array.from(timelinesBySol.keys()).sort((a, b) => a - b);
+  const aggregated: AggregatedGuildSnapshot[] = [];
+
+  for (const sol of allSols) {
+    const snapshots = timelinesBySol.get(sol);
+    if (!snapshots || snapshots.length === 0) continue;
+
+    aggregated.push({
+      sol,
+      guildCount: computePercentileValue(snapshots.map((s) => s.guildCount)),
+      totalMembers: computePercentileValue(snapshots.map((s) => s.totalMembers)),
+      avgGuildSize: computePercentileValue(snapshots.map((s) => s.avgGuildSize)),
+      byType: {
+        professional: computePercentileValue(snapshots.map((s) => s.byType.professional)),
+        social: computePercentileValue(snapshots.map((s) => s.byType.social)),
+        research: computePercentileValue(snapshots.map((s) => s.byType.research)),
+        civic: computePercentileValue(snapshots.map((s) => s.byType.civic)),
+      },
+      runsActive: snapshots.length,
+    });
+  }
+
+  return aggregated;
+}
+
+/**
+ * Compute guild formation analysis statistics.
+ */
+function computeGuildAnalysis(results: RunResult[]): GuildAnalysis {
+  const guildsFormed: number[] = [];
+  const finalGuildSizes: number[] = [];
+  const finalMemberCounts: number[] = [];
+  const typeBreakdown = { professional: 0, social: 0, research: 0, civic: 0 };
+  let runsWithGuilds = 0;
+
+  for (const result of results) {
+    const formed = result.guildsFormed ?? 0;
+    guildsFormed.push(formed);
+    if (formed > 0) runsWithGuilds++;
+
+    if (result.guildTimeline && result.guildTimeline.length > 0) {
+      const last = result.guildTimeline[result.guildTimeline.length - 1]!;
+      finalGuildSizes.push(last.avgGuildSize);
+      finalMemberCounts.push(last.totalMembers);
+      typeBreakdown.professional += last.byType.professional;
+      typeBreakdown.social += last.byType.social;
+      typeBreakdown.research += last.byType.research;
+      typeBreakdown.civic += last.byType.civic;
+    }
+  }
+
+  const avg = (arr: number[]) => (arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+  const n = results.length;
+
+  return {
+    avgGuildsFormed: avg(guildsFormed),
+    runsWithGuilds: (runsWithGuilds / n) * 100,
+    avgByType: {
+      professional: typeBreakdown.professional / n,
+      social: typeBreakdown.social / n,
+      research: typeBreakdown.research / n,
+      civic: typeBreakdown.civic / n,
+    },
+    avgFinalGuildSize: avg(finalGuildSizes),
+    avgFinalMemberCount: avg(finalMemberCounts),
+  };
+}
+
+/**
  * Write analysis data as gzipped JSON for visualization.
  */
 async function writeJsonOutput(results: RunResult[], runs: number, seed: number): Promise<string> {
@@ -1225,6 +1321,7 @@ async function writeJsonOutput(results: RunResult[], runs: number, seed: number)
   // Aggregate timelines with percentile bands
   const aggregatedTimeline = aggregateTimelines(results);
   const aggregatedIdeologyTimeline = aggregateIdeologyTimelines(results);
+  const aggregatedGuildTimeline = aggregateGuildTimelines(results);
 
   const analysisOutput: AnalysisOutput = {
     metadata: {
@@ -1246,6 +1343,7 @@ async function writeJsonOutput(results: RunResult[], runs: number, seed: number)
     resourceTimeline,
     aggregatedTimeline,
     aggregatedIdeologyTimeline,
+    aggregatedGuildTimeline,
     crisisEvents,
     runs: results,
     stats: {
@@ -1259,6 +1357,7 @@ async function writeJsonOutput(results: RunResult[], runs: number, seed: number)
       outliers: computeOutliers(victories),
       socialCohesion: computeSocialCohesion(results),
       ideology: computeIdeologyAnalysis(results),
+      guilds: computeGuildAnalysis(results),
     },
   };
 
@@ -1755,6 +1854,66 @@ function analyzeIdeology(results: RunResult[]): void {
 }
 
 /**
+ * Analyze guild formation patterns across runs.
+ */
+function analyzeGuilds(results: RunResult[]): void {
+  output("\n[Guild Formation Analysis]");
+  output("-".repeat(40));
+
+  // Collect guild data from all runs
+  const runsWithGuilds = results.filter((r) => r.guildTimeline && r.guildTimeline.length > 0);
+
+  if (runsWithGuilds.length === 0) {
+    output("  No guild data available");
+    return;
+  }
+
+  // Calculate statistics
+  const totalGuildsFormed = results.reduce((sum, r) => sum + (r.guildsFormed ?? 0), 0);
+  const avgGuildsPerRun = totalGuildsFormed / results.length;
+
+  // Get final guild counts and sizes
+  const finalGuildCounts: number[] = [];
+  const finalAvgSizes: number[] = [];
+  const guildsByType = { professional: 0, social: 0, research: 0, civic: 0 };
+
+  for (const result of runsWithGuilds) {
+    const lastSnapshot = result.guildTimeline![result.guildTimeline!.length - 1]!;
+    finalGuildCounts.push(lastSnapshot.guildCount);
+    if (lastSnapshot.guildCount > 0) {
+      finalAvgSizes.push(lastSnapshot.avgGuildSize);
+    }
+    guildsByType.professional += lastSnapshot.byType.professional;
+    guildsByType.social += lastSnapshot.byType.social;
+    guildsByType.research += lastSnapshot.byType.research;
+    guildsByType.civic += lastSnapshot.byType.civic;
+  }
+
+  const avgFinalGuildCount =
+    finalGuildCounts.length > 0
+      ? finalGuildCounts.reduce((a, b) => a + b, 0) / finalGuildCounts.length
+      : 0;
+  const avgGuildSize =
+    finalAvgSizes.length > 0 ? finalAvgSizes.reduce((a, b) => a + b, 0) / finalAvgSizes.length : 0;
+  const maxGuildCount = Math.max(...finalGuildCounts, 0);
+
+  output(`  Avg Guilds Formed per Run: ${avgGuildsPerRun.toFixed(1)}`);
+  output(`  Avg Guilds at Game End: ${avgFinalGuildCount.toFixed(1)}`);
+  output(`  Max Concurrent Guilds: ${maxGuildCount}`);
+  output(`  Avg Guild Size: ${avgGuildSize.toFixed(1)} members`);
+
+  // Guild type breakdown
+  const totalByType = Object.values(guildsByType).reduce((a, b) => a + b, 0);
+  if (totalByType > 0) {
+    output("\n  Guild Types (across all runs):");
+    for (const [type, count] of Object.entries(guildsByType)) {
+      const pct = ((count / totalByType) * 100).toFixed(0);
+      output(`    - ${type}: ${count} (${pct}%)`);
+    }
+  }
+}
+
+/**
  * Main entry point.
  */
 async function main(): Promise<void> {
@@ -1926,6 +2085,7 @@ async function main(): Promise<void> {
   analyzeCrisisTimeline(results);
   analyzeSocialCohesion(results);
   analyzeIdeology(results);
+  analyzeGuilds(results);
 
   output("\n" + "=".repeat(60));
 

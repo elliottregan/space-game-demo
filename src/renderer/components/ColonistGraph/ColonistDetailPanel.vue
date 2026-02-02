@@ -23,11 +23,20 @@ interface IdeologicalPressure {
   convictionPressure: { growth: boolean; rate: number };
 }
 
+interface GuildInfo {
+  id: string;
+  name: string;
+  type: string;
+  memberIds: string[];
+  foundedSol: number;
+}
+
 interface Props {
   colonist: Colonist;
   colonists: Colonist[];
   relationships: Map<string, CoworkerRelationship>;
   buildings: BuildingInfo[];
+  guilds: GuildInfo[];
   ideologicalPressure?: IdeologicalPressure | null;
 }
 
@@ -67,6 +76,30 @@ const housemates = computed(() => {
     (c) => c.id !== props.colonist.id && c.housingId === props.colonist.housingId,
   );
 });
+
+// Get colonist's guild memberships
+const colonistGuilds = computed(() => {
+  if (!props.colonist.guildIds?.length) return [];
+  return props.guilds.filter((g) => props.colonist.guildIds?.includes(g.id));
+});
+
+// Check if colonist shares a guild with another colonist
+function sharesGuildWith(otherId: string): boolean {
+  if (!props.colonist.guildIds?.length) return false;
+  const other = props.colonists.find((c) => c.id === otherId);
+  if (!other?.guildIds?.length) return false;
+  return props.colonist.guildIds.some((gId) => other.guildIds?.includes(gId));
+}
+
+function getGuildTypeDisplay(type: string): string {
+  const displays: Record<string, string> = {
+    professional: "Professional",
+    social: "Social",
+    research: "Research",
+    civic: "Civic",
+  };
+  return displays[type] ?? type;
+}
 
 // Maximum relationships to display
 const MAX_RELATIONSHIPS = 6;
@@ -350,6 +383,23 @@ function formatDelta(delta: number): string {
       </div>
     </div>
 
+    <div v-if="colonistGuilds.length > 0" class="panel-section">
+      <div class="section-title">Guilds</div>
+      <div class="guilds-list">
+        <div v-for="guild in colonistGuilds" :key="guild.id" class="guild-row">
+          <div class="guild-info">
+            <span class="guild-name">{{ guild.name }}</span>
+            <span :class="['guild-type-badge', guild.type]">
+              {{ getGuildTypeDisplay(guild.type) }}
+            </span>
+          </div>
+          <div class="guild-members">
+            <span class="member-count">{{ guild.memberIds.length }} members</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div v-if="colonistRelationships.length > 0" class="panel-section">
       <div class="section-title">Relationships</div>
       <div class="relationships-list">
@@ -361,6 +411,7 @@ function formatDelta(delta: number): string {
             <div class="rel-badges">
               <span v-if="rel.isCoworker" class="rel-badge coworker">CW</span>
               <span v-if="rel.isHousemate" class="rel-badge housemate">HM</span>
+              <span v-if="sharesGuildWith(rel.colonist.id)" class="rel-badge guild">G</span>
             </div>
           </div>
           <div class="rel-strength">
@@ -588,6 +639,11 @@ function formatDelta(delta: number): string {
   color: white;
 }
 
+.rel-badge.guild {
+  background: #9c27b0;
+  color: white;
+}
+
 .rel-strength {
   display: flex;
   align-items: center;
@@ -809,5 +865,71 @@ function formatDelta(delta: number): string {
   font-size: var(--g-font-size-xs);
   color: var(--g-color-text-muted);
   opacity: 0.5;
+}
+
+/* Guild styles */
+.guilds-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-xs);
+}
+
+.guild-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--g-space-xs);
+  background: var(--g-color-bg-surface);
+  border-radius: 3px;
+}
+
+.guild-info {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-xs);
+}
+
+.guild-name {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-sm);
+}
+
+.guild-type-badge {
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.guild-type-badge.professional {
+  background: var(--g-color-warning);
+  color: white;
+}
+
+.guild-type-badge.social {
+  background: var(--g-color-info);
+  color: white;
+}
+
+.guild-type-badge.research {
+  background: var(--g-color-positive);
+  color: white;
+}
+
+.guild-type-badge.civic {
+  background: #9c27b0;
+  color: white;
+}
+
+.guild-members {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-xs);
+}
+
+.member-count {
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
 }
 </style>

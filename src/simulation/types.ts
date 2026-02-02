@@ -80,6 +80,10 @@ export interface RunResult {
   blockedDecisions?: BlockedDecision[];
   /** Events that occurred and choices made */
   eventsOccurred?: EventOccurrence[];
+  /** Time-series snapshots of guild statistics */
+  guildTimeline?: GuildSnapshot[];
+  /** Total number of guilds formed during the run */
+  guildsFormed?: number;
 }
 
 /**
@@ -194,6 +198,64 @@ export interface ResourceFlowSnapshot {
   netFood: number;
   netWater: number;
   netMaterials: number;
+}
+
+/**
+ * Time-series snapshot of guild statistics at a given sol.
+ */
+export interface GuildSnapshot {
+  sol: number;
+  /** Total number of guilds */
+  guildCount: number;
+  /** Total members across all guilds */
+  totalMembers: number;
+  /** Average guild size */
+  avgGuildSize: number;
+  /** Count of guilds by type */
+  byType: {
+    professional: number;
+    social: number;
+    research: number;
+    civic: number;
+  };
+}
+
+/**
+ * Aggregated guild snapshot combining data from multiple runs at a given sol.
+ */
+export interface AggregatedGuildSnapshot {
+  sol: number;
+  guildCount: PercentileValue;
+  totalMembers: PercentileValue;
+  avgGuildSize: PercentileValue;
+  byType: {
+    professional: PercentileValue;
+    social: PercentileValue;
+    research: PercentileValue;
+    civic: PercentileValue;
+  };
+  runsActive: number;
+}
+
+/**
+ * Guild formation analysis results.
+ */
+export interface GuildAnalysis {
+  /** Average total guilds formed per run */
+  avgGuildsFormed: number;
+  /** Percentage of runs that formed at least one guild */
+  runsWithGuilds: number;
+  /** Average guilds by type */
+  avgByType: {
+    professional: number;
+    social: number;
+    research: number;
+    civic: number;
+  };
+  /** Average guild size at end of game */
+  avgFinalGuildSize: number;
+  /** Average total guild members at end of game */
+  avgFinalMemberCount: number;
 }
 
 /**
@@ -414,6 +476,8 @@ export interface AnalysisOutput {
   aggregatedTimeline: AggregatedSnapshot[];
   /** Aggregated ideology timeline with percentile bands across all runs */
   aggregatedIdeologyTimeline?: AggregatedIdeologySnapshot[];
+  /** Aggregated guild timeline with percentile bands across all runs */
+  aggregatedGuildTimeline?: AggregatedGuildSnapshot[];
   crisisEvents: CrisisPoint[];
   runs: RunResult[];
 
@@ -429,5 +493,6 @@ export interface AnalysisOutput {
     outliers: OutlierAnalysis;
     socialCohesion: SocialCohesionAnalysis;
     ideology: IdeologyAnalysis;
+    guilds: GuildAnalysis;
   };
 }

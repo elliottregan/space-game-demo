@@ -158,6 +158,29 @@ export const GUILD_INITIAL_RELATIONSHIP_BONUS = 0.08;
 /** Morale bonus per guild membership */
 export const GUILD_MORALE_BONUS = 2;
 
+// ============ Guild Formation System ============
+
+/** Sols between guild formation checks */
+export const GUILD_FORMATION_CHECK_INTERVAL = 10;
+
+/** Minimum relationship strength for guild formation eligibility */
+export const GUILD_FORMATION_RELATIONSHIP_THRESHOLD = 0.7;
+
+/** Minimum relationship strength to join an existing guild */
+export const GUILD_JOIN_RELATIONSHIP_THRESHOLD = 0.5;
+
+/** Base probability of guild forming when eligible colonists found */
+export const GUILD_FORMATION_BASE_PROBABILITY = 0.5;
+
+/** Probability multiplier per existing guild membership (compounds) */
+export const GUILD_FORMATION_MEMBERSHIP_PENALTY = 0.5;
+
+/** Minimum colony population for guild formation */
+export const GUILD_FORMATION_MIN_POPULATION = 4;
+
+/** Maximum number of founders when forming a new guild */
+export const GUILD_FORMATION_MAX_FOUNDERS = 4;
+
 // ============ Social Cohesion System ============
 
 /**
