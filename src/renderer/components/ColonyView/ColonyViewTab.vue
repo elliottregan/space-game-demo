@@ -116,6 +116,7 @@ const buildingsForGraph = computed(() =>
           :colonists="state.colonists"
           :relationships="state.coworkerRelationships"
           :buildings="buildingsForGraph"
+          :guilds="state.guilds"
           :ideological-pressure="selectedColonistPressure"
         />
       </div>
