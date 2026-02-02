@@ -198,6 +198,9 @@ function mapDefeatReason(reason?: string): DefeatReason {
   if (lowerReason.includes("population") || lowerReason.includes("below 5")) {
     return "population_collapse";
   }
+  if (lowerReason.includes("earth") && lowerReason.includes("climate")) {
+    return "earth_collapse";
+  }
 
   return "population_collapse";
 }
@@ -391,6 +394,9 @@ function runSingleGame(seed: number): RunResult {
   const blockedDecisions = strategy.getBlockedDecisions();
   const eventsOccurred = strategy.getEventsOccurred();
 
+  // Capture earth crisis severity at game end
+  const earthCrisisSeverity = api.game.earthCrisisSeverity();
+
   const outcome = victoryState.status === "victory" ? "victory" : "defeat";
   const victoryType = outcome === "victory" ? mapVictoryType(victoryState.reason) : undefined;
   const defeatReason = outcome === "defeat" ? mapDefeatReason(victoryState.reason) : undefined;
@@ -421,6 +427,7 @@ function runSingleGame(seed: number): RunResult {
     blockedDecisions: blockedDecisions?.length ? blockedDecisions : undefined,
     eventsOccurred: eventsOccurred?.length ? eventsOccurred : undefined,
     ideologyTimeline: ideologyTimeline.length > 0 ? ideologyTimeline : undefined,
+    earthCrisisSeverity,
   };
 }
 

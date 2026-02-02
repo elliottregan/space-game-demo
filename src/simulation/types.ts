@@ -28,8 +28,9 @@ export type VictoryType = "return_mission" | "declaration_of_sovereignty" | "pla
  * - starvation: Food resources depleted to zero
  * - suffocation: Oxygen resources depleted to zero
  * - population_collapse: Population dropped below 5
+ * - earth_collapse: Earth climate crisis reached point of no return
  */
-export type DefeatReason = "starvation" | "suffocation" | "population_collapse";
+export type DefeatReason = "starvation" | "suffocation" | "population_collapse" | "earth_collapse";
 
 /**
  * Outcome of a single simulation run.
@@ -84,6 +85,8 @@ export interface RunResult {
   guildTimeline?: GuildSnapshot[];
   /** Total number of guilds formed during the run */
   guildsFormed?: number;
+  /** Earth crisis severity at game end (0-100) */
+  earthCrisisSeverity?: number;
 }
 
 /**
@@ -107,6 +110,10 @@ export interface AggregateStats {
   fastestWin: number;
   /** Maximum sols to achieve victory */
   slowestWin: number;
+  /** Number of defeats due to Earth climate collapse */
+  earthCollapseLosses: number;
+  /** Average Earth crisis severity at victory (0-100) */
+  avgSeverityAtVictory: number;
 }
 
 /**

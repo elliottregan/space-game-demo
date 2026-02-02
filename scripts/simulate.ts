@@ -264,7 +264,12 @@ function runSingleGame(seed: number): RunResult {
     | "declaration_of_sovereignty"
     | "planetary_acquisition"
     | undefined;
-  let defeatReason: "starvation" | "suffocation" | "population_collapse" | undefined;
+  let defeatReason:
+    | "starvation"
+    | "suffocation"
+    | "population_collapse"
+    | "earth_collapse"
+    | undefined;
 
   if (outcome === "victory") {
     const reason = victoryState.reason?.toLowerCase() ?? "";
@@ -282,8 +287,13 @@ function runSingleGame(seed: number): RunResult {
     const reason = victoryState.reason?.toLowerCase() ?? "";
     if (reason.includes("food") || reason.includes("starv")) defeatReason = "starvation";
     else if (reason.includes("oxygen") || reason.includes("suffocat")) defeatReason = "suffocation";
+    else if (reason.includes("earth") && reason.includes("climate"))
+      defeatReason = "earth_collapse";
     else defeatReason = "population_collapse";
   }
+
+  // Capture earth crisis severity at game end
+  const earthCrisisSeverity = api.game.earthCrisisSeverity();
 
   const buildingsRecord: Record<string, number> = {};
   for (const [defId, count] of buildingsBuiltMap) {
@@ -351,6 +361,7 @@ function runSingleGame(seed: number): RunResult {
     blockedDecisions: blockedDecisions.length > 0 ? blockedDecisions : undefined,
     eventsOccurred: eventsOccurred.length > 0 ? eventsOccurred : undefined,
     ideologyTimeline: ideologyTimeline.length > 0 ? ideologyTimeline : undefined,
+    earthCrisisSeverity,
   };
 }
 
@@ -2074,6 +2085,21 @@ async function main(): Promise<void> {
     for (const [type, count] of Object.entries(victoryCounts)) {
       const pct = ((count / victories.length) * 100).toFixed(0);
       output(`    - ${type}: ${count} (${pct}%)`);
+    }
+  }
+
+  // Earth Crisis Statistics
+  output("\n[Earth Crisis Statistics]");
+  output("-".repeat(40));
+  const earthCollapseDefeats = defeats.filter((d) => d.defeatReason === "earth_collapse").length;
+  output(`  Earth Collapse Losses: ${earthCollapseDefeats}`);
+  if (victories.length > 0) {
+    const severities = victories
+      .map((v) => v.earthCrisisSeverity)
+      .filter((s): s is number => s !== undefined);
+    if (severities.length > 0) {
+      const avgSeverity = severities.reduce((a, b) => a + b, 0) / severities.length;
+      output(`  Average Severity at Victory: ${avgSeverity.toFixed(1)}%`);
     }
   }
 

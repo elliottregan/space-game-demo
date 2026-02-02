@@ -6,6 +6,7 @@ import {
   POPULATION_GROWTH_RATE,
   SHORTAGE_THRESHOLDS,
 } from "../balance/EconomyBaseline";
+import { REFUGEE_IDEOLOGY } from "../balance/EarthCrisisBalance";
 import { COLONIST_SKILL_COUNT, SOCIAL_COHESION } from "../balance/WorkforceBalance";
 import { type SkillId, SKILLS } from "../data/skills";
 import type { Colonist, ColonistIdeology } from "../models/Colonist";
@@ -465,6 +466,54 @@ export class ColonyManager {
           colonistArray.splice(index, 1);
         }
       }
+    }
+  }
+
+  /**
+   * Add climate refugees from Earth.
+   * Refugees have Earth-leaning ideology (biased toward Earth Loyalist).
+   */
+  addRefugees(count: number): GameEvent[] {
+    const events: GameEvent[] = [];
+
+    for (let i = 0; i < count; i++) {
+      const ideology = this.generateRefugeeIdeology();
+      const colonist = this.addColonist(undefined, ideology);
+
+      events.push({
+        type: "COLONIST_ARRIVED",
+        severity: "info",
+        message: `Climate refugee ${colonist.name} arrived from Earth`,
+        colonistId: colonist.id,
+      });
+    }
+
+    return events;
+  }
+
+  private generateRefugeeIdeology(): ColonistIdeology {
+    const roll = rng.random();
+
+    if (roll < REFUGEE_IDEOLOGY.earthLoyalistWeight) {
+      // Earth Loyalist leaning (60% chance)
+      return {
+        earthLoyalist: 0.6 + rng.random() * 0.3,
+        marsIndependence: rng.random() * 0.3,
+        corporateInterests: rng.random() * 0.3,
+        conviction: 0.4 + rng.random() * 0.3,
+      };
+    } else if (roll < REFUGEE_IDEOLOGY.earthLoyalistWeight + REFUGEE_IDEOLOGY.neutralWeight) {
+      // Neutral (25% chance)
+      return IdeologyManager.createNeutralIdeology();
+    } else {
+      // Other - Mars Independence or Corporate (15% chance)
+      const isMars = rng.random() > 0.5;
+      return {
+        earthLoyalist: rng.random() * 0.3,
+        marsIndependence: isMars ? 0.5 + rng.random() * 0.3 : rng.random() * 0.3,
+        corporateInterests: isMars ? rng.random() * 0.3 : 0.5 + rng.random() * 0.3,
+        conviction: 0.3 + rng.random() * 0.3,
+      };
     }
   }
 

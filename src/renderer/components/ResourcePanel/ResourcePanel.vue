@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { highlightState } from "../../directives/ResourceHighlight";
 import { gameService } from "../../services/GameService";
 import { ResourceBadge } from "../../ui";
+import EarthCrisisIndicator from "./EarthCrisisIndicator.vue";
 
 // Reactive state for template bindings (auto-updates when API syncs)
 const state = gameService.getState();
@@ -107,6 +108,12 @@ function getPowerGridClass(): string {
         >({{ state.powerGridProduction }}/{{ state.powerGridConsumption }})</span
       >
     </div>
+
+    <!-- Earth Crisis Indicator -->
+    <EarthCrisisIndicator
+      :severity="state.earthCrisis.severity"
+      :pointOfNoReturn="state.earthCrisis.pointOfNoReturn"
+    />
   </div>
 </template>
 

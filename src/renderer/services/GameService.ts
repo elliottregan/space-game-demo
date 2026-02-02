@@ -106,6 +106,10 @@ interface GameUIState {
     pendingProposals: Array<{ projectId: ProjectId; voteSol: number }>;
     failedProposals: ProjectId[];
   };
+  earthCrisis: {
+    severity: number;
+    pointOfNoReturn: boolean;
+  };
 }
 
 /**
@@ -224,6 +228,10 @@ class GameService {
         completedProjects: [],
         pendingProposals: [],
         failedProposals: [],
+      },
+      earthCrisis: {
+        severity: 0,
+        pointOfNoReturn: false,
       },
     };
   }
@@ -345,6 +353,12 @@ class GameService {
         voteSol: p.voteSol,
       })),
       failedProposals: [...this.facade.ideology.getFailedProposals()],
+    };
+
+    // Earth Crisis
+    this.state.earthCrisis = {
+      severity: this.facade.game.earthCrisisSeverity(),
+      pointOfNoReturn: this.facade.game.earthCrisisPointOfNoReturn(),
     };
   }
 
