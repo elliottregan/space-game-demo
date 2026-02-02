@@ -147,7 +147,13 @@ export class GridManager {
       return { success: false, error: "No building at position" };
     }
 
-    this.placements.delete(cell.buildingId);
+    const buildingId = cell.buildingId;
+
+    // Clean up all tracking maps
+    this.powerSources.delete(buildingId);
+    this.buildingPowerConsumption.delete(buildingId);
+    this.placements.delete(buildingId);
+
     cell.buildingId = undefined;
     return { success: true };
   }

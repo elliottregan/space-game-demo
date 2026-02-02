@@ -103,6 +103,18 @@ describe("GridManager - Building Placement", () => {
     const pos = manager.getBuildingPosition("unknown");
     expect(pos).toBeNull();
   });
+
+  it("removeBuilding cleans up power sources", () => {
+    const manager = new GridManager();
+    manager.placeBuilding("solar-1", { x: 5, y: 5 });
+    manager.registerPowerSource("solar-1", 10);
+
+    expect(manager.getPowerSources().length).toBe(1);
+
+    manager.removeBuilding({ x: 5, y: 5 });
+
+    expect(manager.getPowerSources().length).toBe(0);
+  });
 });
 
 describe("GridManager - Power Connections", () => {
