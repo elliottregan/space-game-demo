@@ -2,7 +2,11 @@
 import type { Colonist } from "../../models/Colonist.ts";
 import { ColonistRole, MasteryLevel } from "../../models/Colonist.ts";
 import { GuildType, GUILD_NAME_SUGGESTIONS } from "../../models/Guild.ts";
-import { COHORT_WINDOW_SOLS, MAX_GUILD_MEMBERSHIPS } from "../../balance/WorkforceBalance.ts";
+import {
+  COHORT_WINDOW_SOLS,
+  MAX_GUILD_MEMBERSHIPS,
+  GUILD_FORMATION_MAX_FOUNDERS,
+} from "../../balance/WorkforceBalance.ts";
 import { rng } from "../../utils/random.ts";
 import type { CoworkerRelationship } from "./types.ts";
 
@@ -54,7 +58,8 @@ export function generateGuildName(type: GuildType, usedNames: Set<string>): stri
   // All names used, append suffix to first suggestion
   const baseName = suggestions[0];
   let suffix = 2;
-  while (usedNames.has(`${baseName} ${toRoman(suffix)}`)) {
+  const maxSuffix = 100; // Safety bound to prevent infinite loop
+  while (usedNames.has(`${baseName} ${toRoman(suffix)}`) && suffix < maxSuffix) {
     suffix++;
   }
   return `${baseName} ${toRoman(suffix)}`;
@@ -117,9 +122,10 @@ export function findEligibleFounderGroups(
 
     // BFS to find connected component
     const component: string[] = [];
-    const queue = [colonist.id];
+    const queue: string[] = [colonist.id];
+    const queued = new Set<string>([colonist.id]); // Track queued to prevent duplicates
 
-    while (queue.length > 0 && component.length < 4) {
+    while (queue.length > 0 && component.length < GUILD_FORMATION_MAX_FOUNDERS) {
       const current = queue.shift();
       if (current === undefined || visited.has(current)) continue;
 
@@ -129,8 +135,13 @@ export function findEligibleFounderGroups(
       const currentNeighbors = strongEdges.get(current);
       if (currentNeighbors) {
         for (const neighbor of currentNeighbors) {
-          if (!visited.has(neighbor) && component.length < 4) {
+          if (
+            !visited.has(neighbor) &&
+            !queued.has(neighbor) &&
+            component.length < GUILD_FORMATION_MAX_FOUNDERS
+          ) {
             queue.push(neighbor);
+            queued.add(neighbor);
           }
         }
       }

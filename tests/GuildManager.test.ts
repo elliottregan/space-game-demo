@@ -72,6 +72,32 @@ describe("GuildManager", () => {
     });
   });
 
+  describe("disbandGuild", () => {
+    it("should clean up colonist guildIds when colonists provided", () => {
+      const guild = manager.createGuild("Test", GuildType.SOCIAL, ["c1", "c2", "c3"], 10);
+      const colonists = [
+        createColonist({ id: "c1", guildIds: [guild!.id] }),
+        createColonist({ id: "c2", guildIds: [guild!.id] }),
+        createColonist({ id: "c3", guildIds: [guild!.id, "other_guild"] }),
+      ];
+
+      manager.disbandGuild(guild!.id, colonists);
+
+      expect(colonists[0].guildIds).toEqual([]);
+      expect(colonists[1].guildIds).toEqual([]);
+      expect(colonists[2].guildIds).toEqual(["other_guild"]);
+    });
+
+    it("should work without colonists parameter", () => {
+      const guild = manager.createGuild("Test", GuildType.SOCIAL, ["c1", "c2"], 10);
+
+      const result = manager.disbandGuild(guild!.id);
+
+      expect(result).toBe(true);
+      expect(manager.getGuild(guild!.id)).toBeUndefined();
+    });
+  });
+
   describe("shareGuild", () => {
     it("should detect shared membership", () => {
       const guild = manager.createGuild("Shared", GuildType.SOCIAL, ["c1", "c2"], 10);

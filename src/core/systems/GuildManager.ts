@@ -90,9 +90,27 @@ export class GuildManager {
   }
 
   /**
-   * Disband a guild.
+   * Disband a guild and clean up member guildIds.
+   * @param guildId The guild to disband
+   * @param colonists Optional array of colonists to clean up guildIds from
    */
-  disbandGuild(guildId: string): boolean {
+  disbandGuild(guildId: string, colonists?: Colonist[]): boolean {
+    const guild = this.guilds.get(guildId);
+    if (!guild) return false;
+
+    // Clean up guildIds from remaining members if colonists provided
+    if (colonists) {
+      for (const memberId of guild.memberIds) {
+        const colonist = colonists.find((c) => c.id === memberId);
+        if (colonist?.guildIds) {
+          const idx = colonist.guildIds.indexOf(guildId);
+          if (idx !== -1) {
+            colonist.guildIds.splice(idx, 1);
+          }
+        }
+      }
+    }
+
     return this.guilds.delete(guildId);
   }
 

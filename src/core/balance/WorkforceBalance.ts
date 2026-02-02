@@ -175,6 +175,9 @@ export const GUILD_FORMATION_MEMBERSHIP_PENALTY = 0.5;
 /** Minimum colony population for guild formation */
 export const GUILD_FORMATION_MIN_POPULATION = 4;
 
+/** Maximum number of founders when forming a new guild */
+export const GUILD_FORMATION_MAX_FOUNDERS = 4;
+
 // ============ Social Cohesion System ============
 
 /**
