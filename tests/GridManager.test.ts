@@ -52,3 +52,54 @@ describe("GridManager", () => {
     }
   });
 });
+
+describe("GridManager - Building Placement", () => {
+  it("placeBuilding adds building to cell", () => {
+    const manager = new GridManager();
+    const result = manager.placeBuilding("building-1", { x: 5, y: 5 });
+
+    expect(result.success).toBe(true);
+    const cell = manager.getCell(5, 5);
+    expect(cell?.buildingId).toBe("building-1");
+  });
+
+  it("placeBuilding fails on occupied cell", () => {
+    const manager = new GridManager();
+    manager.placeBuilding("building-1", { x: 5, y: 5 });
+    const result = manager.placeBuilding("building-2", { x: 5, y: 5 });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("Cell is occupied");
+  });
+
+  it("placeBuilding fails on out-of-bounds", () => {
+    const manager = new GridManager();
+    const result = manager.placeBuilding("building-1", { x: 15, y: 5 });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("Position out of bounds");
+  });
+
+  it("removeBuilding clears cell", () => {
+    const manager = new GridManager();
+    manager.placeBuilding("building-1", { x: 5, y: 5 });
+    manager.removeBuilding({ x: 5, y: 5 });
+
+    const cell = manager.getCell(5, 5);
+    expect(cell?.buildingId).toBeUndefined();
+  });
+
+  it("getBuildingPosition returns position for placed building", () => {
+    const manager = new GridManager();
+    manager.placeBuilding("building-1", { x: 3, y: 7 });
+
+    const pos = manager.getBuildingPosition("building-1");
+    expect(pos).toEqual({ x: 3, y: 7 });
+  });
+
+  it("getBuildingPosition returns null for unknown building", () => {
+    const manager = new GridManager();
+    const pos = manager.getBuildingPosition("unknown");
+    expect(pos).toBeNull();
+  });
+});

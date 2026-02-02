@@ -1,9 +1,21 @@
 // src/core/systems/GridManager.ts
-import { GridCell, GridPosition, DepositType, GRID_SIZE, BuildingPlacement } from "../models/Grid";
+import {
+  GridCell,
+  GridPosition,
+  DepositType,
+  GRID_SIZE,
+  BuildingPlacement,
+  PowerState,
+} from "../models/Grid";
 
 interface DepositInfo {
   position: GridPosition;
   type: DepositType;
+}
+
+export interface PlacementResult {
+  success: boolean;
+  error?: string;
 }
 
 export class GridManager {
@@ -89,5 +101,43 @@ export class GridManager {
       }
     }
     return deposits;
+  }
+
+  placeBuilding(buildingId: string, position: GridPosition): PlacementResult {
+    const cell = this.getCell(position.x, position.y);
+
+    if (!cell) {
+      return { success: false, error: "Position out of bounds" };
+    }
+
+    if (cell.buildingId) {
+      return { success: false, error: "Cell is occupied" };
+    }
+
+    cell.buildingId = buildingId;
+
+    // Create placement record
+    this.placements.set(buildingId, {
+      buildingId,
+      position: { ...position },
+      distanceToPower: Infinity,
+      batteryLevel: 1.0, // Start with full battery
+      powerState: PowerState.UNPOWERED,
+    });
+
+    return { success: true };
+  }
+
+  removeBuilding(position: GridPosition): void {
+    const cell = this.getCell(position.x, position.y);
+    if (cell?.buildingId) {
+      this.placements.delete(cell.buildingId);
+      cell.buildingId = undefined;
+    }
+  }
+
+  getBuildingPosition(buildingId: string): GridPosition | null {
+    const placement = this.placements.get(buildingId);
+    return placement ? { ...placement.position } : null;
   }
 }
