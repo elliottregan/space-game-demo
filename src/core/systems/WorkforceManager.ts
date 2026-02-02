@@ -4,6 +4,11 @@ import {
   COWORKER_BONDING_RATE,
   EXPERIENCE_GAIN_RATE,
   GUILD_BONDING_MULTIPLIER,
+  GUILD_FORMATION_BASE_PROBABILITY,
+  GUILD_FORMATION_CHECK_INTERVAL,
+  GUILD_FORMATION_MEMBERSHIP_PENALTY,
+  GUILD_FORMATION_MIN_POPULATION,
+  GUILD_FORMATION_RELATIONSHIP_THRESHOLD,
   GUILD_INITIAL_RELATIONSHIP_BONUS,
   HOUSEMATE_BONDING_RATE,
   INITIAL_COWORKER_RELATIONSHIP,
@@ -37,6 +42,12 @@ import { GuildManager } from "./GuildManager";
 
 // Import pure functions from workforce/ modules
 import { areInSameCohort } from "./workforce/cohort";
+import {
+  determineGuildType,
+  generateGuildName,
+  findEligibleFounderGroups,
+  calculateFormationProbability,
+} from "./workforce/guildFormation";
 import { calculateMasteryLevel, getMasteryEfficiency, getMasteryName } from "./workforce/mastery";
 import { getTrainingTime } from "./workforce/training";
 import { getRelationshipKey } from "./workforce/socialGraph";
@@ -54,6 +65,9 @@ export class WorkforceManager {
 
   /** Manages guilds - delegated to GuildManager */
   private guildManager: GuildManager = new GuildManager();
+
+  /** Sol of last guild formation check */
+  private lastGuildFormationCheck: number = 0;
 
   /**
    * Get the underlying RelationshipManager for direct access.
@@ -921,6 +935,94 @@ export class WorkforceManager {
     modularity: number;
   } {
     return this.relationshipManager.getCommunityStats(colonistIds);
+  }
+
+  // ============ Guild Formation ============
+
+  /**
+   * Process spontaneous guild formation.
+   * Checks every GUILD_FORMATION_CHECK_INTERVAL sols for eligible founder groups.
+   */
+  processGuildFormation(colonists: readonly Colonist[], currentSol: number): GameEvent[] {
+    const events: GameEvent[] = [];
+
+    // Check interval
+    if (currentSol - this.lastGuildFormationCheck < GUILD_FORMATION_CHECK_INTERVAL) {
+      return events;
+    }
+    this.lastGuildFormationCheck = currentSol;
+
+    // Minimum population check
+    if (colonists.length < GUILD_FORMATION_MIN_POPULATION) {
+      return events;
+    }
+
+    // Find eligible founder groups
+    const relationships = this.relationshipManager.getAllRelationships();
+    const groups = findEligibleFounderGroups(
+      colonists,
+      relationships,
+      GUILD_FORMATION_RELATIONSHIP_THRESHOLD,
+    );
+
+    if (groups.length === 0) {
+      return events;
+    }
+
+    // Try to form one guild (prevent explosion)
+    const founderIds = groups[0];
+    const founders = founderIds
+      .map((id) => colonists.find((c) => c.id === id))
+      .filter((c): c is Colonist => c !== undefined);
+
+    if (founders.length < 2) {
+      return events;
+    }
+
+    // Roll probability
+    const probability = calculateFormationProbability(
+      founders,
+      GUILD_FORMATION_BASE_PROBABILITY,
+      GUILD_FORMATION_MEMBERSHIP_PENALTY,
+    );
+
+    if (!rng.chance(probability)) {
+      return events;
+    }
+
+    // Determine type and name
+    const guildType = determineGuildType(founders);
+    const usedNames = this.guildManager.getUsedGuildNames();
+    const guildName = generateGuildName(guildType, usedNames);
+
+    // Create guild
+    const guild = this.guildManager.createGuild(guildName, guildType, founderIds, currentSol);
+
+    if (!guild) {
+      return events;
+    }
+
+    // Update colonist guildIds
+    for (const founder of founders) {
+      if (!founder.guildIds) {
+        founder.guildIds = [];
+      }
+      if (!founder.guildIds.includes(guild.id)) {
+        founder.guildIds.push(guild.id);
+      }
+    }
+
+    events.push({
+      type: "GUILD_FORMED",
+      severity: "info",
+      guildId: guild.id,
+      guildName: guild.name,
+      guildType: guildType,
+      founderIds: founderIds,
+      message: `The ${guild.name} has been founded!`,
+    });
+
+    return events;
   }
 
   // ============ Serialization ============
