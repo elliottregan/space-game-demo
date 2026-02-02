@@ -28,6 +28,7 @@ import {
   type TechResearch,
   type VictoryState,
 } from "../../facade";
+import { type PowerState, type DepositType } from "../../core/models/Grid";
 
 /**
  * Individual colonist morale data for UI display.
@@ -110,6 +111,17 @@ interface GameUIState {
     severity: number;
     pointOfNoReturn: boolean;
   };
+  gridBuildings: Array<{
+    id: string;
+    name: string;
+    position: { x: number; y: number };
+    powerState: PowerState;
+    batteryLevel: number;
+  }>;
+  gridDeposits: Array<{
+    position: { x: number; y: number };
+    type: DepositType;
+  }>;
 }
 
 /**
@@ -233,6 +245,8 @@ class GameService {
         severity: 0,
         pointOfNoReturn: false,
       },
+      gridBuildings: [],
+      gridDeposits: [],
     };
   }
 
@@ -360,6 +374,28 @@ class GameService {
       severity: this.facade.game.earthCrisisSeverity(),
       pointOfNoReturn: this.facade.game.earthCrisisPointOfNoReturn(),
     };
+
+    // Grid state
+    const gridPlacements: GameUIState["gridBuildings"] = [];
+    for (const building of this.facade.buildings.snapshot().active) {
+      const pos = this.facade.game.getGridBuildingPosition(building.id);
+      const placement = this.facade.game.getGridPlacement(building.id);
+      if (pos && placement) {
+        const def = this.facade.buildings.getDefinition(building.definitionId as BuildingId);
+        gridPlacements.push({
+          id: building.id,
+          name: def?.name ?? building.definitionId,
+          position: pos,
+          powerState: placement.powerState,
+          batteryLevel: placement.batteryLevel,
+        });
+      }
+    }
+    this.state.gridBuildings = gridPlacements;
+    this.state.gridDeposits = this.facade.game.getGridDeposits().map((d) => ({
+      position: d.position,
+      type: d.type,
+    }));
   }
 
   /**

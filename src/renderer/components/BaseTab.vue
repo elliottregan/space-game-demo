@@ -1,10 +1,140 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { gameService } from "../services/GameService";
+import type { GridPosition, DepositType, PowerState } from "../../core/models/Grid";
+import BaseGrid from "./BaseGrid/BaseGrid.vue";
+import BuildingContextMenu from "./BaseGrid/BuildingContextMenu.vue";
+import BuildingStatsCard from "./BaseGrid/BuildingStatsCard.vue";
 
-// State will be used in later tasks for grid visualization
-// oxlint-disable-next-line no-unused-vars
 const state = computed(() => gameService.getState());
+
+// Grid data from state
+const gridBuildings = computed(() =>
+  state.value.gridBuildings.map((b) => ({
+    id: b.id,
+    name: b.name,
+    position: b.position as GridPosition,
+    powerState: b.powerState as PowerState,
+    batteryLevel: b.batteryLevel,
+  })),
+);
+
+const gridDeposits = computed(() =>
+  state.value.gridDeposits.map((d) => ({
+    position: d.position as GridPosition,
+    type: d.type as DepositType,
+  })),
+);
+
+// Selection state
+const selectedPosition = ref<GridPosition | null>(null);
+const selectedBuildingId = ref<string | null>(null);
+
+// Context menu state
+const contextMenuPosition = ref<GridPosition | null>(null);
+const contextMenuScreenPos = ref({ x: 0, y: 0 });
+
+// Get available buildings for context menu
+const availableBuildings = computed(() => {
+  return state.value.buildingDefinitions.filter((def) => {
+    const canBuild = gameService.canBuild(def.id);
+    return canBuild;
+  });
+});
+
+// Get selected building data
+const selectedBuilding = computed(() => {
+  if (!selectedBuildingId.value) return null;
+  return state.value.buildings.find((b) => b.id === selectedBuildingId.value) ?? null;
+});
+
+const selectedBuildingDef = computed(() => {
+  if (!selectedBuilding.value) return null;
+  return (
+    state.value.buildingDefinitions.find((d) => d.id === selectedBuilding.value?.definitionId) ??
+    null
+  );
+});
+
+const selectedBuildingGridData = computed(() => {
+  if (!selectedBuildingId.value) return null;
+  return state.value.gridBuildings.find((b) => b.id === selectedBuildingId.value) ?? null;
+});
+
+// Event handlers
+function handleCellClick(position: GridPosition, hasBuilding: boolean) {
+  if (position.x < 0 || position.y < 0) {
+    // Clicked outside grid - clear selection
+    closeContextMenu();
+    selectedPosition.value = null;
+    selectedBuildingId.value = null;
+    return;
+  }
+
+  selectedPosition.value = position;
+
+  if (hasBuilding) {
+    // Find and select the building
+    const building = state.value.gridBuildings.find(
+      (b) => b.position.x === position.x && b.position.y === position.y,
+    );
+    if (building) {
+      selectedBuildingId.value = building.id;
+      closeContextMenu();
+    }
+  } else {
+    // Show context menu for empty cell
+    selectedBuildingId.value = null;
+    showContextMenu(position);
+  }
+}
+
+// oxlint-disable-next-line no-unused-vars
+function handleCellHover(_position: GridPosition | null) {
+  // Could show tooltip in future
+}
+
+function showContextMenu(position: GridPosition) {
+  contextMenuPosition.value = position;
+  // Position menu near center-right of screen for now
+  contextMenuScreenPos.value = {
+    x: window.innerWidth / 2 + 100,
+    y: window.innerHeight / 2 - 100,
+  };
+}
+
+function closeContextMenu() {
+  contextMenuPosition.value = null;
+}
+
+function handleBuildingSelect(buildingDefId: string) {
+  if (!contextMenuPosition.value) return;
+
+  // Build the building (placement will be handled by Task 18)
+  const building = gameService.startBuilding(buildingDefId);
+  if (building) {
+    // For now, just close the menu - actual grid placement comes in Task 18
+    console.log("Built", buildingDefId, "at", contextMenuPosition.value);
+  }
+  closeContextMenu();
+}
+
+function handleDemolish(buildingId: string) {
+  gameService.startRecycling(buildingId);
+  selectedBuildingId.value = null;
+}
+
+function closeStatsCard() {
+  selectedBuildingId.value = null;
+}
+
+// Placement hints for context menu (mock for now - will connect in Task 18)
+const placementHints = computed(() => ({
+  hasPower: false,
+  powerCapacityAvailable: 0,
+  deposit: undefined as DepositType | undefined,
+  isOccupied: false,
+}));
 </script>
 
 <template>
@@ -12,12 +142,47 @@ const state = computed(() => gameService.getState());
     <header class="base-header">
       <h2>Base Grid</h2>
       <div class="power-summary">
-        <span>Power: Coming soon</span>
+        <span>Buildings: {{ state.gridBuildings.length }}</span>
       </div>
     </header>
 
     <div class="grid-container">
-      <p class="placeholder">Grid visualization coming soon...</p>
+      <BaseGrid
+        :buildings="gridBuildings"
+        :deposits="gridDeposits"
+        :selected-position="selectedPosition"
+        @cell-click="handleCellClick"
+        @cell-hover="handleCellHover"
+      />
+    </div>
+
+    <!-- Context menu for empty cells -->
+    <BuildingContextMenu
+      v-if="contextMenuPosition"
+      :position="contextMenuPosition"
+      :hints="placementHints"
+      :available-buildings="availableBuildings"
+      :screen-x="contextMenuScreenPos.x"
+      :screen-y="contextMenuScreenPos.y"
+      @select="handleBuildingSelect"
+      @close="closeContextMenu"
+    />
+
+    <!-- Stats card for selected building -->
+    <div
+      v-if="selectedBuilding && selectedBuildingDef && selectedBuildingGridData"
+      class="stats-overlay"
+    >
+      <BuildingStatsCard
+        :building="selectedBuilding"
+        :definition="selectedBuildingDef"
+        :position="selectedBuildingGridData.position"
+        :power-state="selectedBuildingGridData.powerState"
+        :battery-level="selectedBuildingGridData.batteryLevel"
+        :distance-to-power="0"
+        @close="closeStatsCard"
+        @demolish="handleDemolish"
+      />
     </div>
   </div>
 </template>
@@ -28,6 +193,7 @@ const state = computed(() => gameService.getState());
   flex-direction: column;
   gap: var(--g-space-md);
   height: 100%;
+  position: relative;
 }
 
 .base-header {
@@ -54,13 +220,13 @@ const state = computed(() => gameService.getState());
   flex: 1;
   background: var(--g-color-bg-base);
   border: 1px solid var(--g-color-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
 }
 
-.placeholder {
-  color: var(--g-color-text-muted);
-  font-style: italic;
+.stats-overlay {
+  position: absolute;
+  top: 80px;
+  right: var(--g-space-md);
+  z-index: 100;
 }
 </style>
