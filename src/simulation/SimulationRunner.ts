@@ -14,6 +14,7 @@ import type {
   CrisisSeverity,
   CrisisType,
   DefeatReason,
+  GuildSnapshot,
   IdeologySnapshot,
   ResourceFlowSnapshot,
   ResourceSnapshot,
@@ -288,9 +289,11 @@ export class SimulationRunner {
     const flowTimeline: ResourceFlowSnapshot[] = [];
     const crisisTimeline: CrisisPoint[] = [];
     const ideologyTimeline: IdeologySnapshot[] = [];
+    const guildTimeline: GuildSnapshot[] = [];
     const buildingFirstBuiltSol = new Map<string, number>();
     const techCompletedSol = new Map<string, number>();
     let previousPopulation = api.colony.snapshot({ lightweight: true }).population;
+    let guildsFormed = 0;
 
     // Track last crisis of each type for O(1) lookup (optimization)
     const lastCrisisOfType = new Map<CrisisType, CrisisPoint>();
@@ -393,6 +396,24 @@ export class SimulationRunner {
 
         // Capture ideology snapshot
         ideologyTimeline.push(this.captureIdeologySnapshot(currentSol, colony.colonists));
+
+        // Capture guild snapshot (need full snapshot for guilds)
+        const fullColony = api.colony.snapshot({ lightweight: false });
+        const guilds = fullColony.guilds;
+        const byType = { professional: 0, social: 0, research: 0, civic: 0 };
+        let totalMembers = 0;
+        for (const guild of guilds) {
+          byType[guild.type as keyof typeof byType]++;
+          totalMembers += guild.memberIds.length;
+        }
+        guildTimeline.push({
+          sol: currentSol,
+          guildCount: guilds.length,
+          totalMembers,
+          avgGuildSize: guilds.length > 0 ? totalMembers / guilds.length : 0,
+          byType,
+        });
+        guildsFormed = Math.max(guildsFormed, guilds.length);
       }
 
       // Track newly researched techs
@@ -477,6 +498,8 @@ export class SimulationRunner {
         flowTimeline,
         crisisTimeline,
         ideologyTimeline,
+        guildTimeline,
+        guildsFormed,
         buildingFirstBuiltSol,
         techCompletedSol,
         defeatSol,
@@ -643,6 +666,8 @@ export class SimulationRunner {
       flowTimeline: ResourceFlowSnapshot[];
       crisisTimeline: CrisisPoint[];
       ideologyTimeline: IdeologySnapshot[];
+      guildTimeline: GuildSnapshot[];
+      guildsFormed: number;
       buildingFirstBuiltSol: Map<string, number>;
       techCompletedSol: Map<string, number>;
       defeatSol?: number;
@@ -692,6 +717,8 @@ export class SimulationRunner {
       resourcesAtDeath: enhanced?.resourcesAtDeath,
       blockedDecisions: enhanced?.blockedDecisions?.length ? enhanced.blockedDecisions : undefined,
       eventsOccurred: enhanced?.eventsOccurred?.length ? enhanced.eventsOccurred : undefined,
+      guildTimeline: enhanced?.guildTimeline?.length ? enhanced.guildTimeline : undefined,
+      guildsFormed: enhanced?.guildsFormed,
     };
   }
 
