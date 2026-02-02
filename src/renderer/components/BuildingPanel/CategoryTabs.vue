@@ -19,11 +19,6 @@ const emit = defineEmits<{
     @update:model-value="emit('update:selectedCategory', $event as BuildingPurpose)"
     :tabs="[
       {
-        id: BuildingPurpose.Residential,
-        label: 'Residential',
-        badge: counts[BuildingPurpose.Residential] || undefined,
-      },
-      {
         id: BuildingPurpose.Industrial,
         label: 'Industrial',
         badge: counts[BuildingPurpose.Industrial] || undefined,
