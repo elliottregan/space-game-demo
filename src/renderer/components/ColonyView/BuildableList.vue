@@ -4,8 +4,9 @@ import { BuildingPurpose } from "../../../core/models/Building";
 import type { BuildingDefinition } from "../../../facade";
 import { clearHighlights, highlightResources } from "../../directives/ResourceHighlight";
 import { gameService } from "../../services/GameService";
+import { GCardGrid } from "../../ui";
 import { calculateHighlightInfo } from "../../utils/formatters";
-import BuildableHousingCard from "./BuildableHousingCard.vue";
+import BuildingCard from "../BuildingPanel/BuildingCard.vue";
 
 const props = defineProps<{
   purpose: BuildingPurpose;
@@ -17,7 +18,7 @@ const api = gameService.api;
 const filteredDefinitions = computed(() => {
   return state.buildingDefinitions.filter((def) => {
     if (def.purpose !== props.purpose) return false;
-    if (def.requiredTech && !api.technology.isResearched(def.requiredTech)) return false;
+    // Don't filter by tech - show locked buildings too
     return true;
   });
 });
@@ -38,8 +39,26 @@ function build(defId: string): void {
   }
 }
 
+function getBuildingCount(defId: string): number {
+  return (
+    state.buildings.filter((b) => b.definitionId === defId).length +
+    state.pendingBuildings.filter((b) => b.definitionId === defId).length
+  );
+}
+
 function getPendingCount(defId: string): number {
   return state.pendingBuildings.filter((b) => b.definitionId === defId).length;
+}
+
+function isLocked(def: BuildingDefinition): boolean {
+  if (!def.requiredTech) return false;
+  return !api.technology.isResearched(def.requiredTech);
+}
+
+function getRequiredTechName(def: BuildingDefinition): string {
+  if (!def.requiredTech) return "";
+  const tech = api.technology.getById(def.requiredTech);
+  return tech?.name || def.requiredTech;
 }
 
 function onHover(def: BuildingDefinition): void {
@@ -54,25 +73,20 @@ function onLeave(): void {
 </script>
 
 <template>
-  <div class="buildable-list">
-    <BuildableHousingCard
+  <GCardGrid>
+    <BuildingCard
       v-for="def in filteredDefinitions"
       :key="def.id"
       :definition="def"
+      :count="getBuildingCount(def.id)"
+      :pending-count="getPendingCount(def.id)"
+      :locked="isLocked(def)"
       :can-build="canBuild(def.id)"
       :build-reason="getBuildReason(def.id)"
-      :pending-count="getPendingCount(def.id)"
+      :required-tech-name="getRequiredTechName(def)"
       @build="build(def.id)"
       @hover="onHover(def)"
       @leave="onLeave"
     />
-  </div>
+  </GCardGrid>
 </template>
-
-<style scoped>
-.buildable-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--g-space-xs);
-}
-</style>
