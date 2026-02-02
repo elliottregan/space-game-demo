@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { BuildingPurpose } from "../../../core/models/Building";
 import { gameService } from "../../services/GameService";
 import { GPanel } from "../../ui";
 import { ColonistDetailPanel, ColonistGraph } from "../ColonistGraph";
 import { RecreationPanel } from "../RecreationPanel";
+import BuildableList from "./BuildableList.vue";
 import BuildingSection from "./BuildingSection.vue";
 import ColonyStatsBar from "./ColonyStatsBar.vue";
 import HousingSection from "./HousingSection.vue";
@@ -119,6 +121,10 @@ const buildingsForGraph = computed(() =>
           :ideological-pressure="selectedColonistPressure"
         />
       </div>
+    </GPanel>
+
+    <GPanel title="Build Housing" accent="amber">
+      <BuildableList :purpose="BuildingPurpose.Residential" />
     </GPanel>
 
     <HousingSection

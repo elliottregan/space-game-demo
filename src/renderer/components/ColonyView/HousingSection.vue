@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import type { Building, BuildingDefinition, Colonist, SkillDefinition } from "../../../facade";
-import { BuildingPurpose } from "../../../core/models/Building";
 import { gameService } from "../../services/GameService";
 import { GButton, GEmptyState, GPanel } from "../../ui";
-import BuildableList from "./BuildableList.vue";
 import HousingBuildingCard from "./HousingBuildingCard.vue";
 import UnhousedPool from "./UnhousedPool.vue";
 
@@ -69,11 +67,6 @@ function onUnassignFromHousing(colonistId: string) {
 
 <template>
   <GPanel title="Housing">
-    <div class="build-housing-section">
-      <div class="section-label">Build New Housing</div>
-      <BuildableList :purpose="BuildingPurpose.Residential" />
-    </div>
-
     <div class="housing-controls">
       <span class="housing-stat">
         Unhoused: {{ unhoused.length }} | Available beds: {{ availableBeds }}
@@ -155,19 +148,5 @@ function onUnassignFromHousing(colonistId: string) {
   .housing-layout > :first-child {
     max-width: none;
   }
-}
-
-.build-housing-section {
-  margin-bottom: var(--g-space-md);
-  padding-bottom: var(--g-space-md);
-  border-bottom: 1px solid var(--g-color-border);
-}
-
-.section-label {
-  font-size: var(--g-font-size-sm);
-  color: var(--g-color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: var(--g-space-sm);
 }
 </style>
