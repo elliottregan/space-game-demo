@@ -525,20 +525,24 @@ export class IdeologyManager {
             ? colonist.ideology.marsIndependence
             : colonist.ideology.corporateInterests;
 
-      // Pressure delta: positive = neighbors reinforce, negative = neighbors oppose
-      const pressureDelta = neighborFactionPressure - colonistFactionValue;
+      // Conviction grows when neighbors support your faction (high pressure value)
+      // Conviction decays when neighbors oppose your faction (low pressure value)
+      // Threshold: 0.4 = neighbors moderately support your faction
+      const supportThreshold = 0.35;
 
-      if (pressureDelta > 0) {
-        // Neighbors reinforce this faction - conviction grows
-        const growth =
-          IdeologyBalance.CONVICTION_GROWTH_RATE * pressureDelta * avgNeighborConviction;
+      if (neighborFactionPressure >= supportThreshold) {
+        // Neighbors support this faction - conviction grows based on support level
+        // Growth doesn't depend on neighbor conviction - just alignment
+        const supportStrength = neighborFactionPressure - supportThreshold; // 0 to 0.65
+        const growth = IdeologyBalance.CONVICTION_GROWTH_RATE * (supportStrength * 2 + 0.2);
         colonist.ideology.conviction = Math.min(
           IdeologyBalance.CONVICTION_MAX,
           colonist.ideology.conviction + growth,
         );
       } else {
-        // Neighbors oppose this faction - conviction decays proportionally to mismatch
-        const decay = IdeologyBalance.CONVICTION_DECAY_RATE + Math.abs(pressureDelta) * 0.1;
+        // Neighbors don't support this faction - conviction decays
+        const oppositionStrength = supportThreshold - neighborFactionPressure; // 0 to 0.35
+        const decay = IdeologyBalance.CONVICTION_DECAY_RATE + oppositionStrength * 0.1;
         colonist.ideology.conviction = Math.max(
           IdeologyBalance.CONVICTION_MIN,
           colonist.ideology.conviction - decay,
@@ -646,19 +650,21 @@ export class IdeologyManager {
             ? avgInfluence.marsIndependence
             : avgInfluence.corporateInterests;
 
-      // Pressure delta: positive = neighbors reinforce, negative = neighbors oppose
-      const pressureDelta = neighborFactionPressure - colonistFactionValue;
+      // Conviction grows when neighbors support your faction (high pressure value)
+      // Conviction decays when neighbors don't support your faction (low pressure value)
+      const supportThreshold = 0.35;
 
-      if (pressureDelta > 0) {
+      if (neighborFactionPressure >= supportThreshold) {
+        const supportStrength = neighborFactionPressure - supportThreshold;
         convictionPressure = {
           growth: true,
-          rate: IdeologyBalance.CONVICTION_GROWTH_RATE * pressureDelta * avgNeighborConviction,
+          rate: IdeologyBalance.CONVICTION_GROWTH_RATE * (supportStrength * 2 + 0.2),
         };
       } else {
-        // Decay proportional to how strongly neighbors oppose
+        const oppositionStrength = supportThreshold - neighborFactionPressure;
         convictionPressure = {
           growth: false,
-          rate: IdeologyBalance.CONVICTION_DECAY_RATE + Math.abs(pressureDelta) * 0.1,
+          rate: IdeologyBalance.CONVICTION_DECAY_RATE + oppositionStrength * 0.1,
         };
       }
     }

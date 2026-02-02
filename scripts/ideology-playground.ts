@@ -18,7 +18,7 @@ import { ColonistRole, MasteryLevel } from "../src/core/models/Colonist";
 // ============================================================================
 
 /** Number of sols to simulate */
-const SOLS = 50;
+const SOLS = 100;
 
 /** Define colonists with their initial ideologies */
 const colonists: Colonist[] = [
