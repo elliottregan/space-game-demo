@@ -1,5 +1,5 @@
-export const TILE_WIDTH = 100;
-export const TILE_HEIGHT = 60;
+export const TILE_WIDTH = 140;
+export const TILE_HEIGHT = 84;
 export const GRID_SIZE = 10;
 
 export interface ScreenPosition {
