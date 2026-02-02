@@ -3,6 +3,7 @@ import { AirQualityPanel } from "./AirQualityPanel";
 import { BuildingsTablePanel } from "./BuildingsTablePanel";
 import { ColonistsPanel } from "./ColonistsPanel";
 import { ColonyPanel } from "./ColonyPanel";
+import { HealthPanel } from "./HealthPanel";
 import { PowerGridPanel } from "./PowerGridPanel";
 </script>
 
@@ -10,6 +11,7 @@ import { PowerGridPanel } from "./PowerGridPanel";
   <div class="main-tab">
     <div class="left-column">
       <ColonyPanel />
+      <HealthPanel />
       <AirQualityPanel />
       <PowerGridPanel />
     </div>
