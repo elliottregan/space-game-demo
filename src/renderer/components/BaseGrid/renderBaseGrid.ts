@@ -1,6 +1,7 @@
 import { select } from "d3-selection";
 import { gridToScreen, TILE_WIDTH, TILE_HEIGHT, GRID_SIZE } from "./isometricUtils";
-import type { GridPosition, DepositType, PowerState } from "../../../core/models/Grid";
+import { DepositType, PowerState } from "../../../core/models/Grid";
+import type { GridPosition } from "../../../core/models/Grid";
 
 export interface GridNodeData {
   buildingId?: string;
@@ -44,13 +45,13 @@ function getPowerStateColor(
   colors: ReturnType<typeof getThemeColors>,
 ): string {
   switch (state) {
-    case "powered":
+    case PowerState.POWERED:
       return colors.positive;
-    case "on_battery":
+    case PowerState.ON_BATTERY:
       return colors.warning;
-    case "low_battery":
+    case PowerState.LOW_BATTERY:
       return colors.danger;
-    case "unpowered":
+    case PowerState.UNPOWERED:
       return colors.textMuted;
     default:
       return colors.border;
@@ -59,11 +60,11 @@ function getPowerStateColor(
 
 function getPowerStateIcon(state: PowerState): string {
   switch (state) {
-    case "on_battery":
+    case PowerState.ON_BATTERY:
       return "\u{1F50B}"; // battery emoji
-    case "low_battery":
+    case PowerState.LOW_BATTERY:
       return "\u{1FAAB}"; // low battery emoji
-    case "unpowered":
+    case PowerState.UNPOWERED:
       return "\u{26D4}"; // no entry emoji
     default:
       return "";
@@ -135,7 +136,7 @@ export function renderBaseGrid(
 
       // Deposit indicator
       if (cell?.deposit && !cell.buildingId) {
-        const depositColor = cell.deposit === "water" ? colors.info : colors.warning;
+        const depositColor = cell.deposit === DepositType.WATER ? colors.info : colors.warning;
         cellG
           .append("circle")
           .attr("cx", screen.x)
@@ -170,7 +171,7 @@ export function renderBaseGrid(
           .text(cell.buildingName?.substring(0, 8) ?? "");
 
         // Power state icon
-        if (cell.powerState && cell.powerState !== "powered") {
+        if (cell.powerState && cell.powerState !== PowerState.POWERED) {
           cellG
             .append("text")
             .attr("x", screen.x)
