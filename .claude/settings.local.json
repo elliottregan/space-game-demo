@@ -57,7 +57,9 @@
       "Bash(ls:*)",
       "Bash(git fetch:*)",
       "Bash(git rebase:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git checkout:*)",
+      "Bash(git cherry-pick:*)"
     ]
   }
 }
