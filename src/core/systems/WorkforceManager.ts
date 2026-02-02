@@ -2,7 +2,6 @@ import {
   BASE_CONNECTION_PROBABILITY,
   COHORT_INITIAL_BONUS,
   COWORKER_BONDING_RATE,
-  EXPERIENCE_GAIN_RATE,
   GUILD_BONDING_MULTIPLIER,
   GUILD_FORMATION_BASE_PROBABILITY,
   GUILD_FORMATION_CHECK_INTERVAL,
@@ -14,7 +13,6 @@ import {
   INITIAL_COWORKER_RELATIONSHIP,
   INITIAL_HOUSEMATE_RELATIONSHIP,
   INITIAL_SOCIAL_RELATIONSHIP,
-  MASTER_EVENT_CHANCE,
   MAX_CONNECTION_PROBABILITY,
   MAX_COWORKER_RELATIONSHIP,
   MAX_SKILL_EFFICIENCY_BONUS,
@@ -27,7 +25,7 @@ import {
 } from "../balance/WorkforceBalance";
 import { SKILLS } from "../data/skills";
 import type { Colonist } from "../models/Colonist";
-import { ColonistRole, MasteryLevel } from "../models/Colonist";
+import { ColonistRole } from "../models/Colonist";
 import type { GameEvent } from "../models/GameEvent";
 import { GuildType } from "../models/Guild";
 import type { Guild } from "../models/Guild";
@@ -49,8 +47,6 @@ import {
   calculateFormationProbability,
   canJoinGuild,
 } from "./workforce/guildFormation";
-import { calculateMasteryLevel, getMasteryEfficiency, getMasteryName } from "./workforce/mastery";
-import { getTrainingTime } from "./workforce/training";
 import { getRelationshipKey } from "./workforce/socialGraph";
 
 // Re-export types for backward compatibility
@@ -105,91 +101,7 @@ export class WorkforceManager {
     // Process guild formation
     events.push(...this.processGuildFormation(colonists, currentSol));
 
-    for (const colonist of colonists) {
-      // Handle training
-      if (colonist.trainingTarget && colonist.trainingProgress !== undefined) {
-        colonist.trainingProgress++;
-        const requiredTime = this.getTrainingTime(colonist.role, colonist.trainingTarget);
-
-        if (colonist.trainingProgress >= requiredTime) {
-          const oldRole = colonist.role;
-          colonist.role = colonist.trainingTarget;
-          colonist.trainingTarget = undefined;
-          colonist.trainingProgress = undefined;
-          colonist.experience = 0;
-          colonist.masteryLevel = MasteryLevel.NOVICE;
-
-          events.push({
-            type: "TRAINING_COMPLETE",
-            colonistId: colonist.id,
-            colonistName: colonist.name,
-            oldRole,
-            newRole: colonist.role,
-            severity: "info",
-            message: `${colonist.name} is now trained as ${this.getRoleName(colonist.role)}!`,
-          });
-        }
-      }
-
-      // Handle experience gain for working colonists
-      if (colonist.role !== ColonistRole.UNASSIGNED && !colonist.trainingTarget) {
-        colonist.experience += EXPERIENCE_GAIN_RATE;
-
-        // Check for mastery level up (use pure function)
-        const newLevel = calculateMasteryLevel(colonist.experience);
-        if (newLevel > colonist.masteryLevel) {
-          colonist.masteryLevel = newLevel;
-          events.push({
-            type: "MASTERY_GAINED",
-            colonistId: colonist.id,
-            colonistName: colonist.name,
-            role: colonist.role,
-            newLevel: this.getMasteryName(newLevel),
-            severity: "info",
-            message: `${colonist.name} is now a ${this.getMasteryName(newLevel)} ${this.getRoleName(colonist.role)}!`,
-          });
-        }
-
-        // Master event chance
-        if (colonist.masteryLevel === MasteryLevel.MASTER && rng.chance(MASTER_EVENT_CHANCE)) {
-          events.push({
-            type: "MASTER_BREAKTHROUGH",
-            colonistId: colonist.id,
-            colonistName: colonist.name,
-            role: colonist.role,
-            severity: "info",
-            message: `${colonist.name} made a breakthrough in ${this.getRoleName(colonist.role)}!`,
-          });
-        }
-      }
-    }
-
     return events;
-  }
-
-  startTraining(colonist: Colonist, targetRole: ColonistRole): boolean {
-    if (colonist.role === targetRole) return false;
-    if (colonist.trainingTarget) return false;
-    if (targetRole === ColonistRole.UNASSIGNED) return false;
-
-    colonist.trainingTarget = targetRole;
-    colonist.trainingProgress = 0;
-    return true;
-  }
-
-  cancelTraining(colonist: Colonist): void {
-    colonist.trainingTarget = undefined;
-    colonist.trainingProgress = undefined;
-  }
-
-  /** Delegate to pure function */
-  getTrainingTime(currentRole: ColonistRole, targetRole: ColonistRole): number {
-    return getTrainingTime(currentRole, targetRole);
-  }
-
-  /** Delegate to pure function */
-  calculateMasteryLevel(experience: number): MasteryLevel {
-    return calculateMasteryLevel(experience);
   }
 
   /** Provide backward-compatible role names (differs from ROLE_DISPLAY_NAMES) */
@@ -206,11 +118,6 @@ export class WorkforceManager {
       case ColonistRole.FARMING:
         return "Farmer";
     }
-  }
-
-  /** Delegate to pure function */
-  getMasteryName(level: MasteryLevel): string {
-    return getMasteryName(level);
   }
 
   getWorkforceStats(colony: ColonyManager): Record<ColonistRole, number> {
@@ -231,12 +138,9 @@ export class WorkforceManager {
 
   /**
    * Calculate the total efficiency multiplier for a colonist.
-   * Combines mastery level bonus with skill bonuses (capped).
+   * Based on skill bonuses (capped).
    */
   getColonistEfficiency(colonist: Colonist): number {
-    // Use pure function for mastery efficiency
-    const masteryEfficiency = getMasteryEfficiency(colonist.masteryLevel);
-
     let skillBonus = 0;
     for (const skillId of colonist.skills) {
       const skill = SKILLS.find((s) => s.id === skillId);
@@ -248,7 +152,7 @@ export class WorkforceManager {
     // Cap skill bonus
     skillBonus = Math.min(skillBonus, MAX_SKILL_EFFICIENCY_BONUS);
 
-    return (masteryEfficiency ?? 1.0) + skillBonus;
+    return 1.0 + skillBonus;
   }
 
   /**
