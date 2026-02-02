@@ -4,7 +4,7 @@
 import { SKILLS } from "../../core/data/skills";
 import type { GameState } from "../../core/GameState";
 import type { Colonist, ColonistRole, ColonySnapshot, EntityLookup, Queryable } from "../types";
-import { type CanDoResult, err, ok, type Result } from "../types/common";
+import { err, ok, type Result } from "../types/common";
 
 type CommandExecutor = <T>(fn: () => Result<T>) => Result<T>;
 
@@ -65,26 +65,6 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
   }
 
   /**
-   * Check if a colonist can be trained for a role.
-   */
-  canTrain(colonistId: string, targetRole: ColonistRole): CanDoResult {
-    const colonist = this.gameState.colony.getColonist(colonistId);
-    if (!colonist) {
-      return { allowed: false, reason: "Colonist not found" };
-    }
-
-    if (colonist.trainingTarget) {
-      return { allowed: false, reason: `Already training for ${colonist.trainingTarget}` };
-    }
-
-    if (colonist.role === targetRole) {
-      return { allowed: false, reason: `Already has role: ${targetRole}` };
-    }
-
-    return { allowed: true };
-  }
-
-  /**
    * Get colonists with a specific role.
    */
   getByRole(role: ColonistRole): readonly Readonly<Colonist>[] {
@@ -96,13 +76,6 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
    */
   getColonistsByRole(role: ColonistRole): readonly Readonly<Colonist>[] {
     return this.getByRole(role);
-  }
-
-  /**
-   * Get colonists currently in training.
-   */
-  getInTraining(): readonly Readonly<Colonist>[] {
-    return this.gameState.colony.getColonists().filter((c) => c.trainingTarget !== undefined);
   }
 
   /**
@@ -128,72 +101,6 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
   // ==========================================================================
   // Commands
   // ==========================================================================
-
-  /**
-   * Start training a colonist for a new role.
-   */
-  trainColonist(colonistId: string, targetRole: ColonistRole): Result<void> {
-    return this.executeCommand(() => {
-      const check = this.canTrain(colonistId, targetRole);
-      if (!check.allowed) {
-        return err({
-          type: "INVALID_STATE",
-          current: this.getById(colonistId)?.role ?? "unknown",
-          expected: targetRole,
-          reason: check.reason ?? "Cannot train",
-        });
-      }
-
-      const colonist = this.gameState.colony.getColonist(colonistId);
-      if (!colonist) {
-        return err({
-          type: "NOT_FOUND",
-          entity: "colonist",
-          id: colonistId,
-        });
-      }
-
-      const success = this.gameState.workforce.startTraining(colonist, targetRole);
-
-      if (!success) {
-        return err({
-          type: "INVALID_TARGET",
-          target: colonistId,
-          reason: "Training failed to start",
-        });
-      }
-
-      return ok(undefined);
-    });
-  }
-
-  /**
-   * Cancel colonist training.
-   */
-  cancelTraining(colonistId: string): Result<void> {
-    return this.executeCommand(() => {
-      const colonist = this.gameState.colony.getColonist(colonistId);
-      if (!colonist) {
-        return err({
-          type: "NOT_FOUND",
-          entity: "colonist",
-          id: colonistId,
-        });
-      }
-
-      if (!colonist.trainingTarget) {
-        return err({
-          type: "INVALID_STATE",
-          current: "not training",
-          expected: "training",
-          reason: "Colonist is not in training",
-        });
-      }
-
-      this.gameState.workforce.cancelTraining(colonist);
-      return ok(undefined);
-    });
-  }
 
   /**
    * Assign a colonist to work at a building.

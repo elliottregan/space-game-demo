@@ -7,7 +7,6 @@ import {
   BuildingId,
   type BuildingMode,
   type Colonist,
-  type ColonistRole,
   type CouncilMemberSnapshot,
   type EventChoice,
   type ExpeditionType,
@@ -419,15 +418,6 @@ class GameService {
 
   cancelResearch(): void {
     this.facade.technology.cancelResearch();
-  }
-
-  // Workforce actions
-  startTraining(colonistId: string, targetRole: ColonistRole): boolean {
-    return this.facade.colony.trainColonist(colonistId, targetRole).success;
-  }
-
-  cancelTraining(colonistId: string): void {
-    this.facade.colony.cancelTraining(colonistId);
   }
 
   // Event actions
