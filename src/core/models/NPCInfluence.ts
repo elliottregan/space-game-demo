@@ -125,6 +125,8 @@ export interface Project {
     /** Materials production bonus per sol */
     materialsBonus?: number;
   };
+  /** Effects activated when this project completes (future implementation) */
+  onCompletionEffects?: ProjectEffect[];
   /** True if this is a capstone victory project */
   isCapstone?: boolean;
   /** Projects that must be completed before this can be proposed */
@@ -228,4 +230,45 @@ export interface TriadicClosureEvent {
   occurredAt: number;
   /** Initial weight of the new connection */
   initialWeight: number;
+}
+
+/**
+ * Effect types that can be activated when a project completes.
+ * Each effect type has specific parameters controlling its behavior.
+ */
+export enum ProjectEffectType {
+  /** Modifies ideology distribution of new colonists from immigration events */
+  IMMIGRATION_IDEOLOGY_BIAS = "immigration_ideology_bias",
+}
+
+/**
+ * An effect that is activated when a project completes.
+ * Effects are processed by the game systems but the actual implementation
+ * is handled elsewhere - this is just the data definition.
+ */
+export interface ProjectEffect {
+  /** The type of effect to apply */
+  type: ProjectEffectType;
+  /** Human-readable name for display */
+  name: string;
+  /** Description of what this effect does */
+  description: string;
+  /** Effect-specific parameters */
+  params: ProjectEffectParams;
+}
+
+/**
+ * Union type of all possible effect parameter objects.
+ */
+export type ProjectEffectParams = ImmigrationIdeologyBiasParams;
+
+/**
+ * Parameters for IMMIGRATION_IDEOLOGY_BIAS effect.
+ * Biases the ideology of new colonists arriving through immigration events.
+ */
+export interface ImmigrationIdeologyBiasParams {
+  /** Which faction's ideology to bias toward */
+  faction: NPCFaction;
+  /** Strength of the bias (0-1, where 1 is maximum bias) */
+  strength: number;
 }
