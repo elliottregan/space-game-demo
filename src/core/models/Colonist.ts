@@ -32,24 +32,10 @@ export const ROLE_DISPLAY_NAMES: Record<ColonistRole, string> = {
   [ColonistRole.FARMING]: "Farmer",
 };
 
-export enum MasteryLevel {
-  NOVICE = 0,
-  SKILLED = 1,
-  EXPERT = 2,
-  MASTER = 3,
-}
-
-/** Display names for mastery levels */
-export const MASTERY_DISPLAY_NAMES: readonly string[] = ["Novice", "Skilled", "Expert", "Master"];
-
 export interface Colonist {
   id: string;
   name: string;
   role: ColonistRole;
-  experience: number;
-  masteryLevel: MasteryLevel;
-  trainingTarget?: ColonistRole;
-  trainingProgress?: number;
   skills: SkillId[];
   housingId?: string; // Building ID of assigned habitat
   arrivalSol?: number; // Sol when colonist arrived (for cohort bonding)
