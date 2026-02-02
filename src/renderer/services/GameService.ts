@@ -16,6 +16,7 @@ import {
   type FactionSupportSnapshot,
   GameAPI,
   type GameEvent,
+  type GridPosition,
   type NPCFaction,
   ProjectId,
   type ProspectingSite,
@@ -437,6 +438,11 @@ class GameService {
 
   startBuilding(defId: string): Building | null {
     const result = this.facade.buildings.build(defId as BuildingId);
+    return result.success ? result.data : null;
+  }
+
+  startBuildingAtPosition(defId: string, position: GridPosition): Building | null {
+    const result = this.facade.buildings.buildAtPosition(defId as BuildingId, position);
     return result.success ? result.data : null;
   }
 

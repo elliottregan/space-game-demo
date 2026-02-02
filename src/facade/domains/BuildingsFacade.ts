@@ -3,6 +3,7 @@
 
 import type { GameState } from "../../core/GameState";
 import { BuildingId } from "../../core/models/Building";
+import type { GridPosition } from "../../core/models/Grid";
 import type {
   ActionChecker,
   Building,
@@ -247,6 +248,81 @@ export class BuildingsFacade
   }
 
   /**
+   * Start construction of a new building at a specific grid position.
+   */
+  buildAtPosition(defId: BuildingId, position: GridPosition): Result<Building> {
+    return this.executeCommand(() => {
+      const check = this.canBuild(defId);
+      if (!check.allowed) {
+        return err({
+          type: "PREREQUISITE_NOT_MET",
+          required: defId,
+          reason: check.reason ?? "Cannot build",
+        });
+      }
+
+      // Check if grid position is available
+      const cell = this.gameState.grid.getCell(position.x, position.y);
+      if (!cell) {
+        return err({
+          type: "INVALID_TARGET",
+          target: `${position.x},${position.y}`,
+          reason: "Position is out of bounds",
+        });
+      }
+      if (cell.buildingId) {
+        return err({
+          type: "INVALID_STATE",
+          current: "occupied",
+          expected: "empty",
+          reason: "Cell is already occupied",
+        });
+      }
+
+      // Build the building
+      const building = this.gameState.buildings.startBuilding(
+        defId,
+        this.gameState.resources,
+        this.gameState.technology,
+      );
+
+      if (!building) {
+        return err({
+          type: "INVALID_TARGET",
+          target: defId,
+          reason: "Build operation failed",
+        });
+      }
+
+      // Place on grid - should succeed since we already validated
+      const placementResult = this.gameState.grid.placeBuilding(building.id, position);
+      if (!placementResult.success) {
+        // This should never happen since we pre-validated, but handle gracefully
+        console.error("Grid placement failed after validation:", placementResult.error);
+        // Don't return error since building was created - let it exist without grid position
+        // A future task could add proper rollback support
+      }
+
+      // Register power if this is a power-producing building
+      const def = this.gameState.buildings.getDefinition(defId);
+      if (def?.powerProduction) {
+        this.gameState.grid.registerPowerSource(building.id, def.powerProduction);
+      }
+
+      // Register power consumption
+      if (def?.powerConsumption) {
+        this.gameState.grid.setBuildingPowerConsumption(building.id, def.powerConsumption);
+      }
+
+      // Update power connections
+      const hasTechBonus = this.gameState.technology.isResearched("improved-power-grid");
+      this.gameState.grid.updatePowerConnections(hasTechBonus);
+
+      return ok(building);
+    });
+  }
+
+  /**
    * Change a building's operating mode.
    */
   setMode(buildingId: string, mode: BuildingMode): Result<void> {
@@ -302,6 +378,15 @@ export class BuildingsFacade
           target: buildingId,
           reason: "Recycle operation failed",
         });
+      }
+
+      // Remove from grid when recycling starts
+      const pos = this.gameState.grid.getBuildingPosition(buildingId);
+      if (pos) {
+        this.gameState.grid.removeBuilding(pos);
+        // Update power connections after removal
+        const hasTechBonus = this.gameState.technology.isResearched("improved-power-grid");
+        this.gameState.grid.updatePowerConnections(hasTechBonus);
       }
 
       return ok(undefined);

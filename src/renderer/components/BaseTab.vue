@@ -110,10 +110,9 @@ function closeContextMenu() {
 function handleBuildingSelect(buildingDefId: string) {
   if (!contextMenuPosition.value) return;
 
-  // Build the building (placement will be handled by Task 18)
-  const building = gameService.startBuilding(buildingDefId);
+  // Build the building at the selected grid position
+  const building = gameService.startBuildingAtPosition(buildingDefId, contextMenuPosition.value);
   if (building) {
-    // For now, just close the menu - actual grid placement comes in Task 18
     console.log("Built", buildingDefId, "at", contextMenuPosition.value);
   }
   closeContextMenu();
