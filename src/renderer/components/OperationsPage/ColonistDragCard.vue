@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { MASTERY_DISPLAY_NAMES, ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist";
+import { ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist";
 import type { Colonist, SkillDefinition } from "../../../facade";
 import ColonistSkillBadge from "../ColonyPanel/ColonistSkillBadge.vue";
 
@@ -57,7 +57,6 @@ function onClick() {
         :is-active="skill.affinity.includes(colonist.role)"
       />
     </div>
-    <div class="colonist-mastery">{{ MASTERY_DISPLAY_NAMES[colonist.masteryLevel] }}</div>
   </div>
 </template>
 
@@ -106,11 +105,5 @@ function onClick() {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-bottom: var(--g-space-xs);
-}
-
-.colonist-mastery {
-  font-size: var(--g-font-size-xs);
-  color: var(--g-color-text-muted);
 }
 </style>

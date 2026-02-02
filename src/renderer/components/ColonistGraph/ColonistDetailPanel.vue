@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import {
-  type Colonist,
-  type ColonistIdeology,
-  ColonistRole,
-  MASTERY_DISPLAY_NAMES,
-  ROLE_DISPLAY_NAMES,
-} from "../../../core/models/Colonist";
+import { type Colonist, ColonistRole, ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist";
 import type { CoworkerRelationship } from "../../../core/systems/WorkforceManager";
 
 interface BuildingInfo {
@@ -272,17 +266,6 @@ function formatDelta(delta: number): string {
       <span :class="['role-badge', getRoleClass(colonist.role)]">
         {{ ROLE_DISPLAY_NAMES[colonist.role] }}
       </span>
-    </div>
-
-    <div class="panel-section">
-      <div class="stat-row">
-        <span class="stat-label">Mastery</span>
-        <span class="stat-value">{{ MASTERY_DISPLAY_NAMES[colonist.masteryLevel] }}</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Experience</span>
-        <span class="stat-value">{{ colonist.experience.toFixed(1) }} XP</span>
-      </div>
     </div>
 
     <div v-if="colonist.ideology" class="panel-section">

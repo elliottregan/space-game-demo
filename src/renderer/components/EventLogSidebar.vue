@@ -32,8 +32,6 @@ function getIcon(type: string): string {
   if (type.includes("VICTORY")) return "🎉";
   if (type.includes("DEFEAT")) return "💀";
   if (type.includes("EVENT")) return "⚠️";
-  if (type.includes("TRAINING")) return "📚";
-  if (type.includes("MASTERY")) return "⭐";
   return "📌";
 }
 </script>

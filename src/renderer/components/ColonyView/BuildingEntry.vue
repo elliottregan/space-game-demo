@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { MASTERY_DISPLAY_NAMES, ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist";
+import { ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist";
 import type { Building, BuildingDefinition, Colonist, SkillDefinition } from "../../../facade";
 import { GEntityHeader } from "../../ui";
 import ColonistSkillBadge from "../ColonyPanel/ColonistSkillBadge.vue";
@@ -75,9 +75,7 @@ function formatResourceDelta(delta: Record<string, number> | undefined): string 
       <div class="workers-list">
         <div v-for="worker in assignedWorkers" :key="worker.id" class="worker-row">
           <span class="worker-name">{{ worker.name }}</span>
-          <span class="worker-role">
-            {{ ROLE_DISPLAY_NAMES[worker.role] }} ({{ MASTERY_DISPLAY_NAMES[worker.masteryLevel] }})
-          </span>
+          <span class="worker-role">{{ ROLE_DISPLAY_NAMES[worker.role] }}</span>
           <div class="worker-skills">
             <ColonistSkillBadge
               v-for="skill in getColonistSkills(worker)"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { MASTERY_DISPLAY_NAMES, ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist";
+import { ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist";
 import type { Colonist, SkillDefinition } from "../../../facade";
 import { gameService } from "../../services/GameService";
 import { GActionCard } from "../../ui";
@@ -50,7 +50,6 @@ function isSkillActive(skill: SkillDefinition): boolean {
     <template #tag>
       <span class="colonist-role">
         {{ ROLE_DISPLAY_NAMES[colonist.role] }}
-        ({{ MASTERY_DISPLAY_NAMES[colonist.masteryLevel] }})
       </span>
     </template>
 

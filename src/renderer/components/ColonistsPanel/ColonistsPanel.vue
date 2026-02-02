@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { Home, CircleOff, Crown } from "lucide-vue-next";
-import {
-  ColonistRole,
-  MASTERY_DISPLAY_NAMES,
-  ROLE_DISPLAY_NAMES,
-} from "../../../core/models/Colonist";
+import { ColonistRole, ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist";
 import { NPCFaction } from "../../../core/models/NPCInfluence";
 import { gameService } from "../../services/GameService";
 import { GPanel } from "../../ui";
@@ -66,8 +62,6 @@ const colonistData = computed(() => {
         job: assignment ? assignment.role : ColonistRole.UNASSIGNED,
         jobLabel: assignment ? ROLE_DISPLAY_NAMES[assignment.role] : "Idle",
         workplace: assignment?.buildingName ?? null,
-        mastery: MASTERY_DISPLAY_NAMES[c.masteryLevel],
-        experience: c.experience,
         housed: !!c.housingId,
         centrality: moraleData?.centrality ?? 0,
         connections,
@@ -109,7 +103,6 @@ function getConnectionColor(connections: number): string {
         <span class="col-council" title="Council Member"></span>
         <span class="col-name">Name</span>
         <span class="col-job">Job</span>
-        <span class="col-mastery">Mastery</span>
         <span class="col-housed">Housing</span>
         <span class="col-connections">Connections</span>
         <span class="col-centrality">Centrality</span>
@@ -136,7 +129,6 @@ function getConnectionColor(connections: number): string {
         >
           {{ colonist.jobLabel }}
         </span>
-        <span class="col-mastery">{{ colonist.mastery }}</span>
         <span class="col-housed">
           <Home v-if="colonist.housed" :size="12" class="icon-housed" />
           <CircleOff v-else :size="12" class="icon-unhoused" />
@@ -239,12 +231,6 @@ function getConnectionColor(connections: number): string {
 
 .col-job.idle {
   color: var(--color-warning);
-}
-
-.col-mastery {
-  width: 60px;
-  text-align: left;
-  color: var(--g-color-text-muted);
 }
 
 .col-housed {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { MASTERY_DISPLAY_NAMES, ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist";
+import { ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist";
 import type { BuildingDefinition, Colonist, SkillDefinition } from "../../../facade";
 import { gameService } from "../../services/GameService";
 import GActionCard from "../../ui/composites/GActionCard.vue";
@@ -87,7 +87,7 @@ function onWorkplaceChange(buildingId: string | number) {
 <template>
   <GActionCard
     :title="colonist.name"
-    :description="`${ROLE_DISPLAY_NAMES[colonist.role]} · ${MASTERY_DISPLAY_NAMES[colonist.masteryLevel]}`"
+    :description="ROLE_DISPLAY_NAMES[colonist.role]"
     :select-options="workplaceOptions"
     :select-model-value="workplace"
     @update:select-model-value="onWorkplaceChange"
