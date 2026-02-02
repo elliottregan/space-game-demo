@@ -80,13 +80,14 @@ describe("GridManager - Building Placement", () => {
     expect(result.error).toBe("Position out of bounds");
   });
 
-  it("removeBuilding clears cell", () => {
+  it("removeBuilding clears cell and placement record", () => {
     const manager = new GridManager();
     manager.placeBuilding("building-1", { x: 5, y: 5 });
     manager.removeBuilding({ x: 5, y: 5 });
 
     const cell = manager.getCell(5, 5);
     expect(cell?.buildingId).toBeUndefined();
+    expect(manager.getBuildingPosition("building-1")).toBeNull();
   });
 
   it("getBuildingPosition returns position for placed building", () => {

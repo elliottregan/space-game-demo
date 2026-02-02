@@ -128,12 +128,20 @@ export class GridManager {
     return { success: true };
   }
 
-  removeBuilding(position: GridPosition): void {
+  removeBuilding(position: GridPosition): PlacementResult {
     const cell = this.getCell(position.x, position.y);
-    if (cell?.buildingId) {
-      this.placements.delete(cell.buildingId);
-      cell.buildingId = undefined;
+
+    if (!cell) {
+      return { success: false, error: "Position out of bounds" };
     }
+
+    if (!cell.buildingId) {
+      return { success: false, error: "No building at position" };
+    }
+
+    this.placements.delete(cell.buildingId);
+    cell.buildingId = undefined;
+    return { success: true };
   }
 
   getBuildingPosition(buildingId: string): GridPosition | null {
