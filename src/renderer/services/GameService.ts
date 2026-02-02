@@ -121,6 +121,7 @@ interface GameUIState {
     batteryLevel: number;
     status: "pending" | "active" | "disabled" | "idle" | "recycling";
     constructionProgress?: number; // 0-1 for pending buildings
+    powerSourceId?: string; // ID of the power source this building is connected to
   }>;
   gridDeposits: Array<{
     position: { x: number; y: number };
@@ -401,6 +402,7 @@ class GameService {
             building.status === "pending"
               ? building.constructionProgress / constructionTime
               : undefined,
+          powerSourceId: placement.powerSourceId,
         });
       }
     }

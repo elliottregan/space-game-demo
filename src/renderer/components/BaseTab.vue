@@ -20,6 +20,7 @@ const gridBuildings = computed(() =>
     batteryLevel: b.batteryLevel,
     status: b.status,
     constructionProgress: b.constructionProgress,
+    powerSourceId: b.powerSourceId,
   })),
 );
 

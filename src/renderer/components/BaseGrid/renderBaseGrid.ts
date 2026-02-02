@@ -44,6 +44,7 @@ export interface GridNodeData {
   batteryLevel?: number;
   status?: "pending" | "active" | "disabled" | "idle" | "recycling";
   constructionProgress?: number; // 0-1 for pending buildings
+  powerSourceId?: string; // ID of the power source this building is connected to
 }
 
 export interface BaseGridData {
@@ -130,7 +131,17 @@ export function renderBaseGrid(
   // Create layer groups - order matters for z-index
   const tileLayer = contentGroup.append("g").attr("class", "tile-layer");
   const depositLayer = contentGroup.append("g").attr("class", "deposit-layer");
+  const connectionLayer = contentGroup.append("g").attr("class", "connection-layer");
   const buildingLayer = contentGroup.append("g").attr("class", "building-layer");
+
+  // Build a map of building IDs to their screen positions for connection drawing
+  const buildingPositions = new Map<string, { x: number; y: number }>();
+  for (const cell of data.cells) {
+    if (cell.buildingId) {
+      const screen = gridToScreen(cell.position.x, cell.position.y, width, height);
+      buildingPositions.set(cell.buildingId, screen);
+    }
+  }
 
   // First pass: Render all tiles (bottom layer)
   for (let y = 0; y < GRID_SIZE; y++) {
@@ -184,7 +195,28 @@ export function renderBaseGrid(
     }
   }
 
-  // Third pass: Render all buildings and ghost previews (top layer)
+  // Third pass: Render power connections
+  for (const cell of data.cells) {
+    if (cell.buildingId && cell.powerSourceId && cell.powerSourceId !== cell.buildingId) {
+      const fromPos = buildingPositions.get(cell.buildingId);
+      const toPos = buildingPositions.get(cell.powerSourceId);
+
+      if (fromPos && toPos) {
+        connectionLayer
+          .append("line")
+          .attr("x1", fromPos.x)
+          .attr("y1", fromPos.y)
+          .attr("x2", toPos.x)
+          .attr("y2", toPos.y)
+          .attr("stroke", colors.positive)
+          .attr("stroke-width", 2)
+          .attr("stroke-opacity", 0.4)
+          .style("pointer-events", "none");
+      }
+    }
+  }
+
+  // Fourth pass: Render all buildings and ghost previews (top layer)
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       const screen = gridToScreen(x, y, width, height);
