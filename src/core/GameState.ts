@@ -316,6 +316,7 @@ export class GameState {
         airQualityManager: this.airQuality,
         powerGridManager: this.powerGrid,
         earthCrisis: this.earthCrisis,
+        grid: this.grid,
       },
       { autoAssignNewColonists: this.autoAssignNewColonists },
     );
