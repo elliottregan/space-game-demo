@@ -203,7 +203,7 @@ export class GridManager {
     return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
   }
 
-  updatePowerConnections(hasTechBonus: boolean): void {
+  updatePowerConnections(hasTechBonus: boolean, activeBuildingIds?: Set<string>): void {
     // Reset all placements to calculate fresh
     for (const placement of this.placements.values()) {
       placement.powerSourceId = undefined;
@@ -211,7 +211,10 @@ export class GridManager {
     }
 
     // For each power source, find buildings in range
-    const powerSourceList = Array.from(this.powerSources.values());
+    // Only include power sources that are active (if activeBuildingIds provided)
+    const powerSourceList = Array.from(this.powerSources.values()).filter(
+      (source) => !activeBuildingIds || activeBuildingIds.has(source.buildingId),
+    );
 
     // Build list of buildings that need power (not power sources themselves)
     const buildingsNeedingPower: { placement: BuildingPlacement; consumption: number }[] = [];

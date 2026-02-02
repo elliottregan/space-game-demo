@@ -11,7 +11,7 @@ import type { TickContext } from "../TickContext";
 export const processGridTick = definePhase({
   id: "grid:tick",
   name: "Process Grid Tick",
-  reads: ["technology"],
+  reads: ["technology", "buildings"],
   writes: ["grid"],
   execute(ctx: TickContext): GameEvent[] {
     const events: GameEvent[] = [];
@@ -19,8 +19,12 @@ export const processGridTick = definePhase({
     // Check if player has the improved power grid technology
     const hasTechBonus = ctx.technology.isResearched("improved-power-grid");
 
+    // Get active building IDs - only active buildings can provide power
+    const activeBuildings = ctx.buildings.getActiveBuildings();
+    const activeBuildingIds = new Set(activeBuildings.map((b) => b.id));
+
     // Update power connections (in case buildings were added/removed)
-    ctx.grid.updatePowerConnections(hasTechBonus);
+    ctx.grid.updatePowerConnections(hasTechBonus, activeBuildingIds);
 
     // Tick the grid (drains batteries for unpowered buildings)
     ctx.grid.tick();

@@ -330,9 +330,12 @@ export class BuildingsFacade
         this.gameState.grid.setBuildingPowerConsumption(building.id, def.powerConsumption);
       }
 
-      // Update power connections
+      // Update power connections (only active buildings can provide power)
       const hasTechBonus = this.gameState.technology.isResearched("improved-power-grid");
-      this.gameState.grid.updatePowerConnections(hasTechBonus);
+      const activeBuildingIds = new Set(
+        this.gameState.buildings.getActiveBuildings().map((b) => b.id),
+      );
+      this.gameState.grid.updatePowerConnections(hasTechBonus, activeBuildingIds);
 
       return ok(building);
     });
@@ -402,7 +405,10 @@ export class BuildingsFacade
         this.gameState.grid.removeBuilding(pos);
         // Update power connections after removal
         const hasTechBonus = this.gameState.technology.isResearched("improved-power-grid");
-        this.gameState.grid.updatePowerConnections(hasTechBonus);
+        const activeBuildingIds = new Set(
+          this.gameState.buildings.getActiveBuildings().map((b) => b.id),
+        );
+        this.gameState.grid.updatePowerConnections(hasTechBonus, activeBuildingIds);
       }
 
       return ok(undefined);
