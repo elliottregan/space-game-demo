@@ -1,18 +1,15 @@
 import { describe, expect, test, beforeEach } from "bun:test";
 import { IdeologyManager } from "../src/core/systems/IdeologyManager";
 import { RelationshipManager } from "../src/core/systems/RelationshipManager";
-import { ColonistMoraleManager } from "../src/core/systems/ColonistMoraleManager";
 import { NPCFaction, ProjectId } from "../src/core/models/NPCInfluence";
 import type { Colonist, ColonistIdeology } from "../src/core/models/Colonist";
-import { ColonistRole, MasteryLevel } from "../src/core/models/Colonist";
+import { ColonistRole } from "../src/core/models/Colonist";
 
 function createTestColonist(id: string, name: string, ideology: ColonistIdeology): Colonist {
   return {
     id,
     name,
     role: ColonistRole.UNASSIGNED,
-    experience: 0,
-    masteryLevel: MasteryLevel.NOVICE,
     skills: [],
     ideology,
   };

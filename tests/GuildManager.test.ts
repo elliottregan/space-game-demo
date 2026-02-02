@@ -3,14 +3,12 @@ import { describe, it, expect, beforeEach } from "bun:test";
 import { GuildManager } from "../src/core/systems/GuildManager";
 import { GuildType } from "../src/core/models/Guild";
 import type { Colonist } from "../src/core/models/Colonist";
-import { ColonistRole, MasteryLevel } from "../src/core/models/Colonist";
+import { ColonistRole } from "../src/core/models/Colonist";
 
 const createColonist = (overrides: Partial<Colonist> = {}): Colonist => ({
   id: "test_1",
   name: "Test Colonist",
   role: ColonistRole.UNASSIGNED,
-  experience: 0,
-  masteryLevel: MasteryLevel.NOVICE,
   skills: [],
   ...overrides,
 });

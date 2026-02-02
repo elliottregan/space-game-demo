@@ -1,7 +1,7 @@
 // tests/ColonistSimulationManager.test.ts
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { ColonistSimulationManager } from "../src/renderer/utils/ColonistSimulationManager";
-import { ColonistRole, MasteryLevel, type Colonist } from "../src/core/models/Colonist";
+import { ColonistRole, type Colonist } from "../src/core/models/Colonist";
 
 // Polyfill requestAnimationFrame for test environment
 let rafId = 0;
@@ -39,8 +39,6 @@ function makeColonist(id: string, name: string, role = ColonistRole.UNASSIGNED):
     name,
     role,
     skills: [],
-    experience: 0,
-    masteryLevel: MasteryLevel.NOVICE,
   };
 }
 

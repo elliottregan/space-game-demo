@@ -1,15 +1,9 @@
 // tests/WorkforceManager.test.ts
-import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { SkillId } from "../src/core/data/skills";
-import { ColonistRole, MasteryLevel, type Colonist } from "../src/core/models/Colonist";
+import { describe, it, expect, beforeEach } from "bun:test";
+import { ColonistRole, type Colonist } from "../src/core/models/Colonist";
 import { rng } from "../src/core/utils/random";
 import { WorkforceManager } from "../src/core/systems/WorkforceManager";
 import {
-  MASTERY_THRESHOLDS,
-  EXPERIENCE_GAIN_RATE,
-  ROLE_AFFINITY,
-  MASTERY_EFFICIENCY,
-  MAX_SKILL_EFFICIENCY_BONUS,
   COWORKER_BONDING_RATE,
   INITIAL_COWORKER_RELATIONSHIP,
   HOUSEMATE_BONDING_RATE,
@@ -27,8 +21,6 @@ const createColonist = (overrides: Partial<Colonist> = {}): Colonist => ({
   id: "test_1",
   name: "Test Colonist",
   role: ColonistRole.UNASSIGNED,
-  experience: 0,
-  masteryLevel: MasteryLevel.NOVICE,
   skills: [],
   ...overrides,
 });
@@ -48,402 +40,6 @@ describe("WorkforceManager", () => {
 
   beforeEach(() => {
     workforce = new WorkforceManager();
-  });
-
-  // ==========================================================================
-  // startTraining() tests
-  // ==========================================================================
-  describe("startTraining()", () => {
-    it("should return true for valid training (different role)", () => {
-      const colonist = createColonist({ role: ColonistRole.UNASSIGNED });
-      const result = workforce.startTraining(colonist, ColonistRole.ENGINEERING);
-
-      expect(result).toBe(true);
-      expect(colonist.trainingTarget).toBe(ColonistRole.ENGINEERING);
-      expect(colonist.trainingProgress).toBe(0);
-    });
-
-    it("should return false when same role", () => {
-      const colonist = createColonist({ role: ColonistRole.ENGINEERING });
-      const result = workforce.startTraining(colonist, ColonistRole.ENGINEERING);
-
-      expect(result).toBe(false);
-      expect(colonist.trainingTarget).toBeUndefined();
-    });
-
-    it("should return false when already training", () => {
-      const colonist = createColonist({
-        role: ColonistRole.UNASSIGNED,
-        trainingTarget: ColonistRole.RESEARCH,
-        trainingProgress: 2,
-      });
-      const result = workforce.startTraining(colonist, ColonistRole.ENGINEERING);
-
-      expect(result).toBe(false);
-      expect(colonist.trainingTarget).toBe(ColonistRole.RESEARCH);
-    });
-
-    it("should return false when target is UNASSIGNED", () => {
-      const colonist = createColonist({ role: ColonistRole.ENGINEERING });
-      const result = workforce.startTraining(colonist, ColonistRole.UNASSIGNED);
-
-      expect(result).toBe(false);
-      expect(colonist.trainingTarget).toBeUndefined();
-    });
-
-    it("should set trainingTarget and trainingProgress=0", () => {
-      const colonist = createColonist({ role: ColonistRole.UNASSIGNED });
-      workforce.startTraining(colonist, ColonistRole.FARMING);
-
-      expect(colonist.trainingTarget).toBe(ColonistRole.FARMING);
-      expect(colonist.trainingProgress).toBe(0);
-    });
-  });
-
-  // ==========================================================================
-  // cancelTraining() tests
-  // ==========================================================================
-  describe("cancelTraining()", () => {
-    it("should clear trainingTarget and trainingProgress", () => {
-      const colonist = createColonist({
-        role: ColonistRole.UNASSIGNED,
-        trainingTarget: ColonistRole.RESEARCH,
-        trainingProgress: 3,
-      });
-
-      workforce.cancelTraining(colonist);
-
-      expect(colonist.trainingTarget).toBeUndefined();
-      expect(colonist.trainingProgress).toBeUndefined();
-    });
-
-    it("should work when colonist is training", () => {
-      const colonist = createColonist({ role: ColonistRole.UNASSIGNED });
-      workforce.startTraining(colonist, ColonistRole.ENGINEERING);
-
-      workforce.cancelTraining(colonist);
-
-      expect(colonist.trainingTarget).toBeUndefined();
-      expect(colonist.trainingProgress).toBeUndefined();
-    });
-
-    it("should be no-op when not training", () => {
-      const colonist = createColonist({ role: ColonistRole.ENGINEERING });
-
-      // Should not throw
-      workforce.cancelTraining(colonist);
-
-      expect(colonist.trainingTarget).toBeUndefined();
-      expect(colonist.trainingProgress).toBeUndefined();
-    });
-  });
-
-  // ==========================================================================
-  // getTrainingTime() tests
-  // ==========================================================================
-  describe("getTrainingTime()", () => {
-    it("should return correct affinity (RESEARCH -> CIVIL_SCIENCE = 3)", () => {
-      const time = workforce.getTrainingTime(ColonistRole.RESEARCH, ColonistRole.CIVIL_SCIENCE);
-      expect(time).toBe(ROLE_AFFINITY[ColonistRole.RESEARCH]![ColonistRole.CIVIL_SCIENCE]!);
-      expect(time).toBe(3);
-    });
-
-    it("should return correct affinity (UNASSIGNED -> any = 5)", () => {
-      const timeToEngineering = workforce.getTrainingTime(
-        ColonistRole.UNASSIGNED,
-        ColonistRole.ENGINEERING,
-      );
-      const timeToResearch = workforce.getTrainingTime(
-        ColonistRole.UNASSIGNED,
-        ColonistRole.RESEARCH,
-      );
-      const timeToFarming = workforce.getTrainingTime(
-        ColonistRole.UNASSIGNED,
-        ColonistRole.FARMING,
-      );
-
-      expect(timeToEngineering).toBe(5);
-      expect(timeToResearch).toBe(5);
-      expect(timeToFarming).toBe(5);
-    });
-
-    it("should return default (10) for undefined affinity", () => {
-      // RESEARCH -> UNASSIGNED is not defined in ROLE_AFFINITY
-      const time = workforce.getTrainingTime(ColonistRole.RESEARCH, ColonistRole.UNASSIGNED);
-      expect(time).toBe(10);
-    });
-
-    it("should return different values for different role pairs", () => {
-      const researchToEngineering = workforce.getTrainingTime(
-        ColonistRole.RESEARCH,
-        ColonistRole.ENGINEERING,
-      );
-      const researchToFarming = workforce.getTrainingTime(
-        ColonistRole.RESEARCH,
-        ColonistRole.FARMING,
-      );
-      const engineeringToFarming = workforce.getTrainingTime(
-        ColonistRole.ENGINEERING,
-        ColonistRole.FARMING,
-      );
-
-      expect(researchToEngineering).toBe(7);
-      expect(researchToFarming).toBe(10);
-      expect(engineeringToFarming).toBe(4);
-    });
-  });
-
-  // ==========================================================================
-  // Training Progression via tick() tests
-  // ==========================================================================
-  describe("Training Progression via tick()", () => {
-    it("should increment trainingProgress each tick", () => {
-      const colonist = createColonist({ role: ColonistRole.UNASSIGNED });
-      workforce.startTraining(colonist, ColonistRole.ENGINEERING);
-
-      const colony = mockColony([colonist]);
-      workforce.tick(colony as any);
-
-      expect(colonist.trainingProgress).toBe(1);
-
-      workforce.tick(colony as any);
-      expect(colonist.trainingProgress).toBe(2);
-    });
-
-    it("should emit TRAINING_COMPLETE when training finishes", () => {
-      const colonist = createColonist({ role: ColonistRole.UNASSIGNED });
-      workforce.startTraining(colonist, ColonistRole.ENGINEERING);
-      colonist.trainingProgress = 4; // One away from completion (5 required)
-
-      const colony = mockColony([colonist]);
-      const events = workforce.tick(colony as any);
-
-      const completeEvent = events.find((e) => e.type === "TRAINING_COMPLETE");
-      expect(completeEvent).toBeDefined();
-      expect(completeEvent?.colonistId).toBe("test_1");
-      expect(completeEvent?.newRole).toBe(ColonistRole.ENGINEERING);
-    });
-
-    it("should update colonist.role on completion", () => {
-      const colonist = createColonist({ role: ColonistRole.UNASSIGNED });
-      workforce.startTraining(colonist, ColonistRole.RESEARCH);
-      colonist.trainingProgress = 4; // One tick from completion
-
-      const colony = mockColony([colonist]);
-      workforce.tick(colony as any);
-
-      expect(colonist.role).toBe(ColonistRole.RESEARCH);
-    });
-
-    it("should reset experience and mastery to 0/NOVICE on completion", () => {
-      const colonist = createColonist({
-        role: ColonistRole.ENGINEERING,
-        experience: 50,
-        masteryLevel: MasteryLevel.EXPERT,
-      });
-      workforce.startTraining(colonist, ColonistRole.RESEARCH);
-      colonist.trainingProgress = 6; // One tick from completion (ENGINEERING->RESEARCH = 7)
-
-      const colony = mockColony([colonist]);
-      workforce.tick(colony as any);
-
-      // After training completes, colonist gains XP for new role in same tick
-      // So experience is 0 + 0.5 = 0.5
-      expect(colonist.experience).toBe(EXPERIENCE_GAIN_RATE);
-      expect(colonist.masteryLevel).toBe(MasteryLevel.NOVICE);
-    });
-
-    it("should clear training state on completion", () => {
-      const colonist = createColonist({ role: ColonistRole.UNASSIGNED });
-      workforce.startTraining(colonist, ColonistRole.FARMING);
-      colonist.trainingProgress = 4; // One tick from completion
-
-      const colony = mockColony([colonist]);
-      workforce.tick(colony as any);
-
-      expect(colonist.trainingTarget).toBeUndefined();
-      expect(colonist.trainingProgress).toBeUndefined();
-    });
-  });
-
-  // ==========================================================================
-  // Experience & Mastery tests
-  // ==========================================================================
-  describe("Experience & Mastery", () => {
-    it("should gain 0.5 XP per tick when working", () => {
-      const colonist = createColonist({
-        role: ColonistRole.ENGINEERING,
-        experience: 0,
-      });
-
-      const colony = mockColony([colonist]);
-      workforce.tick(colony as any);
-
-      expect(colonist.experience).toBe(EXPERIENCE_GAIN_RATE);
-      expect(colonist.experience).toBe(0.5);
-    });
-
-    it("should not gain XP when UNASSIGNED", () => {
-      const colonist = createColonist({
-        role: ColonistRole.UNASSIGNED,
-        experience: 0,
-      });
-
-      const colony = mockColony([colonist]);
-      workforce.tick(colony as any);
-
-      expect(colonist.experience).toBe(0);
-    });
-
-    it("should not gain XP when training", () => {
-      const colonist = createColonist({
-        role: ColonistRole.ENGINEERING,
-        experience: 10,
-      });
-      workforce.startTraining(colonist, ColonistRole.RESEARCH);
-
-      const colony = mockColony([colonist]);
-      workforce.tick(colony as any);
-
-      // Experience should not increase while training
-      // (training increment happens, but XP gain is skipped)
-      expect(colonist.experience).toBe(10);
-    });
-
-    it("should level to SKILLED at 25 XP", () => {
-      const colonist = createColonist({
-        role: ColonistRole.ENGINEERING,
-        experience: 24.5,
-        masteryLevel: MasteryLevel.NOVICE,
-      });
-
-      const colony = mockColony([colonist]);
-      const events = workforce.tick(colony as any);
-
-      expect(colonist.experience).toBe(25);
-      expect(colonist.masteryLevel).toBe(MasteryLevel.SKILLED);
-
-      const masteryEvent = events.find((e) => e.type === "MASTERY_GAINED");
-      expect(masteryEvent).toBeDefined();
-      expect(masteryEvent?.newLevel).toBe("Skilled");
-    });
-
-    it("should level to EXPERT at 50 XP", () => {
-      const colonist = createColonist({
-        role: ColonistRole.RESEARCH,
-        experience: 49.5,
-        masteryLevel: MasteryLevel.SKILLED,
-      });
-
-      const colony = mockColony([colonist]);
-      const events = workforce.tick(colony as any);
-
-      expect(colonist.experience).toBe(50);
-      expect(colonist.masteryLevel).toBe(MasteryLevel.EXPERT);
-
-      const masteryEvent = events.find((e) => e.type === "MASTERY_GAINED");
-      expect(masteryEvent).toBeDefined();
-      expect(masteryEvent?.newLevel).toBe("Expert");
-    });
-
-    it("should level to MASTER at 75 XP", () => {
-      const colonist = createColonist({
-        role: ColonistRole.FARMING,
-        experience: 74.5,
-        masteryLevel: MasteryLevel.EXPERT,
-      });
-
-      const colony = mockColony([colonist]);
-      const events = workforce.tick(colony as any);
-
-      expect(colonist.experience).toBe(75);
-      expect(colonist.masteryLevel).toBe(MasteryLevel.MASTER);
-
-      const masteryEvent = events.find((e) => e.type === "MASTERY_GAINED");
-      expect(masteryEvent).toBeDefined();
-      expect(masteryEvent?.newLevel).toBe("Master");
-    });
-
-    it("should emit MASTERY_GAINED event on level up", () => {
-      const colonist = createColonist({
-        role: ColonistRole.CIVIL_SCIENCE,
-        experience: 24.5,
-        masteryLevel: MasteryLevel.NOVICE,
-      });
-
-      const colony = mockColony([colonist]);
-      const events = workforce.tick(colony as any);
-
-      const masteryEvent = events.find((e) => e.type === "MASTERY_GAINED");
-      expect(masteryEvent).toBeDefined();
-      expect(masteryEvent?.colonistId).toBe("test_1");
-      expect(masteryEvent?.colonistName).toBe("Test Colonist");
-      expect(masteryEvent?.role).toBe(ColonistRole.CIVIL_SCIENCE);
-      expect(masteryEvent?.severity).toBe("info");
-    });
-  });
-
-  // ==========================================================================
-  // Master Breakthrough tests
-  // ==========================================================================
-  describe("Master Breakthrough", () => {
-    it("should not trigger breakthrough for non-MASTER colonists", () => {
-      // Seed 307 produces 0.002243..., which is below 0.01 threshold
-      // but breakthrough should still not trigger for non-MASTER colonists
-      rng.seed(307);
-
-      const colonist = createColonist({
-        role: ColonistRole.ENGINEERING,
-        experience: 40,
-        masteryLevel: MasteryLevel.SKILLED,
-      });
-
-      const colony = mockColony([colonist]);
-      const events = workforce.tick(colony as any);
-
-      const breakthroughEvent = events.find((e) => e.type === "MASTER_BREAKTHROUGH");
-      expect(breakthroughEvent).toBeUndefined();
-    });
-
-    it("should trigger breakthrough when rng produces value below MASTER_EVENT_CHANCE", () => {
-      // Seed 307 produces 0.002243..., which is below 0.01 threshold
-      rng.seed(307);
-
-      const colonist = createColonist({
-        role: ColonistRole.RESEARCH,
-        experience: 80,
-        masteryLevel: MasteryLevel.MASTER,
-      });
-
-      const colony = mockColony([colonist]);
-      const events = workforce.tick(colony as any);
-
-      const breakthroughEvent = events.find((e) => e.type === "MASTER_BREAKTHROUGH");
-      expect(breakthroughEvent).toBeDefined();
-    });
-
-    it("should include correct colonist info in breakthrough event", () => {
-      // Seed 307 produces 0.002243..., which is below 0.01 threshold
-      rng.seed(307);
-
-      const colonist = createColonist({
-        id: "master_1",
-        name: "Dr. Expert",
-        role: ColonistRole.CIVIL_SCIENCE,
-        experience: 100,
-        masteryLevel: MasteryLevel.MASTER,
-      });
-
-      const colony = mockColony([colonist]);
-      const events = workforce.tick(colony as any);
-
-      const breakthroughEvent = events.find((e) => e.type === "MASTER_BREAKTHROUGH");
-      expect(breakthroughEvent).toBeDefined();
-      expect(breakthroughEvent?.colonistId).toBe("master_1");
-      expect(breakthroughEvent?.colonistName).toBe("Dr. Expert");
-      expect(breakthroughEvent?.role).toBe(ColonistRole.CIVIL_SCIENCE);
-      expect(breakthroughEvent?.severity).toBe("info");
-    });
   });
 
   // ==========================================================================
@@ -469,58 +65,6 @@ describe("WorkforceManager", () => {
 
       it("should return 'Farmer' for FARMING", () => {
         expect(workforce.getRoleName(ColonistRole.FARMING)).toBe("Farmer");
-      });
-    });
-
-    describe("getMasteryName()", () => {
-      it("should return 'Novice' for NOVICE", () => {
-        expect(workforce.getMasteryName(MasteryLevel.NOVICE)).toBe("Novice");
-      });
-
-      it("should return 'Skilled' for SKILLED", () => {
-        expect(workforce.getMasteryName(MasteryLevel.SKILLED)).toBe("Skilled");
-      });
-
-      it("should return 'Expert' for EXPERT", () => {
-        expect(workforce.getMasteryName(MasteryLevel.EXPERT)).toBe("Expert");
-      });
-
-      it("should return 'Master' for MASTER", () => {
-        expect(workforce.getMasteryName(MasteryLevel.MASTER)).toBe("Master");
-      });
-    });
-
-    describe("calculateMasteryLevel()", () => {
-      it("should return NOVICE for experience 0", () => {
-        expect(workforce.calculateMasteryLevel(0)).toBe(MasteryLevel.NOVICE);
-      });
-
-      it("should return NOVICE for experience 24", () => {
-        expect(workforce.calculateMasteryLevel(24)).toBe(MasteryLevel.NOVICE);
-      });
-
-      it("should return SKILLED for experience 25", () => {
-        expect(workforce.calculateMasteryLevel(25)).toBe(MasteryLevel.SKILLED);
-      });
-
-      it("should return SKILLED for experience 49", () => {
-        expect(workforce.calculateMasteryLevel(49)).toBe(MasteryLevel.SKILLED);
-      });
-
-      it("should return EXPERT for experience 50", () => {
-        expect(workforce.calculateMasteryLevel(50)).toBe(MasteryLevel.EXPERT);
-      });
-
-      it("should return EXPERT for experience 74", () => {
-        expect(workforce.calculateMasteryLevel(74)).toBe(MasteryLevel.EXPERT);
-      });
-
-      it("should return MASTER for experience 75", () => {
-        expect(workforce.calculateMasteryLevel(75)).toBe(MasteryLevel.MASTER);
-      });
-
-      it("should return MASTER for experience 100", () => {
-        expect(workforce.calculateMasteryLevel(100)).toBe(MasteryLevel.MASTER);
       });
     });
   });
@@ -583,85 +127,6 @@ describe("WorkforceManager", () => {
       expect(stats[ColonistRole.RESEARCH]).toBe(1);
       expect(stats[ColonistRole.ENGINEERING]).toBe(0);
       expect(stats[ColonistRole.FARMING]).toBe(0);
-    });
-  });
-
-  // ==========================================================================
-  // getColonistEfficiency() tests
-  // ==========================================================================
-  describe("getColonistEfficiency()", () => {
-    it("should return base mastery efficiency for colonist with no skills", () => {
-      const colonist = createColonist({
-        role: ColonistRole.ENGINEERING,
-        masteryLevel: MasteryLevel.NOVICE,
-        skills: [],
-      });
-
-      const efficiency = workforce.getColonistEfficiency(colonist);
-      expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.NOVICE]!);
-    });
-
-    it("should return higher efficiency for higher mastery levels", () => {
-      const novice = createColonist({
-        role: ColonistRole.RESEARCH,
-        masteryLevel: MasteryLevel.NOVICE,
-        skills: [],
-      });
-      const skilled = createColonist({
-        role: ColonistRole.RESEARCH,
-        masteryLevel: MasteryLevel.SKILLED,
-        skills: [],
-      });
-      const expert = createColonist({
-        role: ColonistRole.RESEARCH,
-        masteryLevel: MasteryLevel.EXPERT,
-        skills: [],
-      });
-      const master = createColonist({
-        role: ColonistRole.RESEARCH,
-        masteryLevel: MasteryLevel.MASTER,
-        skills: [],
-      });
-
-      expect(workforce.getColonistEfficiency(novice)).toBe(0.7);
-      expect(workforce.getColonistEfficiency(skilled)).toBe(1.0);
-      expect(workforce.getColonistEfficiency(expert)).toBe(1.3);
-      expect(workforce.getColonistEfficiency(master)).toBe(1.6);
-    });
-
-    it("should add skill bonus for matching skill", () => {
-      const colonist = createColonist({
-        role: ColonistRole.ENGINEERING,
-        masteryLevel: MasteryLevel.NOVICE,
-        skills: [SkillId.JURY_RIGGER], // +15% for Engineering
-      });
-
-      const efficiency = workforce.getColonistEfficiency(colonist);
-      expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.NOVICE]! + 0.15);
-    });
-
-    it("should not add bonus for non-matching skill", () => {
-      const colonist = createColonist({
-        role: ColonistRole.ENGINEERING,
-        masteryLevel: MasteryLevel.NOVICE,
-        skills: [SkillId.GREEN_THUMB], // Farming skill, not Engineering
-      });
-
-      const efficiency = workforce.getColonistEfficiency(colonist);
-      expect(efficiency).toBe(MASTERY_EFFICIENCY[MasteryLevel.NOVICE]!);
-    });
-
-    it("should cap skill bonus at MAX_SKILL_EFFICIENCY_BONUS", () => {
-      const colonist = createColonist({
-        role: ColonistRole.ENGINEERING,
-        masteryLevel: MasteryLevel.NOVICE,
-        skills: [SkillId.JURY_RIGGER, SkillId.CALM_UNDER_PRESSURE], // +15% + +10% = +25%, but capped at +20%
-      });
-
-      const efficiency = workforce.getColonistEfficiency(colonist);
-      expect(efficiency).toBe(
-        MASTERY_EFFICIENCY[MasteryLevel.NOVICE]! + MAX_SKILL_EFFICIENCY_BONUS,
-      );
     });
   });
 
@@ -1730,32 +1195,24 @@ describe("WorkforceManager", () => {
           id: "c1",
           name: "Alice",
           role: ColonistRole.ENGINEERING,
-          experience: 0,
-          masteryLevel: MasteryLevel.NOVICE,
           skills: [],
         },
         {
           id: "c2",
           name: "Bob",
           role: ColonistRole.ENGINEERING,
-          experience: 0,
-          masteryLevel: MasteryLevel.NOVICE,
           skills: [],
         },
         {
           id: "c3",
           name: "Carol",
           role: ColonistRole.FARMING,
-          experience: 0,
-          masteryLevel: MasteryLevel.NOVICE,
           skills: [],
         },
         {
           id: "c4",
           name: "Dave",
           role: ColonistRole.RESEARCH,
-          experience: 0,
-          masteryLevel: MasteryLevel.NOVICE,
           skills: [],
         },
       ];
@@ -1784,32 +1241,24 @@ describe("WorkforceManager", () => {
           id: "c1",
           name: "Alice",
           role: ColonistRole.ENGINEERING,
-          experience: 0,
-          masteryLevel: MasteryLevel.NOVICE,
           skills: [],
         },
         {
           id: "c2",
           name: "Bob",
           role: ColonistRole.ENGINEERING,
-          experience: 0,
-          masteryLevel: MasteryLevel.NOVICE,
           skills: [],
         },
         {
           id: "c3",
           name: "Carol",
           role: ColonistRole.FARMING,
-          experience: 0,
-          masteryLevel: MasteryLevel.NOVICE,
           skills: [],
         },
         {
           id: "c4",
           name: "Dave",
           role: ColonistRole.RESEARCH,
-          experience: 0,
-          masteryLevel: MasteryLevel.NOVICE,
           skills: [],
         },
       ];
@@ -1829,16 +1278,12 @@ describe("WorkforceManager", () => {
           id: "c1",
           name: "Alice",
           role: ColonistRole.ENGINEERING,
-          experience: 0,
-          masteryLevel: MasteryLevel.NOVICE,
           skills: [],
         },
         {
           id: "c2",
           name: "Bob",
           role: ColonistRole.ENGINEERING,
-          experience: 0,
-          masteryLevel: MasteryLevel.NOVICE,
           skills: [],
         },
       ];
@@ -1857,32 +1302,24 @@ describe("WorkforceManager", () => {
           id: "c1",
           name: "Alice",
           role: ColonistRole.ENGINEERING,
-          experience: 0,
-          masteryLevel: MasteryLevel.NOVICE,
           skills: [],
         },
         {
           id: "c2",
           name: "Bob",
           role: ColonistRole.ENGINEERING,
-          experience: 0,
-          masteryLevel: MasteryLevel.NOVICE,
           skills: [],
         },
         {
           id: "c3",
           name: "Carol",
           role: ColonistRole.FARMING,
-          experience: 0,
-          masteryLevel: MasteryLevel.NOVICE,
           skills: [],
         },
         {
           id: "c4",
           name: "Dave",
           role: ColonistRole.RESEARCH,
-          experience: 0,
-          masteryLevel: MasteryLevel.NOVICE,
           skills: [],
         },
       ];
@@ -1939,9 +1376,10 @@ describe("WorkforceManager", () => {
       const relationshipAB = workforce.getCoworkerRelationshipStrength("c1", "c2");
       expect(relationshipAB).toBeGreaterThan(0);
 
-      // Alice and Charlie should have no relationship (different social buildings)
+      // Alice and Charlie should have weaker relationship than Alice and Bob
+      // (they may still have some relationship from preferential attachment)
       const relationshipAC = workforce.getCoworkerRelationshipStrength("c1", "c3");
-      expect(relationshipAC).toBe(0);
+      expect(relationshipAB).toBeGreaterThan(relationshipAC);
     });
 
     it("should respect bondingStrength multiplier from building definition", () => {

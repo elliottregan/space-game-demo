@@ -7,7 +7,7 @@ import {
   calculateFormationProbability,
   shareRole,
   shareCohort,
-  hasHighMastery,
+  hasResearchPotential,
   matchesGuildCharacteristic,
   canJoinGuild,
 } from "../src/core/systems/workforce/guildFormation";
@@ -15,14 +15,13 @@ import type { Guild } from "../src/core/models/Guild";
 import { GuildType } from "../src/core/models/Guild";
 import type { CoworkerRelationship } from "../src/core/systems/workforce/types";
 import type { Colonist } from "../src/core/models/Colonist";
-import { ColonistRole, MasteryLevel } from "../src/core/models/Colonist";
+import { ColonistRole } from "../src/core/models/Colonist";
+import { SkillId } from "../src/core/data/skills";
 
 const createColonist = (overrides: Partial<Colonist> = {}): Colonist => ({
   id: "test_1",
   name: "Test Colonist",
   role: ColonistRole.UNASSIGNED,
-  experience: 0,
-  masteryLevel: MasteryLevel.NOVICE,
   skills: [],
   ...overrides,
 });
@@ -43,13 +42,17 @@ describe("determineGuildType", () => {
     expect(determineGuildType(founders)).toBe(GuildType.PROFESSIONAL);
   });
 
-  it("should return RESEARCH when average mastery >= SKILLED", () => {
+  it("should return RESEARCH when founders have research potential (multiple skills)", () => {
     const founders = [
-      createColonist({ id: "c1", role: ColonistRole.RESEARCH, masteryLevel: MasteryLevel.SKILLED }),
+      createColonist({
+        id: "c1",
+        role: ColonistRole.RESEARCH,
+        skills: [SkillId.JURY_RIGGER, SkillId.GREEN_THUMB],
+      }),
       createColonist({
         id: "c2",
         role: ColonistRole.ENGINEERING,
-        masteryLevel: MasteryLevel.EXPERT,
+        skills: [SkillId.JURY_RIGGER, SkillId.GREEN_THUMB],
       }),
     ];
 
@@ -61,13 +64,11 @@ describe("determineGuildType", () => {
       createColonist({
         id: "c1",
         role: ColonistRole.RESEARCH,
-        masteryLevel: MasteryLevel.NOVICE,
         arrivalSol: 50,
       }),
       createColonist({
         id: "c2",
         role: ColonistRole.ENGINEERING,
-        masteryLevel: MasteryLevel.NOVICE,
         arrivalSol: 50,
       }),
     ];
@@ -80,13 +81,11 @@ describe("determineGuildType", () => {
       createColonist({
         id: "c1",
         role: ColonistRole.RESEARCH,
-        masteryLevel: MasteryLevel.NOVICE,
         arrivalSol: 10,
       }),
       createColonist({
         id: "c2",
         role: ColonistRole.ENGINEERING,
-        masteryLevel: MasteryLevel.NOVICE,
         arrivalSol: 100,
       }),
     ];
@@ -296,21 +295,21 @@ describe("shareCohort", () => {
   });
 });
 
-describe("hasHighMastery", () => {
-  it("should return true when average mastery >= SKILLED", () => {
+describe("hasResearchPotential", () => {
+  it("should return true when colonists have multiple skills on average", () => {
     const colonists = [
-      createColonist({ id: "c1", masteryLevel: MasteryLevel.SKILLED }),
-      createColonist({ id: "c2", masteryLevel: MasteryLevel.EXPERT }),
+      createColonist({ id: "c1", skills: [SkillId.JURY_RIGGER, SkillId.GREEN_THUMB] }),
+      createColonist({ id: "c2", skills: [SkillId.JURY_RIGGER, SkillId.GREEN_THUMB] }),
     ];
-    expect(hasHighMastery(colonists)).toBe(true);
+    expect(hasResearchPotential(colonists)).toBe(true);
   });
 
-  it("should return false when average mastery < SKILLED", () => {
+  it("should return false when colonists have fewer than 2 skills on average", () => {
     const colonists = [
-      createColonist({ id: "c1", masteryLevel: MasteryLevel.NOVICE }),
-      createColonist({ id: "c2", masteryLevel: MasteryLevel.NOVICE }),
+      createColonist({ id: "c1", skills: [SkillId.JURY_RIGGER] }),
+      createColonist({ id: "c2", skills: [] }),
     ];
-    expect(hasHighMastery(colonists)).toBe(false);
+    expect(hasResearchPotential(colonists)).toBe(false);
   });
 });
 
@@ -339,9 +338,17 @@ describe("matchesGuildCharacteristic", () => {
     expect(matchesGuildCharacteristic(colonist, GuildType.SOCIAL, members)).toBe(false);
   });
 
-  it("should match RESEARCH guild when colonist has high mastery", () => {
-    const colonist = createColonist({ id: "c1", masteryLevel: MasteryLevel.SKILLED });
+  it("should match RESEARCH guild when colonist has multiple skills", () => {
+    const colonist = createColonist({
+      id: "c1",
+      skills: [SkillId.JURY_RIGGER, SkillId.GREEN_THUMB],
+    });
     expect(matchesGuildCharacteristic(colonist, GuildType.RESEARCH, [])).toBe(true);
+  });
+
+  it("should not match RESEARCH guild when colonist has fewer than 2 skills", () => {
+    const colonist = createColonist({ id: "c1", skills: [SkillId.JURY_RIGGER] });
+    expect(matchesGuildCharacteristic(colonist, GuildType.RESEARCH, [])).toBe(false);
   });
 
   it("should always match CIVIC guild", () => {

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { BuildingId, BuildingPurpose } from "../src/core/models/Building";
 import { BUILDINGS } from "../src/core/data/buildings";
 import type { Colonist } from "../src/core/models/Colonist";
-import { ColonistRole, MasteryLevel } from "../src/core/models/Colonist";
+import { ColonistRole } from "../src/core/models/Colonist";
 import { ColonyManager } from "../src/core/systems/ColonyManager";
 import { BuildingManager } from "../src/core/systems/BuildingManager";
 import { ResourceManager } from "../src/core/systems/ResourceManager";
@@ -55,8 +55,6 @@ describe("Colonist socialBuildingIds", () => {
       id: "c1",
       name: "Test Colonist",
       role: ColonistRole.UNASSIGNED,
-      experience: 0,
-      masteryLevel: MasteryLevel.NOVICE,
       skills: [],
       socialBuildingIds: ["building_1", "building_2"],
     };
@@ -68,8 +66,6 @@ describe("Colonist socialBuildingIds", () => {
       id: "c1",
       name: "Test Colonist",
       role: ColonistRole.UNASSIGNED,
-      experience: 0,
-      masteryLevel: MasteryLevel.NOVICE,
       skills: [],
     };
     expect(colonist.socialBuildingIds).toBeUndefined();
