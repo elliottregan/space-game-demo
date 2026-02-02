@@ -1,7 +1,7 @@
 // tests/GridManager.test.ts
 import { describe, expect, it } from "bun:test";
 import { GridManager } from "../src/core/systems/GridManager";
-import { DepositType, GRID_SIZE } from "../src/core/models/Grid";
+import { DepositType, GRID_SIZE, PowerState } from "../src/core/models/Grid";
 
 describe("GridManager", () => {
   it("initializes 10x10 grid", () => {
@@ -102,5 +102,79 @@ describe("GridManager - Building Placement", () => {
     const manager = new GridManager();
     const pos = manager.getBuildingPosition("unknown");
     expect(pos).toBeNull();
+  });
+});
+
+describe("GridManager - Power Connections", () => {
+  it("registerPowerSource tracks power buildings", () => {
+    const manager = new GridManager();
+    manager.placeBuilding("solar-1", { x: 5, y: 5 });
+    manager.registerPowerSource("solar-1", 10); // 10 power output
+
+    const sources = manager.getPowerSources();
+    expect(sources.length).toBe(1);
+    expect(sources[0].buildingId).toBe("solar-1");
+  });
+
+  it("calculateDistance returns Manhattan distance", () => {
+    const manager = new GridManager();
+    const distance = manager.calculateDistance({ x: 0, y: 0 }, { x: 3, y: 4 });
+    expect(distance).toBe(7); // |3-0| + |4-0| = 7
+  });
+
+  it("building within range connects to power", () => {
+    const manager = new GridManager();
+
+    // Place solar panel at center
+    manager.placeBuilding("solar-1", { x: 5, y: 5 });
+    manager.registerPowerSource("solar-1", 10); // range = 2
+
+    // Place habitat within range (distance 2)
+    manager.placeBuilding("habitat-1", { x: 5, y: 7 });
+
+    manager.updatePowerConnections(false); // no tech bonus
+
+    const state = manager.getPowerState("habitat-1");
+    expect(state).toBe(PowerState.POWERED);
+  });
+
+  it("building outside range is unpowered", () => {
+    const manager = new GridManager();
+
+    // Place solar panel at center
+    manager.placeBuilding("solar-1", { x: 5, y: 5 });
+    manager.registerPowerSource("solar-1", 10); // range = 2
+
+    // Place habitat outside range (distance 5)
+    manager.placeBuilding("habitat-1", { x: 0, y: 5 });
+
+    manager.updatePowerConnections(false);
+
+    const state = manager.getPowerState("habitat-1");
+    expect(state).toBe(PowerState.ON_BATTERY); // Starts on battery
+  });
+
+  it("closer buildings get priority when capacity exceeded", () => {
+    const manager = new GridManager();
+
+    // Solar panel with 10 power (enough for ~2 buildings at 4 power each)
+    manager.placeBuilding("solar-1", { x: 5, y: 5 });
+    manager.registerPowerSource("solar-1", 10);
+
+    // Three habitats at different distances, each consuming 4 power
+    manager.placeBuilding("habitat-close", { x: 5, y: 6 }); // distance 1
+    manager.placeBuilding("habitat-mid", { x: 5, y: 7 }); // distance 2
+    manager.placeBuilding("habitat-far", { x: 4, y: 7 }); // distance 3
+
+    manager.setBuildingPowerConsumption("habitat-close", 4);
+    manager.setBuildingPowerConsumption("habitat-mid", 4);
+    manager.setBuildingPowerConsumption("habitat-far", 4);
+
+    manager.updatePowerConnections(false);
+
+    // Close and mid should be powered (8 power), far should not (would need 12)
+    expect(manager.getPowerState("habitat-close")).toBe(PowerState.POWERED);
+    expect(manager.getPowerState("habitat-mid")).toBe(PowerState.POWERED);
+    expect(manager.getPowerState("habitat-far")).toBe(PowerState.ON_BATTERY);
   });
 });

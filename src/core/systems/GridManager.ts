@@ -7,10 +7,16 @@ import {
   BuildingPlacement,
   PowerState,
 } from "../models/Grid";
+import { calculatePowerRange } from "../balance/GridBalance";
 
 interface DepositInfo {
   position: GridPosition;
   type: DepositType;
+}
+
+interface PowerSource {
+  buildingId: string;
+  output: number;
 }
 
 export interface PlacementResult {
@@ -21,6 +27,8 @@ export interface PlacementResult {
 export class GridManager {
   private grid: GridCell[][] = [];
   private placements: Map<string, BuildingPlacement> = new Map();
+  private powerSources: Map<string, PowerSource> = new Map();
+  private buildingPowerConsumption: Map<string, number> = new Map();
 
   constructor() {
     this.initializeGrid();
@@ -147,5 +155,103 @@ export class GridManager {
   getBuildingPosition(buildingId: string): GridPosition | null {
     const placement = this.placements.get(buildingId);
     return placement ? { ...placement.position } : null;
+  }
+
+  registerPowerSource(buildingId: string, output: number): void {
+    this.powerSources.set(buildingId, { buildingId, output });
+  }
+
+  unregisterPowerSource(buildingId: string): void {
+    this.powerSources.delete(buildingId);
+  }
+
+  getPowerSources(): PowerSource[] {
+    return Array.from(this.powerSources.values());
+  }
+
+  setBuildingPowerConsumption(buildingId: string, consumption: number): void {
+    this.buildingPowerConsumption.set(buildingId, consumption);
+  }
+
+  calculateDistance(a: GridPosition, b: GridPosition): number {
+    return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+  }
+
+  updatePowerConnections(hasTechBonus: boolean): void {
+    // Reset all placements to calculate fresh
+    for (const placement of this.placements.values()) {
+      placement.powerSourceId = undefined;
+      placement.distanceToPower = Infinity;
+    }
+
+    // For each power source, find buildings in range
+    const powerSourceList = Array.from(this.powerSources.values());
+
+    // Build list of buildings that need power (not power sources themselves)
+    const buildingsNeedingPower: { placement: BuildingPlacement; consumption: number }[] = [];
+
+    for (const placement of this.placements.values()) {
+      if (this.powerSources.has(placement.buildingId)) {
+        // Power sources are always powered
+        placement.powerState = PowerState.POWERED;
+        placement.distanceToPower = 0;
+        continue;
+      }
+
+      const consumption = this.buildingPowerConsumption.get(placement.buildingId) ?? 0;
+      buildingsNeedingPower.push({ placement, consumption });
+    }
+
+    // For each power source, allocate power by distance
+    for (const source of powerSourceList) {
+      const sourcePosition = this.getBuildingPosition(source.buildingId);
+      if (!sourcePosition) continue;
+
+      const range = calculatePowerRange(source.output, hasTechBonus);
+      let availablePower = source.output;
+
+      // Find all buildings in range and sort by distance
+      const inRange = buildingsNeedingPower
+        .map((b) => ({
+          ...b,
+          distance: this.calculateDistance(sourcePosition, b.placement.position),
+        }))
+        .filter((b) => b.distance <= range)
+        .sort((a, b) => a.distance - b.distance);
+
+      // Allocate power by distance priority
+      for (const building of inRange) {
+        if (building.placement.powerSourceId) continue; // Already connected
+
+        if (availablePower >= building.consumption) {
+          building.placement.powerSourceId = source.buildingId;
+          building.placement.distanceToPower = building.distance;
+          building.placement.powerState = PowerState.POWERED;
+          building.placement.batteryLevel = 1.0; // Recharge battery
+          availablePower -= building.consumption;
+        }
+      }
+    }
+
+    // Buildings not connected use battery or become unpowered
+    for (const { placement } of buildingsNeedingPower) {
+      if (!placement.powerSourceId) {
+        // Not connected to power - check battery
+        if (placement.batteryLevel > 0) {
+          placement.powerState = PowerState.ON_BATTERY;
+        } else {
+          placement.powerState = PowerState.UNPOWERED;
+        }
+      }
+    }
+  }
+
+  getPowerState(buildingId: string): PowerState {
+    const placement = this.placements.get(buildingId);
+    return placement?.powerState ?? PowerState.UNPOWERED;
+  }
+
+  getPlacement(buildingId: string): BuildingPlacement | undefined {
+    return this.placements.get(buildingId);
   }
 }
