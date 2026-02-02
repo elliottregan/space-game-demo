@@ -34,6 +34,13 @@ function renderIcon(
     .attr("fill", "none");
 }
 
+export type OccupantFaction = "earth" | "mars" | "corporate" | "neutral";
+
+export interface OccupantSlot {
+  filled: boolean;
+  faction?: OccupantFaction;
+}
+
 export interface GridNodeData {
   buildingId?: string;
   buildingDefId?: string;
@@ -45,6 +52,7 @@ export interface GridNodeData {
   status?: "pending" | "active" | "disabled" | "idle" | "recycling";
   constructionProgress?: number; // 0-1 for pending buildings
   powerSourceId?: string; // ID of the power source this building is connected to
+  occupants?: OccupantSlot[]; // Colonists assigned/living in this building
 }
 
 export interface BaseGridData {
@@ -93,6 +101,23 @@ function getPowerStateColor(
       return colors.textMuted;
     default:
       return colors.border;
+  }
+}
+
+function getFactionColor(
+  faction: OccupantFaction | undefined,
+  colors: ReturnType<typeof getThemeColors>,
+): string {
+  switch (faction) {
+    case "earth":
+      return colors.info; // Blue
+    case "mars":
+      return colors.positive; // Green
+    case "corporate":
+      return colors.warning; // Orange
+    case "neutral":
+    default:
+      return colors.textMuted; // Gray
   }
 }
 
@@ -284,6 +309,42 @@ export function renderBaseGrid(
             .attr("cy", screen.y - 12)
             .attr("r", 5)
             .attr("fill", getPowerStateColor(cell.powerState, colors));
+        }
+
+        // Occupant dots - only for non-pending buildings with occupants
+        if (!isPending && cell.occupants && cell.occupants.length > 0) {
+          const dotSize = 6; // 0.75rem ≈ 12px, but 6px radius looks better on grid
+          const dotSpacing = 14;
+          const totalWidth = (cell.occupants.length - 1) * dotSpacing;
+          const startX = screen.x - totalWidth / 2;
+          const dotY = screen.y - 28; // Above the building
+
+          cell.occupants.forEach((occupant, i) => {
+            const dotX = startX + i * dotSpacing;
+            const dotColor = getFactionColor(occupant.faction, colors);
+
+            if (occupant.filled) {
+              // Filled dot - solid with border
+              nodeG
+                .append("circle")
+                .attr("cx", dotX)
+                .attr("cy", dotY)
+                .attr("r", dotSize)
+                .attr("fill", dotColor)
+                .attr("stroke", colors.bgSurface)
+                .attr("stroke-width", 2);
+            } else {
+              // Empty slot - border only
+              nodeG
+                .append("circle")
+                .attr("cx", dotX)
+                .attr("cy", dotY)
+                .attr("r", dotSize)
+                .attr("fill", "none")
+                .attr("stroke", colors.border)
+                .attr("stroke-width", 2);
+            }
+          });
         }
       }
 

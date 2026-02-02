@@ -2,7 +2,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import type { GridPosition, DepositType, PowerState } from "../../../core/models/Grid";
-import { renderBaseGrid, type BaseGridData, type GridNodeData } from "./renderBaseGrid";
+import {
+  renderBaseGrid,
+  type BaseGridData,
+  type GridNodeData,
+  type OccupantSlot,
+} from "./renderBaseGrid";
 import { GRID_SIZE, TILE_WIDTH, TILE_HEIGHT } from "./isometricUtils";
 
 interface BuildingInfo {
@@ -15,6 +20,7 @@ interface BuildingInfo {
   status?: "pending" | "active" | "disabled" | "idle" | "recycling";
   constructionProgress?: number;
   powerSourceId?: string;
+  occupants?: OccupantSlot[];
 }
 
 interface DepositInfo {
@@ -144,6 +150,7 @@ const gridData = computed<BaseGridData>(() => {
         status: building?.status,
         constructionProgress: building?.constructionProgress,
         powerSourceId: building?.powerSourceId,
+        occupants: building?.occupants,
       });
     }
   }

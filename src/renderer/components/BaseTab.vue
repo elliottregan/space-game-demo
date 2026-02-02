@@ -2,28 +2,122 @@
 import { computed, ref } from "vue";
 import { gameService } from "../services/GameService";
 import type { GridPosition, DepositType, PowerState } from "../../core/models/Grid";
-import type { Colonist } from "../../core/models/Colonist";
+import type { Colonist, ColonistIdeology } from "../../core/models/Colonist";
+import { BuildingPurpose } from "../../core/models/Building";
 import BaseGrid from "./BaseGrid/BaseGrid.vue";
 import BuildingContextMenu from "./BaseGrid/BuildingContextMenu.vue";
 import BuildingStatsCard from "./BaseGrid/BuildingStatsCard.vue";
 import BuildingIconDefs from "./BaseGrid/BuildingIconDefs.vue";
 import ColonyNeedsPanel from "./BaseGrid/ColonyNeedsPanel.vue";
+import type { OccupantSlot, OccupantFaction } from "./BaseGrid/renderBaseGrid";
+
+/**
+ * Get the dominant faction for a colonist based on their ideology.
+ */
+function getDominantFaction(ideology: ColonistIdeology | undefined): OccupantFaction {
+  if (!ideology) return "neutral";
+
+  const { earthLoyalist, marsIndependence, corporateInterests } = ideology;
+  const max = Math.max(earthLoyalist, marsIndependence, corporateInterests);
+
+  // If all are very low or equal, consider neutral
+  if (max < 0.2) return "neutral";
+
+  if (earthLoyalist === max) return "earth";
+  if (marsIndependence === max) return "mars";
+  if (corporateInterests === max) return "corporate";
+
+  return "neutral";
+}
 
 const state = computed(() => gameService.getState());
 
-// Grid data from state
+// Create lookup maps for colonists
+const colonistMap = computed(() => new Map(state.value.colonists.map((c) => [c.id, c])));
+
+// Grid data from state with occupant information
 const gridBuildings = computed(() =>
-  state.value.gridBuildings.map((b) => ({
-    id: b.id,
-    defId: b.defId,
-    name: b.name,
-    position: b.position as GridPosition,
-    powerState: b.powerState as PowerState,
-    batteryLevel: b.batteryLevel,
-    status: b.status,
-    constructionProgress: b.constructionProgress,
-    powerSourceId: b.powerSourceId,
-  })),
+  state.value.gridBuildings.map((b) => {
+    // Find building definition
+    const def = state.value.buildingDefinitions.find((d) => d.id === b.defId);
+    // Find building instance (for assignedWorkers)
+    const building = state.value.buildings.find((bld) => bld.id === b.id);
+
+    let occupants: OccupantSlot[] | undefined;
+
+    if (def && b.status !== "pending") {
+      // Residential buildings - show housing occupancy
+      if (def.purpose === BuildingPurpose.Residential && def.capacity) {
+        const residents = state.value.colonists.filter((c) => c.housingId === b.id);
+        occupants = [];
+
+        // Add filled slots for current residents
+        for (const resident of residents) {
+          occupants.push({
+            filled: true,
+            faction: getDominantFaction(resident.ideology),
+          });
+        }
+
+        // Add empty slots for remaining capacity
+        const emptySlots = def.capacity - residents.length;
+        for (let i = 0; i < emptySlots; i++) {
+          occupants.push({ filled: false });
+        }
+      }
+      // Work buildings - show worker slots
+      else if (def.workerSlots && def.workerSlots > 0 && building) {
+        occupants = [];
+
+        // Add filled slots for assigned workers
+        for (const workerId of building.assignedWorkers) {
+          const worker = colonistMap.value.get(workerId);
+          occupants.push({
+            filled: true,
+            faction: getDominantFaction(worker?.ideology),
+          });
+        }
+
+        // Add empty slots for remaining capacity
+        const emptySlots = def.workerSlots - building.assignedWorkers.length;
+        for (let i = 0; i < emptySlots; i++) {
+          occupants.push({ filled: false });
+        }
+      }
+      // Social buildings - show capacity if defined
+      else if (def.purpose === BuildingPurpose.Social && def.capacity) {
+        const visitors = state.value.colonists.filter((c) => c.socialBuildingIds?.includes(b.id));
+        occupants = [];
+
+        // Add filled slots for visitors
+        for (const visitor of visitors) {
+          occupants.push({
+            filled: true,
+            faction: getDominantFaction(visitor.ideology),
+          });
+        }
+
+        // Add empty slots for remaining capacity
+        const emptySlots = Math.max(0, def.capacity - visitors.length);
+        for (let i = 0; i < emptySlots; i++) {
+          occupants.push({ filled: false });
+        }
+      }
+    }
+
+    return {
+      id: b.id,
+      defId: b.defId,
+      name: b.name,
+      position: b.position as GridPosition,
+      powerState: b.powerState as PowerState,
+      batteryLevel: b.batteryLevel,
+      status: b.status,
+      constructionProgress: b.constructionProgress,
+      powerSourceId: b.powerSourceId,
+      occupants,
+    };
+  }),
 );
 
 const gridDeposits = computed(() =>
