@@ -64,6 +64,16 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
           progress: 0,
         });
       }),
+      buildAtPosition: mock((defId: string, _position: { x: number; y: number }) => {
+        if (overrides.buildCalled) overrides.buildCalled(defId);
+        return successResult({
+          id: "b1",
+          definitionId: defId,
+          status: "pending" as const,
+          mode: "normal" as const,
+          progress: 0,
+        });
+      }),
       snapshot: mock(
         () =>
           overrides.buildingsSnapshot ?? {
@@ -148,6 +158,54 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
       launchExpedition: mock(() => successResult(undefined)),
       canDevelopSite: mock(() => allowed),
       developSite: mock(() => successResult(undefined)),
+    },
+    grid: {
+      snapshot: mock(() => ({
+        size: 10,
+        deposits: overrides.gridAvailableDeposits ?? [],
+        powerSources: [],
+        occupiedCells: [],
+      })),
+      getEmptyCells: mock(() => {
+        // Return all cells as empty by default
+        const cells: { x: number; y: number }[] = [];
+        for (let y = 0; y < 10; y++) {
+          for (let x = 0; x < 10; x++) {
+            cells.push({ x, y });
+          }
+        }
+        return cells;
+      }),
+      getDeposits: mock(() => overrides.gridAvailableDeposits ?? []),
+      getAvailableDeposits: mock((type: string) => {
+        if (overrides.gridAvailableDeposits) {
+          return overrides.gridAvailableDeposits.filter((d) => d.type === type && !d.isOccupied);
+        }
+        return [];
+      }),
+      getCellsInPowerRange: mock(() => {
+        // Return center cells as powered by default
+        const cells: { x: number; y: number }[] = [];
+        for (let y = 3; y <= 6; y++) {
+          for (let x = 3; x <= 6; x++) {
+            cells.push({ x, y });
+          }
+        }
+        return cells;
+      }),
+      getPlacementHints: mock(() => ({
+        position: { x: 5, y: 5 },
+        isOccupied: false,
+        hasPower: true,
+        powerCapacityAvailable: 10,
+        distanceToNearestPower: 0,
+      })),
+      hasDeposit: mock(() => false),
+      getDepositAt: mock(() => undefined),
+      isEmpty: mock(() => true),
+      calculateDistance: mock((a: { x: number; y: number }, b: { x: number; y: number }) => {
+        return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+      }),
     },
     npc: {
       snapshot: mock(() => ({ factions: [], matrix: [], activeActions: [], nextActionIn: 0 })),
@@ -288,6 +346,12 @@ interface MockedAPI {
     reason?: string;
   };
   lobbyCouncilMemberCalled?: (colonistId: string, faction: string, boost: number) => void;
+  // Grid mocking
+  gridAvailableDeposits?: Array<{
+    position: { x: number; y: number };
+    type: string;
+    isOccupied: boolean;
+  }>;
 }
 
 describe("HeuristicStrategy", () => {
@@ -642,9 +706,10 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         resourceSnapshot: {
           current: { food: 100, water: 100, materials: 50 },
-          production: { food: 10 },
+          // Has materials production already, so handleMaterialsProduction won't trigger
+          production: { food: 10, materials: 5 },
           consumption: { food: 5 },
-          netFlow: { food: 5, materials: 0 },
+          netFlow: { food: 5, materials: 5 },
         },
         canBuild: (defId) => {
           if (defId === BuildingId.MINING_STATION) return { allowed: true };
@@ -652,6 +717,8 @@ describe("HeuristicStrategy", () => {
           return { allowed: true };
         },
         buildCalled: (defId) => buildCalls.push(defId),
+        // Provide an available mineral deposit for the mining station
+        gridAvailableDeposits: [{ position: { x: 2, y: 2 }, type: "mineral", isOccupied: false }],
       });
 
       const strategy = new HeuristicStrategy(api);

@@ -3,12 +3,26 @@
 
 import { BuildingId } from "../core/models/Building";
 import type { EventChoice } from "../core/models/GameEvent";
+import { DepositType, type GridPosition } from "../core/models/Grid";
 import { NPCFaction, ProjectId } from "../core/models/NPCInfluence";
 import { getProjectsByFaction } from "../core/data/projects";
 import { rng } from "../core/utils/random";
 import type { GameAPI } from "../facade/GameAPI";
 import type { IdeologySnapshot } from "../facade/types/ideology";
 import type { BlockedDecision, EventOccurrence } from "./types";
+
+// Center of the grid (5,5) for power source placement preference
+const GRID_CENTER: GridPosition = { x: 5, y: 5 };
+
+// Buildings that produce power (should be placed avoiding deposits)
+const POWER_SOURCE_BUILDINGS = new Set([BuildingId.SOLAR_PANEL, BuildingId.NUCLEAR_REACTOR]);
+
+// Buildings that require deposits
+const RESOURCE_EXTRACTORS: Record<BuildingId, DepositType> = {
+  [BuildingId.WATER_EXTRACTOR]: DepositType.WATER,
+  [BuildingId.BASIC_MINE]: DepositType.MINERAL,
+  [BuildingId.MINING_STATION]: DepositType.MINERAL,
+};
 
 /**
  * Mapping from faction to their victory megastructure building.
@@ -107,7 +121,8 @@ export class HeuristicStrategy {
   }
 
   /**
-   * Try to build a building. Returns true if built, records blocked decision if not.
+   * Try to build a building at an optimal grid position.
+   * Returns true if built, records blocked decision if not.
    * When committed to a faction, reserves materials for ideology projects.
    */
   private tryBuild(
@@ -137,8 +152,107 @@ export class HeuristicStrategy {
       }
     }
 
-    this.api.buildings.build(buildingId);
-    return true;
+    // Find the best position for this building type
+    const position = this.findBestPosition(buildingId);
+    if (!position) {
+      if (recordIfBlocked) {
+        this.recordBlockedDecision(category, `build_${buildingId}`, "no valid grid position");
+      }
+      return false;
+    }
+
+    const result = this.api.buildings.buildAtPosition(buildingId, position);
+    return result.success;
+  }
+
+  /**
+   * Find the best grid position for a building based on its type.
+   * - Power sources: near center, avoiding deposits
+   * - Resource extractors: on matching deposit
+   * - Power consumers: in power range, avoiding deposits
+   */
+  private findBestPosition(buildingId: BuildingId): GridPosition | null {
+    // Resource extractors need matching deposit
+    const requiredDeposit = RESOURCE_EXTRACTORS[buildingId as keyof typeof RESOURCE_EXTRACTORS];
+    if (requiredDeposit) {
+      const deposits = this.api.grid.getAvailableDeposits(requiredDeposit);
+      if (deposits.length > 0) {
+        return deposits[0].position;
+      }
+      return null; // No available deposit of required type
+    }
+
+    // Power sources: prefer center, avoid deposits
+    if (POWER_SOURCE_BUILDINGS.has(buildingId)) {
+      return this.findPowerSourcePosition();
+    }
+
+    // Power consumers: need to be in power range, avoid deposits
+    return this.findPoweredPosition();
+  }
+
+  /**
+   * Find a position for a power source building.
+   * Prefers positions near the center, avoiding deposits.
+   */
+  private findPowerSourcePosition(): GridPosition | null {
+    const emptyCells = this.api.grid.getEmptyCells();
+    const candidates = emptyCells.filter((pos) => !this.api.grid.hasDeposit(pos));
+
+    if (candidates.length === 0) {
+      // Fallback: use any empty cell (even if on deposit)
+      return emptyCells.length > 0 ? emptyCells[0] : null;
+    }
+
+    // Sort by distance to center (closest first)
+    candidates.sort((a, b) => {
+      const distA = this.api.grid.calculateDistance(a, GRID_CENTER);
+      const distB = this.api.grid.calculateDistance(b, GRID_CENTER);
+      return distA - distB;
+    });
+
+    return candidates[0];
+  }
+
+  /**
+   * Find a position for a power-consuming building.
+   * Prefers positions in power range, avoiding deposits.
+   */
+  private findPoweredPosition(): GridPosition | null {
+    const emptyCells = this.api.grid.getEmptyCells();
+
+    // First, try to find a powered cell that's not on a deposit
+    const poweredCells = new Set(this.api.grid.getCellsInPowerRange().map((p) => `${p.x},${p.y}`));
+
+    // Candidates: empty, in power range, not on deposit
+    const poweredCandidates = emptyCells.filter(
+      (pos) => poweredCells.has(`${pos.x},${pos.y}`) && !this.api.grid.hasDeposit(pos),
+    );
+
+    if (poweredCandidates.length > 0) {
+      // Sort by distance to center (prefer central locations)
+      poweredCandidates.sort((a, b) => {
+        const distA = this.api.grid.calculateDistance(a, GRID_CENTER);
+        const distB = this.api.grid.calculateDistance(b, GRID_CENTER);
+        return distA - distB;
+      });
+      return poweredCandidates[0];
+    }
+
+    // Fallback: any empty cell not on deposit (building will be unpowered until power expands)
+    const fallbackCandidates = emptyCells.filter((pos) => !this.api.grid.hasDeposit(pos));
+    if (fallbackCandidates.length > 0) {
+      // Sort by distance to center
+      fallbackCandidates.sort((a, b) => {
+        const distA = this.api.grid.calculateDistance(a, GRID_CENTER);
+        const distB = this.api.grid.calculateDistance(b, GRID_CENTER);
+        return distA - distB;
+      });
+      return fallbackCandidates[0];
+    }
+
+    // Last resort: any empty cell
+    return emptyCells.length > 0 ? emptyCells[0] : null;
   }
 
   /**
@@ -424,7 +538,8 @@ export class HeuristicStrategy {
   }
 
   /**
-   * Handle water production by building water extractors on deposits.
+   * Handle water production by building water extractors on grid deposits.
+   * Uses grid-based deposit placement instead of Operations site workflow.
    * @returns true if an action was taken
    */
   private handleWaterProduction(
@@ -440,63 +555,14 @@ export class HeuristicStrategy {
     // Already have a water extractor and not in crisis
     if (this.hasBuilding(BuildingId.WATER_EXTRACTOR) && waterFlow >= 0) return false;
 
-    const operations = this.api.operations.snapshot();
-
-    // Single pass to categorize water sites instead of multiple .find() calls
-    let developedAvailable: (typeof operations.sites)[0] | null = null;
-    let revealedUndeveloped: (typeof operations.sites)[0] | null = null;
-    let unrevealed: (typeof operations.sites)[0] | null = null;
-
-    for (const site of operations.sites) {
-      if (site.resourceType !== "water") continue;
-
-      if (site.developed && !site.linkedBuildingId && !developedAvailable) {
-        developedAvailable = site;
-      } else if (site.revealed && !site.developed && !revealedUndeveloped) {
-        revealedUndeveloped = site;
-      } else if (!site.revealed && !unrevealed) {
-        unrevealed = site;
-      }
-
-      // Early exit if we found all categories
-      if (developedAvailable && revealedUndeveloped && unrevealed) break;
-    }
-
-    // Priority 1: Build water extractor on available developed deposit
-    if (developedAvailable) {
-      const canBuild = this.api.buildings.canBuild(BuildingId.WATER_EXTRACTOR);
-      if (canBuild.allowed) {
-        const result = this.api.buildings.build(BuildingId.WATER_EXTRACTOR);
-        if (result.success && result.data) {
-          this.api.buildings.linkToDeposit(result.data.id, developedAvailable.id);
-          return true;
-        }
-      }
-    }
-
-    // Priority 2: Develop a revealed water site
-    if (revealedUndeveloped) {
-      const canDevelop = this.api.operations.canDevelopSite(revealedUndeveloped.id);
-      if (canDevelop.allowed) {
-        this.api.operations.developSite(revealedUndeveloped.id);
-        return true;
-      }
-    }
-
-    // Priority 3: Reveal an unrevealed water site
-    if (unrevealed) {
-      const canReveal = this.api.operations.canRevealSite(unrevealed.id);
-      if (canReveal.allowed) {
-        this.api.operations.revealSite(unrevealed.id);
-        return true;
-      }
-    }
-
-    return false;
+    // Try to build water extractor on an available water deposit
+    // tryBuild() will automatically find an available water deposit via findBestPosition()
+    return this.tryBuild(BuildingId.WATER_EXTRACTOR, "survival");
   }
 
   /**
-   * Handle materials production by building basic mines on mineral deposits.
+   * Handle materials production by building basic mines on grid deposits.
+   * Uses grid-based deposit placement instead of Operations site workflow.
    * @returns true if an action was taken
    */
   private handleMaterialsProduction(): boolean {
@@ -506,58 +572,9 @@ export class HeuristicStrategy {
     // Already have materials production
     if (materialsProd > 0) return false;
 
-    const operations = this.api.operations.snapshot();
-
-    // Single pass to categorize mineral sites
-    let developedAvailable: (typeof operations.sites)[0] | null = null;
-    let revealedUndeveloped: (typeof operations.sites)[0] | null = null;
-    let unrevealed: (typeof operations.sites)[0] | null = null;
-
-    for (const site of operations.sites) {
-      if (site.resourceType !== "minerals") continue;
-
-      if (site.developed && !site.linkedBuildingId && !developedAvailable) {
-        developedAvailable = site;
-      } else if (site.revealed && !site.developed && !revealedUndeveloped) {
-        revealedUndeveloped = site;
-      } else if (!site.revealed && !unrevealed) {
-        unrevealed = site;
-      }
-
-      if (developedAvailable && revealedUndeveloped && unrevealed) break;
-    }
-
-    // Priority 1: Build basic mine on available developed deposit
-    if (developedAvailable) {
-      const canBuild = this.api.buildings.canBuild(BuildingId.BASIC_MINE);
-      if (canBuild.allowed) {
-        const result = this.api.buildings.build(BuildingId.BASIC_MINE);
-        if (result.success && result.data) {
-          this.api.buildings.linkToDeposit(result.data.id, developedAvailable.id);
-          return true;
-        }
-      }
-    }
-
-    // Priority 2: Develop a revealed mineral site
-    if (revealedUndeveloped) {
-      const canDevelop = this.api.operations.canDevelopSite(revealedUndeveloped.id);
-      if (canDevelop.allowed) {
-        this.api.operations.developSite(revealedUndeveloped.id);
-        return true;
-      }
-    }
-
-    // Priority 3: Reveal an unrevealed mineral site
-    if (unrevealed) {
-      const canReveal = this.api.operations.canRevealSite(unrevealed.id);
-      if (canReveal.allowed) {
-        this.api.operations.revealSite(unrevealed.id);
-        return true;
-      }
-    }
-
-    return false;
+    // Try to build basic mine on an available mineral deposit
+    // tryBuild() will automatically find an available mineral deposit via findBestPosition()
+    return this.tryBuild(BuildingId.BASIC_MINE, "infrastructure");
   }
 
   /**
