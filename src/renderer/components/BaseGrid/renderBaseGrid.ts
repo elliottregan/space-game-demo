@@ -3,6 +3,7 @@ import type { Selection } from "d3-selection";
 import { gridToScreen, TILE_WIDTH, TILE_HEIGHT, GRID_SIZE } from "./isometricUtils";
 import { DepositType, PowerState } from "../../../core/models/Grid";
 import type { GridPosition } from "../../../core/models/Grid";
+import { getFactionColorFromTheme, type FactionId } from "../../utils/ideologyDisplay";
 
 /**
  * Get the SVG symbol ID for a building icon.
@@ -34,7 +35,7 @@ function renderIcon(
     .attr("fill", "none");
 }
 
-export type OccupantFaction = "earth" | "mars" | "corporate" | "neutral";
+export type OccupantFaction = FactionId;
 
 export interface OccupantSlot {
   filled: boolean;
@@ -108,17 +109,7 @@ function getFactionColor(
   faction: OccupantFaction | undefined,
   colors: ReturnType<typeof getThemeColors>,
 ): string {
-  switch (faction) {
-    case "earth":
-      return colors.info; // Blue
-    case "mars":
-      return colors.positive; // Green
-    case "corporate":
-      return colors.warning; // Orange
-    case "neutral":
-    default:
-      return colors.textMuted; // Gray
-  }
+  return getFactionColorFromTheme(faction ?? "neutral", colors);
 }
 
 export function renderBaseGrid(

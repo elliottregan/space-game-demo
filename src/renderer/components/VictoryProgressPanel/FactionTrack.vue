@@ -7,6 +7,11 @@ import { PROJECTS, getProjectsByFaction } from "../../../core/data/projects";
 import { BUILDINGS } from "../../../core/data/buildings";
 import { gameService } from "../../services/GameService";
 import { GBadge } from "../../ui";
+import {
+  FACTION_CSS_VARS,
+  FACTION_FULL_NAMES,
+  npcFactionToFactionId,
+} from "../../utils/ideologyDisplay";
 
 const props = defineProps<{
   faction: NPCFaction;
@@ -14,28 +19,20 @@ const props = defineProps<{
 
 const state = gameService.getState();
 
-// Faction display config with megastructure
+// Faction display config with megastructure using unified display model
 const factionConfig = computed(() => {
-  switch (props.faction) {
-    case NPCFaction.EarthLoyalists:
-      return {
-        name: "Earth Loyalists",
-        color: "var(--color-info)",
-        megastructureId: BuildingId.SPACE_ELEVATOR,
-      };
-    case NPCFaction.MarsIndependence:
-      return {
-        name: "Mars Independence",
-        color: "var(--color-positive)",
-        megastructureId: BuildingId.UNITED_MARS_STATION,
-      };
-    case NPCFaction.CorporateInterests:
-      return {
-        name: "Corporate Interests",
-        color: "var(--color-warning)",
-        megastructureId: BuildingId.GENERATION_SHIP,
-      };
-  }
+  const factionId = npcFactionToFactionId(props.faction);
+  const megastructureMap: Record<NPCFaction, BuildingId> = {
+    [NPCFaction.EarthLoyalists]: BuildingId.SPACE_ELEVATOR,
+    [NPCFaction.MarsIndependence]: BuildingId.UNITED_MARS_STATION,
+    [NPCFaction.CorporateInterests]: BuildingId.GENERATION_SHIP,
+  };
+
+  return {
+    name: FACTION_FULL_NAMES[factionId],
+    color: FACTION_CSS_VARS[factionId],
+    megastructureId: megastructureMap[props.faction],
+  };
 });
 
 // Get projects for this faction (non-capstone prerequisites)

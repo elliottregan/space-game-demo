@@ -7,6 +7,11 @@ import { type GridPosition, PowerState } from "../../../core/models/Grid";
 import GPanel from "../../ui/primitives/GPanel.vue";
 import GProgress from "../../ui/primitives/GProgress.vue";
 import GButton from "../../ui/primitives/GButton.vue";
+import {
+  getDominantFactionInfo,
+  FACTION_CSS_VARS,
+  FACTION_SHORT_NAMES,
+} from "../../utils/ideologyDisplay";
 
 interface Props {
   building: Building;
@@ -43,19 +48,11 @@ const residents = computed(() => {
   return props.colonists.filter((c) => c.housingId === props.building.id);
 });
 
-// Determine dominant ideology for a colonist
+// Determine dominant ideology for a colonist using unified ideology display model
 function getDominantIdeology(ideology?: ColonistIdeology): { name: string; color: string } | null {
-  if (!ideology) return null;
-
-  const factions = [
-    { name: "Earth", value: ideology.earthLoyalist, color: "var(--g-color-info)" },
-    { name: "Mars", value: ideology.marsIndependence, color: "var(--g-color-warning)" },
-    { name: "Corp", value: ideology.corporateInterests, color: "var(--g-color-positive)" },
-  ];
-
-  const dominant = factions.reduce((max, f) => (f.value > max.value ? f : max));
-  if (dominant.value < 0.3) return null; // No strong affiliation
-  return { name: dominant.name, color: dominant.color };
+  const info = getDominantFactionInfo(ideology);
+  if (!info) return null;
+  return { name: info.name, color: info.color };
 }
 
 const powerStateLabel = computed(() => {

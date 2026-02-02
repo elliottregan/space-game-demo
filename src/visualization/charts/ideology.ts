@@ -3,21 +3,22 @@
 
 import * as d3 from "../d3";
 import type { AnalysisOutput, AggregatedIdeologySnapshot, PercentileValue } from "../types";
+import { FACTION_HEX_COLORS, FACTION_FULL_NAMES } from "../../renderer/utils/ideologyDisplay";
 
-// Colors matching the faction colors from the game
+// Colors using the unified faction color model
 const COLORS = {
-  earthLoyalist: "#00838f", // Teal/blue
-  marsIndependence: "#2e7d32", // Green
-  corporateInterests: "#ef6c00", // Orange
-  conviction: "#7b1fa2", // Purple
-  spread: "#78909c", // Blue-gray
+  earthLoyalist: FACTION_HEX_COLORS.earth,
+  marsIndependence: FACTION_HEX_COLORS.mars,
+  corporateInterests: FACTION_HEX_COLORS.corporate,
+  conviction: "#7b1fa2", // Purple (not a faction color)
+  spread: "#78909c", // Blue-gray (not a faction color)
 };
 
-// Display names for legend
+// Display names for legend using the unified model
 const DISPLAY_NAMES: Record<string, string> = {
-  earthLoyalist: "Earth Loyalists",
-  marsIndependence: "Mars Independence",
-  corporateInterests: "Corporate Interests",
+  earthLoyalist: FACTION_FULL_NAMES.earth,
+  marsIndependence: FACTION_FULL_NAMES.mars,
+  corporateInterests: FACTION_FULL_NAMES.corporate,
   conviction: "Avg Conviction",
   spread: "Ideology Spread",
 };
