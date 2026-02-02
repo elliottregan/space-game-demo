@@ -49,6 +49,7 @@ export class BuildingsFacade
       pending: Object.freeze([...this.gameState.buildings.getPendingBuildings()]),
       definitions: Object.freeze([...this.gameState.buildings.getAllDefinitions()]),
       moraleBoost: this.gameState.buildings.getTotalMoraleBoost(),
+      totalAirContribution: this.gameState.buildings.getTotalAirContribution(),
     };
   }
 

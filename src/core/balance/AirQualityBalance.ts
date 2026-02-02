@@ -1,7 +1,7 @@
 // src/core/balance/AirQualityBalance.ts
 
-/** Base oxygen consumption per colonist per tick */
-export const BASE_OXYGEN_PER_COLONIST = 1;
+/** Base air consumption per colonist per tick */
+export const BASE_AIR_PER_COLONIST = 1;
 
 /** Air quality threshold: above this is comfortable (no penalties) */
 export const AIR_QUALITY_COMFORTABLE = 0.8;

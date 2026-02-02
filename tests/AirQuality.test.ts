@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import {
-  BASE_OXYGEN_PER_COLONIST,
+  BASE_AIR_PER_COLONIST,
   AIR_QUALITY_COMFORTABLE,
   AIR_QUALITY_CRITICAL,
   AIR_QUALITY_DEADLY,
@@ -11,8 +11,8 @@ import { GameState } from "../src/core/GameState";
 import { BuildingId } from "../src/core/models/Building";
 
 describe("AirQualityBalance constants", () => {
-  it("should have BASE_OXYGEN_PER_COLONIST defined", () => {
-    expect(BASE_OXYGEN_PER_COLONIST).toBeGreaterThan(0);
+  it("should have BASE_AIR_PER_COLONIST defined", () => {
+    expect(BASE_AIR_PER_COLONIST).toBeGreaterThan(0);
   });
 
   it("should have threshold constants in correct order", () => {

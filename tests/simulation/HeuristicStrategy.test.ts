@@ -324,7 +324,7 @@ describe("HeuristicStrategy", () => {
           pending: [],
           definitions: [],
           moraleBoost: 0,
-          totalOxygenContribution: 2, // Low oxygen contribution
+          totalAirContribution: 2, // Low oxygen contribution
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -367,7 +367,7 @@ describe("HeuristicStrategy", () => {
           pending: [],
           definitions: [],
           moraleBoost: 0,
-          totalOxygenContribution: -2, // Negative oxygen contribution
+          totalAirContribution: -2, // Negative oxygen contribution
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });

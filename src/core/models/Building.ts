@@ -60,7 +60,7 @@ export interface BuildingDefinition {
   repurposeTargets?: readonly BuildingId[];
   moraleBoost?: number; // Passive morale boost when active
   capacity?: number; // Housing capacity for habitats
-  oxygenContribution?: number; // Oxygen units contributed per sol when active
+  airContribution?: number; // Air quality contribution per sol when active
   purpose?: BuildingPurpose;
   bondingStrength?: number; // Multiplier for relationship growth rate (default 1.0)
   requiredProject?: ProjectId; // Project that must be passed to unlock

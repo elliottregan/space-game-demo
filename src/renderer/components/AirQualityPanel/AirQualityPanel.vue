@@ -4,7 +4,7 @@ import { Wind } from "lucide-vue-next";
 import {
   AIR_QUALITY_COMFORTABLE,
   AIR_QUALITY_CRITICAL,
-  BASE_OXYGEN_PER_COLONIST,
+  BASE_AIR_PER_COLONIST,
 } from "../../../core/balance/AirQualityBalance";
 import { gameService } from "../../services/GameService";
 import { GBreakdownList, GMetricBar, GPanel } from "../../ui";
@@ -35,17 +35,17 @@ const breakdownItems = computed<BreakdownItem[]>(() => {
     if (building.status !== "active") continue;
 
     const def = state.buildingDefinitions.find((d) => d.id === building.definitionId);
-    if (!def || !def.oxygenContribution) continue;
+    if (!def || !def.airContribution) continue;
 
     const existing = buildingCounts.get(def.id);
     if (existing) {
       existing.count++;
-      existing.contribution += def.oxygenContribution;
+      existing.contribution += def.airContribution;
     } else {
       buildingCounts.set(def.id, {
         name: def.name,
         count: 1,
-        contribution: def.oxygenContribution,
+        contribution: def.airContribution,
       });
     }
   }
@@ -65,7 +65,7 @@ const breakdownItems = computed<BreakdownItem[]>(() => {
     key: "colonists",
     name: "Colonists",
     count: state.population,
-    value: -(state.population * BASE_OXYGEN_PER_COLONIST),
+    value: -(state.population * BASE_AIR_PER_COLONIST),
     separator: true,
   });
 

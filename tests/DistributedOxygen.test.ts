@@ -77,39 +77,39 @@ describe("Distributed Oxygen System", () => {
     });
   });
 
-  describe("BuildingDefinition.oxygenContribution", () => {
-    it("should have oxygenContribution defined on habitat", () => {
+  describe("BuildingDefinition.airContribution", () => {
+    it("should have airContribution defined on habitat", () => {
       const habitat = gameState.buildings.getDefinition(BuildingId.HABITAT);
-      expect(habitat?.oxygenContribution).toBe(2);
+      expect(habitat?.airContribution).toBe(2);
     });
 
-    it("should have oxygenContribution defined on research_lab", () => {
+    it("should have airContribution defined on research_lab", () => {
       const lab = gameState.buildings.getDefinition(BuildingId.RESEARCH_LAB);
-      expect(lab?.oxygenContribution).toBe(-1);
+      expect(lab?.airContribution).toBe(-1);
     });
 
-    it("should have oxygenContribution as 0 on solar_panel", () => {
+    it("should have airContribution as 0 on solar_panel", () => {
       const solar = gameState.buildings.getDefinition(BuildingId.SOLAR_PANEL);
-      expect(solar?.oxygenContribution).toBe(0);
+      expect(solar?.airContribution).toBe(0);
     });
 
     it("should have oxygen_generator building with oxygen contribution", () => {
       const oxygenGen = gameState.buildings.getDefinition("oxygen_generator" as BuildingId);
       expect(oxygenGen).toBeDefined();
-      expect(oxygenGen?.oxygenContribution).toBe(5);
+      expect(oxygenGen?.airContribution).toBe(5);
     });
   });
 
-  describe("BuildingManager.getTotalOxygenContribution", () => {
+  describe("BuildingManager.getTotalAirContribution", () => {
     it("should return starting buildings oxygen contribution", () => {
       // Default starting condition has: 1 habitat (+2), 1 farm (+2), 1 oxygen generator (+5) = 9
-      const total = gameState.buildings.getTotalOxygenContribution();
+      const total = gameState.buildings.getTotalAirContribution();
       expect(total).toBe(9);
     });
 
     it("should sum oxygen contributions from active buildings", () => {
       // Starting contribution is 9 (habitat +2, farm +2, oxygen generator +5)
-      const startingOxygen = gameState.buildings.getTotalOxygenContribution();
+      const startingOxygen = gameState.buildings.getTotalAirContribution();
       expect(startingOxygen).toBe(9);
 
       // Build another habitat (+2) and basic_farm (+2)
@@ -131,7 +131,7 @@ describe("Distributed Oxygen System", () => {
         gameState.tick();
       }
 
-      const total = gameState.buildings.getTotalOxygenContribution();
+      const total = gameState.buildings.getTotalAirContribution();
       expect(total).toBe(13); // 9 + 2 + 2
     });
 
@@ -158,13 +158,13 @@ describe("Distributed Oxygen System", () => {
         gameState.tick();
       }
 
-      const total = gameState.buildings.getTotalOxygenContribution();
+      const total = gameState.buildings.getTotalAirContribution();
       expect(total).toBe(10); // 9 + 2 + (-1) = 10
     });
 
     it("should not count broken buildings", () => {
       // Starting contribution is 9
-      const startingOxygen = gameState.buildings.getTotalOxygenContribution();
+      const startingOxygen = gameState.buildings.getTotalAirContribution();
       expect(startingOxygen).toBe(9);
 
       // Get a starting habitat and break it
@@ -174,13 +174,13 @@ describe("Distributed Oxygen System", () => {
       // Break the building
       gameState.buildings.breakBuilding(habitat!.id, gameState.resources);
 
-      const total = gameState.buildings.getTotalOxygenContribution();
+      const total = gameState.buildings.getTotalAirContribution();
       expect(total).toBe(7); // 9 - 2 = 7 (broken habitat doesn't contribute)
     });
 
     it("should not count pending buildings", () => {
       // Starting contribution is 9
-      const startingOxygen = gameState.buildings.getTotalOxygenContribution();
+      const startingOxygen = gameState.buildings.getTotalAirContribution();
       expect(startingOxygen).toBe(9);
 
       gameState.resources.add({ materials: 500 });
@@ -192,7 +192,7 @@ describe("Distributed Oxygen System", () => {
       );
 
       // Don't advance time - new building is still pending
-      const total = gameState.buildings.getTotalOxygenContribution();
+      const total = gameState.buildings.getTotalAirContribution();
       expect(total).toBe(9); // Still 9, pending building doesn't count
     });
   });

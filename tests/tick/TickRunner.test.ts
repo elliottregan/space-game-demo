@@ -234,7 +234,7 @@ describe("TickRunner", () => {
         socialCohesion: null,
         policyEffects: null,
         laborPoolBonus: 0,
-        oxygenContribution: 0,
+        airContribution: 0,
       },
       settings: { autoAssignNewColonists: false },
     } as TickContext;
@@ -286,7 +286,7 @@ describe("TickRunner", () => {
         socialCohesion: null,
         policyEffects: null,
         laborPoolBonus: 0,
-        oxygenContribution: 0,
+        airContribution: 0,
       },
       settings: { autoAssignNewColonists: false },
     } as TickContext;

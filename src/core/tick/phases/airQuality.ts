@@ -1,5 +1,5 @@
 import {
-  BASE_OXYGEN_PER_COLONIST,
+  BASE_AIR_PER_COLONIST,
   AIR_QUALITY_COMFORTABLE,
   AIR_QUALITY_CRITICAL,
   AIR_QUALITY_MAX_HEALTH_PENALTY,
@@ -24,12 +24,12 @@ export const calculateAirQuality = definePhase({
   execute(ctx: TickContext): GameEvent[] {
     const events: GameEvent[] = [];
 
-    // Get oxygen production from buildings
-    const production = ctx.buildings.getTotalOxygenContribution();
+    // Get air production from buildings
+    const production = ctx.buildings.getTotalAirContribution();
 
-    // Get oxygen consumption from population
+    // Get air consumption from population
     const population = ctx.colony.getPopulation();
-    const consumption = population * BASE_OXYGEN_PER_COLONIST;
+    const consumption = population * BASE_AIR_PER_COLONIST;
 
     // Calculate air quality using the manager (updates its internal state)
     const airQuality = ctx.airQualityManager.calculate(production, consumption);

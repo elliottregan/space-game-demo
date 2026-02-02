@@ -389,8 +389,8 @@ export class HeuristicStrategy {
     const waterProduction = resources.production.water ?? 0;
     const waterConsumption = resources.consumption.water ?? 0;
 
-    // Calculate oxygen contribution from buildings
-    const oxygenContribution = buildings.totalOxygenContribution;
+    // Calculate air contribution from buildings
+    const airContribution = buildings.totalAirContribution;
 
     // Handle water production early - needed for morale recovery
     if (this.handleWaterProduction(waterProduction, waterConsumption, currentWater)) {
@@ -410,13 +410,13 @@ export class HeuristicStrategy {
       if (this.tryBuild(BuildingId.BASIC_FARM, "survival")) return true;
     }
 
-    // Oxygen contribution needs to be maintained for air quality
-    if (oxygenContribution < 6) {
-      // Oxygen generator provides the most oxygen contribution
+    // Air contribution needs to be maintained for air quality
+    if (airContribution < 6) {
+      // Oxygen generator provides the most air contribution
       if (this.tryBuild(BuildingId.OXYGEN_GENERATOR, "survival")) return true;
-      // Hydroponic garden provides oxygen contribution without workers
+      // Hydroponic garden provides air contribution without workers
       if (this.tryBuild(BuildingId.HYDROPONIC_GARDEN, "survival")) return true;
-      // Farm provides food AND oxygen contribution (if workers are assigned)
+      // Farm provides food AND air contribution (if workers are assigned)
       if (this.tryBuild(BuildingId.BASIC_FARM, "survival")) return true;
     }
 

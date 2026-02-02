@@ -1,7 +1,7 @@
 // src/facade/domains/AirQualityFacade.ts
 
 import type { GameState } from "../../core/GameState";
-import { BASE_OXYGEN_PER_COLONIST } from "../../core/balance/AirQualityBalance";
+import { BASE_AIR_PER_COLONIST } from "../../core/balance/AirQualityBalance";
 import type { Queryable } from "../types/interfaces";
 import type { AirQualitySnapshot } from "../types/airQuality";
 
@@ -18,8 +18,8 @@ export class AirQualityFacade implements Queryable<AirQualitySnapshot> {
    * Get complete air quality state snapshot.
    */
   snapshot(): AirQualitySnapshot {
-    const production = this.gameState.buildings.getTotalOxygenContribution();
-    const consumption = this.gameState.colony.getPopulation() * BASE_OXYGEN_PER_COLONIST;
+    const production = this.gameState.buildings.getTotalAirContribution();
+    const consumption = this.gameState.colony.getPopulation() * BASE_AIR_PER_COLONIST;
     const airQuality = this.gameState.airQuality.getAirQuality();
 
     return {

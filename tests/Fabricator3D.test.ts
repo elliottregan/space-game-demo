@@ -78,10 +78,10 @@ describe("3D Fabricator", () => {
       expect(def?.requiresDeposit).toBeFalsy();
     });
 
-    it("has -1 oxygen contribution", () => {
+    it("has -1 air contribution", () => {
       const def = api.buildings.getDefinition(BuildingId.FABRICATOR_3D);
       expect(def).toBeDefined();
-      expect(def?.oxygenContribution).toBe(-1);
+      expect(def?.airContribution).toBe(-1);
     });
 
     it("consumes 8 power per sol", () => {

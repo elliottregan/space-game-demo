@@ -716,8 +716,8 @@ export class BuildingManager {
     return this.sumActiveBuildings((def) => def.moraleBoost);
   }
 
-  getTotalOxygenContribution(): number {
-    return this.sumActiveBuildings((def) => def.oxygenContribution);
+  getTotalAirContribution(): number {
+    return this.sumActiveBuildings((def) => def.airContribution);
   }
 
   /**
