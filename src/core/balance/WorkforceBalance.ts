@@ -166,6 +166,9 @@ export const GUILD_FORMATION_CHECK_INTERVAL = 10;
 /** Minimum relationship strength for guild formation eligibility */
 export const GUILD_FORMATION_RELATIONSHIP_THRESHOLD = 0.7;
 
+/** Minimum relationship strength to join an existing guild */
+export const GUILD_JOIN_RELATIONSHIP_THRESHOLD = 0.5;
+
 /** Base probability of guild forming when eligible colonists found */
 export const GUILD_FORMATION_BASE_PROBABILITY = 0.5;
 

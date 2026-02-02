@@ -47,6 +47,7 @@ import {
   generateGuildName,
   findEligibleFounderGroups,
   calculateFormationProbability,
+  canJoinGuild,
 } from "./workforce/guildFormation";
 import { calculateMasteryLevel, getMasteryEfficiency, getMasteryName } from "./workforce/mastery";
 import { getTrainingTime } from "./workforce/training";
@@ -587,9 +588,28 @@ export class WorkforceManager {
 
   /**
    * Add a colonist to a guild.
-   * Delegates to GuildManager.
+   * Validates eligibility (relationship threshold + characteristic match) before joining.
    */
-  joinGuild(colonistId: string, guildId: string, colonist: Colonist): boolean {
+  joinGuild(
+    colonistId: string,
+    guildId: string,
+    colonist: Colonist,
+    allColonists: readonly Colonist[],
+  ): boolean {
+    const guild = this.guildManager.getGuild(guildId);
+    if (!guild) return false;
+
+    // Get current guild members
+    const members = guild.memberIds
+      .map((id) => allColonists.find((c) => c.id === id))
+      .filter((c): c is Colonist => c !== undefined);
+
+    // Validate eligibility (relationship + characteristic)
+    const relationships = this.relationshipManager.getAllRelationships();
+    if (!canJoinGuild(colonist, guild, members, relationships)) {
+      return false;
+    }
+
     return this.guildManager.joinGuild(colonistId, guildId, colonist);
   }
 

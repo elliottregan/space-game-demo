@@ -1129,24 +1129,69 @@ describe("WorkforceManager", () => {
       expect(guild).toBeNull();
     });
 
-    it("should allow joining a guild", () => {
-      const guild = workforce.createGuild("Test Guild", "social" as any, ["c1", "c2"], 10);
-      const colonist = createColonist({ id: "c3" });
+    it("should allow joining a guild with valid relationship and matching characteristic", () => {
+      // Create colonists in same cohort (Social guild requirement)
+      const c1 = createColonist({ id: "c1", arrivalSol: 10 });
+      const c2 = createColonist({ id: "c2", arrivalSol: 12 });
+      const c3 = createColonist({ id: "c3", arrivalSol: 15 }); // Same cohort
+      const allColonists = [c1, c2, c3];
 
-      const result = workforce.joinGuild("c3", guild!.id, colonist);
+      // Create guild
+      const guild = workforce.createGuild("Test Guild", "social" as any, ["c1", "c2"], 10);
+
+      // Create relationship between c3 and c1 at join threshold (0.5)
+      workforce.createInitialRelationship("c3", "c1", 0.5);
+
+      const result = workforce.joinGuild("c3", guild!.id, c3, allColonists);
 
       expect(result).toBe(true);
       expect(guild!.memberIds).toContain("c3");
-      expect(colonist.guildIds).toContain(guild!.id);
+      expect(c3.guildIds).toContain(guild!.id);
+    });
+
+    it("should not allow joining without sufficient relationship", () => {
+      const c1 = createColonist({ id: "c1", arrivalSol: 10 });
+      const c2 = createColonist({ id: "c2", arrivalSol: 12 });
+      const c3 = createColonist({ id: "c3", arrivalSol: 15 });
+      const allColonists = [c1, c2, c3];
+
+      const guild = workforce.createGuild("Test Guild", "social" as any, ["c1", "c2"], 10);
+
+      // Create weak relationship (below 0.5 threshold)
+      workforce.createInitialRelationship("c3", "c1", 0.3);
+
+      const result = workforce.joinGuild("c3", guild!.id, c3, allColonists);
+
+      expect(result).toBe(false);
+    });
+
+    it("should not allow joining without matching characteristic", () => {
+      const c1 = createColonist({ id: "c1", arrivalSol: 10 });
+      const c2 = createColonist({ id: "c2", arrivalSol: 12 });
+      const c3 = createColonist({ id: "c3", arrivalSol: 100 }); // Different cohort
+      const allColonists = [c1, c2, c3];
+
+      const guild = workforce.createGuild("Test Guild", "social" as any, ["c1", "c2"], 10);
+
+      // Strong relationship but wrong cohort
+      workforce.createInitialRelationship("c3", "c1", 0.6);
+
+      const result = workforce.joinGuild("c3", guild!.id, c3, allColonists);
+
+      expect(result).toBe(false);
     });
 
     it("should not allow joining when guild is at max capacity", () => {
       // Create guild at max capacity (8 members)
       const members = Array.from({ length: 8 }, (_, i) => `m${i}`);
+      const allColonists = members.map((id) => createColonist({ id, arrivalSol: 10 }));
       const guild = workforce.createGuild("Full Guild", "social" as any, members, 10);
 
-      const colonist = createColonist({ id: "c1" });
-      const result = workforce.joinGuild("c1", guild!.id, colonist);
+      const colonist = createColonist({ id: "c1", arrivalSol: 10 });
+      allColonists.push(colonist);
+      workforce.createInitialRelationship("c1", "m0", 0.6);
+
+      const result = workforce.joinGuild("c1", guild!.id, colonist, allColonists);
 
       expect(result).toBe(false);
     });

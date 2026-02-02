@@ -5,7 +5,13 @@ import {
   generateGuildName,
   findEligibleFounderGroups,
   calculateFormationProbability,
+  shareRole,
+  shareCohort,
+  hasHighMastery,
+  matchesGuildCharacteristic,
+  canJoinGuild,
 } from "../src/core/systems/workforce/guildFormation";
+import type { Guild } from "../src/core/models/Guild";
 import { GuildType } from "../src/core/models/Guild";
 import type { CoworkerRelationship } from "../src/core/systems/workforce/types";
 import type { Colonist } from "../src/core/models/Colonist";
@@ -19,6 +25,12 @@ const createColonist = (overrides: Partial<Colonist> = {}): Colonist => ({
   masteryLevel: MasteryLevel.NOVICE,
   skills: [],
   ...overrides,
+});
+
+const createRelationship = (strength: number): CoworkerRelationship => ({
+  strength,
+  formedAt: 0,
+  lastWorkedTogether: 0,
 });
 
 describe("determineGuildType", () => {
@@ -117,12 +129,6 @@ describe("generateGuildName", () => {
 });
 
 describe("findEligibleFounderGroups", () => {
-  const createRelationship = (strength: number): CoworkerRelationship => ({
-    strength,
-    formedAt: 0,
-    lastWorkedTogether: 0,
-  });
-
   it("should find a group of connected colonists above threshold", () => {
     const colonists = [
       createColonist({ id: "c1" }),
@@ -243,5 +249,155 @@ describe("calculateFormationProbability", () => {
 
     // 0.5 * (0.5^2) * (0.5^1) = 0.5 * 0.25 * 0.5 = 0.0625
     expect(prob).toBeCloseTo(0.0625);
+  });
+});
+
+describe("shareRole", () => {
+  it("should return true when all colonists share the same role", () => {
+    const colonists = [
+      createColonist({ id: "c1", role: ColonistRole.ENGINEERING }),
+      createColonist({ id: "c2", role: ColonistRole.ENGINEERING }),
+    ];
+    expect(shareRole(colonists)).toBe(true);
+  });
+
+  it("should return false when roles differ", () => {
+    const colonists = [
+      createColonist({ id: "c1", role: ColonistRole.ENGINEERING }),
+      createColonist({ id: "c2", role: ColonistRole.RESEARCH }),
+    ];
+    expect(shareRole(colonists)).toBe(false);
+  });
+
+  it("should return false when role is UNASSIGNED", () => {
+    const colonists = [
+      createColonist({ id: "c1", role: ColonistRole.UNASSIGNED }),
+      createColonist({ id: "c2", role: ColonistRole.UNASSIGNED }),
+    ];
+    expect(shareRole(colonists)).toBe(false);
+  });
+});
+
+describe("shareCohort", () => {
+  it("should return true when all colonists arrived within cohort window", () => {
+    const colonists = [
+      createColonist({ id: "c1", arrivalSol: 10 }),
+      createColonist({ id: "c2", arrivalSol: 18 }), // Within 10 sols
+    ];
+    expect(shareCohort(colonists)).toBe(true);
+  });
+
+  it("should return false when colonists arrived outside cohort window", () => {
+    const colonists = [
+      createColonist({ id: "c1", arrivalSol: 10 }),
+      createColonist({ id: "c2", arrivalSol: 50 }), // Outside 10 sols
+    ];
+    expect(shareCohort(colonists)).toBe(false);
+  });
+});
+
+describe("hasHighMastery", () => {
+  it("should return true when average mastery >= SKILLED", () => {
+    const colonists = [
+      createColonist({ id: "c1", masteryLevel: MasteryLevel.SKILLED }),
+      createColonist({ id: "c2", masteryLevel: MasteryLevel.EXPERT }),
+    ];
+    expect(hasHighMastery(colonists)).toBe(true);
+  });
+
+  it("should return false when average mastery < SKILLED", () => {
+    const colonists = [
+      createColonist({ id: "c1", masteryLevel: MasteryLevel.NOVICE }),
+      createColonist({ id: "c2", masteryLevel: MasteryLevel.NOVICE }),
+    ];
+    expect(hasHighMastery(colonists)).toBe(false);
+  });
+});
+
+describe("matchesGuildCharacteristic", () => {
+  it("should match PROFESSIONAL guild when colonist has same role", () => {
+    const colonist = createColonist({ id: "c1", role: ColonistRole.ENGINEERING });
+    const members = [createColonist({ id: "m1", role: ColonistRole.ENGINEERING })];
+    expect(matchesGuildCharacteristic(colonist, GuildType.PROFESSIONAL, members)).toBe(true);
+  });
+
+  it("should not match PROFESSIONAL guild when role differs", () => {
+    const colonist = createColonist({ id: "c1", role: ColonistRole.RESEARCH });
+    const members = [createColonist({ id: "m1", role: ColonistRole.ENGINEERING })];
+    expect(matchesGuildCharacteristic(colonist, GuildType.PROFESSIONAL, members)).toBe(false);
+  });
+
+  it("should match SOCIAL guild when within cohort window", () => {
+    const colonist = createColonist({ id: "c1", arrivalSol: 20 });
+    const members = [createColonist({ id: "m1", arrivalSol: 10 })];
+    expect(matchesGuildCharacteristic(colonist, GuildType.SOCIAL, members)).toBe(true);
+  });
+
+  it("should not match SOCIAL guild when outside cohort window", () => {
+    const colonist = createColonist({ id: "c1", arrivalSol: 200 });
+    const members = [createColonist({ id: "m1", arrivalSol: 10 })];
+    expect(matchesGuildCharacteristic(colonist, GuildType.SOCIAL, members)).toBe(false);
+  });
+
+  it("should match RESEARCH guild when colonist has high mastery", () => {
+    const colonist = createColonist({ id: "c1", masteryLevel: MasteryLevel.SKILLED });
+    expect(matchesGuildCharacteristic(colonist, GuildType.RESEARCH, [])).toBe(true);
+  });
+
+  it("should always match CIVIC guild", () => {
+    const colonist = createColonist({ id: "c1" });
+    expect(matchesGuildCharacteristic(colonist, GuildType.CIVIC, [])).toBe(true);
+  });
+});
+
+describe("canJoinGuild", () => {
+  const createGuild = (type: GuildType, memberIds: string[]): Guild => ({
+    id: "guild_1",
+    name: "Test Guild",
+    type,
+    memberIds,
+    foundedSol: 1,
+  });
+
+  it("should allow joining when relationship and characteristic match", () => {
+    const colonist = createColonist({ id: "c1", arrivalSol: 10 });
+    const guild = createGuild(GuildType.SOCIAL, ["m1"]);
+    const members = [createColonist({ id: "m1", arrivalSol: 15 })];
+    const relationships = new Map<string, CoworkerRelationship>([
+      ["c1:m1", createRelationship(0.5)],
+    ]);
+
+    expect(canJoinGuild(colonist, guild, members, relationships)).toBe(true);
+  });
+
+  it("should not allow joining when relationship below threshold", () => {
+    const colonist = createColonist({ id: "c1", arrivalSol: 10 });
+    const guild = createGuild(GuildType.SOCIAL, ["m1"]);
+    const members = [createColonist({ id: "m1", arrivalSol: 15 })];
+    const relationships = new Map<string, CoworkerRelationship>([
+      ["c1:m1", createRelationship(0.3)], // Below 0.5 threshold
+    ]);
+
+    expect(canJoinGuild(colonist, guild, members, relationships)).toBe(false);
+  });
+
+  it("should not allow joining when characteristic does not match", () => {
+    const colonist = createColonist({ id: "c1", arrivalSol: 200 }); // Different cohort
+    const guild = createGuild(GuildType.SOCIAL, ["m1"]);
+    const members = [createColonist({ id: "m1", arrivalSol: 10 })];
+    const relationships = new Map<string, CoworkerRelationship>([
+      ["c1:m1", createRelationship(0.6)],
+    ]);
+
+    expect(canJoinGuild(colonist, guild, members, relationships)).toBe(false);
+  });
+
+  it("should not allow joining when already a member", () => {
+    const colonist = createColonist({ id: "m1", arrivalSol: 10 });
+    const guild = createGuild(GuildType.SOCIAL, ["m1"]);
+    const members = [colonist];
+    const relationships = new Map<string, CoworkerRelationship>();
+
+    expect(canJoinGuild(colonist, guild, members, relationships)).toBe(false);
   });
 });

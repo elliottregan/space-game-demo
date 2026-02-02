@@ -1,14 +1,86 @@
 // src/core/systems/workforce/guildFormation.ts
 import type { Colonist } from "../../models/Colonist.ts";
 import { ColonistRole, MasteryLevel } from "../../models/Colonist.ts";
+import type { Guild } from "../../models/Guild.ts";
 import { GuildType, GUILD_NAME_SUGGESTIONS } from "../../models/Guild.ts";
 import {
   COHORT_WINDOW_SOLS,
   MAX_GUILD_MEMBERSHIPS,
   GUILD_FORMATION_MAX_FOUNDERS,
+  GUILD_JOIN_RELATIONSHIP_THRESHOLD,
 } from "../../balance/WorkforceBalance.ts";
 import { rng } from "../../utils/random.ts";
 import type { CoworkerRelationship } from "./types.ts";
+
+// ============ Shared Characteristic Checks ============
+
+/**
+ * Check if all colonists share the same job role (excluding UNASSIGNED).
+ */
+export function shareRole(colonists: readonly Colonist[]): boolean {
+  if (colonists.length < 2) return false;
+  const roles = colonists.map((c) => c.role);
+  const firstRole = roles[0];
+  return firstRole !== ColonistRole.UNASSIGNED && roles.every((r) => r === firstRole);
+}
+
+/**
+ * Check if all colonists are within the same arrival cohort.
+ */
+export function shareCohort(colonists: readonly Colonist[]): boolean {
+  if (colonists.length < 2) return false;
+  const arrivalSols = colonists.map((c) => c.arrivalSol ?? 0);
+  const minArrival = Math.min(...arrivalSols);
+  const maxArrival = Math.max(...arrivalSols);
+  return maxArrival - minArrival <= COHORT_WINDOW_SOLS;
+}
+
+/**
+ * Check if colonists have high average mastery (>= SKILLED).
+ */
+export function hasHighMastery(colonists: readonly Colonist[]): boolean {
+  if (colonists.length === 0) return false;
+  const avgMastery = colonists.reduce((sum, c) => sum + c.masteryLevel, 0) / colonists.length;
+  return avgMastery >= MasteryLevel.SKILLED;
+}
+
+/**
+ * Check if a colonist matches the characteristic required for a guild type.
+ */
+export function matchesGuildCharacteristic(
+  colonist: Colonist,
+  guildType: GuildType,
+  existingMembers: readonly Colonist[],
+): boolean {
+  switch (guildType) {
+    case GuildType.PROFESSIONAL: {
+      // Must share role with existing members
+      if (existingMembers.length === 0) return colonist.role !== ColonistRole.UNASSIGNED;
+      const guildRole = existingMembers[0]?.role;
+      return guildRole !== undefined && colonist.role === guildRole;
+    }
+    case GuildType.SOCIAL: {
+      // Must be within cohort window of existing members
+      if (existingMembers.length === 0) return true;
+      const arrivalSols = existingMembers.map((m) => m.arrivalSol ?? 0);
+      const minArrival = Math.min(...arrivalSols);
+      const maxArrival = Math.max(...arrivalSols);
+      const colonistArrival = colonist.arrivalSol ?? 0;
+      return (
+        colonistArrival >= minArrival - COHORT_WINDOW_SOLS &&
+        colonistArrival <= maxArrival + COHORT_WINDOW_SOLS
+      );
+    }
+    case GuildType.RESEARCH: {
+      // Must have SKILLED or higher mastery
+      return colonist.masteryLevel >= MasteryLevel.SKILLED;
+    }
+    case GuildType.CIVIC: {
+      // Civic guilds accept anyone
+      return true;
+    }
+  }
+}
 
 /**
  * Determine guild type based on founder characteristics.
@@ -159,6 +231,40 @@ export function findEligibleFounderGroups(
 function sharesGuild(c1: Colonist, c2: Colonist): boolean {
   if (!c1.guildIds?.length || !c2.guildIds?.length) return false;
   return c1.guildIds.some((gId) => c2.guildIds?.includes(gId));
+}
+
+/**
+ * Check if a colonist can join an existing guild.
+ * Requires: relationship threshold met with at least one member + matches guild characteristic.
+ */
+export function canJoinGuild(
+  colonist: Colonist,
+  guild: Guild,
+  members: readonly Colonist[],
+  relationships: Map<string, CoworkerRelationship>,
+): boolean {
+  // Can't join if already a member
+  if (guild.memberIds.includes(colonist.id)) return false;
+
+  // Can't join if at max memberships
+  if ((colonist.guildIds?.length ?? 0) >= MAX_GUILD_MEMBERSHIPS) return false;
+
+  // Must have relationship >= join threshold with at least one member
+  const hasStrongEnoughRelationship = guild.memberIds.some((memberId) => {
+    const key = getRelationshipKey(colonist.id, memberId);
+    const rel = relationships.get(key);
+    return rel && rel.strength >= GUILD_JOIN_RELATIONSHIP_THRESHOLD;
+  });
+
+  if (!hasStrongEnoughRelationship) return false;
+
+  // Must match guild's characteristic
+  return matchesGuildCharacteristic(colonist, guild.type, members);
+}
+
+/** Get canonical relationship key for two colonist IDs */
+function getRelationshipKey(id1: string, id2: string): string {
+  return id1 < id2 ? `${id1}:${id2}` : `${id2}:${id1}`;
 }
 
 /**
