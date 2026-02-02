@@ -11,7 +11,7 @@ export const processEarthCrisis = definePhase({
   id: "earthCrisis:process",
   name: "Process Earth Crisis",
   reads: ["earthCrisis", "currentSol"],
-  writes: ["earthCrisis", "colony", "events"],
+  writes: ["earthCrisis", "colony", "victory", "events"],
   execute(ctx: TickContext): GameEvent[] {
     const effects = ctx.earthCrisis.tick(ctx.currentSol);
     const events: GameEvent[] = [];
@@ -27,6 +27,10 @@ export const processEarthCrisis = definePhase({
         });
         events.push(...refugeeEvents);
       } else if (effect.type === "earth_collapse") {
+        const defeatEvent = ctx.victory.markEarthCollapse();
+        if (defeatEvent) {
+          events.push(defeatEvent);
+        }
         events.push({
           type: "EARTH_COLLAPSE",
           severity: "critical",

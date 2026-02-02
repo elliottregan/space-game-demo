@@ -98,6 +98,25 @@ export class VictoryManager {
     };
   }
 
+  /**
+   * Mark game as defeat due to Earth collapse.
+   * Called when Earth crisis reaches point of no return.
+   */
+  markEarthCollapse(): GameEvent | null {
+    if (this.status !== "playing") return null;
+
+    this.status = "defeat";
+    this.reason =
+      "Earth's climate has collapsed. The colony survives, but victory is no longer possible.";
+
+    return {
+      type: "DEFEAT",
+      reason: this.reason,
+      severity: "critical",
+      message: this.reason,
+    };
+  }
+
   getState(): VictoryState {
     return {
       status: this.status,
