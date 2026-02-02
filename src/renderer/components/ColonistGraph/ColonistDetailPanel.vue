@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import {
   type Colonist,
+  type ColonistIdeology,
   ColonistRole,
   MASTERY_DISPLAY_NAMES,
   ROLE_DISPLAY_NAMES,
@@ -102,6 +103,28 @@ function getRoleClass(role: ColonistRole): string {
 function formatStrength(strength: number): string {
   return (strength * 100).toFixed(0) + "%";
 }
+
+// Ideology display data
+interface IdeologyDisplay {
+  label: string;
+  value: number;
+  cssClass: string;
+}
+
+const ideologyData = computed<IdeologyDisplay[]>(() => {
+  const ideology = props.colonist.ideology;
+  if (!ideology) return [];
+
+  return [
+    { label: "Earth", value: ideology.earthLoyalist, cssClass: "earth" },
+    { label: "Mars", value: ideology.marsIndependence, cssClass: "mars" },
+    { label: "Corporate", value: ideology.corporateInterests, cssClass: "corporate" },
+  ];
+});
+
+const convictionLevel = computed(() => {
+  return props.colonist.ideology?.conviction ?? 0;
+});
 </script>
 
 <template>
@@ -121,6 +144,36 @@ function formatStrength(strength: number): string {
       <div class="stat-row">
         <span class="stat-label">Experience</span>
         <span class="stat-value">{{ colonist.experience.toFixed(1) }} XP</span>
+      </div>
+    </div>
+
+    <div v-if="colonist.ideology" class="panel-section">
+      <div class="section-title">Ideology</div>
+      <div class="ideology-list">
+        <div v-for="ideo in ideologyData" :key="ideo.label" class="ideology-row">
+          <span class="ideology-label">{{ ideo.label }}</span>
+          <div class="ideology-bar-container">
+            <div class="ideology-bar-bg">
+              <div
+                :class="['ideology-bar', ideo.cssClass]"
+                :style="{ width: ideo.value * 100 + '%' }"
+              />
+            </div>
+            <span class="ideology-value">{{ formatStrength(ideo.value) }}</span>
+          </div>
+        </div>
+        <div class="ideology-row conviction-row">
+          <span class="ideology-label">Conviction</span>
+          <div class="ideology-bar-container">
+            <div class="ideology-bar-bg">
+              <div
+                class="ideology-bar conviction"
+                :style="{ width: convictionLevel * 100 + '%' }"
+              />
+            </div>
+            <span class="ideology-value">{{ formatStrength(convictionLevel) }}</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -413,5 +466,75 @@ function formatStrength(strength: number): string {
   color: var(--g-color-text-muted);
   min-width: 32px;
   text-align: right;
+}
+
+/* Ideology styles */
+.ideology-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-xs);
+}
+
+.ideology-row {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-xs);
+}
+
+.ideology-label {
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  min-width: 60px;
+}
+
+.ideology-bar-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-xs);
+}
+
+.ideology-bar-bg {
+  flex: 1;
+  height: 6px;
+  background: var(--g-color-bg-surface);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.ideology-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.2s;
+}
+
+.ideology-bar.earth {
+  background: var(--g-color-info);
+}
+
+.ideology-bar.mars {
+  background: var(--g-color-positive);
+}
+
+.ideology-bar.corporate {
+  background: var(--g-color-warning);
+}
+
+.ideology-bar.conviction {
+  background: var(--g-color-text-muted);
+}
+
+.ideology-value {
+  font-size: var(--g-font-size-xs);
+  font-family: var(--g-font-mono);
+  color: var(--g-color-text-muted);
+  min-width: 32px;
+  text-align: right;
+}
+
+.conviction-row {
+  margin-top: var(--g-space-xs);
+  padding-top: var(--g-space-xs);
+  border-top: 1px solid var(--g-color-border);
 }
 </style>
