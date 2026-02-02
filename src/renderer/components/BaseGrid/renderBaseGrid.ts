@@ -56,6 +56,8 @@ export interface BaseGridData {
 export interface BaseGridOptions {
   width: number;
   height: number;
+  panX: number;
+  panY: number;
   onCellClick: (position: GridPosition, hasBuilding: boolean) => void;
   onCellHover: (position: GridPosition | null) => void;
 }
@@ -98,14 +100,14 @@ export function renderBaseGrid(
   data: BaseGridData,
   options: BaseGridOptions,
 ): void {
-  const { width, height, onCellClick, onCellHover } = options;
+  const { width, height, panX, panY, onCellClick, onCellHover } = options;
   const colors = getThemeColors();
 
   const svg = select(container);
   svg.selectAll("*").remove();
   svg.attr("width", width).attr("height", height).attr("viewBox", `0 0 ${width} ${height}`);
 
-  // Background for click-away
+  // Background for click-away (fixed, doesn't pan)
   svg
     .append("rect")
     .attr("width", width)
@@ -119,10 +121,16 @@ export function renderBaseGrid(
     cellMap.set(`${cell.position.x},${cell.position.y}`, cell);
   }
 
+  // Content group with pan transform
+  const contentGroup = svg
+    .append("g")
+    .attr("class", "content")
+    .attr("transform", `translate(${panX}, ${panY})`);
+
   // Create layer groups - order matters for z-index
-  const tileLayer = svg.append("g").attr("class", "tile-layer");
-  const depositLayer = svg.append("g").attr("class", "deposit-layer");
-  const buildingLayer = svg.append("g").attr("class", "building-layer");
+  const tileLayer = contentGroup.append("g").attr("class", "tile-layer");
+  const depositLayer = contentGroup.append("g").attr("class", "deposit-layer");
+  const buildingLayer = contentGroup.append("g").attr("class", "building-layer");
 
   // First pass: Render all tiles (bottom layer)
   for (let y = 0; y < GRID_SIZE; y++) {

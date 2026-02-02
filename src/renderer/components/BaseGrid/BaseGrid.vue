@@ -40,6 +40,14 @@ const containerRef = ref<HTMLDivElement | null>(null);
 const svgRef = ref<SVGSVGElement | null>(null);
 const dimensions = ref({ width: 800, height: 600 });
 
+// Pan state
+const pan = ref({ x: 0, y: 0 });
+const isPanning = ref(false);
+const isMouseDown = ref(false);
+const dragStart = ref({ x: 0, y: 0 });
+const panStart = ref({ x: 0, y: 0 });
+const DRAG_THRESHOLD = 5; // pixels before drag starts
+
 function updateDimensions() {
   if (containerRef.value) {
     const rect = containerRef.value.getBoundingClientRect();
@@ -48,6 +56,44 @@ function updateDimensions() {
       height: Math.max(300, rect.height),
     };
   }
+}
+
+function handleMouseDown(event: MouseEvent) {
+  if (event.button === 0) {
+    isMouseDown.value = true;
+    dragStart.value = { x: event.clientX, y: event.clientY };
+    panStart.value = { x: pan.value.x, y: pan.value.y };
+  }
+}
+
+function handleMouseMove(event: MouseEvent) {
+  if (!isMouseDown.value) return;
+
+  const dx = event.clientX - dragStart.value.x;
+  const dy = event.clientY - dragStart.value.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  // Start panning once we exceed threshold
+  if (distance > DRAG_THRESHOLD) {
+    isPanning.value = true;
+  }
+
+  if (isPanning.value) {
+    pan.value = {
+      x: panStart.value.x + dx,
+      y: panStart.value.y + dy,
+    };
+  }
+}
+
+function handleMouseUp() {
+  isMouseDown.value = false;
+  isPanning.value = false;
+}
+
+function handleMouseLeave() {
+  isMouseDown.value = false;
+  isPanning.value = false;
 }
 
 const gridData = computed<BaseGridData>(() => {
@@ -91,6 +137,8 @@ function render() {
   renderBaseGrid(svgRef.value, gridData.value, {
     width: dimensions.value.width,
     height: dimensions.value.height,
+    panX: pan.value.x,
+    panY: pan.value.y,
     onCellClick: (pos, hasBuilding) => emit("cellClick", pos, hasBuilding),
     onCellHover: (pos) => emit("cellHover", pos),
   });
@@ -125,11 +173,19 @@ onUnmounted(() => {
   resizeObserver?.disconnect();
 });
 
-watch([gridData, dimensions], render);
+watch([gridData, dimensions, pan], render, { deep: true });
 </script>
 
 <template>
-  <div ref="containerRef" class="base-grid">
+  <div
+    ref="containerRef"
+    class="base-grid"
+    :class="{ dragging: isPanning }"
+    @mousedown="handleMouseDown"
+    @mousemove="handleMouseMove"
+    @mouseup="handleMouseUp"
+    @mouseleave="handleMouseLeave"
+  >
     <svg ref="svgRef" class="grid-svg" />
   </div>
 </template>
@@ -139,11 +195,22 @@ watch([gridData, dimensions], render);
   width: 100%;
   height: 100%;
   min-height: 400px;
+  cursor: grab;
+  user-select: none;
+}
+
+.base-grid.dragging {
+  cursor: grabbing;
 }
 
 .grid-svg {
   display: block;
   width: 100%;
   height: 100%;
+  pointer-events: none;
+}
+
+.grid-svg :deep(*) {
+  pointer-events: auto;
 }
 </style>
