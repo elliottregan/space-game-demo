@@ -3,7 +3,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import type { GridPosition, DepositType, PowerState } from "../../../core/models/Grid";
 import { renderBaseGrid, type BaseGridData, type GridNodeData } from "./renderBaseGrid";
-import { GRID_SIZE } from "./isometricUtils";
+import { GRID_SIZE, TILE_WIDTH, TILE_HEIGHT } from "./isometricUtils";
 
 interface BuildingInfo {
   id: string;
@@ -40,6 +40,7 @@ const emit = defineEmits<{
 const containerRef = ref<HTMLDivElement | null>(null);
 const svgRef = ref<SVGSVGElement | null>(null);
 const dimensions = ref({ width: 800, height: 600 });
+const hasInitializedPan = ref(false);
 
 // Pan state
 const pan = ref({ x: 0, y: 0 });
@@ -49,13 +50,34 @@ const dragStart = ref({ x: 0, y: 0 });
 const panStart = ref({ x: 0, y: 0 });
 const DRAG_THRESHOLD = 5; // pixels before drag starts
 
+/**
+ * Calculate the pan offset needed to center the grid in the viewport.
+ */
+function calculateCenteredPan(viewWidth: number, viewHeight: number): { x: number; y: number } {
+  // The grid's vertical center is at: TILE_HEIGHT*2 + (GRID_SIZE-1) * TILE_HEIGHT / 2
+  // which simplifies to: TILE_HEIGHT * (2 + (GRID_SIZE-1)/2) = TILE_HEIGHT * (2 + 4.5) = 6.5 * TILE_HEIGHT
+  const gridVerticalCenter = TILE_HEIGHT * (2 + (GRID_SIZE - 1) / 2);
+
+  // Pan Y to center the grid vertically
+  const panY = viewHeight / 2 - gridVerticalCenter;
+
+  // Grid is already horizontally centered via viewWidth/2 in gridToScreen
+  return { x: 0, y: panY };
+}
+
 function updateDimensions() {
   if (containerRef.value) {
     const rect = containerRef.value.getBoundingClientRect();
     dimensions.value = {
-      width: Math.max(400, rect.width),
-      height: Math.max(300, rect.height),
+      width: Math.max(600, rect.width),
+      height: Math.max(500, rect.height),
     };
+
+    // Set initial pan to center the grid on first render
+    if (!hasInitializedPan.value) {
+      pan.value = calculateCenteredPan(dimensions.value.width, dimensions.value.height);
+      hasInitializedPan.value = true;
+    }
   }
 }
 
@@ -196,7 +218,7 @@ watch([gridData, dimensions, pan], render, { deep: true });
 .base-grid {
   width: 100%;
   height: 100%;
-  min-height: 400px;
+  min-height: 600px;
   cursor: grab;
   user-select: none;
 }
