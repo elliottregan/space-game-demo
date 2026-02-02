@@ -88,6 +88,7 @@ function render() {
 }
 
 let resizeObserver: ResizeObserver | null = null;
+let resizeFrameId: number | null = null;
 
 onMounted(() => {
   updateDimensions();
@@ -95,14 +96,23 @@ onMounted(() => {
 
   if (containerRef.value) {
     resizeObserver = new ResizeObserver(() => {
-      updateDimensions();
-      render();
+      if (resizeFrameId !== null) {
+        cancelAnimationFrame(resizeFrameId);
+      }
+      resizeFrameId = requestAnimationFrame(() => {
+        updateDimensions();
+        render();
+        resizeFrameId = null;
+      });
     });
     resizeObserver.observe(containerRef.value);
   }
 });
 
 onUnmounted(() => {
+  if (resizeFrameId !== null) {
+    cancelAnimationFrame(resizeFrameId);
+  }
   resizeObserver?.disconnect();
 });
 
