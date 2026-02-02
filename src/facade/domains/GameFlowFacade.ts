@@ -52,6 +52,20 @@ export class GameFlowFacade {
   }
 
   /**
+   * Get Earth crisis severity (0-100).
+   */
+  earthCrisisSeverity(): number {
+    return this.gameState.earthCrisis.getSeverity();
+  }
+
+  /**
+   * Check if Earth has reached point of no return.
+   */
+  earthCrisisPointOfNoReturn(): boolean {
+    return this.gameState.earthCrisis.isPointOfNoReturn();
+  }
+
+  /**
    * Get all available starting conditions.
    */
   getStartingConditions(): readonly StartingCondition[] {
