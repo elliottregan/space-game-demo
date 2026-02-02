@@ -486,8 +486,9 @@ export class WorkforceManager {
       if (currentSocialPairs.has(key)) continue; // Currently socializing, skip
 
       const [id1, id2] = key.split(":");
+      if (!id1 || !id2) continue;
       // Only decay if both colonists have social building assignments (social relationship)
-      if (colonistsWithSocialBuildings.has(id1!) && colonistsWithSocialBuildings.has(id2!)) {
+      if (colonistsWithSocialBuildings.has(id1) && colonistsWithSocialBuildings.has(id2)) {
         // Direct mutation since we need custom decay logic
         relationship.strength = Math.max(0, relationship.strength - SOCIAL_RELATIONSHIP_DECAY);
       }
@@ -630,24 +631,26 @@ export class WorkforceManager {
 
       for (let i = 0; i < guild.memberIds.length; i++) {
         const colonistAId = guild.memberIds[i];
-        const colonistA = colonistMap.get(colonistAId!);
+        if (!colonistAId) continue;
+        const colonistA = colonistMap.get(colonistAId);
         if (!colonistA) continue;
 
         for (let j = i + 1; j < guild.memberIds.length; j++) {
           const colonistBId = guild.memberIds[j];
-          const colonistB = colonistMap.get(colonistBId!);
+          if (!colonistBId) continue;
+          const colonistB = colonistMap.get(colonistBId);
           if (!colonistB) continue;
 
           const existingRelationship = this.relationshipManager.getRelationship(
-            colonistAId!,
-            colonistBId!,
+            colonistAId,
+            colonistBId,
           );
 
           if (!existingRelationship) {
             // Guild members meeting for first time - create via RelationshipManager
             const initialStrength =
               INITIAL_COWORKER_RELATIONSHIP + GUILD_INITIAL_RELATIONSHIP_BONUS;
-            this.relationshipManager.createRelationship(colonistAId!, colonistBId!, currentSol, {
+            this.relationshipManager.createRelationship(colonistAId, colonistBId, currentSol, {
               initialStrength: Math.min(MAX_COWORKER_RELATIONSHIP, initialStrength),
               sharedGuildIds: [guild.id],
             });
@@ -664,13 +667,13 @@ export class WorkforceManager {
           } else {
             // Update shared guild tracking
             const sharedGuildIds = this.guildManager.getSharedGuildIds(colonistA, colonistB);
-            this.relationshipManager.updateSharedGuilds(colonistAId!, colonistBId!, sharedGuildIds);
+            this.relationshipManager.updateSharedGuilds(colonistAId, colonistBId, sharedGuildIds);
 
             // Guild members bond at an accelerated rate
             const bondingRate = COWORKER_BONDING_RATE * GUILD_BONDING_MULTIPLIER * 0.5; // Half rate since passive
             this.relationshipManager.strengthenRelationship(
-              colonistAId!,
-              colonistBId!,
+              colonistAId,
+              colonistBId,
               bondingRate,
               currentSol,
             );
@@ -951,8 +954,8 @@ export class WorkforceManager {
         if (id1 && id2) {
           if (!adjacencyList.has(id1)) adjacencyList.set(id1, []);
           if (!adjacencyList.has(id2)) adjacencyList.set(id2, []);
-          adjacencyList.get(id1)!.push(id2);
-          adjacencyList.get(id2)!.push(id1);
+          adjacencyList.get(id1)?.push(id2);
+          adjacencyList.get(id2)?.push(id1);
         }
       }
 

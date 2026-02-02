@@ -20,7 +20,9 @@ export function computeEigenvectorCentrality(
   const n = ids.length;
 
   if (n === 0) return new Map();
-  if (n === 1) return new Map([[ids[0]!, 1.0]]);
+  const firstId = ids[0];
+  if (n === 1 && firstId) return new Map([[firstId, 1.0]]);
+  if (n === 1) return new Map();
 
   // Initialize all centralities to 1/n
   let centrality = new Map(ids.map((id) => [id, 1 / n]));

@@ -20,8 +20,8 @@ export function pickRandomSubset<T>(array: T[], k: number): T[] {
     // Pick random index from remaining elements [i, n-1]
     const randomIndex = rng.int(i, n - 1);
     // Swap with current position
-    [copy[i], copy[randomIndex]] = [copy[randomIndex]!, copy[i]!];
-    result.push(copy[i]!);
+    [copy[i], copy[randomIndex]] = [copy[randomIndex] as T, copy[i] as T];
+    result.push(copy[i] as T);
   }
 
   return result;

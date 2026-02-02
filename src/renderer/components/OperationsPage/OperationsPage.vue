@@ -41,7 +41,7 @@ const buildingsByRole = computed(() => {
     if (!groups[role]) {
       groups[role] = [];
     }
-    groups[role]!.push(building);
+    groups[role]?.push(building);
   }
 
   return groups;

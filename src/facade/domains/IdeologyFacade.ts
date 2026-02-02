@@ -181,7 +181,18 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
       };
     }
 
-    const project = getProject(projectId)!;
+    const project = getProject(projectId);
+    if (!project) {
+      return {
+        success: false,
+        error: {
+          type: "INVALID_STATE",
+          current: "not_found",
+          expected: "exists",
+          reason: "Project not found",
+        },
+      };
+    }
 
     // Deduct cost
     this.gameState.resources.deduct(project.proposalCost);

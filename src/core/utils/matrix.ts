@@ -34,7 +34,7 @@ export function matrixMultiply(A: number[][], B: number[][]): number[][] {
  * M is m×n, v is n×1, result is m×1
  */
 export function matrixVectorMultiply(M: number[][], v: number[]): number[] {
-  const result = new Array(M.length).fill(0);
+  const result = Array.from({ length: M.length }, () => 0);
 
   for (let i = 0; i < M.length; i++) {
     const row = M[i];
@@ -88,7 +88,7 @@ export function updateSupport(
   const target = matrixVectorMultiply(WT, currentSupport);
 
   // Move toward target by alpha
-  const newSupport = new Array(N);
+  const newSupport: number[] = [];
   for (let i = 0; i < N; i++) {
     const current = currentSupport[i] ?? 0;
     const targetVal = target[i] ?? 0;

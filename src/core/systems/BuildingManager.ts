@@ -241,13 +241,14 @@ export class BuildingManager {
     }
     // Sort: food buildings first, then by most slots needed
     return result.sort((a, b) => {
-      const defA = this.definitions.get(a.definitionId)!;
-      const defB = this.definitions.get(b.definitionId)!;
+      const defA = this.definitions.get(a.definitionId);
+      const defB = this.definitions.get(b.definitionId);
+      if (!defA || !defB) return 0;
       const isFoodA = defA.production?.food ? 1 : 0;
       const isFoodB = defB.production?.food ? 1 : 0;
       if (isFoodA !== isFoodB) return isFoodB - isFoodA;
-      const emptyA = defA.workerSlots! - a.assignedWorkers.length;
-      const emptyB = defB.workerSlots! - b.assignedWorkers.length;
+      const emptyA = (defA.workerSlots ?? 0) - a.assignedWorkers.length;
+      const emptyB = (defB.workerSlots ?? 0) - b.assignedWorkers.length;
       return emptyB - emptyA;
     });
   }
@@ -271,8 +272,9 @@ export class BuildingManager {
     if (unassigned.length === 0) return events;
 
     for (const building of understaffed) {
-      const def = this.definitions.get(building.definitionId)!;
-      const slotsNeeded = def.workerSlots! - building.assignedWorkers.length;
+      const def = this.definitions.get(building.definitionId);
+      if (!def) continue;
+      const slotsNeeded = (def.workerSlots ?? 0) - building.assignedWorkers.length;
 
       // Score and sort available colonists
       const scored = unassigned

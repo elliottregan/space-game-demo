@@ -164,10 +164,11 @@ const bridgeColonists = computed(() => {
     for (const [otherKey, otherRel] of props.relationships) {
       if (otherRel.strength < WEAK_TIE_THRESHOLD) continue;
       const [a, b] = otherKey.split(":");
-      if (a === id1) id1Connections.add(b!);
-      if (b === id1) id1Connections.add(a!);
-      if (a === id2) id2Connections.add(b!);
-      if (b === id2) id2Connections.add(a!);
+      if (!a || !b) continue;
+      if (a === id1) id1Connections.add(b);
+      if (b === id1) id1Connections.add(a);
+      if (a === id2) id2Connections.add(b);
+      if (b === id2) id2Connections.add(a);
     }
 
     // If id1's strong connections don't overlap with id2's, both are bridges

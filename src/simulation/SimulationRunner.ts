@@ -89,7 +89,11 @@ function getWorkerCount(): number {
 function distributeSeedsToWorkers(seeds: number[], workerCount: number): number[][] {
   const batches: number[][] = Array.from({ length: workerCount }, () => []);
   for (let i = 0; i < seeds.length; i++) {
-    batches[i % workerCount]!.push(seeds[i]!);
+    const batch = batches[i % workerCount];
+    const seed = seeds[i];
+    if (batch && seed !== undefined) {
+      batch.push(seed);
+    }
   }
   return batches.filter((batch) => batch.length > 0);
 }
@@ -193,17 +197,21 @@ export class SimulationRunner {
           const data = event.data;
 
           if (data.type === "progress" && this.config.verbose) {
-            progressByWorker.set(data.workerId!, {
-              completed: data.completed!,
-              total: data.total!,
-            });
+            if (
+              data.workerId !== undefined &&
+              data.completed !== undefined &&
+              data.total !== undefined
+            ) {
+              progressByWorker.set(data.workerId, {
+                completed: data.completed,
+                total: data.total,
+              });
+            }
 
             // Calculate total progress
             let totalCompleted = 0;
-            let totalTotal = 0;
             for (const progress of progressByWorker.values()) {
               totalCompleted += progress.completed;
-              totalTotal += progress.total;
             }
 
             const pct = ((totalCompleted / this.config.runs) * 100).toFixed(0);
@@ -212,7 +220,7 @@ export class SimulationRunner {
 
           if (data.type === "results") {
             worker.terminate();
-            resolve(data.results!);
+            resolve(data.results ?? []);
           }
         };
 
@@ -510,7 +518,9 @@ export class SimulationRunner {
 
       // Check for dominant faction (threshold of 0.15 difference)
       const values = [earthLoyalist, marsIndependence, corporateInterests].sort((a, b) => b - a);
-      if (values[0]! >= 0.3 && values[0]! - values[1]! >= 0.15) {
+      const highest = values[0] ?? 0;
+      const second = values[1] ?? 0;
+      if (highest >= 0.3 && highest - second >= 0.15) {
         dominantCount++;
       }
 

@@ -53,9 +53,10 @@ const housingInfo = computed(() => {
 
 // Get coworkers (same building)
 const coworkers = computed(() => {
-  if (!buildingAssignment.value) return [];
+  const assignment = buildingAssignment.value;
+  if (!assignment) return [];
   return props.colonists.filter(
-    (c) => c.id !== props.colonist.id && buildingAssignment.value!.assignedWorkers.includes(c.id),
+    (c) => c.id !== props.colonist.id && assignment.assignedWorkers.includes(c.id),
   );
 });
 

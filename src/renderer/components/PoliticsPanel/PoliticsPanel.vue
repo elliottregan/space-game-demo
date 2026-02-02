@@ -66,9 +66,9 @@ function handleLobby(): void {
 // oxlint-disable-next-line no-unused-vars
 const colonistsWithIdeology = computed(() => {
   return state.colonists
-    .filter((c) => c.ideology)
+    .filter((c): c is typeof c & { ideology: NonNullable<typeof c.ideology> } => !!c.ideology)
     .map((c) => {
-      const ideology = c.ideology!;
+      const ideology = c.ideology;
       const maxAffinity = Math.max(
         ideology.earthLoyalist,
         ideology.marsIndependence,

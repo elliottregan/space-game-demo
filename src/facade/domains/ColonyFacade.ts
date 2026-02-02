@@ -337,7 +337,8 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
 
       // Update resource flows for changed buildings
       for (const building of understaffed) {
-        const old = oldFlows.get(building.id)!;
+        const old = oldFlows.get(building.id);
+        if (!old) continue;
         const newProd = this.gameState.buildings.getEffectiveProduction(building.id);
         const newCons = this.gameState.buildings.getEffectiveConsumption(building.id);
 

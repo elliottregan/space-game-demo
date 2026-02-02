@@ -5,7 +5,6 @@ import { rng } from "../core/utils/random";
 import { GameAPI } from "../facade/GameAPI";
 import { HeuristicStrategy } from "./HeuristicStrategy";
 import type { ColonistIdeology } from "../core/models/Colonist";
-import { IdeologyManager } from "../core/systems/IdeologyManager";
 
 const MAX_SOLS = 2000;
 const SNAPSHOT_INTERVAL = 25; // Capture ideology every 25 sols
@@ -57,8 +56,10 @@ function getDominantFaction(ideology: ColonistIdeology): string | null {
   ];
 
   const sorted = factions.sort((a, b) => b.value - a.value);
-  if (sorted[0]!.value - sorted[1]!.value >= threshold) {
-    return sorted[0]!.name;
+  const first = sorted[0];
+  const second = sorted[1];
+  if (first && second && first.value - second.value >= threshold) {
+    return first.name;
   }
   return null; // Mixed/no clear dominant
 }
@@ -183,10 +184,11 @@ function analyzeIdeologyDrift(analysis: IdeologyAnalysis): void {
     low: [] as { name: string; initialSpread: number; finalSpread: number; retained: boolean }[],
   };
 
-  for (const [id, tracking] of analysis.foundingColonistTracking) {
+  for (const [_id, tracking] of analysis.foundingColonistTracking) {
     if (tracking.snapshots.length < 2) continue;
-    const first = tracking.snapshots[0]!;
-    const last = tracking.snapshots[tracking.snapshots.length - 1]!;
+    const first = tracking.snapshots[0];
+    const last = tracking.snapshots[tracking.snapshots.length - 1];
+    if (!first || !last) continue;
 
     const entry = {
       name: tracking.name,
@@ -269,8 +271,9 @@ function printAnalysis(analysis: IdeologyAnalysis): void {
   for (const [id, tracking] of analysis.foundingColonistTracking) {
     if (tracking.snapshots.length === 0) continue;
 
-    const first = tracking.snapshots[0]!;
-    const last = tracking.snapshots[tracking.snapshots.length - 1]!;
+    const first = tracking.snapshots[0];
+    const last = tracking.snapshots[tracking.snapshots.length - 1];
+    if (!first || !last) continue;
 
     console.log(`\n${tracking.name} (${id}):`);
     console.log(
@@ -309,8 +312,9 @@ function printAnalysis(analysis: IdeologyAnalysis): void {
   console.log("=".repeat(80));
 
   if (analysis.timeline.length >= 2) {
-    const early = analysis.timeline[0]!;
-    const late = analysis.timeline[analysis.timeline.length - 1]!;
+    const early = analysis.timeline[0];
+    const late = analysis.timeline[analysis.timeline.length - 1];
+    if (!early || !late) return;
 
     console.log("\nColony-wide averages:");
     console.log(
@@ -360,7 +364,7 @@ function printAnalysis(analysis: IdeologyAnalysis): void {
   console.log("=".repeat(80));
 
   let detailedCount = 0;
-  for (const [id, tracking] of analysis.foundingColonistTracking) {
+  for (const [_id, tracking] of analysis.foundingColonistTracking) {
     if (detailedCount >= 3) break;
     if (tracking.snapshots.length === 0) continue;
 
@@ -402,7 +406,7 @@ function analyzeRelationshipStrengths(api: GameAPI): void {
   const strengths: number[] = [];
 
   // Collect all relationship strengths
-  for (const [key, rel] of colony.coworkerRelationships) {
+  for (const [_key, rel] of colony.coworkerRelationships) {
     strengths.push(rel.strength);
   }
 
@@ -423,10 +427,11 @@ function analyzeRelationshipStrengths(api: GameAPI): void {
   }
 
   console.log(`Total relationships: ${strengths.length}`);
-  console.log(
-    `Min: ${strengths[0]!.toFixed(3)}, Max: ${strengths[strengths.length - 1]!.toFixed(3)}`,
-  );
-  console.log(`Median: ${strengths[Math.floor(strengths.length / 2)]!.toFixed(3)}`);
+  const minStrength = strengths[0];
+  const maxStrength = strengths[strengths.length - 1];
+  const medianStrength = strengths[Math.floor(strengths.length / 2)];
+  console.log(`Min: ${minStrength?.toFixed(3) ?? "N/A"}, Max: ${maxStrength?.toFixed(3) ?? "N/A"}`);
+  console.log(`Median: ${medianStrength?.toFixed(3) ?? "N/A"}`);
   console.log("\nDistribution:");
   console.log(
     `  <0.2 (very weak): ${buckets[0]} (${((buckets[0] / strengths.length) * 100).toFixed(1)}%)`,

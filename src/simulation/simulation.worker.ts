@@ -455,7 +455,9 @@ function captureIdeologySnapshot(
 
     // Check for dominant faction (threshold of 0.15 difference)
     const values = [earthLoyalist, marsIndependence, corporateInterests].sort((a, b) => b - a);
-    if (values[0]! >= 0.3 && values[0]! - values[1]! >= 0.15) {
+    const highest = values[0] ?? 0;
+    const second = values[1] ?? 0;
+    if (highest >= 0.3 && highest - second >= 0.15) {
       dominantCount++;
     }
 
@@ -483,7 +485,8 @@ self.onmessage = (event: MessageEvent<WorkerInput>) => {
     const results: RunResult[] = [];
 
     for (let i = 0; i < seeds.length; i++) {
-      const seed = seeds[i]!;
+      const seed = seeds[i];
+      if (seed === undefined) continue;
       results.push(runSingleGame(seed));
 
       // Report progress every 10 runs or at the end

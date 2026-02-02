@@ -92,9 +92,9 @@ class SeededRandom {
   shuffle<T>(array: T[]): T[] {
     for (let i = array.length - 1; i > 0; i--) {
       const j = this.below(i + 1);
-      const temp = array[i];
-      array[i] = array[j]!;
-      array[j] = temp!;
+      const temp = array[i] as T;
+      array[i] = array[j] as T;
+      array[j] = temp;
     }
     return array;
   }

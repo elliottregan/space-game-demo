@@ -64,7 +64,10 @@ export function renderHeatmap(
   function aggregateCrises(crises: CrisisPoint[]): Map<string, number[]> {
     const result = new Map<string, number[]>();
     for (const type of CRISIS_TYPES) {
-      result.set(type, new Array(numBins).fill(0));
+      result.set(
+        type,
+        Array.from({ length: numBins }, () => 0),
+      );
     }
     for (const crisis of crises) {
       const bin = Math.min(Math.floor(crisis.sol / binWidth), numBins - 1);
