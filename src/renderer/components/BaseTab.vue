@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 import { gameService } from "../services/GameService";
 import type { GridPosition, DepositType, PowerState } from "../../core/models/Grid";
+import type { Colonist } from "../../core/models/Colonist";
 import BaseGrid from "./BaseGrid/BaseGrid.vue";
 import BuildingContextMenu from "./BaseGrid/BuildingContextMenu.vue";
 import BuildingStatsCard from "./BaseGrid/BuildingStatsCard.vue";
@@ -207,6 +208,7 @@ const placementHints = computed(() => ({
         :battery-level="selectedBuildingGridData.batteryLevel"
         :construction-progress="selectedBuildingGridData.constructionProgress"
         :distance-to-power="0"
+        :colonists="state.colonists as Colonist[]"
         @close="closeStatsCard"
         @demolish="handleDemolish"
         @cancel="handleCancelConstruction"

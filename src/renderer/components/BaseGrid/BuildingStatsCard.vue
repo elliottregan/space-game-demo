@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Building, BuildingDefinition } from "../../../core/models/Building";
+import type { Colonist, ColonistIdeology } from "../../../core/models/Colonist";
 import { type GridPosition, PowerState } from "../../../core/models/Grid";
 import GPanel from "../../ui/primitives/GPanel.vue";
 import GProgress from "../../ui/primitives/GProgress.vue";
@@ -15,6 +16,7 @@ interface Props {
   batteryLevel: number;
   distanceToPower: number;
   constructionProgress?: number; // 0-1 for pending buildings
+  colonists: Colonist[]; // All colonists for lookup
 }
 
 const props = defineProps<Props>();
@@ -27,6 +29,34 @@ const emit = defineEmits<{
 
 const isPending = computed(() => props.building.status === "pending");
 const constructionPercent = computed(() => Math.round((props.constructionProgress ?? 0) * 100));
+
+// Get workers assigned to this building
+const assignedWorkers = computed(() => {
+  return props.building.assignedWorkers
+    .map((id) => props.colonists.find((c) => c.id === id))
+    .filter((c): c is Colonist => c !== undefined);
+});
+
+// Get residents living in this building (for residential buildings)
+const residents = computed(() => {
+  if (props.definition.purpose !== "residential") return [];
+  return props.colonists.filter((c) => c.housingId === props.building.id);
+});
+
+// Determine dominant ideology for a colonist
+function getDominantIdeology(ideology?: ColonistIdeology): { name: string; color: string } | null {
+  if (!ideology) return null;
+
+  const factions = [
+    { name: "Earth", value: ideology.earthLoyalist, color: "var(--g-color-info)" },
+    { name: "Mars", value: ideology.marsIndependence, color: "var(--g-color-warning)" },
+    { name: "Corp", value: ideology.corporateInterests, color: "var(--g-color-positive)" },
+  ];
+
+  const dominant = factions.reduce((max, f) => (f.value > max.value ? f : max));
+  if (dominant.value < 0.3) return null; // No strong affiliation
+  return { name: dominant.name, color: dominant.color };
+}
 
 const powerStateLabel = computed(() => {
   switch (props.powerState) {
@@ -159,6 +189,36 @@ const batteryVariant = computed(() => {
             >{{ building.assignedWorkers.length }} / {{ definition.workerSlots }}</span
           >
         </div>
+        <div v-if="assignedWorkers.length" class="colonist-list">
+          <div v-for="worker in assignedWorkers" :key="worker.id" class="colonist-item">
+            <span class="colonist-name">{{ worker.name }}</span>
+            <span
+              v-if="getDominantIdeology(worker.ideology)"
+              class="ideology-badge"
+              :style="{ backgroundColor: getDominantIdeology(worker.ideology)?.color }"
+            >
+              {{ getDominantIdeology(worker.ideology)?.name }}
+            </span>
+            <span v-else class="ideology-badge neutral">Neutral</span>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="residents.length" class="stats-section">
+        <h4>Residents</h4>
+        <div class="colonist-list">
+          <div v-for="resident in residents" :key="resident.id" class="colonist-item">
+            <span class="colonist-name">{{ resident.name }}</span>
+            <span
+              v-if="getDominantIdeology(resident.ideology)"
+              class="ideology-badge"
+              :style="{ backgroundColor: getDominantIdeology(resident.ideology)?.color }"
+            >
+              {{ getDominantIdeology(resident.ideology)?.name }}
+            </span>
+            <span v-else class="ideology-badge neutral">Neutral</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -285,5 +345,44 @@ const batteryVariant = computed(() => {
   font-size: var(--g-font-size-xs);
   color: var(--g-color-info);
   margin: var(--g-space-xs) 0 0 0;
+}
+
+.colonist-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-xs);
+  margin-top: var(--g-space-xs);
+}
+
+.colonist-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--g-space-xs);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--g-radius-sm);
+  font-size: var(--g-font-size-sm);
+}
+
+.colonist-name {
+  color: var(--g-color-text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ideology-badge {
+  padding: 2px 6px;
+  border-radius: var(--g-radius-sm);
+  font-size: var(--g-font-size-xs);
+  font-weight: 500;
+  color: white;
+  flex-shrink: 0;
+  margin-left: var(--g-space-xs);
+}
+
+.ideology-badge.neutral {
+  background-color: var(--g-color-text-muted);
 }
 </style>
