@@ -2,6 +2,7 @@ import type { AirQualityManager } from "../systems/AirQualityManager";
 import type { BuildingManager } from "../systems/BuildingManager";
 import type { ColonistMoraleManager } from "../systems/ColonistMoraleManager";
 import type { ColonyManager } from "../systems/ColonyManager";
+import type { EarthCrisisManager } from "../systems/EarthCrisisManager";
 import type { EventManager } from "../systems/EventManager";
 import type { IdeologyManager } from "../systems/IdeologyManager";
 import type { OperationsManager } from "../systems/OperationsManager";
@@ -61,6 +62,7 @@ export interface TickContext {
   ideology: IdeologyManager;
   airQualityManager: AirQualityManager;
   powerGridManager: PowerGridManager;
+  earthCrisis: EarthCrisisManager;
 
   /** Derived values computed during tick */
   derived: DerivedValues;
@@ -88,6 +90,7 @@ export function createTickContext(
     ideology: IdeologyManager;
     airQualityManager: AirQualityManager;
     powerGridManager: PowerGridManager;
+    earthCrisis: EarthCrisisManager;
   },
   settings: TickSettings,
 ): TickContext {

@@ -10,6 +10,7 @@ import { AirQualityManager } from "./systems/AirQualityManager";
 import { BuildingManager } from "./systems/BuildingManager";
 import { ColonistMoraleManager } from "./systems/ColonistMoraleManager";
 import { ColonyManager } from "./systems/ColonyManager";
+import { EarthCrisisManager } from "./systems/EarthCrisisManager";
 import { EventManager } from "./systems/EventManager";
 import { IdeologyManager } from "./systems/IdeologyManager";
 import { OperationsManager } from "./systems/OperationsManager";
@@ -36,6 +37,7 @@ export class GameState {
   airQuality: AirQualityManager;
   powerGrid: PowerGridManager;
   ideology: IdeologyManager;
+  earthCrisis: EarthCrisisManager;
 
   private tickRunner: TickRunner;
   private eventLog: GameEvent[] = [];
@@ -77,6 +79,7 @@ export class GameState {
     this.airQuality = new AirQualityManager();
     this.powerGrid = new PowerGridManager();
     this.ideology = new IdeologyManager();
+    this.earthCrisis = new EarthCrisisManager();
     this.buildings.setIdeologyManager(this.ideology);
     this.buildings.setVictoryManager(this.victory);
 
@@ -228,6 +231,7 @@ export class GameState {
         ideology: this.ideology,
         airQualityManager: this.airQuality,
         powerGridManager: this.powerGrid,
+        earthCrisis: this.earthCrisis,
       },
       { autoAssignNewColonists: this.autoAssignNewColonists },
     );
@@ -291,6 +295,7 @@ export class GameState {
       airQuality: this.airQuality.toJSON(),
       powerGrid: this.powerGrid.toJSON(),
       ideology: this.ideology.toJSON(),
+      earthCrisis: this.earthCrisis.toJSON(),
       autoAssignNewColonists: this.autoAssignNewColonists,
     };
   }
@@ -327,6 +332,10 @@ export class GameState {
     if (data.ideology) {
       state.ideology = IdeologyManager.fromJSON(data.ideology);
       state.buildings.setIdeologyManager(state.ideology);
+    }
+
+    if (data.earthCrisis) {
+      state.earthCrisis = EarthCrisisManager.fromJSON(data.earthCrisis);
     }
 
     state.buildings.setVictoryManager(state.victory);
