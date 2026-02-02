@@ -85,6 +85,7 @@ const buildingsForGraph = computed(() =>
         />
         <ColonistDetailPanel
           v-if="selectedColonist"
+          :key="`${selectedColonist.id}-${state.currentSol}`"
           :colonist="selectedColonist"
           :colonists="state.colonists"
           :relationships="state.coworkerRelationships"
