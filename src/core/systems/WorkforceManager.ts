@@ -69,6 +69,11 @@ export class WorkforceManager {
   /** Sol of last guild formation check */
   private lastGuildFormationCheck: number = 0;
 
+  /** Set the last guild formation check sol (used for deserialization) */
+  setLastGuildFormationCheck(sol: number): void {
+    this.lastGuildFormationCheck = sol;
+  }
+
   /**
    * Get the underlying RelationshipManager for direct access.
    * Used by morale propagation and other systems that need centrality data.
@@ -95,6 +100,9 @@ export class WorkforceManager {
 
     // Process preferential attachment (random new connections)
     events.push(...this.processPreferentialAttachment(colonists, currentSol));
+
+    // Process guild formation
+    events.push(...this.processGuildFormation(colonists, currentSol));
 
     for (const colonist of colonists) {
       // Handle training
@@ -1033,6 +1041,7 @@ export class WorkforceManager {
       coworkerRelationships: Object.fromEntries(this.relationshipManager.getAllRelationships()),
       guilds: Object.fromEntries(this.guildManager.getGuilds().map((g) => [g.id, g])),
       nextGuildId: this.guildManager.toJSON().nextGuildId,
+      lastGuildFormationCheck: this.lastGuildFormationCheck,
     };
   }
 
@@ -1076,6 +1085,11 @@ export class WorkforceManager {
         guilds: data.guilds as Record<string, Guild>,
         nextGuildId: data.nextGuildId ?? 1,
       });
+    }
+
+    // Restore lastGuildFormationCheck
+    if (data.lastGuildFormationCheck !== undefined) {
+      manager.setLastGuildFormationCheck(data.lastGuildFormationCheck);
     }
 
     return manager;
