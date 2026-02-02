@@ -2,6 +2,7 @@
 import { describe, expect, it } from "bun:test";
 import { GridManager } from "../src/core/systems/GridManager";
 import { DepositType, GRID_SIZE, PowerState } from "../src/core/models/Grid";
+import { BATTERY_BACKUP_SOLS, LOW_BATTERY_THRESHOLD } from "../src/core/balance/GridBalance";
 
 describe("GridManager", () => {
   it("initializes 10x10 grid", () => {
@@ -188,5 +189,81 @@ describe("GridManager - Power Connections", () => {
     expect(manager.getPowerState("habitat-close")).toBe(PowerState.POWERED);
     expect(manager.getPowerState("habitat-mid")).toBe(PowerState.POWERED);
     expect(manager.getPowerState("habitat-far")).toBe(PowerState.ON_BATTERY);
+  });
+});
+
+describe("GridManager - Battery System", () => {
+  it("tick drains battery for unpowered buildings", () => {
+    const manager = new GridManager();
+
+    // Place building with no power source
+    manager.placeBuilding("habitat-1", { x: 0, y: 0 });
+    manager.setBuildingPowerConsumption("habitat-1", 4);
+    manager.updatePowerConnections(false);
+
+    const initialBattery = manager.getPlacement("habitat-1")?.batteryLevel ?? 0;
+    expect(initialBattery).toBe(1.0);
+
+    // Tick once (1 sol)
+    manager.tick();
+
+    const afterOneSol = manager.getPlacement("habitat-1")?.batteryLevel ?? 0;
+    expect(afterOneSol).toBeCloseTo(1 - 1 / BATTERY_BACKUP_SOLS, 2);
+  });
+
+  it("battery transitions to low_battery state", () => {
+    const manager = new GridManager();
+
+    manager.placeBuilding("habitat-1", { x: 0, y: 0 });
+    manager.setBuildingPowerConsumption("habitat-1", 4);
+    manager.updatePowerConnections(false);
+
+    // Drain to low battery (tick enough times)
+    const ticksToLowBattery = Math.ceil(BATTERY_BACKUP_SOLS * (1 - LOW_BATTERY_THRESHOLD));
+    for (let i = 0; i < ticksToLowBattery; i++) {
+      manager.tick();
+    }
+
+    expect(manager.getPowerState("habitat-1")).toBe(PowerState.LOW_BATTERY);
+  });
+
+  it("battery fully drained becomes unpowered", () => {
+    const manager = new GridManager();
+
+    manager.placeBuilding("habitat-1", { x: 0, y: 0 });
+    manager.setBuildingPowerConsumption("habitat-1", 4);
+    manager.updatePowerConnections(false);
+
+    // Drain completely (tick BATTERY_BACKUP_SOLS + 1 times)
+    for (let i = 0; i <= BATTERY_BACKUP_SOLS; i++) {
+      manager.tick();
+    }
+
+    expect(manager.getPowerState("habitat-1")).toBe(PowerState.UNPOWERED);
+  });
+
+  it("reconnecting to power recharges battery", () => {
+    const manager = new GridManager();
+
+    // Start without power
+    manager.placeBuilding("habitat-1", { x: 5, y: 5 });
+    manager.setBuildingPowerConsumption("habitat-1", 4);
+    manager.updatePowerConnections(false);
+
+    // Drain some battery
+    manager.tick();
+    manager.tick();
+
+    const drainedBattery = manager.getPlacement("habitat-1")?.batteryLevel ?? 0;
+    expect(drainedBattery).toBeLessThan(1.0);
+
+    // Add power source and reconnect
+    manager.placeBuilding("solar-1", { x: 5, y: 6 });
+    manager.registerPowerSource("solar-1", 10);
+    manager.updatePowerConnections(false);
+
+    // Battery should be recharged
+    expect(manager.getPlacement("habitat-1")?.batteryLevel).toBe(1.0);
+    expect(manager.getPowerState("habitat-1")).toBe(PowerState.POWERED);
   });
 });

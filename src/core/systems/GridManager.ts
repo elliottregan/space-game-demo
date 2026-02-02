@@ -7,7 +7,11 @@ import {
   BuildingPlacement,
   PowerState,
 } from "../models/Grid";
-import { calculatePowerRange } from "../balance/GridBalance";
+import {
+  BATTERY_BACKUP_SOLS,
+  LOW_BATTERY_THRESHOLD,
+  calculatePowerRange,
+} from "../balance/GridBalance";
 
 interface DepositInfo {
   position: GridPosition;
@@ -259,5 +263,29 @@ export class GridManager {
 
   getPlacement(buildingId: string): BuildingPlacement | undefined {
     return this.placements.get(buildingId);
+  }
+
+  tick(): void {
+    const drainPerSol = 1 / BATTERY_BACKUP_SOLS;
+
+    for (const placement of this.placements.values()) {
+      // Skip power sources
+      if (this.powerSources.has(placement.buildingId)) continue;
+
+      // Skip powered buildings
+      if (placement.powerSourceId) continue;
+
+      // Drain battery
+      placement.batteryLevel = Math.max(0, placement.batteryLevel - drainPerSol);
+
+      // Update power state based on battery
+      if (placement.batteryLevel <= 0) {
+        placement.powerState = PowerState.UNPOWERED;
+      } else if (placement.batteryLevel <= LOW_BATTERY_THRESHOLD) {
+        placement.powerState = PowerState.LOW_BATTERY;
+      } else {
+        placement.powerState = PowerState.ON_BATTERY;
+      }
+    }
   }
 }
