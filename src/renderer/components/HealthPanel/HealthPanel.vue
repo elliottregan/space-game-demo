@@ -106,14 +106,16 @@ const hasEffects = computed(() => {
 </script>
 
 <template>
-  <GPanel title="Health" accent="rose">
+  <GPanel title="Health" accent="red">
     <div class="health-content">
-      <GMetricBar
-        label="Colony Health"
-        :value="state.health / 100"
-        :icon="HeartPulse"
-        :thresholds="healthThresholds"
-      />
+      <div class="metric-wrapper">
+        <GMetricBar
+          label="Colony Health"
+          :value="state.health / 100"
+          :icon="HeartPulse"
+          :thresholds="healthThresholds"
+        />
+      </div>
 
       <div class="health-stats">
         <div class="stat">
@@ -162,6 +164,10 @@ const hasEffects = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--g-space-md);
+}
+
+.metric-wrapper :deep(.metric-icon) {
+  color: var(--g-accent-red);
 }
 
 .health-stats {
