@@ -1,7 +1,7 @@
 // src/core/data/projects.ts
 
 import { BuildingId } from "../models/Building.ts";
-import { NPCFaction, type Project, ProjectId } from "../models/NPCInfluence.ts";
+import { NPCFaction, ProjectEffectType, type Project, ProjectId } from "../models/NPCInfluence.ts";
 
 export const PROJECTS: Project[] = [
   // Earth Loyalists projects
@@ -149,6 +149,17 @@ export const PROJECTS: Project[] = [
     ],
     requiredCouncilSupport: 0.65,
     effects: { unlockBuilding: BuildingId.SPACE_ELEVATOR },
+    onCompletionEffects: [
+      {
+        type: ProjectEffectType.IMMIGRATION_IDEOLOGY_BIAS,
+        name: "Preferred Boarding",
+        description: "New immigrants arrive with stronger Earth Loyalist ideology.",
+        params: {
+          faction: NPCFaction.EarthLoyalists,
+          strength: 0.3,
+        },
+      },
+    ],
   },
   {
     id: ProjectId.DECLARATION_OF_SOVEREIGNTY,
