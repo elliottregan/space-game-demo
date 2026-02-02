@@ -391,8 +391,9 @@ export class IdeologyManager {
         const neighborCentrality = relationshipManager.getCentrality(neighborId);
         const neighborConviction = neighborIdeology.conviction;
 
-        // Weight = relationship × (centrality + baseline) × conviction
-        const weight = relationshipStrength * (neighborCentrality + 0.1) * neighborConviction;
+        // Weight = relationship² × (centrality + baseline) × conviction
+        // Squaring relationship strength makes strong bonds disproportionately more influential
+        const weight = relationshipStrength ** 2 * (neighborCentrality + 0.1) * neighborConviction;
         totalWeight += weight;
 
         avgInfluence.earthLoyalist += weight * neighborIdeology.earthLoyalist;
@@ -577,8 +578,9 @@ export class IdeologyManager {
       const neighborCentrality = relationshipManager.getCentrality(neighborId);
       const neighborConviction = neighbor.ideology.conviction;
 
-      // Weight = relationship × (centrality + baseline) × conviction
-      const weight = relationshipStrength * (neighborCentrality + 0.1) * neighborConviction;
+      // Weight = relationship² × (centrality + baseline) × conviction
+      // Squaring relationship strength makes strong bonds disproportionately more influential
+      const weight = relationshipStrength ** 2 * (neighborCentrality + 0.1) * neighborConviction;
       totalWeight += weight;
 
       avgInfluence.earthLoyalist += weight * neighbor.ideology.earthLoyalist;
