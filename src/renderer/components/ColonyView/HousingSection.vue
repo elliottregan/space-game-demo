@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import type { Building, BuildingDefinition, Colonist, SkillDefinition } from "../../../facade";
+import { BuildingPurpose } from "../../../core/models/Building";
+import { clearHighlights, highlightResources } from "../../directives/ResourceHighlight";
 import { gameService } from "../../services/GameService";
 import { GButton, GEmptyState, GPanel } from "../../ui";
+import { calculateHighlightInfo } from "../../utils/formatters";
+import BuildableHousingCard from "./BuildableHousingCard.vue";
 import HousingBuildingCard from "./HousingBuildingCard.vue";
 import UnhousedPool from "./UnhousedPool.vue";
 
@@ -16,6 +20,46 @@ const props = defineProps<{
 
 const selectedColonistId = ref<string | null>(null);
 const draggingColonistId = ref<string | null>(null);
+
+const api = gameService.api;
+
+const residentialDefinitions = computed(() => {
+  return props.buildingDefinitions.filter((def) => {
+    if (def.purpose !== BuildingPurpose.Residential) return false;
+    if (def.requiredTech && !api.technology.isResearched(def.requiredTech)) return false;
+    return true;
+  });
+});
+
+function canBuild(defId: string): boolean {
+  return api.buildings.canBuild(defId).allowed;
+}
+
+function getBuildReason(defId: string): string | undefined {
+  const check = api.buildings.canBuild(defId);
+  return check.allowed ? undefined : check.reason;
+}
+
+function buildBuilding(defId: string): void {
+  const result = api.buildings.build(defId);
+  if (!result.success) {
+    console.warn(`Build failed: ${result.error.type}`, result.error);
+  }
+}
+
+function getPendingCount(defId: string): number {
+  return gameService.getState().pendingBuildings.filter((b) => b.definitionId === defId).length;
+}
+
+function onBuildingHover(def: { cost: Record<string, number> }): void {
+  const currentResources = api.resources.snapshot().current as Record<string, number>;
+  const info = calculateHighlightInfo(def.cost, currentResources);
+  highlightResources(info.requiredResources, info.insufficientResources, info.deltas);
+}
+
+function onBuildingLeave(): void {
+  clearHighlights();
+}
 
 const availableBeds = computed(() => {
   let total = 0;
@@ -67,6 +111,23 @@ function onUnassignFromHousing(colonistId: string) {
 
 <template>
   <GPanel title="Housing">
+    <div class="build-housing-section">
+      <div class="section-label">Build New Housing</div>
+      <div class="buildable-list">
+        <BuildableHousingCard
+          v-for="def in residentialDefinitions"
+          :key="def.id"
+          :definition="def"
+          :can-build="canBuild(def.id)"
+          :build-reason="getBuildReason(def.id)"
+          :pending-count="getPendingCount(def.id)"
+          @build="buildBuilding(def.id)"
+          @hover="onBuildingHover(def)"
+          @leave="onBuildingLeave"
+        />
+      </div>
+    </div>
+
     <div class="housing-controls">
       <span class="housing-stat">
         Unhoused: {{ unhoused.length }} | Available beds: {{ availableBeds }}
@@ -148,5 +209,25 @@ function onUnassignFromHousing(colonistId: string) {
   .housing-layout > :first-child {
     max-width: none;
   }
+}
+
+.build-housing-section {
+  margin-bottom: var(--g-space-md);
+  padding-bottom: var(--g-space-md);
+  border-bottom: 1px solid var(--g-color-border);
+}
+
+.section-label {
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--g-space-sm);
+}
+
+.buildable-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-xs);
 }
 </style>
