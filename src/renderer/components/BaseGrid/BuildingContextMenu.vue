@@ -1,37 +1,64 @@
 <!-- src/renderer/components/BaseGrid/BuildingContextMenu.vue -->
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, type Component } from "vue";
 import type { GridPosition, DepositType } from "../../../core/models/Grid";
 import type { BuildingDefinition } from "../../../core/models/Building";
 import { BuildingId } from "../../../core/models/Building";
+import {
+  House,
+  SolarPanel,
+  Droplet,
+  Sprout,
+  Pickaxe,
+  Wind,
+  Leaf,
+  Recycle,
+  FlaskConical,
+  Building,
+  Factory,
+  Printer,
+  Gem,
+  Atom,
+  Dna,
+  Stethoscope,
+  Snowflake,
+  Sofa,
+  Dumbbell,
+  Flower,
+  Telescope,
+  Landmark,
+  Rocket,
+  Globe,
+  TowerControl,
+} from "lucide-vue-next";
 
-// Map building IDs to icon characters
-const BUILDING_ICONS: Record<string, string> = {
-  [BuildingId.HABITAT]: "🏠",
-  [BuildingId.SOLAR_PANEL]: "☀️",
-  [BuildingId.WATER_EXTRACTOR]: "💧",
-  [BuildingId.BASIC_FARM]: "🌱",
-  [BuildingId.BASIC_MINE]: "⛏️",
-  [BuildingId.OXYGEN_GENERATOR]: "💨",
-  [BuildingId.GREENHOUSE]: "🌿",
-  [BuildingId.WATER_RECLAIMER]: "♻️",
-  [BuildingId.RESEARCH_LAB]: "🔬",
-  [BuildingId.ADVANCED_HABITAT]: "🏢",
-  [BuildingId.AUTOMATED_FACTORY]: "🏭",
-  [BuildingId.FABRICATOR_3D]: "🖨️",
-  [BuildingId.MINING_STATION]: "🏗️",
-  [BuildingId.NUCLEAR_REACTOR]: "⚛️",
-  [BuildingId.BIOLAB]: "🧬",
-  [BuildingId.MEDICAL_CENTER]: "🏥",
-  [BuildingId.CRYO_FACILITY]: "❄️",
-  [BuildingId.COMMON_ROOM]: "🛋️",
-  [BuildingId.GYMNASIUM]: "🏋️",
-  [BuildingId.HYDROPONIC_GARDEN]: "🌺",
-  [BuildingId.OBSERVATORY_DOME]: "🔭",
-  [BuildingId.ASSEMBLY_HALL]: "🏛️",
-  [BuildingId.GENERATION_SHIP]: "🚀",
-  [BuildingId.UNITED_MARS_STATION]: "🌍",
-  [BuildingId.SPACE_ELEVATOR]: "🗼",
+// Map building IDs to Lucide Vue components
+const BUILDING_ICONS: Record<string, Component> = {
+  [BuildingId.HABITAT]: House,
+  [BuildingId.SOLAR_PANEL]: SolarPanel,
+  [BuildingId.WATER_EXTRACTOR]: Droplet,
+  [BuildingId.BASIC_FARM]: Sprout,
+  [BuildingId.BASIC_MINE]: Pickaxe,
+  [BuildingId.OXYGEN_GENERATOR]: Wind,
+  [BuildingId.GREENHOUSE]: Leaf,
+  [BuildingId.WATER_RECLAIMER]: Recycle,
+  [BuildingId.RESEARCH_LAB]: FlaskConical,
+  [BuildingId.ADVANCED_HABITAT]: Building,
+  [BuildingId.AUTOMATED_FACTORY]: Factory,
+  [BuildingId.FABRICATOR_3D]: Printer,
+  [BuildingId.MINING_STATION]: Gem,
+  [BuildingId.NUCLEAR_REACTOR]: Atom,
+  [BuildingId.BIOLAB]: Dna,
+  [BuildingId.MEDICAL_CENTER]: Stethoscope,
+  [BuildingId.CRYO_FACILITY]: Snowflake,
+  [BuildingId.COMMON_ROOM]: Sofa,
+  [BuildingId.GYMNASIUM]: Dumbbell,
+  [BuildingId.HYDROPONIC_GARDEN]: Flower,
+  [BuildingId.OBSERVATORY_DOME]: Telescope,
+  [BuildingId.ASSEMBLY_HALL]: Landmark,
+  [BuildingId.GENERATION_SHIP]: Rocket,
+  [BuildingId.UNITED_MARS_STATION]: Globe,
+  [BuildingId.SPACE_ELEVATOR]: TowerControl,
 };
 
 interface PlacementHints {
@@ -122,8 +149,8 @@ function cancelSelection() {
   selectedDefId.value = null;
 }
 
-function getIcon(defId: string): string {
-  return BUILDING_ICONS[defId] ?? "🏗️";
+function getIcon(defId: string): Component | null {
+  return BUILDING_ICONS[defId] ?? null;
 }
 </script>
 
@@ -144,7 +171,9 @@ function getIcon(defId: string): string {
 
     <!-- Selected building preview -->
     <div v-if="selectedBuilding" class="selected-preview">
-      <div class="preview-icon">{{ getIcon(selectedBuilding.id) }}</div>
+      <div class="preview-icon">
+        <component :is="getIcon(selectedBuilding.id)" :size="32" />
+      </div>
       <div class="preview-info">
         <div class="preview-name">{{ selectedBuilding.name }}</div>
         <div class="preview-desc">{{ selectedBuilding.description }}</div>
@@ -165,7 +194,9 @@ function getIcon(defId: string): string {
         :class="{ recommended: isRecommended(def) }"
         @click="selectBuilding(def.id)"
       >
-        <div class="building-icon">{{ getIcon(def.id) }}</div>
+        <div class="building-icon">
+          <component :is="getIcon(def.id)" :size="20" />
+        </div>
         <div class="building-details">
           <div class="building-name">
             {{ def.name }}

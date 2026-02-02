@@ -1,37 +1,38 @@
 import { select } from "d3-selection";
+import type { Selection } from "d3-selection";
 import { gridToScreen, TILE_WIDTH, TILE_HEIGHT, GRID_SIZE } from "./isometricUtils";
 import { DepositType, PowerState } from "../../../core/models/Grid";
 import type { GridPosition } from "../../../core/models/Grid";
-import { BuildingId } from "../../../core/models/Building";
 
-// Map building IDs to icon characters (using simple text symbols for SVG)
-const BUILDING_ICONS: Record<string, string> = {
-  [BuildingId.HABITAT]: "🏠",
-  [BuildingId.SOLAR_PANEL]: "☀️",
-  [BuildingId.WATER_EXTRACTOR]: "💧",
-  [BuildingId.BASIC_FARM]: "🌱",
-  [BuildingId.BASIC_MINE]: "⛏️",
-  [BuildingId.OXYGEN_GENERATOR]: "💨",
-  [BuildingId.GREENHOUSE]: "🌿",
-  [BuildingId.WATER_RECLAIMER]: "♻️",
-  [BuildingId.RESEARCH_LAB]: "🔬",
-  [BuildingId.ADVANCED_HABITAT]: "🏢",
-  [BuildingId.AUTOMATED_FACTORY]: "🏭",
-  [BuildingId.FABRICATOR_3D]: "🖨️",
-  [BuildingId.MINING_STATION]: "🏗️",
-  [BuildingId.NUCLEAR_REACTOR]: "⚛️",
-  [BuildingId.BIOLAB]: "🧬",
-  [BuildingId.MEDICAL_CENTER]: "🏥",
-  [BuildingId.CRYO_FACILITY]: "❄️",
-  [BuildingId.COMMON_ROOM]: "🛋️",
-  [BuildingId.GYMNASIUM]: "🏋️",
-  [BuildingId.HYDROPONIC_GARDEN]: "🌺",
-  [BuildingId.OBSERVATORY_DOME]: "🔭",
-  [BuildingId.ASSEMBLY_HALL]: "🏛️",
-  [BuildingId.GENERATION_SHIP]: "🚀",
-  [BuildingId.UNITED_MARS_STATION]: "🌍",
-  [BuildingId.SPACE_ELEVATOR]: "🗼",
-};
+/**
+ * Get the SVG symbol ID for a building icon.
+ * Icons are defined in BuildingIconDefs.vue as <symbol> elements.
+ */
+function getIconHref(buildingDefId: string): string {
+  return `#building-icon-${buildingDefId}`;
+}
+
+/**
+ * Render a building icon using SVG <use> to reference a symbol.
+ */
+function renderIcon(
+  parent: Selection<SVGGElement, unknown, null, undefined>,
+  buildingDefId: string,
+  cx: number,
+  cy: number,
+  size: number,
+  color: string,
+): void {
+  parent
+    .append("use")
+    .attr("href", getIconHref(buildingDefId))
+    .attr("x", cx - size / 2)
+    .attr("y", cy - size / 2)
+    .attr("width", size)
+    .attr("height", size)
+    .attr("stroke", color)
+    .attr("fill", "none");
+}
 
 export interface GridNodeData {
   buildingId?: string;
@@ -188,15 +189,8 @@ export function renderBaseGrid(
           .attr("stroke-width", 2);
 
         // Building icon
-        const icon = cell.buildingDefId ? BUILDING_ICONS[cell.buildingDefId] : undefined;
-        if (icon) {
-          nodeG
-            .append("text")
-            .attr("x", screen.x)
-            .attr("y", screen.y + 5)
-            .attr("text-anchor", "middle")
-            .attr("font-size", "14px")
-            .text(icon);
+        if (cell.buildingDefId) {
+          renderIcon(nodeG, cell.buildingDefId, screen.x, screen.y, 18, colors.text);
         }
 
         // Building label
@@ -223,28 +217,26 @@ export function renderBaseGrid(
 
       // Ghost preview for selected building to place
       if (!cell?.buildingId && data.selectedBuildingDefId && isSelected) {
-        const ghostIcon = BUILDING_ICONS[data.selectedBuildingDefId];
-        if (ghostIcon) {
-          cellG
-            .append("circle")
-            .attr("cx", screen.x)
-            .attr("cy", screen.y)
-            .attr("r", 18)
-            .attr("fill", colors.bgSurface)
-            .attr("stroke", colors.info)
-            .attr("stroke-width", 2)
-            .attr("stroke-dasharray", "4,2")
-            .attr("opacity", 0.6);
+        const ghostG = cellG.append("g").attr("opacity", 0.6);
 
-          cellG
-            .append("text")
-            .attr("x", screen.x)
-            .attr("y", screen.y + 5)
-            .attr("text-anchor", "middle")
-            .attr("font-size", "14px")
-            .attr("opacity", 0.6)
-            .text(ghostIcon);
-        }
+        ghostG
+          .append("circle")
+          .attr("cx", screen.x)
+          .attr("cy", screen.y)
+          .attr("r", 18)
+          .attr("fill", colors.bgSurface)
+          .attr("stroke", colors.info)
+          .attr("stroke-width", 2)
+          .attr("stroke-dasharray", "4,2");
+
+        renderIcon(
+          ghostG as Selection<SVGGElement, unknown, null, undefined>,
+          data.selectedBuildingDefId,
+          screen.x,
+          screen.y,
+          18,
+          colors.info,
+        );
       }
     }
   }

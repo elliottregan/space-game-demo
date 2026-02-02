@@ -5,6 +5,7 @@ import type { GridPosition, DepositType, PowerState } from "../../core/models/Gr
 import BaseGrid from "./BaseGrid/BaseGrid.vue";
 import BuildingContextMenu from "./BaseGrid/BuildingContextMenu.vue";
 import BuildingStatsCard from "./BaseGrid/BuildingStatsCard.vue";
+import BuildingIconDefs from "./BaseGrid/BuildingIconDefs.vue";
 
 const state = computed(() => gameService.getState());
 
@@ -147,6 +148,9 @@ const placementHints = computed(() => ({
 
 <template>
   <div class="base-tab">
+    <!-- SVG icon definitions for D3 to reference -->
+    <BuildingIconDefs />
+
     <header class="base-header">
       <h2>Base Grid</h2>
       <div class="power-summary">
