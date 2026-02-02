@@ -1,6 +1,6 @@
 // src/core/systems/workforce/guildFormation.ts
 import type { Colonist } from "../../models/Colonist.ts";
-import { ColonistRole, MasteryLevel } from "../../models/Colonist.ts";
+import { ColonistRole } from "../../models/Colonist.ts";
 import type { Guild } from "../../models/Guild.ts";
 import { GuildType, GUILD_NAME_SUGGESTIONS } from "../../models/Guild.ts";
 import {
@@ -36,12 +36,14 @@ export function shareCohort(colonists: readonly Colonist[]): boolean {
 }
 
 /**
- * Check if colonists have high average mastery (>= SKILLED).
+ * Check if colonists have research potential (multiple skills).
  */
-export function hasHighMastery(colonists: readonly Colonist[]): boolean {
+export function hasResearchPotential(colonists: readonly Colonist[]): boolean {
   if (colonists.length === 0) return false;
-  const avgMastery = colonists.reduce((sum, c) => sum + c.masteryLevel, 0) / colonists.length;
-  return avgMastery >= MasteryLevel.SKILLED;
+  // Research guilds form among colonists with multiple skills
+  const avgSkillCount =
+    colonists.reduce((sum, c) => sum + (c.skills?.length ?? 0), 0) / colonists.length;
+  return avgSkillCount >= 2;
 }
 
 /**
@@ -72,8 +74,8 @@ export function matchesGuildCharacteristic(
       );
     }
     case GuildType.RESEARCH: {
-      // Must have SKILLED or higher mastery
-      return colonist.masteryLevel >= MasteryLevel.SKILLED;
+      // Must have multiple skills (research potential)
+      return (colonist.skills?.length ?? 0) >= 2;
     }
     case GuildType.CIVIC: {
       // Civic guilds accept anyone
@@ -94,9 +96,10 @@ export function determineGuildType(founders: readonly Colonist[]): GuildType {
     return GuildType.PROFESSIONAL;
   }
 
-  // 2. Research: average mastery >= SKILLED (1)
-  const avgMastery = founders.reduce((sum, f) => sum + f.masteryLevel, 0) / founders.length;
-  if (avgMastery >= MasteryLevel.SKILLED) {
+  // 2. Research: founders have research potential (multiple skills)
+  const avgSkillCount =
+    founders.reduce((sum, f) => sum + (f.skills?.length ?? 0), 0) / founders.length;
+  if (avgSkillCount >= 2) {
     return GuildType.RESEARCH;
   }
 

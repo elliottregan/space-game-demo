@@ -1,10 +1,4 @@
-import {
-  MASTERY_EFFICIENCY,
-  MAX_SKILL_EFFICIENCY_BONUS,
-  ROLE_MISMATCH_PENALTY,
-  STAFFING_CURVE_EXPONENT,
-  TRAINING_WORK_PENALTY,
-} from "../balance/WorkforceBalance";
+import { ROLE_MISMATCH_PENALTY, STAFFING_CURVE_EXPONENT } from "../balance/WorkforceBalance";
 import { SKILLS } from "../data/skills";
 import type { Colonist, ColonistRole } from "../models/Colonist";
 
@@ -29,18 +23,18 @@ export function calculateStaffingEfficiency(
 
 /**
  * Calculate efficiency for a single colonist working at a building.
- * Factors in: mastery level, skill bonuses, role mismatch penalty, training penalty.
+ * Factors in: skill bonuses and role mismatch penalty.
  *
  * @param colonist - The colonist working
  * @param requiredRole - The role the building requires (if any)
- * @returns Efficiency multiplier (typically 0.5 to 1.5)
+ * @returns Efficiency multiplier (typically 0.7 to 1.3)
  */
 export function calculateColonistEfficiency(
   colonist: Colonist,
   requiredRole?: ColonistRole,
 ): number {
-  // Base mastery efficiency
-  let efficiency = MASTERY_EFFICIENCY[colonist.masteryLevel] ?? 1;
+  // Base efficiency
+  let efficiency = 1;
 
   // Add skill bonus (capped)
   const skillBonus = calculateSkillBonus(colonist);
@@ -51,13 +45,11 @@ export function calculateColonistEfficiency(
     efficiency *= 1 - ROLE_MISMATCH_PENALTY;
   }
 
-  // Training penalty
-  if (colonist.trainingTarget) {
-    efficiency *= 1 - TRAINING_WORK_PENALTY;
-  }
-
   return efficiency;
 }
+
+/** Maximum skill bonus cap (equivalent to 2 max-bonus skills) */
+const MAX_SKILL_EFFICIENCY_BONUS = 0.3;
 
 /**
  * Calculate the skill bonus for a colonist based on their skills and role.

@@ -15,7 +15,6 @@ import {
   INITIAL_SOCIAL_RELATIONSHIP,
   MAX_CONNECTION_PROBABILITY,
   MAX_COWORKER_RELATIONSHIP,
-  MAX_SKILL_EFFICIENCY_BONUS,
   PREFERENTIAL_ATTACHMENT_FACTOR,
   PREFERENTIAL_ATTACHMENT_THRESHOLD,
   SOCIAL_BONDING_RATE,
@@ -23,6 +22,9 @@ import {
   SOCIAL_RELATIONSHIP_DECAY,
   WEAK_TIE_THRESHOLD,
 } from "../balance/WorkforceBalance";
+
+/** Maximum skill efficiency bonus cap */
+const MAX_SKILL_EFFICIENCY_BONUS = 0.3;
 import { SKILLS } from "../data/skills";
 import type { Colonist } from "../models/Colonist";
 import { ColonistRole } from "../models/Colonist";

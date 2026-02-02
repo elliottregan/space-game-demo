@@ -1,7 +1,7 @@
 // src/core/systems/ColonistMoraleManager.ts
 import { COLONIST_MORALE } from "../balance/MoraleBalance";
 import type { Colonist } from "../models/Colonist";
-import { ColonistRole, MasteryLevel } from "../models/Colonist";
+import { ColonistRole } from "../models/Colonist";
 import type { ColonyManager } from "./ColonyManager";
 import type { RelationshipManager } from "./RelationshipManager";
 import type { ResourceManager } from "./ResourceManager";
@@ -135,16 +135,14 @@ export class ColonistMoraleManager {
   }
 
   /**
-   * Esteem need: skill utilization and mastery.
+   * Esteem need: skill utilization.
    * Returns 0-1 satisfaction.
    */
   private calculateEsteemNeed(colonist: Colonist): number {
-    // Base on whether colonist has an assigned role and mastery level
+    // Base on whether colonist has an assigned role
     const hasRole = colonist.role !== ColonistRole.UNASSIGNED;
-    const hasMastery = colonist.masteryLevel !== MasteryLevel.NOVICE;
 
-    if (hasRole && hasMastery) return 1.0;
-    if (hasRole || hasMastery) return 0.5;
+    if (hasRole) return 1.0;
     return 0.2; // Base esteem from being part of colony
   }
 

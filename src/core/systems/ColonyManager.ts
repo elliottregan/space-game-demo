@@ -10,7 +10,7 @@ import { REFUGEE_IDEOLOGY } from "../balance/EarthCrisisBalance";
 import { COLONIST_SKILL_COUNT, SOCIAL_COHESION } from "../balance/WorkforceBalance";
 import { type SkillId, SKILLS } from "../data/skills";
 import type { Colonist, ColonistIdeology } from "../models/Colonist";
-import { ColonistRole, MasteryLevel } from "../models/Colonist";
+import { ColonistRole } from "../models/Colonist";
 import { IdeologyManager } from "./IdeologyManager";
 import type { GameEvent } from "../models/GameEvent";
 import { BuildingPurpose } from "../models/Building";
@@ -385,8 +385,6 @@ export class ColonyManager {
       id: `colonist_${this.nextId++}`,
       name: name || `${firstName} ${lastName}`,
       role: ColonistRole.UNASSIGNED,
-      experience: 0,
-      masteryLevel: MasteryLevel.NOVICE,
       skills: this.assignRandomSkills(),
       ideology: ideology ?? IdeologyManager.createNeutralIdeology(),
     };

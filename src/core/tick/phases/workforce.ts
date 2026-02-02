@@ -11,8 +11,6 @@ import type { GameEvent } from "../../models/GameEvent";
  * - Guild bonding (professional relationships)
  * - Social bonding (relationships formed at social buildings)
  * - Preferential attachment (network growth)
- * - Training progress
- * - Experience gain
  *
  * This is a transitional combined phase that will be split into
  * finer-grained phases later.
