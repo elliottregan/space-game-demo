@@ -5,5 +5,6 @@ export type {
   ColonistGraphLink,
   ColonistGraphNode,
   ColonistRenderOptions,
+  IdeologyPressureData,
   RelationshipType,
 } from "./renderColonistGraph";

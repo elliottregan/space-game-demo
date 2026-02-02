@@ -53,6 +53,31 @@ const selectedColonistPressure = computed(() => {
   return gameService.api.ideology.getIdeologicalPressure(selectedColonistId.value);
 });
 
+// Get ideology pressure for all colonists (for graph visualization)
+const allIdeologyPressures = computed(() => {
+  const pressures = new Map<
+    string,
+    {
+      pressure: { earthLoyalist: number; marsIndependence: number; corporateInterests: number };
+      totalWeight: number;
+      neighborCount: number;
+    }
+  >();
+
+  for (const colonist of state.colonists) {
+    const pressure = gameService.api.ideology.getIdeologicalPressure(colonist.id);
+    if (pressure) {
+      pressures.set(colonist.id, {
+        pressure: pressure.pressure,
+        totalWeight: pressure.totalWeight,
+        neighborCount: pressure.neighborCount,
+      });
+    }
+  }
+
+  return pressures;
+});
+
 // Prepare building info for the graph
 const buildingsForGraph = computed(() =>
   state.buildings.map((b) => ({
@@ -81,6 +106,7 @@ const buildingsForGraph = computed(() =>
           :buildings="buildingsForGraph"
           :guilds="state.guilds"
           :selected-colonist-id="selectedColonistId"
+          :ideology-pressures="allIdeologyPressures"
           @select="selectedColonistId = $event"
         />
         <ColonistDetailPanel

@@ -2,6 +2,12 @@ import { select } from "d3-selection";
 import type { Colonist, ColonistIdeology } from "../../../core/models/Colonist";
 import type { PositionedColonist } from "../../utils/ColonistSimulationManager";
 
+export interface IdeologyPressureData {
+  pressure: { earthLoyalist: number; marsIndependence: number; corporateInterests: number };
+  totalWeight: number;
+  neighborCount: number;
+}
+
 export interface ColonistGraphNode extends PositionedColonist {
   colonist: Colonist;
   isWorking: boolean;
@@ -9,6 +15,7 @@ export interface ColonistGraphNode extends PositionedColonist {
   guildCount: number;
   isBridge: boolean;
   connectionCount: number;
+  ideologyPressure?: IdeologyPressureData | null;
 }
 
 export type RelationshipType = "coworker" | "housemate" | "both" | "guild" | "social";
@@ -34,6 +41,7 @@ export interface ColonistRenderOptions {
   selectedId: string | null;
   onNodeClick: (colonistId: string | null) => void;
   showWeakTies?: boolean;
+  showPressureArrows?: boolean;
 }
 
 const NODE_RADIUS = 18;
@@ -100,6 +108,44 @@ function getIdeologyColor(
   return colors.textMuted;
 }
 
+function getDominantPressureColor(
+  pressure: { earthLoyalist: number; marsIndependence: number; corporateInterests: number },
+  colors: ReturnType<typeof getThemeColors>,
+): { color: string; faction: string } | null {
+  const { earthLoyalist, marsIndependence, corporateInterests } = pressure;
+  const max = Math.max(earthLoyalist, marsIndependence, corporateInterests);
+
+  // If pressure is too low, don't show an arrow
+  if (max < 0.15) return null;
+
+  // Determine dominant faction with threshold for clear dominance
+  const threshold = 0.1;
+  if (
+    earthLoyalist >= max - 0.01 &&
+    earthLoyalist - marsIndependence >= threshold &&
+    earthLoyalist - corporateInterests >= threshold
+  ) {
+    return { color: colors.info, faction: "earth" };
+  }
+  if (
+    marsIndependence >= max - 0.01 &&
+    marsIndependence - earthLoyalist >= threshold &&
+    marsIndependence - corporateInterests >= threshold
+  ) {
+    return { color: colors.positive, faction: "mars" };
+  }
+  if (
+    corporateInterests >= max - 0.01 &&
+    corporateInterests - earthLoyalist >= threshold &&
+    corporateInterests - marsIndependence >= threshold
+  ) {
+    return { color: colors.warning, faction: "corporate" };
+  }
+
+  // Mixed pressure - use muted color
+  return { color: colors.textMuted, faction: "mixed" };
+}
+
 function getLinkColor(
   type: RelationshipType,
   hasSharedGuild: boolean,
@@ -131,7 +177,14 @@ export function renderColonistGraph(
   data: ColonistGraphData,
   options: ColonistRenderOptions,
 ): void {
-  const { width, height, selectedId, onNodeClick, showWeakTies = false } = options;
+  const {
+    width,
+    height,
+    selectedId,
+    onNodeClick,
+    showWeakTies = false,
+    showPressureArrows = true,
+  } = options;
   const svg = select(container);
   const colors = getThemeColors();
 
@@ -166,6 +219,32 @@ export function renderColonistGraph(
     .attr("cy", 2)
     .attr("r", 1)
     .attr("fill", colors.info);
+
+  // Define arrowhead markers for pressure arrows (one per faction color)
+  const factionColors = [
+    { id: "pressure-arrow-earth", color: colors.info },
+    { id: "pressure-arrow-mars", color: colors.positive },
+    { id: "pressure-arrow-corporate", color: colors.warning },
+    { id: "pressure-arrow-mixed", color: colors.textMuted },
+  ];
+  for (const { id, color } of factionColors) {
+    defs
+      .append("marker")
+      .attr("id", id)
+      .attr("viewBox", "0 0 10 10")
+      .attr("refX", 9)
+      .attr("refY", 5)
+      .attr("markerWidth", 5)
+      .attr("markerHeight", 5)
+      .attr("orient", "auto")
+      .append("path")
+      .attr("d", "M 1 1 L 9 5 L 1 9")
+      .attr("fill", "none")
+      .attr("stroke", color)
+      .attr("stroke-width", 1.5)
+      .attr("stroke-linecap", "round")
+      .attr("stroke-linejoin", "round");
+  }
 
   // Render edges (behind nodes)
   const edgesGroup = svg.append("g").attr("class", "edges");
@@ -213,6 +292,100 @@ export function renderColonistGraph(
       .attr("stroke-opacity", opacity)
       .attr("stroke-width", strokeWidth)
       .attr("stroke-dasharray", dashArray);
+  }
+
+  // Render ideology pressure arrows (between connected nodes)
+  if (showPressureArrows) {
+    const pressureGroup = svg.append("g").attr("class", "pressure-arrows");
+
+    for (const node of data.nodes) {
+      if (!node.ideologyPressure || node.ideologyPressure.neighborCount === 0) continue;
+
+      const pressureInfo = getDominantPressureColor(node.ideologyPressure.pressure, colors);
+      if (!pressureInfo) continue;
+
+      // Find the neighbor with the strongest influence toward the dominant pressure
+      let strongestNeighborId: string | null = null;
+      let strongestWeight = 0;
+
+      for (const link of data.links) {
+        if (link.isWeakTie && !showWeakTies) continue;
+
+        let neighborId: string | null = null;
+        if (link.source === node.id) neighborId = link.target;
+        else if (link.target === node.id) neighborId = link.source;
+        else continue;
+
+        const neighborNode = data.nodes.find((n) => n.id === neighborId);
+        if (!neighborNode?.colonist.ideology) continue;
+
+        // Check if this neighbor is pushing toward the dominant pressure faction
+        const neighborIdeology = neighborNode.colonist.ideology;
+        let neighborFactionValue = 0;
+        if (pressureInfo.faction === "earth") neighborFactionValue = neighborIdeology.earthLoyalist;
+        else if (pressureInfo.faction === "mars")
+          neighborFactionValue = neighborIdeology.marsIndependence;
+        else if (pressureInfo.faction === "corporate")
+          neighborFactionValue = neighborIdeology.corporateInterests;
+
+        // Weight by relationship strength and neighbor's faction affinity
+        const weight = link.weight * neighborFactionValue;
+        if (weight > strongestWeight) {
+          strongestWeight = weight;
+          strongestNeighborId = neighborId;
+        }
+      }
+
+      if (!strongestNeighborId) continue;
+
+      const neighborNode = data.nodes.find((n) => n.id === strongestNeighborId);
+      if (!neighborNode) continue;
+
+      // Draw curved arrow from neighbor to this node (pressure flows toward the node)
+      const dx = node.x - neighborNode.x;
+      const dy = node.y - neighborNode.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 1) continue;
+
+      // Normalize direction
+      const nx = dx / dist;
+      const ny = dy / dist;
+
+      // Perpendicular vector for curve offset
+      const px = -ny;
+      const py = nx;
+
+      // Rotate connection points slightly toward the curve direction
+      const angleOffset = 0.25; // radians, ~14 degrees
+      const startNx = nx * Math.cos(angleOffset) - ny * Math.sin(angleOffset);
+      const startNy = nx * Math.sin(angleOffset) + ny * Math.cos(angleOffset);
+      const endNx = nx * Math.cos(-angleOffset) - ny * Math.sin(-angleOffset);
+      const endNy = nx * Math.sin(-angleOffset) + ny * Math.cos(-angleOffset);
+
+      // Start from edge of neighbor node, end at edge of target node
+      const startX = neighborNode.x + startNx * (NODE_RADIUS + 4);
+      const startY = neighborNode.y + startNy * (NODE_RADIUS + 4);
+      const endX = node.x - endNx * (NODE_RADIUS + 8);
+      const endY = node.y - endNy * (NODE_RADIUS + 8);
+
+      // Control point offset perpendicular to the line (creates the curve)
+      const curveOffset = dist * 0.15;
+      const ctrlX = (startX + endX) / 2 + px * curveOffset;
+      const ctrlY = (startY + endY) / 2 + py * curveOffset;
+
+      const markerId = `pressure-arrow-${pressureInfo.faction}`;
+
+      // Draw quadratic bezier curve
+      pressureGroup
+        .append("path")
+        .attr("d", `M ${startX} ${startY} Q ${ctrlX} ${ctrlY} ${endX} ${endY}`)
+        .attr("fill", "none")
+        .attr("stroke", pressureInfo.color)
+        .attr("stroke-width", 1.5)
+        .attr("stroke-dasharray", "5,3")
+        .attr("marker-end", `url(#${markerId})`)
+        .attr("opacity", 0.75);
+    }
   }
 
   // Render nodes

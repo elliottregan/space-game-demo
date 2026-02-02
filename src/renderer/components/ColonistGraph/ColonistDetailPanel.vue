@@ -67,6 +67,9 @@ const housemates = computed(() => {
   );
 });
 
+// Maximum relationships to display
+const MAX_RELATIONSHIPS = 6;
+
 // Get all relationships for this colonist
 const colonistRelationships = computed(() => {
   const results: {
@@ -74,6 +77,7 @@ const colonistRelationships = computed(() => {
     strength: number;
     isCoworker: boolean;
     isHousemate: boolean;
+    ideologyDelta?: { earth: number; mars: number; corporate: number } | null;
   }[] = [];
 
   for (const [key, rel] of props.relationships) {
@@ -91,18 +95,54 @@ const colonistRelationships = computed(() => {
       if (other) {
         const isCoworker = coworkers.value.some((c) => c.id === otherId);
         const isHousemate = housemates.value.some((c) => c.id === otherId);
+
+        // Calculate ideology delta if both have ideology
+        let ideologyDelta: { earth: number; mars: number; corporate: number } | null = null;
+        if (props.colonist.ideology && other.ideology) {
+          ideologyDelta = {
+            earth: other.ideology.earthLoyalist - props.colonist.ideology.earthLoyalist,
+            mars: other.ideology.marsIndependence - props.colonist.ideology.marsIndependence,
+            corporate:
+              other.ideology.corporateInterests - props.colonist.ideology.corporateInterests,
+          };
+        }
+
         results.push({
           colonist: other,
           strength: rel.strength,
           isCoworker,
           isHousemate,
+          ideologyDelta,
         });
       }
     }
   }
 
-  return results.sort((a, b) => b.strength - a.strength);
+  // Sort by strength and cap to 6
+  return results.sort((a, b) => b.strength - a.strength).slice(0, MAX_RELATIONSHIPS);
 });
+
+// Get dominant pressure faction from relationship delta
+function getDominantDelta(delta: { earth: number; mars: number; corporate: number }): {
+  faction: string;
+  cssClass: string;
+  value: number;
+} | null {
+  const absEarth = Math.abs(delta.earth);
+  const absMars = Math.abs(delta.mars);
+  const absCorporate = Math.abs(delta.corporate);
+  const max = Math.max(absEarth, absMars, absCorporate);
+
+  if (max < 0.1) return null;
+
+  if (absEarth >= max - 0.01) {
+    return { faction: "E", cssClass: "earth", value: delta.earth };
+  }
+  if (absMars >= max - 0.01) {
+    return { faction: "M", cssClass: "mars", value: delta.mars };
+  }
+  return { faction: "C", cssClass: "corporate", value: delta.corporate };
+}
 
 function getRoleClass(role: ColonistRole): string {
   return role.toLowerCase().replace("_", "-");
@@ -331,6 +371,21 @@ function formatDelta(delta: number): string {
               />
             </div>
             <span class="strength-value">{{ formatStrength(rel.strength) }}</span>
+          </div>
+          <!-- Ideology pressure indicator -->
+          <div v-if="rel.ideologyDelta" class="rel-pressure">
+            <template v-if="getDominantDelta(rel.ideologyDelta)">
+              <span class="pressure-arrow">↓</span>
+              <span
+                :class="['pressure-faction', getDominantDelta(rel.ideologyDelta)!.cssClass]"
+                :title="`Pushes toward ${getDominantDelta(rel.ideologyDelta)!.faction === 'E' ? 'Earth' : getDominantDelta(rel.ideologyDelta)!.faction === 'M' ? 'Mars' : 'Corporate'}`"
+              >
+                {{ getDominantDelta(rel.ideologyDelta)!.faction }}
+                {{ getDominantDelta(rel.ideologyDelta)!.value > 0 ? "+" : ""
+                }}{{ (getDominantDelta(rel.ideologyDelta)!.value * 100).toFixed(0) }}%
+              </span>
+            </template>
+            <span v-else class="pressure-neutral">—</span>
           </div>
         </div>
       </div>
@@ -709,5 +764,49 @@ function formatDelta(delta: number): string {
   margin-top: var(--g-space-xs);
   padding-top: var(--g-space-xs);
   border-top: 1px dotted var(--g-color-border);
+}
+
+/* Relationship pressure styles */
+.rel-pressure {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 2px;
+  padding-left: 2px;
+}
+
+.pressure-arrow {
+  font-size: 8px;
+  color: var(--g-color-text-muted);
+  opacity: 0.7;
+}
+
+.pressure-faction {
+  font-size: var(--g-font-size-xs);
+  font-family: var(--g-font-mono);
+  padding: 0 3px;
+  border-radius: 2px;
+  border-left: 2px dashed;
+}
+
+.pressure-faction.earth {
+  color: var(--g-color-info);
+  border-color: var(--g-color-info);
+}
+
+.pressure-faction.mars {
+  color: var(--g-color-positive);
+  border-color: var(--g-color-positive);
+}
+
+.pressure-faction.corporate {
+  color: var(--g-color-warning);
+  border-color: var(--g-color-warning);
+}
+
+.pressure-neutral {
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  opacity: 0.5;
 }
 </style>

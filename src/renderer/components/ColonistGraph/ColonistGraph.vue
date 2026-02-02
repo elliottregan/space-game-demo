@@ -9,6 +9,7 @@ import {
   type ColonistGraphData,
   type ColonistGraphLink,
   type ColonistGraphNode,
+  type IdeologyPressureData,
   type RelationshipType,
   renderColonistGraph,
 } from "./renderColonistGraph";
@@ -26,6 +27,7 @@ interface Props {
   buildings: BuildingInfo[];
   guilds: Guild[];
   selectedColonistId: string | null;
+  ideologyPressures?: Map<string, IdeologyPressureData>;
 }
 
 const props = defineProps<Props>();
@@ -210,6 +212,7 @@ const graphData = computed<ColonistGraphData>(() => {
     const pos = positionMap.get(colonist.id) ?? { x: 0, y: 0 };
     const buildingInfo = getColonistBuilding(colonist.id);
     const guildCount = guildMembership.value.get(colonist.id)?.length ?? 0;
+    const ideologyPressure = props.ideologyPressures?.get(colonist.id) ?? null;
 
     return {
       id: colonist.id,
@@ -221,6 +224,7 @@ const graphData = computed<ColonistGraphData>(() => {
       guildCount,
       isBridge: bridgeColonists.value.has(colonist.id),
       connectionCount: connectionCounts.value.get(colonist.id) ?? 0,
+      ideologyPressure,
     };
   });
 
@@ -397,6 +401,14 @@ watch(dimensions, render);
           <span>Bridge</span>
         </div>
       </div>
+      <div class="legend-divider" />
+      <div class="legend-section">
+        <span class="legend-title">Pressure:</span>
+        <div class="legend-item">
+          <span class="legend-arrow" />
+          <span>Ideology</span>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -544,6 +556,40 @@ watch(dimensions, render);
   border-radius: 50%;
   border: 2px dashed #9c27b0;
   opacity: 0.7;
+}
+
+.legend-arrow {
+  position: relative;
+  width: 16px;
+  height: 14px;
+}
+
+.legend-arrow::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 0;
+  width: 2px;
+  height: 10px;
+  background: repeating-linear-gradient(
+    180deg,
+    var(--g-color-text-muted) 0px,
+    var(--g-color-text-muted) 3px,
+    transparent 3px,
+    transparent 5px
+  );
+}
+
+.legend-arrow::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--g-color-text-muted);
 }
 
 .legend-checkbox {
