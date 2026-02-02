@@ -28,6 +28,19 @@ export interface PlacementResult {
   error?: string;
 }
 
+export interface GridManagerJSON {
+  deposits: Array<{ x: number; y: number; type: DepositType }>;
+  placements: Array<{
+    buildingId: string;
+    x: number;
+    y: number;
+    batteryLevel: number;
+    powerState: PowerState;
+  }>;
+  powerSources: Array<{ buildingId: string; output: number }>;
+  powerConsumption: Array<{ buildingId: string; consumption: number }>;
+}
+
 export class GridManager {
   private grid: GridCell[][] = [];
   private placements: Map<string, BuildingPlacement> = new Map();
@@ -287,5 +300,77 @@ export class GridManager {
         placement.powerState = PowerState.ON_BATTERY;
       }
     }
+  }
+
+  toJSON(): GridManagerJSON {
+    const deposits: GridManagerJSON["deposits"] = [];
+    for (let y = 0; y < GRID_SIZE; y++) {
+      for (let x = 0; x < GRID_SIZE; x++) {
+        const cell = this.grid[y][x];
+        if (cell.deposit) {
+          deposits.push({ x, y, type: cell.deposit });
+        }
+      }
+    }
+
+    const placements = Array.from(this.placements.values()).map((p) => ({
+      buildingId: p.buildingId,
+      x: p.position.x,
+      y: p.position.y,
+      batteryLevel: p.batteryLevel,
+      powerState: p.powerState,
+    }));
+
+    const powerSources = Array.from(this.powerSources.values()).map((s) => ({
+      buildingId: s.buildingId,
+      output: s.output,
+    }));
+
+    const powerConsumption = Array.from(this.buildingPowerConsumption.entries()).map(
+      ([buildingId, consumption]) => ({ buildingId, consumption }),
+    );
+
+    return { deposits, placements, powerSources, powerConsumption };
+  }
+
+  fromJSON(json: GridManagerJSON): void {
+    // Reset state
+    this.initializeGrid();
+    this.placements.clear();
+    this.powerSources.clear();
+    this.buildingPowerConsumption.clear();
+
+    // Restore deposits
+    for (const deposit of json.deposits) {
+      const cell = this.grid[deposit.y][deposit.x];
+      cell.deposit = deposit.type;
+    }
+
+    // Restore power sources first
+    for (const source of json.powerSources) {
+      this.powerSources.set(source.buildingId, source);
+    }
+
+    // Restore power consumption
+    for (const { buildingId, consumption } of json.powerConsumption) {
+      this.buildingPowerConsumption.set(buildingId, consumption);
+    }
+
+    // Restore placements
+    for (const p of json.placements) {
+      const cell = this.grid[p.y][p.x];
+      cell.buildingId = p.buildingId;
+
+      this.placements.set(p.buildingId, {
+        buildingId: p.buildingId,
+        position: { x: p.x, y: p.y },
+        distanceToPower: Infinity,
+        batteryLevel: p.batteryLevel,
+        powerState: p.powerState,
+      });
+    }
+
+    // Recalculate power connections
+    this.updatePowerConnections(false); // TODO: pass tech bonus from GameState
   }
 }

@@ -267,3 +267,41 @@ describe("GridManager - Battery System", () => {
     expect(manager.getPowerState("habitat-1")).toBe(PowerState.POWERED);
   });
 });
+
+describe("GridManager - Serialization", () => {
+  it("toJSON captures grid state", () => {
+    const manager = new GridManager();
+    manager.generateDeposits(12345);
+    manager.placeBuilding("solar-1", { x: 5, y: 5 });
+    manager.registerPowerSource("solar-1", 10);
+    manager.placeBuilding("habitat-1", { x: 5, y: 6 });
+    manager.setBuildingPowerConsumption("habitat-1", 4);
+    manager.updatePowerConnections(false);
+
+    const json = manager.toJSON();
+
+    expect(json.placements).toHaveLength(2);
+    expect(json.powerSources).toHaveLength(1);
+    expect(json.deposits.length).toBeGreaterThan(0);
+  });
+
+  it("fromJSON restores grid state", () => {
+    const manager = new GridManager();
+    manager.generateDeposits(12345);
+    manager.placeBuilding("solar-1", { x: 5, y: 5 });
+    manager.registerPowerSource("solar-1", 10);
+    manager.placeBuilding("habitat-1", { x: 5, y: 6 });
+    manager.setBuildingPowerConsumption("habitat-1", 4);
+    manager.updatePowerConnections(false);
+
+    const json = manager.toJSON();
+
+    const restored = new GridManager();
+    restored.fromJSON(json);
+
+    expect(restored.getCell(5, 5)?.buildingId).toBe("solar-1");
+    expect(restored.getCell(5, 6)?.buildingId).toBe("habitat-1");
+    expect(restored.getPowerSources()).toHaveLength(1);
+    expect(restored.getPowerState("habitat-1")).toBe(PowerState.POWERED);
+  });
+});
