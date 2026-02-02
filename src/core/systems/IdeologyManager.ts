@@ -438,11 +438,13 @@ export class IdeologyManager {
   }
 
   /**
-   * Evolve conviction based on social reinforcement.
-   * Conviction grows when surrounded by like-minded colonists and
-   * decays when isolated from one's faction.
+   * Evolve conviction based on ideology pressure from neighbors.
+   * Conviction grows when neighbors reinforce the colonist's primary faction
+   * and decays proportionally to how strongly neighbors oppose it.
    */
   private evolveConviction(colonists: Colonist[], relationshipManager: RelationshipManager): void {
+    const colonistMap = new Map(colonists.map((c) => [c.id, c]));
+
     for (const colonist of colonists) {
       if (!colonist.ideology) continue;
 
@@ -462,10 +464,11 @@ export class IdeologyManager {
         continue;
       }
 
-      // Count matching neighbors and calculate their average conviction
-      let matchingCount = 0;
-      let matchingConvictionSum = 0;
-      let totalStrongNeighbors = 0;
+      // Calculate weighted average neighbor ideology for the primary faction
+      let totalWeight = 0;
+      let weightedFactionSum = 0;
+      let avgNeighborConviction = 0;
+      let convictionWeightSum = 0;
 
       for (const neighborId of neighbors) {
         const relationshipStrength = relationshipManager.getRelationshipStrength(
@@ -478,21 +481,31 @@ export class IdeologyManager {
           continue;
         }
 
-        totalStrongNeighbors++;
-
-        // Find neighbor's ideology
-        const neighbor = colonists.find((c) => c.id === neighborId);
+        const neighbor = colonistMap.get(neighborId);
         if (!neighbor?.ideology) continue;
 
-        const neighborFaction = IdeologyManager.getPrimaryFaction(neighbor.ideology);
-        if (neighborFaction === primaryFaction) {
-          matchingCount++;
-          matchingConvictionSum += neighbor.ideology.conviction;
-        }
+        const neighborCentrality = relationshipManager.getCentrality(neighborId);
+        const neighborConviction = neighbor.ideology.conviction;
+
+        // Use squared relationship strength (consistent with spread formula)
+        const weight = relationshipStrength ** 2 * (neighborCentrality + 0.1) * neighborConviction;
+        totalWeight += weight;
+
+        // Get neighbor's value for this colonist's primary faction
+        const neighborFactionValue =
+          primaryFaction === "earth"
+            ? neighbor.ideology.earthLoyalist
+            : primaryFaction === "mars"
+              ? neighbor.ideology.marsIndependence
+              : neighbor.ideology.corporateInterests;
+
+        weightedFactionSum += weight * neighborFactionValue;
+        convictionWeightSum += weight;
+        avgNeighborConviction += weight * neighborConviction;
       }
 
-      if (totalStrongNeighbors === 0) {
-        // No strong connections, decay
+      if (totalWeight === 0) {
+        // No strong connections with ideology, decay
         colonist.ideology.conviction = Math.max(
           IdeologyBalance.CONVICTION_MIN,
           colonist.ideology.conviction - IdeologyBalance.CONVICTION_DECAY_RATE,
@@ -500,19 +513,32 @@ export class IdeologyManager {
         continue;
       }
 
-      const matchRatio = matchingCount / totalStrongNeighbors;
+      // Normalize
+      const neighborFactionPressure = weightedFactionSum / totalWeight;
+      avgNeighborConviction = avgNeighborConviction / convictionWeightSum;
 
-      if (matchRatio > 0.5) {
-        // Majority match - conviction grows
-        const avgNeighborConviction = matchingCount > 0 ? matchingConvictionSum / matchingCount : 0;
-        const growth = IdeologyBalance.CONVICTION_GROWTH_RATE * avgNeighborConviction * matchRatio;
+      // Get colonist's current value for their primary faction
+      const colonistFactionValue =
+        primaryFaction === "earth"
+          ? colonist.ideology.earthLoyalist
+          : primaryFaction === "mars"
+            ? colonist.ideology.marsIndependence
+            : colonist.ideology.corporateInterests;
+
+      // Pressure delta: positive = neighbors reinforce, negative = neighbors oppose
+      const pressureDelta = neighborFactionPressure - colonistFactionValue;
+
+      if (pressureDelta > 0) {
+        // Neighbors reinforce this faction - conviction grows
+        const growth =
+          IdeologyBalance.CONVICTION_GROWTH_RATE * pressureDelta * avgNeighborConviction;
         colonist.ideology.conviction = Math.min(
           IdeologyBalance.CONVICTION_MAX,
           colonist.ideology.conviction + growth,
         );
       } else {
-        // Minority match - conviction decays
-        const decay = IdeologyBalance.CONVICTION_DECAY_RATE * (1 - matchRatio);
+        // Neighbors oppose this faction - conviction decays proportionally to mismatch
+        const decay = IdeologyBalance.CONVICTION_DECAY_RATE + Math.abs(pressureDelta) * 0.1;
         colonist.ideology.conviction = Math.max(
           IdeologyBalance.CONVICTION_MIN,
           colonist.ideology.conviction - decay,
@@ -555,8 +581,8 @@ export class IdeologyManager {
 
     let totalWeight = 0;
     let neighborCount = 0;
-    let matchingCount = 0;
-    let matchingConvictionSum = 0;
+    let convictionWeightSum = 0;
+    let avgNeighborConviction = 0;
     const avgInfluence = { earthLoyalist: 0, marsIndependence: 0, corporateInterests: 0 };
 
     for (const neighborId of neighbors) {
@@ -587,14 +613,9 @@ export class IdeologyManager {
       avgInfluence.marsIndependence += weight * neighbor.ideology.marsIndependence;
       avgInfluence.corporateInterests += weight * neighbor.ideology.corporateInterests;
 
-      // Track faction matching for conviction pressure
-      if (primaryFaction) {
-        const neighborFaction = IdeologyManager.getPrimaryFaction(neighbor.ideology);
-        if (neighborFaction === primaryFaction) {
-          matchingCount++;
-          matchingConvictionSum += neighbor.ideology.conviction;
-        }
-      }
+      // Track average neighbor conviction
+      convictionWeightSum += weight;
+      avgNeighborConviction += weight * neighborConviction;
     }
 
     // Normalize
@@ -602,24 +623,42 @@ export class IdeologyManager {
       avgInfluence.earthLoyalist /= totalWeight;
       avgInfluence.marsIndependence /= totalWeight;
       avgInfluence.corporateInterests /= totalWeight;
+      avgNeighborConviction /= convictionWeightSum;
     }
 
-    // Calculate conviction pressure
+    // Calculate conviction pressure based on ideology pressure delta
     let convictionPressure: { growth: boolean; rate: number };
     if (!primaryFaction || neighborCount === 0) {
       convictionPressure = { growth: false, rate: 0 };
     } else {
-      const matchRatio = matchingCount / neighborCount;
-      if (matchRatio > 0.5) {
-        const avgNeighborConviction = matchingCount > 0 ? matchingConvictionSum / matchingCount : 0;
+      // Get colonist's and neighbors' values for the primary faction
+      const colonistFactionValue =
+        primaryFaction === "earth"
+          ? colonist.ideology.earthLoyalist
+          : primaryFaction === "mars"
+            ? colonist.ideology.marsIndependence
+            : colonist.ideology.corporateInterests;
+
+      const neighborFactionPressure =
+        primaryFaction === "earth"
+          ? avgInfluence.earthLoyalist
+          : primaryFaction === "mars"
+            ? avgInfluence.marsIndependence
+            : avgInfluence.corporateInterests;
+
+      // Pressure delta: positive = neighbors reinforce, negative = neighbors oppose
+      const pressureDelta = neighborFactionPressure - colonistFactionValue;
+
+      if (pressureDelta > 0) {
         convictionPressure = {
           growth: true,
-          rate: IdeologyBalance.CONVICTION_GROWTH_RATE * avgNeighborConviction * matchRatio,
+          rate: IdeologyBalance.CONVICTION_GROWTH_RATE * pressureDelta * avgNeighborConviction,
         };
       } else {
+        // Decay proportional to how strongly neighbors oppose
         convictionPressure = {
           growth: false,
-          rate: IdeologyBalance.CONVICTION_DECAY_RATE * (1 - matchRatio),
+          rate: IdeologyBalance.CONVICTION_DECAY_RATE + Math.abs(pressureDelta) * 0.1,
         };
       }
     }
