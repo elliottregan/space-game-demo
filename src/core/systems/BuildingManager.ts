@@ -518,6 +518,25 @@ export class BuildingManager {
     return true;
   }
 
+  /**
+   * Cancel a building under construction and refund resources.
+   * Returns the full cost since construction hasn't completed.
+   */
+  cancelConstruction(buildingId: string, resources: ResourceManager): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+    if (building.status !== "pending") return false;
+
+    const def = this.definitions.get(building.definitionId);
+    if (def) {
+      // Refund full cost - building was never completed
+      resources.add(def.cost);
+    }
+
+    this.buildings.delete(buildingId);
+    return true;
+  }
+
   canRepurpose(
     buildingId: string,
     targetDefId: BuildingId,

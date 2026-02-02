@@ -14,6 +14,7 @@ interface Props {
   powerState: PowerState;
   batteryLevel: number;
   distanceToPower: number;
+  constructionProgress?: number; // 0-1 for pending buildings
 }
 
 const props = defineProps<Props>();
@@ -21,7 +22,11 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
   close: [];
   demolish: [buildingId: string];
+  cancel: [buildingId: string];
 }>();
+
+const isPending = computed(() => props.building.status === "pending");
+const constructionPercent = computed(() => Math.round((props.constructionProgress ?? 0) * 100));
 
 const powerStateLabel = computed(() => {
   switch (props.powerState) {
@@ -81,6 +86,16 @@ const batteryVariant = computed(() => {
     <div class="card-content">
       <p class="description">{{ definition.description }}</p>
 
+      <!-- Construction progress for pending buildings -->
+      <div v-if="isPending" class="stats-section construction-section">
+        <h4>Construction</h4>
+        <div class="construction-progress">
+          <GProgress :percent="constructionPercent" variant="info" />
+          <span class="construction-percent">{{ constructionPercent }}%</span>
+        </div>
+        <p class="construction-note">Building under construction</p>
+      </div>
+
       <div class="stats-section">
         <h4>Location</h4>
         <div class="stat-row">
@@ -89,7 +104,7 @@ const batteryVariant = computed(() => {
         </div>
       </div>
 
-      <div class="stats-section">
+      <div v-if="!isPending" class="stats-section">
         <h4>Power</h4>
         <div class="stat-row">
           <span class="stat-label">Status</span>
@@ -148,7 +163,15 @@ const batteryVariant = computed(() => {
     </div>
 
     <template #footer>
-      <GButton variant="danger" class="demolish-btn" @click="emit('demolish', building.id)">
+      <GButton
+        v-if="isPending"
+        variant="warning"
+        class="action-btn"
+        @click="emit('cancel', building.id)"
+      >
+        Cancel Construction
+      </GButton>
+      <GButton v-else variant="danger" class="action-btn" @click="emit('demolish', building.id)">
         Demolish
       </GButton>
     </template>
@@ -232,7 +255,35 @@ const batteryVariant = computed(() => {
   text-align: right;
 }
 
-.demolish-btn {
+.action-btn {
   width: 100%;
+}
+
+.construction-section {
+  background: rgba(33, 150, 243, 0.1);
+  padding: var(--g-space-sm);
+  margin: 0 calc(-1 * var(--g-space-md)) var(--g-space-md);
+  border-top: 1px solid var(--g-color-info);
+  border-bottom: 1px solid var(--g-color-info);
+}
+
+.construction-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-sm);
+}
+
+.construction-percent {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-info);
+  min-width: 36px;
+  text-align: right;
+}
+
+.construction-note {
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-info);
+  margin: var(--g-space-xs) 0 0 0;
 }
 </style>

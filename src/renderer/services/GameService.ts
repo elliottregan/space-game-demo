@@ -559,6 +559,10 @@ class GameService {
     return this.facade.buildings.rushRecycling(buildingId).success;
   }
 
+  cancelConstruction(buildingId: string): boolean {
+    return this.facade.buildings.cancelConstruction(buildingId).success;
+  }
+
   // Repurposing methods
   canRepurpose(buildingId: string, targetDefId: string): boolean {
     return this.facade.buildings.canRepurpose(buildingId, targetDefId as BuildingId).allowed;

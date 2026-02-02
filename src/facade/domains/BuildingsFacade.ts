@@ -166,6 +166,22 @@ export class BuildingsFacade
   }
 
   /**
+   * Check if construction can be canceled for a pending building.
+   */
+  canCancelConstruction(buildingId: string): CanDoResult {
+    const building = this.gameState.buildings.getBuilding(buildingId);
+    if (!building) {
+      return { allowed: false, reason: "Building not found" };
+    }
+
+    if (building.status !== "pending") {
+      return { allowed: false, reason: "Building is not under construction" };
+    }
+
+    return { allowed: true };
+  }
+
+  /**
    * Check if a building can be repurposed to a target type.
    */
   canRepurpose(buildingId: string, targetDefId: BuildingId): CanDoResult {
@@ -387,6 +403,44 @@ export class BuildingsFacade
         // Update power connections after removal
         const hasTechBonus = this.gameState.technology.isResearched("improved-power-grid");
         this.gameState.grid.updatePowerConnections(hasTechBonus);
+      }
+
+      return ok(undefined);
+    });
+  }
+
+  /**
+   * Cancel construction of a pending building and refund resources.
+   */
+  cancelConstruction(buildingId: string): Result<void> {
+    return this.executeCommand(() => {
+      const check = this.canCancelConstruction(buildingId);
+      if (!check.allowed) {
+        return err({
+          type: "INVALID_STATE",
+          current: this.getById(buildingId)?.status ?? "unknown",
+          expected: "pending",
+          reason: check.reason ?? "Cannot cancel construction",
+        });
+      }
+
+      // Remove from grid first
+      const pos = this.gameState.grid.getBuildingPosition(buildingId);
+      if (pos) {
+        this.gameState.grid.removeBuilding(pos);
+      }
+
+      const success = this.gameState.buildings.cancelConstruction(
+        buildingId,
+        this.gameState.resources,
+      );
+
+      if (!success) {
+        return err({
+          type: "INVALID_TARGET",
+          target: buildingId,
+          reason: "Cancel construction failed",
+        });
       }
 
       return ok(undefined);

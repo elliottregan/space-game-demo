@@ -135,6 +135,11 @@ function handleDemolish(buildingId: string) {
   selectedBuildingId.value = null;
 }
 
+function handleCancelConstruction(buildingId: string) {
+  gameService.cancelConstruction(buildingId);
+  selectedBuildingId.value = null;
+}
+
 function closeStatsCard() {
   selectedBuildingId.value = null;
 }
@@ -195,9 +200,11 @@ const placementHints = computed(() => ({
         :position="selectedBuildingGridData.position"
         :power-state="selectedBuildingGridData.powerState"
         :battery-level="selectedBuildingGridData.batteryLevel"
+        :construction-progress="selectedBuildingGridData.constructionProgress"
         :distance-to-power="0"
         @close="closeStatsCard"
         @demolish="handleDemolish"
+        @cancel="handleCancelConstruction"
       />
     </div>
   </div>
