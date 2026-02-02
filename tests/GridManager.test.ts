@@ -268,6 +268,46 @@ describe("GridManager - Battery System", () => {
   });
 });
 
+describe("GridManager - Placement Hints", () => {
+  it("getPlacementHints shows power availability", () => {
+    const manager = new GridManager();
+
+    manager.placeBuilding("solar-1", { x: 5, y: 5 });
+    manager.registerPowerSource("solar-1", 10);
+    manager.updatePowerConnections(false);
+
+    // Cell in power range
+    const hintsInRange = manager.getPlacementHints({ x: 5, y: 6 }, false);
+    expect(hintsInRange.hasPower).toBe(true);
+    expect(hintsInRange.powerCapacityAvailable).toBe(10);
+
+    // Cell outside power range
+    const hintsOutOfRange = manager.getPlacementHints({ x: 0, y: 0 }, false);
+    expect(hintsOutOfRange.hasPower).toBe(false);
+  });
+
+  it("getPlacementHints shows deposit info", () => {
+    const manager = new GridManager();
+    manager.generateDeposits(12345);
+
+    const deposits = manager.getAllDeposits();
+    const waterDeposit = deposits.find((d) => d.type === DepositType.WATER);
+
+    if (waterDeposit) {
+      const hints = manager.getPlacementHints(waterDeposit.position, false);
+      expect(hints.deposit).toBe(DepositType.WATER);
+    }
+  });
+
+  it("getPlacementHints shows cell is occupied", () => {
+    const manager = new GridManager();
+    manager.placeBuilding("solar-1", { x: 5, y: 5 });
+
+    const hints = manager.getPlacementHints({ x: 5, y: 5 }, false);
+    expect(hints.isOccupied).toBe(true);
+  });
+});
+
 describe("GridManager - Serialization", () => {
   it("toJSON captures grid state", () => {
     const manager = new GridManager();

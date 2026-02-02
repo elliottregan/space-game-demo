@@ -28,6 +28,15 @@ export interface PlacementResult {
   error?: string;
 }
 
+export interface PlacementHints {
+  position: GridPosition;
+  isOccupied: boolean;
+  deposit?: DepositType;
+  hasPower: boolean;
+  powerCapacityAvailable: number;
+  distanceToNearestPower: number;
+}
+
 export interface GridManagerJSON {
   deposits: Array<{ x: number; y: number; type: DepositType }>;
   placements: Array<{
@@ -276,6 +285,38 @@ export class GridManager {
 
   getPlacement(buildingId: string): BuildingPlacement | undefined {
     return this.placements.get(buildingId);
+  }
+
+  getPlacementHints(position: GridPosition, hasTechBonus: boolean): PlacementHints {
+    const cell = this.getCell(position.x, position.y);
+
+    const hints: PlacementHints = {
+      position,
+      isOccupied: !!cell?.buildingId,
+      deposit: cell?.deposit,
+      hasPower: false,
+      powerCapacityAvailable: 0,
+      distanceToNearestPower: Infinity,
+    };
+
+    // Check power availability from all sources
+    for (const source of this.powerSources.values()) {
+      const sourcePos = this.getBuildingPosition(source.buildingId);
+      if (!sourcePos) continue;
+
+      const distance = this.calculateDistance(position, sourcePos);
+      const range = calculatePowerRange(source.output, hasTechBonus);
+
+      if (distance <= range) {
+        hints.hasPower = true;
+        // Calculate remaining capacity (simplified - full capacity for now)
+        hints.powerCapacityAvailable = Math.max(hints.powerCapacityAvailable, source.output);
+      }
+
+      hints.distanceToNearestPower = Math.min(hints.distanceToNearestPower, distance);
+    }
+
+    return hints;
   }
 
   tick(): void {
