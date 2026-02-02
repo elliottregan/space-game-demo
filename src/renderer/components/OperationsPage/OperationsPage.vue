@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { BuildingPurpose } from "../../../core/models/Building";
 import { ColonistRole } from "../../../core/models/Colonist";
+import { clearHighlights, highlightResources } from "../../directives/ResourceHighlight";
 import { gameService } from "../../services/GameService";
 import { GButton, GPanel } from "../../ui";
+import { calculateHighlightInfo } from "../../utils/formatters";
 import { BuildingPanel } from "../BuildingPanel";
+import BuildableHousingCard from "../ColonyView/BuildableHousingCard.vue";
 import BuildingRoleGroup from "./BuildingRoleGroup.vue";
 import ColonistPool from "./ColonistPool.vue";
 
@@ -15,6 +19,45 @@ const draggingColonistId = ref<string | null>(null);
 
 // Auto-assign toggle state
 const autoAssignEnabled = ref(gameService.getAutoAssignNewColonists());
+
+const residentialDefinitions = computed(() => {
+  return state.buildingDefinitions.filter((def) => {
+    if (def.purpose !== BuildingPurpose.Residential) return false;
+    if (def.requiredTech && !gameService.api.technology.isResearched(def.requiredTech))
+      return false;
+    return true;
+  });
+});
+
+function canBuildHousing(defId: string): boolean {
+  return gameService.api.buildings.canBuild(defId).allowed;
+}
+
+function getHousingBuildReason(defId: string): string | undefined {
+  const check = gameService.api.buildings.canBuild(defId);
+  return check.allowed ? undefined : check.reason;
+}
+
+function buildHousing(defId: string): void {
+  const result = gameService.api.buildings.build(defId);
+  if (!result.success) {
+    console.warn(`Build failed: ${result.error.type}`, result.error);
+  }
+}
+
+function getHousingPendingCount(defId: string): number {
+  return state.pendingBuildings.filter((b) => b.definitionId === defId).length;
+}
+
+function onHousingHover(def: { cost: Record<string, number> }): void {
+  const currentResources = gameService.api.resources.snapshot().current as Record<string, number>;
+  const info = calculateHighlightInfo(def.cost, currentResources);
+  highlightResources(info.requiredResources, info.insufficientResources, info.deltas);
+}
+
+function onHousingLeave(): void {
+  clearHighlights();
+}
 
 // Get unassigned colonists (not assigned to any building)
 const unassignedColonists = computed(() => {
@@ -113,6 +156,21 @@ function handleToggleAutoAssign(e: Event) {
 <template>
   <div class="operations-page">
     <BuildingPanel />
+    <GPanel title="Housing" accent="amber">
+      <div class="buildable-list">
+        <BuildableHousingCard
+          v-for="def in residentialDefinitions"
+          :key="def.id"
+          :definition="def"
+          :can-build="canBuildHousing(def.id)"
+          :build-reason="getHousingBuildReason(def.id)"
+          :pending-count="getHousingPendingCount(def.id)"
+          @build="buildHousing(def.id)"
+          @hover="onHousingHover(def)"
+          @leave="onHousingLeave"
+        />
+      </div>
+    </GPanel>
     <GPanel title="Workforce Assignment" accent="amber">
       <div class="workforce-controls">
         <div class="workforce-left">
@@ -171,6 +229,12 @@ function handleToggleAutoAssign(e: Event) {
 </template>
 
 <style scoped>
+.buildable-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-xs);
+}
+
 .operations-page {
   display: flex;
   flex-direction: column;
