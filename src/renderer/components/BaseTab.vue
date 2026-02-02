@@ -12,6 +12,7 @@ const state = computed(() => gameService.getState());
 const gridBuildings = computed(() =>
   state.value.gridBuildings.map((b) => ({
     id: b.id,
+    defId: b.defId,
     name: b.name,
     position: b.position as GridPosition,
     powerState: b.powerState as PowerState,
@@ -33,6 +34,9 @@ const selectedBuildingId = ref<string | null>(null);
 // Context menu state
 const contextMenuPosition = ref<GridPosition | null>(null);
 const contextMenuScreenPos = ref({ x: 0, y: 0 });
+
+// Building placement preview
+const pendingBuildingDefId = ref<string | null>(null);
 
 // Get available buildings for context menu
 const availableBuildings = computed(() => {
@@ -105,6 +109,11 @@ function showContextMenu(position: GridPosition) {
 
 function closeContextMenu() {
   contextMenuPosition.value = null;
+  pendingBuildingDefId.value = null;
+}
+
+function handleBuildingPreview(buildingDefId: string | null) {
+  pendingBuildingDefId.value = buildingDefId;
 }
 
 function handleBuildingSelect(buildingDefId: string) {
@@ -150,6 +159,7 @@ const placementHints = computed(() => ({
         :buildings="gridBuildings"
         :deposits="gridDeposits"
         :selected-position="selectedPosition"
+        :selected-building-def-id="pendingBuildingDefId"
         @cell-click="handleCellClick"
         @cell-hover="handleCellHover"
       />
@@ -164,6 +174,7 @@ const placementHints = computed(() => ({
       :screen-x="contextMenuScreenPos.x"
       :screen-y="contextMenuScreenPos.y"
       @select="handleBuildingSelect"
+      @preview="handleBuildingPreview"
       @close="closeContextMenu"
     />
 

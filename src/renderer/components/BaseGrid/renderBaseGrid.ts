@@ -2,11 +2,41 @@ import { select } from "d3-selection";
 import { gridToScreen, TILE_WIDTH, TILE_HEIGHT, GRID_SIZE } from "./isometricUtils";
 import { DepositType, PowerState } from "../../../core/models/Grid";
 import type { GridPosition } from "../../../core/models/Grid";
+import { BuildingId } from "../../../core/models/Building";
+
+// Map building IDs to icon characters (using simple text symbols for SVG)
+const BUILDING_ICONS: Record<string, string> = {
+  [BuildingId.HABITAT]: "🏠",
+  [BuildingId.SOLAR_PANEL]: "☀️",
+  [BuildingId.WATER_EXTRACTOR]: "💧",
+  [BuildingId.BASIC_FARM]: "🌱",
+  [BuildingId.BASIC_MINE]: "⛏️",
+  [BuildingId.OXYGEN_GENERATOR]: "💨",
+  [BuildingId.GREENHOUSE]: "🌿",
+  [BuildingId.WATER_RECLAIMER]: "♻️",
+  [BuildingId.RESEARCH_LAB]: "🔬",
+  [BuildingId.ADVANCED_HABITAT]: "🏢",
+  [BuildingId.AUTOMATED_FACTORY]: "🏭",
+  [BuildingId.FABRICATOR_3D]: "🖨️",
+  [BuildingId.MINING_STATION]: "🏗️",
+  [BuildingId.NUCLEAR_REACTOR]: "⚛️",
+  [BuildingId.BIOLAB]: "🧬",
+  [BuildingId.MEDICAL_CENTER]: "🏥",
+  [BuildingId.CRYO_FACILITY]: "❄️",
+  [BuildingId.COMMON_ROOM]: "🛋️",
+  [BuildingId.GYMNASIUM]: "🏋️",
+  [BuildingId.HYDROPONIC_GARDEN]: "🌺",
+  [BuildingId.OBSERVATORY_DOME]: "🔭",
+  [BuildingId.ASSEMBLY_HALL]: "🏛️",
+  [BuildingId.GENERATION_SHIP]: "🚀",
+  [BuildingId.UNITED_MARS_STATION]: "🌍",
+  [BuildingId.SPACE_ELEVATOR]: "🗼",
+};
 
 export interface GridNodeData {
   buildingId?: string;
+  buildingDefId?: string;
   buildingName?: string;
-  buildingIcon?: string;
   position: GridPosition;
   deposit?: DepositType;
   powerState?: PowerState;
@@ -16,6 +46,8 @@ export interface GridNodeData {
 export interface BaseGridData {
   cells: GridNodeData[];
   selectedPosition: GridPosition | null;
+  /** Building definition ID selected for placement (shows ghost preview) */
+  selectedBuildingDefId?: string;
 }
 
 export interface BaseGridOptions {
@@ -55,19 +87,6 @@ function getPowerStateColor(
       return colors.textMuted;
     default:
       return colors.border;
-  }
-}
-
-function getPowerStateIcon(state: PowerState): string {
-  switch (state) {
-    case PowerState.ON_BATTERY:
-      return "\u{1F50B}"; // battery emoji
-    case PowerState.LOW_BATTERY:
-      return "\u{1FAAB}"; // low battery emoji
-    case PowerState.UNPOWERED:
-      return "\u{26D4}"; // no entry emoji
-    default:
-      return "";
   }
 }
 
@@ -149,37 +168,82 @@ export function renderBaseGrid(
 
       // Building node
       if (cell?.buildingId) {
+        const nodeG = cellG
+          .append("g")
+          .attr("class", "building-node")
+          .style("cursor", "pointer")
+          .on("click", (event: MouseEvent) => {
+            event.stopPropagation();
+            onCellClick({ x, y }, true);
+          });
+
         // Building circle
-        cellG
+        nodeG
           .append("circle")
           .attr("cx", screen.x)
           .attr("cy", screen.y)
-          .attr("r", 14)
+          .attr("r", 18)
           .attr("fill", colors.bgSurface)
           .attr("stroke", getPowerStateColor(cell.powerState, colors))
           .attr("stroke-width", 2);
 
+        // Building icon
+        const icon = cell.buildingDefId ? BUILDING_ICONS[cell.buildingDefId] : undefined;
+        if (icon) {
+          nodeG
+            .append("text")
+            .attr("x", screen.x)
+            .attr("y", screen.y + 5)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "14px")
+            .text(icon);
+        }
+
         // Building label
-        cellG
+        nodeG
           .append("text")
           .attr("x", screen.x)
-          .attr("y", screen.y + 24)
+          .attr("y", screen.y + 32)
           .attr("text-anchor", "middle")
           .attr("fill", colors.textMuted)
-          .attr("font-size", "9px")
+          .attr("font-size", "10px")
           .attr("font-family", "var(--g-font-mono)")
-          .text(cell.buildingName?.substring(0, 8) ?? "");
+          .text(cell.buildingName?.substring(0, 10) ?? "");
 
-        // Power state icon
+        // Power state indicator (small dot)
         if (cell.powerState && cell.powerState !== PowerState.POWERED) {
+          nodeG
+            .append("circle")
+            .attr("cx", screen.x + 12)
+            .attr("cy", screen.y - 12)
+            .attr("r", 5)
+            .attr("fill", getPowerStateColor(cell.powerState, colors));
+        }
+      }
+
+      // Ghost preview for selected building to place
+      if (!cell?.buildingId && data.selectedBuildingDefId && isSelected) {
+        const ghostIcon = BUILDING_ICONS[data.selectedBuildingDefId];
+        if (ghostIcon) {
+          cellG
+            .append("circle")
+            .attr("cx", screen.x)
+            .attr("cy", screen.y)
+            .attr("r", 18)
+            .attr("fill", colors.bgSurface)
+            .attr("stroke", colors.info)
+            .attr("stroke-width", 2)
+            .attr("stroke-dasharray", "4,2")
+            .attr("opacity", 0.6);
+
           cellG
             .append("text")
             .attr("x", screen.x)
-            .attr("y", screen.y + 4)
+            .attr("y", screen.y + 5)
             .attr("text-anchor", "middle")
-            .attr("fill", getPowerStateColor(cell.powerState, colors))
-            .attr("font-size", "12px")
-            .text(getPowerStateIcon(cell.powerState));
+            .attr("font-size", "14px")
+            .attr("opacity", 0.6)
+            .text(ghostIcon);
         }
       }
     }

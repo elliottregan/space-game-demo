@@ -1,6 +1,7 @@
 // tests/Grid.test.ts
 import { describe, expect, test } from "bun:test";
-import { GridCell, GridPosition, PowerState, DepositType } from "../src/core/models/Grid";
+import type { GridCell, GridPosition } from "../src/core/models/Grid";
+import { PowerState, DepositType } from "../src/core/models/Grid";
 
 describe("Grid Model", () => {
   test("GridPosition has x and y coordinates", () => {

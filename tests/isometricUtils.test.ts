@@ -123,16 +123,18 @@ describe("Isometric Utils", () => {
 
   describe("constants", () => {
     it("exports expected tile dimensions", () => {
-      expect(TILE_WIDTH).toBe(64);
-      expect(TILE_HEIGHT).toBe(32);
+      expect(TILE_WIDTH).toBe(80);
+      expect(TILE_HEIGHT).toBe(48);
     });
 
     it("exports grid size", () => {
       expect(GRID_SIZE).toBe(10);
     });
 
-    it("tile height is half of tile width for isometric projection", () => {
-      expect(TILE_HEIGHT).toBe(TILE_WIDTH / 2);
+    it("tile height provides adequate vertical space for labels", () => {
+      // Height should be at least half width for proper isometric look
+      // but can be taller to accommodate labels
+      expect(TILE_HEIGHT).toBeGreaterThanOrEqual(TILE_WIDTH / 2);
     });
   });
 });

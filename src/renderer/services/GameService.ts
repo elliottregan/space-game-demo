@@ -114,6 +114,7 @@ interface GameUIState {
   };
   gridBuildings: Array<{
     id: string;
+    defId: string;
     name: string;
     position: { x: number; y: number };
     powerState: PowerState;
@@ -385,6 +386,7 @@ class GameService {
         const def = this.facade.buildings.getDefinition(building.definitionId as BuildingId);
         gridPlacements.push({
           id: building.id,
+          defId: building.definitionId,
           name: def?.name ?? building.definitionId,
           position: pos,
           powerState: placement.powerState,

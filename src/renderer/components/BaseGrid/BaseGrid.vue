@@ -7,6 +7,7 @@ import { GRID_SIZE } from "./isometricUtils";
 
 interface BuildingInfo {
   id: string;
+  defId: string;
   name: string;
   position: GridPosition;
   powerState: PowerState;
@@ -22,6 +23,8 @@ interface Props {
   buildings: BuildingInfo[];
   deposits: DepositInfo[];
   selectedPosition: GridPosition | null;
+  /** Building definition ID selected for placement preview */
+  selectedBuildingDefId?: string;
 }
 
 const props = defineProps<Props>();
@@ -62,6 +65,7 @@ const gridData = computed<BaseGridData>(() => {
       cells.push({
         position: { x, y },
         buildingId: building?.id,
+        buildingDefId: building?.defId,
         buildingName: building?.name,
         powerState: building?.powerState,
         batteryLevel: building?.batteryLevel,
@@ -73,6 +77,7 @@ const gridData = computed<BaseGridData>(() => {
   return {
     cells,
     selectedPosition: props.selectedPosition,
+    selectedBuildingDefId: props.selectedBuildingDefId,
   };
 });
 

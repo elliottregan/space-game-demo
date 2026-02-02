@@ -1,8 +1,38 @@
 <!-- src/renderer/components/BaseGrid/BuildingContextMenu.vue -->
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import type { GridPosition, DepositType } from "../../../core/models/Grid";
 import type { BuildingDefinition } from "../../../core/models/Building";
+import { BuildingId } from "../../../core/models/Building";
+
+// Map building IDs to icon characters
+const BUILDING_ICONS: Record<string, string> = {
+  [BuildingId.HABITAT]: "🏠",
+  [BuildingId.SOLAR_PANEL]: "☀️",
+  [BuildingId.WATER_EXTRACTOR]: "💧",
+  [BuildingId.BASIC_FARM]: "🌱",
+  [BuildingId.BASIC_MINE]: "⛏️",
+  [BuildingId.OXYGEN_GENERATOR]: "💨",
+  [BuildingId.GREENHOUSE]: "🌿",
+  [BuildingId.WATER_RECLAIMER]: "♻️",
+  [BuildingId.RESEARCH_LAB]: "🔬",
+  [BuildingId.ADVANCED_HABITAT]: "🏢",
+  [BuildingId.AUTOMATED_FACTORY]: "🏭",
+  [BuildingId.FABRICATOR_3D]: "🖨️",
+  [BuildingId.MINING_STATION]: "🏗️",
+  [BuildingId.NUCLEAR_REACTOR]: "⚛️",
+  [BuildingId.BIOLAB]: "🧬",
+  [BuildingId.MEDICAL_CENTER]: "🏥",
+  [BuildingId.CRYO_FACILITY]: "❄️",
+  [BuildingId.COMMON_ROOM]: "🛋️",
+  [BuildingId.GYMNASIUM]: "🏋️",
+  [BuildingId.HYDROPONIC_GARDEN]: "🌺",
+  [BuildingId.OBSERVATORY_DOME]: "🔭",
+  [BuildingId.ASSEMBLY_HALL]: "🏛️",
+  [BuildingId.GENERATION_SHIP]: "🚀",
+  [BuildingId.UNITED_MARS_STATION]: "🌍",
+  [BuildingId.SPACE_ELEVATOR]: "🗼",
+};
 
 interface PlacementHints {
   hasPower: boolean;
@@ -23,8 +53,22 @@ const props = defineProps<Props>();
 
 const emit = defineEmits<{
   select: [buildingId: string];
+  preview: [buildingId: string | null];
   close: [];
 }>();
+
+// Track selected building before confirmation
+const selectedDefId = ref<string | null>(null);
+
+const selectedBuilding = computed(() => {
+  if (!selectedDefId.value) return null;
+  return props.availableBuildings.find((b) => b.id === selectedDefId.value) ?? null;
+});
+
+// Emit preview when selection changes
+watch(selectedDefId, (defId) => {
+  emit("preview", defId);
+});
 
 const filteredBuildings = computed(() => {
   return props.availableBuildings.filter((def) => {
@@ -63,6 +107,24 @@ function isRecommended(def: BuildingDefinition): boolean {
   }
   return false;
 }
+
+function selectBuilding(defId: string) {
+  selectedDefId.value = defId;
+}
+
+function confirmSelection() {
+  if (selectedDefId.value) {
+    emit("select", selectedDefId.value);
+  }
+}
+
+function cancelSelection() {
+  selectedDefId.value = null;
+}
+
+function getIcon(defId: string): string {
+  return BUILDING_ICONS[defId] ?? "🏗️";
+}
 </script>
 
 <template>
@@ -80,20 +142,38 @@ function isRecommended(def: BuildingDefinition): boolean {
       </span>
     </div>
 
-    <ul class="building-list">
+    <!-- Selected building preview -->
+    <div v-if="selectedBuilding" class="selected-preview">
+      <div class="preview-icon">{{ getIcon(selectedBuilding.id) }}</div>
+      <div class="preview-info">
+        <div class="preview-name">{{ selectedBuilding.name }}</div>
+        <div class="preview-desc">{{ selectedBuilding.description }}</div>
+        <div class="preview-cost">{{ selectedBuilding.cost.materials }} materials</div>
+      </div>
+      <div class="preview-actions">
+        <button class="build-btn" @click="confirmSelection">Build</button>
+        <button class="cancel-btn" @click="cancelSelection">Back</button>
+      </div>
+    </div>
+
+    <!-- Building list -->
+    <ul v-else class="building-list">
       <li
         v-for="def in filteredBuildings"
         :key="def.id"
         class="building-option"
         :class="{ recommended: isRecommended(def) }"
-        @click="emit('select', def.id)"
+        @click="selectBuilding(def.id)"
       >
-        <div class="building-name">
-          {{ def.name }}
-          <span v-if="isRecommended(def)" class="rec-badge">*</span>
+        <div class="building-icon">{{ getIcon(def.id) }}</div>
+        <div class="building-details">
+          <div class="building-name">
+            {{ def.name }}
+            <span v-if="isRecommended(def)" class="rec-badge">*</span>
+          </div>
+          <div class="building-hint">{{ getBuildingHint(def) }}</div>
+          <div class="building-cost">{{ def.cost.materials }} mat</div>
         </div>
-        <div class="building-hint">{{ getBuildingHint(def) }}</div>
-        <div class="building-cost">{{ def.cost.materials }} materials</div>
       </li>
     </ul>
   </div>
@@ -103,8 +183,8 @@ function isRecommended(def: BuildingDefinition): boolean {
 .context-menu {
   position: fixed;
   z-index: 1000;
-  min-width: 220px;
-  max-height: 300px;
+  min-width: 240px;
+  max-height: 350px;
   overflow-y: auto;
   background: var(--g-color-bg-surface);
   border: 1px solid var(--g-color-border);
@@ -159,6 +239,75 @@ function isRecommended(def: BuildingDefinition): boolean {
   color: var(--g-color-info);
 }
 
+/* Selected building preview */
+.selected-preview {
+  padding: var(--g-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-sm);
+}
+
+.preview-icon {
+  font-size: 32px;
+  text-align: center;
+}
+
+.preview-info {
+  text-align: center;
+}
+
+.preview-name {
+  font-weight: 600;
+  font-size: var(--g-font-size-md);
+  margin-bottom: var(--g-space-xs);
+}
+
+.preview-desc {
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  margin-bottom: var(--g-space-xs);
+}
+
+.preview-cost {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-info);
+}
+
+.preview-actions {
+  display: flex;
+  gap: var(--g-space-sm);
+  margin-top: var(--g-space-sm);
+}
+
+.build-btn {
+  flex: 1;
+  padding: var(--g-space-sm);
+  background: var(--g-color-positive);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.build-btn:hover {
+  filter: brightness(1.1);
+}
+
+.cancel-btn {
+  padding: var(--g-space-sm) var(--g-space-md);
+  background: var(--g-color-bg-base);
+  color: var(--g-color-text-muted);
+  border: 1px solid var(--g-color-border);
+  cursor: pointer;
+}
+
+.cancel-btn:hover {
+  background: var(--g-color-bg-surface);
+  color: var(--g-color-text);
+}
+
+/* Building list */
 .building-list {
   list-style: none;
   margin: 0;
@@ -166,9 +315,12 @@ function isRecommended(def: BuildingDefinition): boolean {
 }
 
 .building-option {
+  display: flex;
+  gap: var(--g-space-sm);
   padding: var(--g-space-sm);
   cursor: pointer;
   border-bottom: 1px solid var(--g-color-border);
+  align-items: center;
 }
 
 .building-option:hover {
@@ -177,6 +329,17 @@ function isRecommended(def: BuildingDefinition): boolean {
 
 .building-option.recommended {
   background: rgba(33, 150, 243, 0.1);
+}
+
+.building-icon {
+  font-size: 20px;
+  width: 28px;
+  text-align: center;
+}
+
+.building-details {
+  flex: 1;
+  min-width: 0;
 }
 
 .building-name {

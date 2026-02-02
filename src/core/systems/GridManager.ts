@@ -1,12 +1,6 @@
 // src/core/systems/GridManager.ts
-import {
-  GridCell,
-  GridPosition,
-  DepositType,
-  GRID_SIZE,
-  BuildingPlacement,
-  PowerState,
-} from "../models/Grid";
+import type { GridCell, GridPosition, BuildingPlacement } from "../models/Grid";
+import { DepositType, GRID_SIZE, PowerState } from "../models/Grid";
 import {
   BATTERY_BACKUP_SOLS,
   LOW_BATTERY_THRESHOLD,
