@@ -223,6 +223,10 @@ function handleCancelConstruction(buildingId: string) {
   selectedBuildingId.value = null;
 }
 
+function handleUnassignWorker(colonistId: string) {
+  gameService.api.colony.unassignFromBuilding(colonistId);
+}
+
 function closeStatsCard() {
   selectedBuildingId.value = null;
 }
@@ -293,6 +297,7 @@ const placementHints = computed(() => ({
         @close="closeStatsCard"
         @demolish="handleDemolish"
         @cancel="handleCancelConstruction"
+        @unassign-worker="handleUnassignWorker"
       />
     </div>
   </div>

@@ -30,6 +30,7 @@ const emit = defineEmits<{
   close: [];
   demolish: [buildingId: string];
   cancel: [buildingId: string];
+  unassignWorker: [colonistId: string];
 }>();
 
 const isPending = computed(() => props.building.status === "pending");
@@ -197,6 +198,13 @@ const batteryVariant = computed(() => {
               {{ getDominantIdeology(worker.ideology)?.name }}
             </span>
             <span v-else class="ideology-badge neutral">Neutral</span>
+            <button
+              class="unassign-btn"
+              title="Unassign worker"
+              @click="emit('unassignWorker', worker.id)"
+            >
+              ×
+            </button>
           </div>
         </div>
       </div>
@@ -381,5 +389,25 @@ const batteryVariant = computed(() => {
 
 .ideology-badge.neutral {
   background-color: var(--g-color-text-muted);
+}
+
+.unassign-btn {
+  background: none;
+  border: none;
+  color: var(--g-color-text-muted);
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 4px;
+  margin-left: var(--g-space-xs);
+  cursor: pointer;
+  opacity: 0.6;
+  transition:
+    opacity 0.15s,
+    color 0.15s;
+}
+
+.unassign-btn:hover {
+  opacity: 1;
+  color: var(--g-color-negative);
 }
 </style>
