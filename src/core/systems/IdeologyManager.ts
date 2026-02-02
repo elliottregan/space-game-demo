@@ -117,6 +117,66 @@ export class IdeologyManager {
     return { ...IdeologyBalance.NEW_COLONIST_IDEOLOGY };
   }
 
+  /**
+   * Imprint ideology on a new colonist based on their strongest connections.
+   * This creates ideological clustering - new colonists adopt the beliefs
+   * of whoever they're closest to (typically housemates/coworkers).
+   *
+   * @param colonist The colonist to imprint ideology on
+   * @param colonists All colonists (to find neighbors' ideologies)
+   * @param relationshipManager To find neighbor relationship strengths
+   * @param imprinting How much to weight neighbor influence (0-1, default 0.7)
+   */
+  static imprintIdeologyFromNeighbors(
+    colonist: Colonist,
+    colonists: Colonist[],
+    relationshipManager: RelationshipManager,
+    imprinting: number = IdeologyBalance.IDEOLOGY_IMPRINTING_STRENGTH,
+  ): void {
+    if (!colonist.ideology) return;
+
+    const neighbors = relationshipManager.getNeighbors(colonist.id);
+    if (neighbors.size === 0) return;
+
+    // Build a map for quick lookup
+    const colonistMap = new Map(colonists.map((c) => [c.id, c]));
+
+    // Find the strongest connection with ideology
+    let strongestNeighbor: Colonist | null = null;
+    let strongestStrength = 0;
+
+    for (const neighborId of neighbors) {
+      const neighbor = colonistMap.get(neighborId);
+      if (!neighbor?.ideology) continue;
+
+      const strength = relationshipManager.getRelationshipStrength(colonist.id, neighborId);
+      if (strength > strongestStrength) {
+        strongestStrength = strength;
+        strongestNeighbor = neighbor;
+      }
+    }
+
+    // Only imprint if there's a reasonably strong connection
+    if (!strongestNeighbor || strongestStrength < IdeologyBalance.IDEOLOGY_IMPRINTING_THRESHOLD) {
+      return;
+    }
+
+    const sourceIdeology = strongestNeighbor.ideology!;
+
+    // Blend toward the neighbor's ideology (partial imprinting)
+    colonist.ideology.earthLoyalist =
+      colonist.ideology.earthLoyalist * (1 - imprinting) +
+      sourceIdeology.earthLoyalist * imprinting;
+    colonist.ideology.marsIndependence =
+      colonist.ideology.marsIndependence * (1 - imprinting) +
+      sourceIdeology.marsIndependence * imprinting;
+    colonist.ideology.corporateInterests =
+      colonist.ideology.corporateInterests * (1 - imprinting) +
+      sourceIdeology.corporateInterests * imprinting;
+
+    // New colonists keep their low conviction (they're influenced, not converted)
+  }
+
   // ============ Council Selection ============
 
   /**
@@ -321,6 +381,13 @@ export class IdeologyManager {
           colonist.id,
           neighborId,
         );
+
+        // Skip weak connections - ideology only spreads through strong ties
+        // This creates ideological "pockets" in the social network
+        if (relationshipStrength < IdeologyBalance.IDEOLOGY_SPREAD_CONNECTION_THRESHOLD) {
+          continue;
+        }
+
         const neighborCentrality = relationshipManager.getCentrality(neighborId);
         const neighborConviction = neighborIdeology.conviction;
 

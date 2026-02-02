@@ -15,6 +15,15 @@ export const IDEOLOGY_SPREAD_INTERVAL = 5;
 /** How much conviction reduces influence susceptibility (0-1) */
 export const CONVICTION_RESISTANCE_FACTOR = 0.8;
 
+/**
+ * Minimum relationship strength for ideology to spread.
+ * Connections below this threshold do not transmit ideology.
+ * This creates ideological "pockets" in the social network where
+ * closely-bonded groups maintain distinct beliefs.
+ * Set to 0 to disable threshold (all connections spread ideology).
+ */
+export const IDEOLOGY_SPREAD_CONNECTION_THRESHOLD = 0.5;
+
 /** Affinity threshold below which colonist is considered "neutral" */
 export const IDEOLOGY_NEUTRAL_THRESHOLD = 0.3;
 
@@ -85,6 +94,21 @@ export const NEW_COLONIST_IDEOLOGY = {
   corporateInterests: 0.33,
   conviction: 0.2,
 } as const;
+
+// ============ Ideology Imprinting ============
+
+/**
+ * How strongly new colonists adopt their neighbor's ideology (0-1).
+ * At 0.7, a neutral colonist near a Mars Independence supporter would
+ * shift from (0.33, 0.33, 0.33) toward (0.33, 0.73, 0.33) partially.
+ */
+export const IDEOLOGY_IMPRINTING_STRENGTH = 0.7;
+
+/**
+ * Minimum relationship strength required for imprinting.
+ * New colonists only adopt ideology from strong connections (e.g., housemates).
+ */
+export const IDEOLOGY_IMPRINTING_THRESHOLD = 0.3;
 
 // ============ Lobbying ============
 

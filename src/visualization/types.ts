@@ -3,8 +3,11 @@
 
 export type {
   AggregatedSnapshot,
+  AggregatedIdeologySnapshot,
   AnalysisOutput,
   CrisisPoint,
+  IdeologySnapshot,
+  IdeologyAnalysis,
   PercentileValue,
   ResourceSnapshot,
   RunResult,

@@ -70,6 +70,8 @@ export interface RunResult {
   resourcesAtDeath?: ResourceSnapshot;
   /** Crisis events detected during the run */
   crisisTimeline?: CrisisPoint[];
+  /** Time-series snapshots of ideology distribution */
+  ideologyTimeline?: IdeologySnapshot[];
   /** First sol each building type was constructed */
   buildingFirstBuiltSol?: Record<string, number>;
   /** Sol when each technology was completed */
@@ -121,6 +123,29 @@ export interface ResourceSnapshot {
 }
 
 /**
+ * Time-series snapshot of ideology distribution at a given sol.
+ */
+export interface IdeologySnapshot {
+  sol: number;
+  /** Average Earth Loyalist affinity across all colonists (0-1) */
+  avgEarthLoyalist: number;
+  /** Average Mars Independence affinity across all colonists (0-1) */
+  avgMarsIndependence: number;
+  /** Average Corporate Interests affinity across all colonists (0-1) */
+  avgCorporateInterests: number;
+  /** Average conviction level (0-1) */
+  avgConviction: number;
+  /** Average ideology spread (max - min affinity per colonist) */
+  avgIdeologySpread: number;
+  /** Number of colonists with a clear dominant faction */
+  colonistsWithDominant: number;
+  /** Total colonists with ideology */
+  totalColonists: number;
+  /** Percentage of colonists with dominant faction */
+  dominantFactionPct: number;
+}
+
+/**
  * Percentile values for aggregated metrics across multiple runs.
  */
 export interface PercentileValue {
@@ -144,6 +169,20 @@ export interface AggregatedSnapshot {
   morale: PercentileValue;
   socialCohesion: PercentileValue;
   /** Number of simulation runs that were still active at this sol */
+  runsActive: number;
+}
+
+/**
+ * Aggregated ideology snapshot combining data from multiple runs at a given sol.
+ */
+export interface AggregatedIdeologySnapshot {
+  sol: number;
+  earthLoyalist: PercentileValue;
+  marsIndependence: PercentileValue;
+  corporateInterests: PercentileValue;
+  conviction: PercentileValue;
+  ideologySpread: PercentileValue;
+  dominantFactionPct: PercentileValue;
   runsActive: number;
 }
 
@@ -331,6 +370,26 @@ export interface SocialCohesionAnalysis {
 }
 
 /**
+ * Ideology analysis results.
+ */
+export interface IdeologyAnalysis {
+  /** Average ideology spread at game start */
+  avgInitialSpread: number;
+  /** Average ideology spread at game end */
+  avgFinalSpread: number;
+  /** Percentage of colonists with dominant faction at start */
+  initialDominantPct: number;
+  /** Percentage of colonists with dominant faction at end */
+  finalDominantPct: number;
+  /** Average conviction at start */
+  avgInitialConviction: number;
+  /** Average conviction at end */
+  avgFinalConviction: number;
+  /** Convergence rate: how much ideology homogenized (0 = no change, 1 = fully converged) */
+  convergenceRate: number;
+}
+
+/**
  * Complete analysis output for visualization.
  */
 export interface AnalysisOutput {
@@ -353,6 +412,8 @@ export interface AnalysisOutput {
   resourceTimeline: ResourceSnapshot[];
   /** Aggregated timeline with percentile bands across all runs */
   aggregatedTimeline: AggregatedSnapshot[];
+  /** Aggregated ideology timeline with percentile bands across all runs */
+  aggregatedIdeologyTimeline?: AggregatedIdeologySnapshot[];
   crisisEvents: CrisisPoint[];
   runs: RunResult[];
 
@@ -367,5 +428,6 @@ export interface AnalysisOutput {
     crisisTimeline: CrisisTimelineAnalysis;
     outliers: OutlierAnalysis;
     socialCohesion: SocialCohesionAnalysis;
+    ideology: IdeologyAnalysis;
   };
 }

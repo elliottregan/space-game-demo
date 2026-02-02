@@ -26,6 +26,10 @@ export function renderChartsContent(): string {
       ${batchB ? renderTimelineLegend() : ""}
       <div id="timeline" class="chart-container timeline-container"></div>
     </div>
+    <div class="chart-panel">
+      <h2>Ideology Evolution</h2>
+      <div id="ideology" class="chart-container timeline-container"></div>
+    </div>
     <div class="charts-row">
       <div class="chart-panel">
         <h2>Crisis Heatmap</h2>
@@ -174,6 +178,7 @@ export function renderCharts(): void {
   // Charts will be rendered by separate modules
   import("../charts/histogram.ts").then((m) => m.renderHistogram("histogram", batchA, batchB));
   import("../charts/timeline.ts").then((m) => m.renderTimeline("timeline", batchA, batchB));
+  import("../charts/ideology.ts").then((m) => m.renderIdeologyTimeline("ideology", batchA, batchB));
   import("../charts/heatmap.ts").then((m) => m.renderHeatmap("heatmap", batchA, batchB));
   import("../charts/progression.ts").then((m) =>
     m.renderProgression("progression", batchA, batchB),

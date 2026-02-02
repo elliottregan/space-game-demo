@@ -1,6 +1,34 @@
 import { getProject } from "../../data/projects";
 import type { GameEvent } from "../../events/GameEvent";
 import { definePhase } from "../TickPhase";
+import { IdeologyManager } from "../../systems/IdeologyManager";
+import * as IdeologyBalance from "../../balance/IdeologyBalance";
+
+/**
+ * Check if a colonist has neutral/unimprinted ideology.
+ * Returns true if all three affinities are close to 0.33 (neutral).
+ */
+function isNeutralIdeology(colonist: {
+  ideology?: {
+    earthLoyalist: number;
+    marsIndependence: number;
+    corporateInterests: number;
+    conviction: number;
+  };
+}): boolean {
+  if (!colonist.ideology) return false;
+  const { earthLoyalist, marsIndependence, corporateInterests, conviction } = colonist.ideology;
+
+  // Check if ideology is still near neutral (within 0.05 of 0.33)
+  const neutralThreshold = 0.05;
+  const isNeutral =
+    Math.abs(earthLoyalist - 0.33) < neutralThreshold &&
+    Math.abs(marsIndependence - 0.33) < neutralThreshold &&
+    Math.abs(corporateInterests - 0.33) < neutralThreshold;
+
+  // Only imprint if conviction is low (new colonist)
+  return isNeutral && conviction <= IdeologyBalance.NEW_COLONIST_IDEOLOGY.conviction;
+}
 
 /**
  * Propagate Ideology Phase
@@ -8,6 +36,10 @@ import { definePhase } from "../TickPhase";
  * Spreads ideology through the colonist social network.
  * Colonists' ideologies drift toward their neighbors' weighted average.
  * Also updates the council based on centrality × conviction.
+ *
+ * Additionally, new colonists with neutral ideology get "imprinted"
+ * with the ideology of their strongest connection, creating ideological
+ * clustering in the social network.
  */
 export const propagateIdeology = definePhase({
   id: "ideology:propagateIdeology",
@@ -17,6 +49,14 @@ export const propagateIdeology = definePhase({
   execute(ctx) {
     const colonists = ctx.colony.getColonists();
     const relationshipManager = ctx.workforce.getRelationshipManager();
+
+    // Imprint ideology on new/neutral colonists from their strongest connection
+    // This creates ideological "pockets" in the network
+    for (const colonist of colonists) {
+      if (isNeutralIdeology(colonist)) {
+        IdeologyManager.imprintIdeologyFromNeighbors(colonist, colonists, relationshipManager);
+      }
+    }
 
     // Propagate ideology through social network
     ctx.ideology.propagateIdeology(colonists, relationshipManager, ctx.currentSol);

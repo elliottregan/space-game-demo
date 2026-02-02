@@ -11,6 +11,9 @@ import type {
   ResourceSnapshot,
   ResourceFlowSnapshot,
   CrisisPoint,
+  IdeologySnapshot,
+  AggregatedIdeologySnapshot,
+  IdeologyAnalysis,
   AnalysisOutput,
   VictoryTimeStats,
   PeakPopulationStats,
@@ -24,6 +27,7 @@ import type {
   AggregatedSnapshot,
   PercentileValue,
 } from "../src/simulation/types";
+import type { ColonistIdeology } from "../src/core/models/Colonist";
 
 type LogLevel = "silent" | "default" | "verbose";
 
@@ -137,6 +141,7 @@ function runSingleGame(seed: number): RunResult {
   const resourceTimeline: ResourceSnapshot[] = [];
   const flowTimeline: ResourceFlowSnapshot[] = [];
   const crisisTimeline: CrisisPoint[] = [];
+  const ideologyTimeline: IdeologySnapshot[] = [];
   const buildingFirstBuiltSol = new Map<string, number>();
   const techCompletedSol = new Map<string, number>();
   let previousPopulation = api.colony.snapshot().population;
@@ -217,6 +222,9 @@ function runSingleGame(seed: number): RunResult {
         netMaterials:
           (resources.production.materials ?? 0) - (resources.consumption.materials ?? 0),
       });
+
+      // Capture ideology snapshot
+      ideologyTimeline.push(captureIdeologySnapshot(currentSol, colony.colonists));
     }
 
     for (const tech of api.technology.snapshot().researched) {
@@ -339,6 +347,58 @@ function runSingleGame(seed: number): RunResult {
     resourcesAtDeath,
     blockedDecisions: blockedDecisions.length > 0 ? blockedDecisions : undefined,
     eventsOccurred: eventsOccurred.length > 0 ? eventsOccurred : undefined,
+    ideologyTimeline: ideologyTimeline.length > 0 ? ideologyTimeline : undefined,
+  };
+}
+
+/**
+ * Capture ideology distribution snapshot at a given sol.
+ */
+function captureIdeologySnapshot(
+  sol: number,
+  colonists: Array<{ ideology?: ColonistIdeology }>,
+): IdeologySnapshot {
+  let sumEarth = 0;
+  let sumMars = 0;
+  let sumCorp = 0;
+  let sumConviction = 0;
+  let sumSpread = 0;
+  let dominantCount = 0;
+  let count = 0;
+
+  for (const colonist of colonists) {
+    if (!colonist.ideology) continue;
+
+    const { earthLoyalist, marsIndependence, corporateInterests, conviction } = colonist.ideology;
+    sumEarth += earthLoyalist;
+    sumMars += marsIndependence;
+    sumCorp += corporateInterests;
+    sumConviction += conviction;
+
+    // Calculate spread (max - min affinity)
+    const max = Math.max(earthLoyalist, marsIndependence, corporateInterests);
+    const min = Math.min(earthLoyalist, marsIndependence, corporateInterests);
+    sumSpread += max - min;
+
+    // Check for dominant faction (threshold of 0.15 difference)
+    const values = [earthLoyalist, marsIndependence, corporateInterests].sort((a, b) => b - a);
+    if (values[0]! >= 0.3 && values[0]! - values[1]! >= 0.15) {
+      dominantCount++;
+    }
+
+    count++;
+  }
+
+  return {
+    sol,
+    avgEarthLoyalist: count > 0 ? sumEarth / count : 0.33,
+    avgMarsIndependence: count > 0 ? sumMars / count : 0.33,
+    avgCorporateInterests: count > 0 ? sumCorp / count : 0.33,
+    avgConviction: count > 0 ? sumConviction / count : 0,
+    avgIdeologySpread: count > 0 ? sumSpread / count : 0,
+    colonistsWithDominant: dominantCount,
+    totalColonists: count,
+    dominantFactionPct: count > 0 ? dominantCount / count : 0,
   };
 }
 
@@ -987,6 +1047,98 @@ function aggregateTimelines(results: RunResult[]): AggregatedSnapshot[] {
 }
 
 /**
+ * Aggregate ideology timelines from multiple runs into percentile bands.
+ */
+function aggregateIdeologyTimelines(results: RunResult[]): AggregatedIdeologySnapshot[] {
+  // Find the meaningful game range
+  const victories = results.filter((r) => r.outcome === "victory");
+  const maxVictorySol = victories.length > 0 ? Math.max(...victories.map((r) => r.finalSol)) : 0;
+  const maxDefeatSol = Math.max(
+    ...results.filter((r) => r.outcome === "defeat").map((r) => r.finalSol),
+  );
+  const timelineLimit = maxVictorySol > 0 ? maxVictorySol : maxDefeatSol;
+
+  // Collect all ideology snapshots by sol
+  const timelinesBySol = new Map<number, IdeologySnapshot[]>();
+
+  for (const result of results) {
+    if (!result.ideologyTimeline) continue;
+    for (const snapshot of result.ideologyTimeline) {
+      if (snapshot.sol > timelineLimit) continue;
+      const existing = timelinesBySol.get(snapshot.sol) ?? [];
+      existing.push(snapshot);
+      timelinesBySol.set(snapshot.sol, existing);
+    }
+  }
+
+  const allSols = Array.from(timelinesBySol.keys()).sort((a, b) => a - b);
+  const aggregated: AggregatedIdeologySnapshot[] = [];
+
+  for (const sol of allSols) {
+    const snapshots = timelinesBySol.get(sol);
+    if (!snapshots || snapshots.length === 0) continue;
+
+    aggregated.push({
+      sol,
+      earthLoyalist: computePercentileValue(snapshots.map((s) => s.avgEarthLoyalist)),
+      marsIndependence: computePercentileValue(snapshots.map((s) => s.avgMarsIndependence)),
+      corporateInterests: computePercentileValue(snapshots.map((s) => s.avgCorporateInterests)),
+      conviction: computePercentileValue(snapshots.map((s) => s.avgConviction)),
+      ideologySpread: computePercentileValue(snapshots.map((s) => s.avgIdeologySpread)),
+      dominantFactionPct: computePercentileValue(snapshots.map((s) => s.dominantFactionPct)),
+      runsActive: snapshots.length,
+    });
+  }
+
+  return aggregated;
+}
+
+/**
+ * Compute ideology analysis statistics.
+ */
+function computeIdeologyAnalysis(results: RunResult[]): IdeologyAnalysis {
+  const initialSpreads: number[] = [];
+  const finalSpreads: number[] = [];
+  const initialDominantPcts: number[] = [];
+  const finalDominantPcts: number[] = [];
+  const initialConvictions: number[] = [];
+  const finalConvictions: number[] = [];
+
+  for (const result of results) {
+    if (!result.ideologyTimeline || result.ideologyTimeline.length < 2) continue;
+
+    const first = result.ideologyTimeline[0]!;
+    const last = result.ideologyTimeline[result.ideologyTimeline.length - 1]!;
+
+    initialSpreads.push(first.avgIdeologySpread);
+    finalSpreads.push(last.avgIdeologySpread);
+    initialDominantPcts.push(first.dominantFactionPct);
+    finalDominantPcts.push(last.dominantFactionPct);
+    initialConvictions.push(first.avgConviction);
+    finalConvictions.push(last.avgConviction);
+  }
+
+  const avg = (arr: number[]) => (arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+
+  const avgInitialSpread = avg(initialSpreads);
+  const avgFinalSpread = avg(finalSpreads);
+
+  // Convergence rate: how much ideology homogenized (0 = no change, 1 = fully converged)
+  const convergenceRate =
+    avgInitialSpread > 0 ? (avgInitialSpread - avgFinalSpread) / avgInitialSpread : 0;
+
+  return {
+    avgInitialSpread,
+    avgFinalSpread,
+    initialDominantPct: avg(initialDominantPcts) * 100,
+    finalDominantPct: avg(finalDominantPcts) * 100,
+    avgInitialConviction: avg(initialConvictions),
+    avgFinalConviction: avg(finalConvictions),
+    convergenceRate,
+  };
+}
+
+/**
  * Write analysis data as gzipped JSON for visualization.
  */
 async function writeJsonOutput(results: RunResult[], runs: number, seed: number): Promise<string> {
@@ -1072,6 +1224,7 @@ async function writeJsonOutput(results: RunResult[], runs: number, seed: number)
 
   // Aggregate timelines with percentile bands
   const aggregatedTimeline = aggregateTimelines(results);
+  const aggregatedIdeologyTimeline = aggregateIdeologyTimelines(results);
 
   const analysisOutput: AnalysisOutput = {
     metadata: {
@@ -1092,6 +1245,7 @@ async function writeJsonOutput(results: RunResult[], runs: number, seed: number)
     buildingCounts,
     resourceTimeline,
     aggregatedTimeline,
+    aggregatedIdeologyTimeline,
     crisisEvents,
     runs: results,
     stats: {
@@ -1104,6 +1258,7 @@ async function writeJsonOutput(results: RunResult[], runs: number, seed: number)
       crisisTimeline: computeCrisisTimeline(results),
       outliers: computeOutliers(victories),
       socialCohesion: computeSocialCohesion(results),
+      ideology: computeIdeologyAnalysis(results),
     },
   };
 
@@ -1531,6 +1686,75 @@ function analyzeSocialCohesion(results: RunResult[]): void {
 }
 
 /**
+ * Analyze ideology evolution across runs.
+ */
+function analyzeIdeology(results: RunResult[]): void {
+  output("\n[Ideology Evolution Analysis]");
+  output("-".repeat(40));
+
+  const initialSpreads: number[] = [];
+  const finalSpreads: number[] = [];
+  const initialDominantPcts: number[] = [];
+  const finalDominantPcts: number[] = [];
+  const initialConvictions: number[] = [];
+  const finalConvictions: number[] = [];
+
+  for (const result of results) {
+    if (!result.ideologyTimeline || result.ideologyTimeline.length < 2) continue;
+
+    const first = result.ideologyTimeline[0]!;
+    const last = result.ideologyTimeline[result.ideologyTimeline.length - 1]!;
+
+    initialSpreads.push(first.avgIdeologySpread);
+    finalSpreads.push(last.avgIdeologySpread);
+    initialDominantPcts.push(first.dominantFactionPct * 100);
+    finalDominantPcts.push(last.dominantFactionPct * 100);
+    initialConvictions.push(first.avgConviction);
+    finalConvictions.push(last.avgConviction);
+  }
+
+  if (initialSpreads.length === 0) {
+    output("  No ideology data available");
+    return;
+  }
+
+  const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
+
+  const avgInitialSpread = avg(initialSpreads);
+  const avgFinalSpread = avg(finalSpreads);
+  const avgInitialDominant = avg(initialDominantPcts);
+  const avgFinalDominant = avg(finalDominantPcts);
+  const avgInitialConviction = avg(initialConvictions);
+  const avgFinalConviction = avg(finalConvictions);
+
+  output("  Ideology Metrics Over Time:");
+  output("  " + "-".repeat(45));
+  output("  Metric                    Initial    Final");
+  output(
+    `  Avg Ideology Spread       ${avgInitialSpread.toFixed(3).padStart(7)}    ${avgFinalSpread.toFixed(3).padStart(6)}`,
+  );
+  output(
+    `  % with Dominant Faction   ${avgInitialDominant.toFixed(1).padStart(6)}%    ${avgFinalDominant.toFixed(1).padStart(5)}%`,
+  );
+  output(
+    `  Avg Conviction            ${avgInitialConviction.toFixed(3).padStart(7)}    ${avgFinalConviction.toFixed(3).padStart(6)}`,
+  );
+
+  const convergenceRate =
+    avgInitialSpread > 0 ? ((avgInitialSpread - avgFinalSpread) / avgInitialSpread) * 100 : 0;
+  output(`\n  Convergence Rate: ${convergenceRate.toFixed(1)}%`);
+  output(`    (How much ideology homogenized over time)`);
+
+  if (convergenceRate > 50) {
+    output("    ⚠ High convergence - ideologies becoming uniform");
+  } else if (convergenceRate > 25) {
+    output("    ○ Moderate convergence - some diversity retained");
+  } else {
+    output("    ✓ Low convergence - ideological diversity maintained");
+  }
+}
+
+/**
  * Main entry point.
  */
 async function main(): Promise<void> {
@@ -1701,6 +1925,7 @@ async function main(): Promise<void> {
   analyzeEventImpact(results);
   analyzeCrisisTimeline(results);
   analyzeSocialCohesion(results);
+  analyzeIdeology(results);
 
   output("\n" + "=".repeat(60));
 

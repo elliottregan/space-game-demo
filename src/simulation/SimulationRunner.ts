@@ -14,12 +14,14 @@ import type {
   CrisisSeverity,
   CrisisType,
   DefeatReason,
+  IdeologySnapshot,
   ResourceFlowSnapshot,
   ResourceSnapshot,
   RunResult,
   SimulationConfig,
   VictoryType,
 } from "./types";
+import type { ColonistIdeology } from "../core/models/Colonist";
 
 /**
  * Maximum sols to run before considering a game stuck.
@@ -277,6 +279,7 @@ export class SimulationRunner {
     const resourceTimeline: ResourceSnapshot[] = [];
     const flowTimeline: ResourceFlowSnapshot[] = [];
     const crisisTimeline: CrisisPoint[] = [];
+    const ideologyTimeline: IdeologySnapshot[] = [];
     const buildingFirstBuiltSol = new Map<string, number>();
     const techCompletedSol = new Map<string, number>();
     let previousPopulation = api.colony.snapshot({ lightweight: true }).population;
@@ -379,6 +382,9 @@ export class SimulationRunner {
           netMaterials:
             (resources.production.materials ?? 0) - (resources.consumption.materials ?? 0),
         });
+
+        // Capture ideology snapshot
+        ideologyTimeline.push(this.captureIdeologySnapshot(currentSol, colony.colonists));
       }
 
       // Track newly researched techs
@@ -462,6 +468,7 @@ export class SimulationRunner {
         resourceTimeline,
         flowTimeline,
         crisisTimeline,
+        ideologyTimeline,
         buildingFirstBuiltSol,
         techCompletedSol,
         defeatSol,
@@ -470,6 +477,57 @@ export class SimulationRunner {
         eventsOccurred,
       },
     );
+  }
+
+  /**
+   * Capture ideology distribution snapshot at a given sol.
+   */
+  private captureIdeologySnapshot(
+    sol: number,
+    colonists: Array<{ ideology?: ColonistIdeology }>,
+  ): IdeologySnapshot {
+    let sumEarth = 0;
+    let sumMars = 0;
+    let sumCorp = 0;
+    let sumConviction = 0;
+    let sumSpread = 0;
+    let dominantCount = 0;
+    let count = 0;
+
+    for (const colonist of colonists) {
+      if (!colonist.ideology) continue;
+
+      const { earthLoyalist, marsIndependence, corporateInterests, conviction } = colonist.ideology;
+      sumEarth += earthLoyalist;
+      sumMars += marsIndependence;
+      sumCorp += corporateInterests;
+      sumConviction += conviction;
+
+      // Calculate spread (max - min affinity)
+      const max = Math.max(earthLoyalist, marsIndependence, corporateInterests);
+      const min = Math.min(earthLoyalist, marsIndependence, corporateInterests);
+      sumSpread += max - min;
+
+      // Check for dominant faction (threshold of 0.15 difference)
+      const values = [earthLoyalist, marsIndependence, corporateInterests].sort((a, b) => b - a);
+      if (values[0]! >= 0.3 && values[0]! - values[1]! >= 0.15) {
+        dominantCount++;
+      }
+
+      count++;
+    }
+
+    return {
+      sol,
+      avgEarthLoyalist: count > 0 ? sumEarth / count : 0.33,
+      avgMarsIndependence: count > 0 ? sumMars / count : 0.33,
+      avgCorporateInterests: count > 0 ? sumCorp / count : 0.33,
+      avgConviction: count > 0 ? sumConviction / count : 0,
+      avgIdeologySpread: count > 0 ? sumSpread / count : 0,
+      colonistsWithDominant: dominantCount,
+      totalColonists: count,
+      dominantFactionPct: count > 0 ? dominantCount / count : 0,
+    };
   }
 
   /**
@@ -574,6 +632,7 @@ export class SimulationRunner {
       resourceTimeline: ResourceSnapshot[];
       flowTimeline: ResourceFlowSnapshot[];
       crisisTimeline: CrisisPoint[];
+      ideologyTimeline: IdeologySnapshot[];
       buildingFirstBuiltSol: Map<string, number>;
       techCompletedSol: Map<string, number>;
       defeatSol?: number;
@@ -612,6 +671,7 @@ export class SimulationRunner {
       resourceTimeline: enhanced?.resourceTimeline,
       flowTimeline: enhanced?.flowTimeline,
       crisisTimeline: enhanced?.crisisTimeline,
+      ideologyTimeline: enhanced?.ideologyTimeline,
       buildingFirstBuiltSol:
         Object.keys(buildingFirstBuiltSolRecord).length > 0
           ? buildingFirstBuiltSolRecord
