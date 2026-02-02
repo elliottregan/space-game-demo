@@ -2,12 +2,12 @@
 withDefaults(
   defineProps<{
     title?: string;
-    accent?: "red" | "cyan" | "olive" | "amber" | "slate" | "blue";
+    accent?: "grey" | "red" | "cyan" | "olive" | "amber" | "slate" | "blue";
     glow?: boolean;
     thick?: boolean;
   }>(),
   {
-    accent: "slate",
+    accent: "grey",
     thick: false,
   },
 );
