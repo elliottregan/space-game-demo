@@ -149,3 +149,22 @@ function sharesGuild(c1: Colonist, c2: Colonist): boolean {
   if (!c1.guildIds?.length || !c2.guildIds?.length) return false;
   return c1.guildIds.some((gId) => c2.guildIds?.includes(gId));
 }
+
+/**
+ * Calculate probability of guild formation based on founder memberships.
+ * Each existing membership multiplies probability by penalty factor.
+ */
+export function calculateFormationProbability(
+  founders: readonly Colonist[],
+  baseProbability: number,
+  membershipPenalty: number,
+): number {
+  let probability = baseProbability;
+
+  for (const founder of founders) {
+    const membershipCount = founder.guildIds?.length ?? 0;
+    probability *= Math.pow(membershipPenalty, membershipCount);
+  }
+
+  return probability;
+}

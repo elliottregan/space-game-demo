@@ -4,6 +4,7 @@ import {
   determineGuildType,
   generateGuildName,
   findEligibleFounderGroups,
+  calculateFormationProbability,
 } from "../src/core/systems/workforce/guildFormation";
 import { GuildType } from "../src/core/models/Guild";
 import type { CoworkerRelationship } from "../src/core/systems/workforce/types";
@@ -208,5 +209,39 @@ describe("findEligibleFounderGroups", () => {
     const groups = findEligibleFounderGroups(colonists, relationships, 0.7);
 
     expect(groups[0].length).toBeLessThanOrEqual(4);
+  });
+});
+
+describe("calculateFormationProbability", () => {
+  it("should return base probability for founders with no guilds", () => {
+    const founders = [createColonist({ id: "c1" }), createColonist({ id: "c2" })];
+
+    const prob = calculateFormationProbability(founders, 0.5, 0.5);
+
+    expect(prob).toBe(0.5);
+  });
+
+  it("should apply penalty for each existing membership", () => {
+    const founders = [
+      createColonist({ id: "c1", guildIds: ["g1"] }), // 1 guild
+      createColonist({ id: "c2" }), // 0 guilds
+    ];
+
+    const prob = calculateFormationProbability(founders, 0.5, 0.5);
+
+    // 0.5 * 0.5 (c1's penalty) * 1.0 (c2 no penalty) = 0.25
+    expect(prob).toBe(0.25);
+  });
+
+  it("should compound penalties for multiple memberships", () => {
+    const founders = [
+      createColonist({ id: "c1", guildIds: ["g1", "g2"] }), // 2 guilds
+      createColonist({ id: "c2", guildIds: ["g3"] }), // 1 guild
+    ];
+
+    const prob = calculateFormationProbability(founders, 0.5, 0.5);
+
+    // 0.5 * (0.5^2) * (0.5^1) = 0.5 * 0.25 * 0.5 = 0.0625
+    expect(prob).toBeCloseTo(0.0625);
   });
 });
