@@ -1,10 +1,15 @@
 // src/facade/types/powerGrid.ts
 
 export interface PowerGridSnapshot {
-  readonly gridStrain: number;
-  readonly production: number;
-  readonly consumption: number;
-  readonly efficiencyMultiplier: number;
-  readonly isComfortable: boolean;
-  readonly isCritical: boolean;
+  /** Total power being produced by all active power sources */
+  readonly totalProduction: number;
+  /** Total power being consumed by all powered buildings */
+  readonly totalConsumption: number;
+  /** Count of buildings in each power state */
+  readonly buildingCounts: {
+    readonly powered: number;
+    readonly onBattery: number;
+    readonly lowBattery: number;
+    readonly unpowered: number;
+  };
 }

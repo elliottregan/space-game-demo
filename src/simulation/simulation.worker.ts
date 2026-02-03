@@ -62,6 +62,17 @@ function mapToRecord<V>(map: Map<string, V>): Record<string, V> {
 }
 
 /**
+ * Compute power grid ratio from production and consumption.
+ * Returns a value where 1.0 = production >= consumption.
+ */
+function computePowerRatio(production: number, consumption: number): number {
+  if (consumption <= 0) {
+    return production > 0 ? 1.0 : 0;
+  }
+  return Math.min(1.0, production / consumption);
+}
+
+/**
  * Message types for worker communication
  */
 export interface WorkerInput {
@@ -307,7 +318,7 @@ function runSingleGame(seed: number): RunResult {
         sol: currentSol,
         food: resources.current.food,
         water: resources.current.water,
-        powerGrid: powerGrid.gridStrain,
+        powerGrid: computePowerRatio(powerGrid.totalProduction, powerGrid.totalConsumption),
         materials: resources.current.materials,
         population: currentPop,
         morale: colony.morale,
@@ -376,11 +387,12 @@ function runSingleGame(seed: number): RunResult {
     const isolatedCount = colony.colonists.filter(
       (c) => !colony.coworkerRelationships.has(c.id),
     ).length;
+    const pgSnapshot = api.powerGrid.snapshot();
     resourcesAtDeath = {
       sol: finalSol,
       food: resources.current.food,
       water: resources.current.water,
-      powerGrid: api.powerGrid.snapshot().gridStrain,
+      powerGrid: computePowerRatio(pgSnapshot.totalProduction, pgSnapshot.totalConsumption),
       materials: resources.current.materials,
       population: colony.population,
       morale: colony.morale,

@@ -15,7 +15,6 @@ import { GridManager } from "./systems/GridManager";
 import { EventManager } from "./systems/EventManager";
 import { IdeologyManager } from "./systems/IdeologyManager";
 import { OperationsManager } from "./systems/OperationsManager";
-import { PowerGridManager } from "./systems/PowerGridManager";
 import { ResourceManager } from "./systems/ResourceManager";
 import { TechnologyTree } from "./systems/TechnologyTree";
 import { VictoryManager } from "./systems/VictoryManager";
@@ -36,7 +35,6 @@ export class GameState {
   victory: VictoryManager;
   operations: OperationsManager;
   airQuality: AirQualityManager;
-  powerGrid: PowerGridManager;
   ideology: IdeologyManager;
   earthCrisis: EarthCrisisManager;
   grid: GridManager;
@@ -79,13 +77,13 @@ export class GameState {
     this.victory = new VictoryManager();
     this.operations = new OperationsManager();
     this.airQuality = new AirQualityManager();
-    this.powerGrid = new PowerGridManager();
     this.ideology = new IdeologyManager();
     this.earthCrisis = new EarthCrisisManager();
     this.grid = new GridManager();
     this.grid.generateDeposits(Date.now()); // Use timestamp as seed for variety
     this.buildings.setIdeologyManager(this.ideology);
     this.buildings.setVictoryManager(this.victory);
+    this.buildings.setGridManager(this.grid);
 
     // Initialize tick runner
     this.tickRunner = createStandardTickRunner();
@@ -315,7 +313,6 @@ export class GameState {
         victory: this.victory,
         ideology: this.ideology,
         airQualityManager: this.airQuality,
-        powerGridManager: this.powerGrid,
         earthCrisis: this.earthCrisis,
         grid: this.grid,
       },
@@ -379,7 +376,6 @@ export class GameState {
       victory: this.victory.toJSON(),
       operations: this.operations.toJSON(),
       airQuality: this.airQuality.toJSON(),
-      powerGrid: this.powerGrid.toJSON(),
       ideology: this.ideology.toJSON(),
       earthCrisis: this.earthCrisis.toJSON(),
       grid: this.grid.toJSON(),
@@ -412,10 +408,6 @@ export class GameState {
       state.airQuality = AirQualityManager.fromJSON(data.airQuality);
     }
 
-    if (data.powerGrid) {
-      state.powerGrid = PowerGridManager.fromJSON(data.powerGrid);
-    }
-
     if (data.ideology) {
       state.ideology = IdeologyManager.fromJSON(data.ideology);
       state.buildings.setIdeologyManager(state.ideology);
@@ -430,6 +422,7 @@ export class GameState {
     }
 
     state.buildings.setVictoryManager(state.victory);
+    state.buildings.setGridManager(state.grid);
 
     if (data.autoAssignNewColonists !== undefined) {
       state.autoAssignNewColonists = data.autoAssignNewColonists;

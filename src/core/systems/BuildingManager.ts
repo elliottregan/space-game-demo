@@ -2,6 +2,7 @@ import { BUILDING_MODES, REPAIR_DURATION_SOLS } from "../balance/OperationsBalan
 import { getSkillById } from "../data/skills";
 import { type Building, type BuildingDefinition, BuildingId } from "../models/Building";
 import type { Colonist } from "../models/Colonist";
+import { PowerState } from "../models/Grid";
 import { TechnologyId } from "../models/Technology";
 import type { GameEvent } from "../models/GameEvent";
 import type { ResourceDelta } from "../models/Resources";
@@ -19,6 +20,7 @@ import {
   calculateStaffingEfficiency,
 } from "../utils/workerEfficiency";
 import type { ColonyManager } from "./ColonyManager";
+import type { GridManager } from "./GridManager";
 import type { IdeologyManager } from "./IdeologyManager";
 import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
@@ -35,8 +37,8 @@ export class BuildingManager {
   private workforceManager: WorkforceManager | null = null;
   private ideologyManager: IdeologyManager | null = null;
   private victoryManager: VictoryManager | null = null;
+  private gridManager: GridManager | null = null;
   private airQualityEfficiency: number = 1;
-  private powerGridEfficiency: number = 1;
 
   setColonyManager(colony: ColonyManager): void {
     this.colonyManager = colony;
@@ -54,16 +56,16 @@ export class BuildingManager {
     this.airQualityEfficiency = Math.max(0, Math.min(1, multiplier));
   }
 
-  setPowerGridEfficiency(multiplier: number): void {
-    this.powerGridEfficiency = Math.max(0, Math.min(1, multiplier));
-  }
-
   setIdeologyManager(ideology: IdeologyManager): void {
     this.ideologyManager = ideology;
   }
 
   setVictoryManager(victory: VictoryManager): void {
     this.victoryManager = victory;
+  }
+
+  setGridManager(grid: GridManager): void {
+    this.gridManager = grid;
   }
 
   constructor(defs: BuildingDefinition[]) {
@@ -621,7 +623,7 @@ export class BuildingManager {
 
   /**
    * Calculate the combined efficiency multiplier for a building.
-   * Factors: air quality, power grid, staffing, worker efficiency, team cohesion.
+   * Factors: air quality, staffing, worker efficiency, team cohesion.
    */
   private getBuildingEfficiencyMultiplier(buildingId: string): number {
     const building = this.buildings.get(buildingId);
@@ -629,7 +631,6 @@ export class BuildingManager {
 
     return combineMultipliers(
       this.airQualityEfficiency,
-      this.powerGridEfficiency,
       this.getStaffingEfficiency(buildingId),
       this.getWorkerEfficiency(buildingId),
       this.getTeamCohesionMultiplier(buildingId),
@@ -656,6 +657,15 @@ export class BuildingManager {
     if (!result || result.building.status !== "active" || result.building.broken) return {};
     if (!result.def.production) return {};
 
+    // Gate on power state - unpowered buildings produce nothing
+    // Only check if building is placed on grid (has a placement record)
+    if (this.gridManager) {
+      const placement = this.gridManager.getPlacement(buildingId);
+      if (placement && placement.powerState === PowerState.UNPOWERED) {
+        return {};
+      }
+    }
+
     const modeMultiplier = BUILDING_MODES[result.building.mode].production;
     const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(buildingId);
     return applyMultiplier(result.def.production, modeMultiplier * efficiencyMultiplier);
@@ -665,6 +675,15 @@ export class BuildingManager {
     const result = this.getBuildingWithDef(buildingId);
     if (!result || result.building.status !== "active" || result.building.broken) return {};
     if (!result.def.consumption) return {};
+
+    // Gate on power state - unpowered buildings consume nothing
+    // Only check if building is placed on grid (has a placement record)
+    if (this.gridManager) {
+      const placement = this.gridManager.getPlacement(buildingId);
+      if (placement && placement.powerState === PowerState.UNPOWERED) {
+        return {};
+      }
+    }
 
     const modeMultiplier = BUILDING_MODES[result.building.mode].consumption;
     const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(buildingId);

@@ -773,10 +773,17 @@ export class HeuristicStrategy {
     // Establish materials production early via basic mines
     if (this.handleMaterialsProduction()) return true;
 
-    // Build solar panel if power grid is strained (< 80% comfortable threshold)
+    // Build solar panel if we have unpowered buildings or production is near consumption
     const powerGrid = this.api.powerGrid.snapshot();
-    if (powerGrid.gridStrain < 0.9) {
-      // Want some headroom above the 0.8 comfortable threshold
+    const hasUnpowered = powerGrid.buildingCounts.unpowered > 0;
+    const productionRatio =
+      powerGrid.totalConsumption > 0
+        ? powerGrid.totalProduction / powerGrid.totalConsumption
+        : powerGrid.totalProduction > 0
+          ? 1.0
+          : 0;
+    // Build more solar panels if we have unpowered buildings or less than 20% headroom
+    if (hasUnpowered || productionRatio < 1.2) {
       if (this.tryBuild(BuildingId.SOLAR_PANEL, "infrastructure")) return true;
     }
 
