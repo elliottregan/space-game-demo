@@ -303,8 +303,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     description:
       "Extends transit connectivity to distant buildings, allowing colonists to commute across gaps in the base layout.",
     cost: {
-      materials: -200,
-      power: -5,
+      materials: 200,
     },
     constructionTime: 8,
     powerConsumption: 5,
