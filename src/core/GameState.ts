@@ -81,6 +81,7 @@ export class GameState {
     this.earthCrisis = new EarthCrisisManager();
     this.grid = new GridManager();
     this.grid.generateDeposits(Date.now()); // Use timestamp as seed for variety
+    this.buildings.setGridManager(this.grid);
     this.buildings.setIdeologyManager(this.ideology);
     this.buildings.setVictoryManager(this.victory);
     this.buildings.setGridManager(this.grid);
@@ -99,6 +100,9 @@ export class GameState {
 
     // Place starting buildings on the grid
     this.placeStartingBuildingsOnGrid();
+
+    // Initialize transit clusters for starting buildings
+    this.buildings.triggerClusterUpdate();
 
     // Initialize colonist consumption (without triggering population growth)
     this.colony.updateConsumption(this.resources);
@@ -420,6 +424,10 @@ export class GameState {
     if (data.grid) {
       state.grid.fromJSON(data.grid);
     }
+
+    // Re-establish grid manager reference and update clusters after grid is restored
+    state.buildings.setGridManager(state.grid);
+    state.buildings.triggerClusterUpdate();
 
     state.buildings.setVictoryManager(state.victory);
     state.buildings.setGridManager(state.grid);
