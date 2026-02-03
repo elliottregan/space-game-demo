@@ -297,6 +297,20 @@ export const BUILDINGS: BuildingDefinition[] = [
     purpose: BuildingPurpose.Social,
     bondingStrength: 1.2,
   },
+  {
+    id: BuildingId.ROVER_DEPOT,
+    name: "Rover Depot",
+    description:
+      "Extends transit connectivity to distant buildings, allowing colonists to commute across gaps in the base layout.",
+    cost: {
+      materials: -200,
+      power: -5,
+    },
+    constructionTime: 8,
+    powerConsumption: 5,
+    depotRange: 3,
+    purpose: BuildingPurpose.Industrial,
+  },
 
   // Victory Megastructures (unlocked by capstone projects)
   {

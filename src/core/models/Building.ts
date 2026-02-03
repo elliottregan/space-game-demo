@@ -26,6 +26,7 @@ export enum BuildingId {
   HYDROPONIC_GARDEN = "hydroponic_garden",
   OBSERVATORY_DOME = "observatory_dome",
   ASSEMBLY_HALL = "assembly_hall",
+  ROVER_DEPOT = "rover_depot",
   // Victory megastructures
   GENERATION_SHIP = "generation_ship",
   UNITED_MARS_STATION = "united_mars_station",
@@ -64,6 +65,8 @@ export interface BuildingDefinition {
   bondingStrength?: number; // Multiplier for relationship growth rate (default 1.0)
   requiredProject?: ProjectId; // Project that must be passed to unlock
   isVictoryBuilding?: boolean; // Completing this building wins the game
+  /** Range in tiles for extending transit connectivity */
+  depotRange?: number;
 }
 
 export interface Building {
