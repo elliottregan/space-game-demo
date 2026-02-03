@@ -29,6 +29,7 @@ import type {
   GuildSnapshot,
   AggregatedGuildSnapshot,
   GuildAnalysis,
+  ActionsPerSolAnalysis,
 } from "../src/simulation/types";
 import type { ColonistIdeology } from "../src/core/models/Colonist";
 
@@ -160,7 +161,9 @@ function runSingleGame(seed: number): RunResult {
 
   let solsRun = 0;
   while (!api.game.isGameOver() && solsRun < 5000) {
-    strategy.executeTick();
+    // Execute strategy tick (make decisions) and record the action taken
+    const tickResult = strategy.executeTick();
+    strategy.recordAction(tickResult);
     api.game.advanceSol();
     solsRun++;
 
@@ -338,6 +341,7 @@ function runSingleGame(seed: number): RunResult {
   // Get tracked data from strategy
   const blockedDecisions = strategy.getBlockedDecisions();
   const eventsOccurred = strategy.getEventsOccurred();
+  const actionsExecuted = strategy.getExecutedActions();
 
   return {
     seed,
@@ -362,6 +366,7 @@ function runSingleGame(seed: number): RunResult {
     eventsOccurred: eventsOccurred.length > 0 ? eventsOccurred : undefined,
     ideologyTimeline: ideologyTimeline.length > 0 ? ideologyTimeline : undefined,
     earthCrisisSeverity,
+    actionsExecuted: actionsExecuted.length > 0 ? actionsExecuted : undefined,
   };
 }
 
@@ -1246,6 +1251,90 @@ function computeGuildAnalysis(results: RunResult[]): GuildAnalysis {
 }
 
 /**
+ * Compute actions per sol analysis statistics.
+ */
+function computeActionsPerSolAnalysis(results: RunResult[]): ActionsPerSolAnalysis {
+  const actionsPerSolList: number[] = [];
+  const actionsByCategory: Record<string, number> = {};
+  const actionsOverTimeMap = new Map<number, { total: number; count: number }>();
+
+  // Calculate actions per sol for each run
+  for (const result of results) {
+    if (!result.actionsExecuted || result.actionsExecuted.length === 0) continue;
+
+    // Count non-idle actions
+    const nonIdleActions = result.actionsExecuted.filter((a) => a.category !== "idle");
+    const finalSol = result.finalSol;
+
+    if (finalSol > 0) {
+      const actionsPerSol = nonIdleActions.length / finalSol;
+      actionsPerSolList.push(actionsPerSol);
+    }
+
+    // Count by category
+    for (const action of result.actionsExecuted) {
+      actionsByCategory[action.category] = (actionsByCategory[action.category] ?? 0) + 1;
+    }
+
+    // Track actions over time (at intervals)
+    const actionsBySol = new Map<number, number>();
+    for (const action of result.actionsExecuted) {
+      if (action.category === "idle") continue;
+      const solBucket = Math.floor(action.sol / 50) * 50; // 50-sol buckets
+      actionsBySol.set(solBucket, (actionsBySol.get(solBucket) ?? 0) + 1);
+    }
+
+    for (const [sol, count] of actionsBySol) {
+      const existing = actionsOverTimeMap.get(sol) ?? { total: 0, count: 0 };
+      existing.total += count / 50; // Actions per sol in this bucket
+      existing.count++;
+      actionsOverTimeMap.set(sol, existing);
+    }
+  }
+
+  // Compute stats
+  const avgActionsPerSol =
+    actionsPerSolList.length > 0
+      ? actionsPerSolList.reduce((a, b) => a + b, 0) / actionsPerSolList.length
+      : 0;
+  const minActionsPerSol = actionsPerSolList.length > 0 ? Math.min(...actionsPerSolList) : 0;
+  const maxActionsPerSol = actionsPerSolList.length > 0 ? Math.max(...actionsPerSolList) : 0;
+
+  // Create histogram (actions per sol distribution)
+  const histogramBuckets = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+  const histogram: Array<{ range: string; count: number }> = [];
+  let prevBucket = 0;
+  for (const bucket of histogramBuckets) {
+    const count = actionsPerSolList.filter((v) => v > prevBucket && v <= bucket).length;
+    histogram.push({ range: `${prevBucket.toFixed(1)}-${bucket.toFixed(1)}`, count });
+    prevBucket = bucket;
+  }
+  // Overflow bucket
+  const overflow = actionsPerSolList.filter((v) => v > 1.0).length;
+  if (overflow > 0) {
+    histogram.push({ range: "1.0+", count: overflow });
+  }
+
+  // Actions over time
+  const actionsOverTime = Array.from(actionsOverTimeMap.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([sol, data]) => ({
+      sol,
+      avgActions: data.count > 0 ? data.total / data.count : 0,
+      runsActive: data.count,
+    }));
+
+  return {
+    avgActionsPerSol,
+    minActionsPerSol,
+    maxActionsPerSol,
+    actionsByCategory,
+    histogram,
+    actionsOverTime,
+  };
+}
+
+/**
  * Write analysis data as gzipped JSON for visualization.
  */
 async function writeJsonOutput(results: RunResult[], runs: number, seed: number): Promise<string> {
@@ -1369,6 +1458,7 @@ async function writeJsonOutput(results: RunResult[], runs: number, seed: number)
       socialCohesion: computeSocialCohesion(results),
       ideology: computeIdeologyAnalysis(results),
       guilds: computeGuildAnalysis(results),
+      actionsPerSol: computeActionsPerSolAnalysis(results),
     },
   };
 
@@ -1865,6 +1955,84 @@ function analyzeIdeology(results: RunResult[]): void {
 }
 
 /**
+ * Analyze actions per sol patterns across runs.
+ */
+function analyzeActionsPerSol(results: RunResult[]): void {
+  output("\n[Actions Per Sol Analysis]");
+  output("-".repeat(40));
+
+  const actionsPerSolList: number[] = [];
+  const actionsByCategory: Record<string, number> = {};
+  let totalActions = 0;
+  let totalIdleActions = 0;
+
+  for (const result of results) {
+    if (!result.actionsExecuted || result.actionsExecuted.length === 0) continue;
+
+    const nonIdleActions = result.actionsExecuted.filter((a) => a.category !== "idle");
+    const idleActions = result.actionsExecuted.filter((a) => a.category === "idle");
+    const finalSol = result.finalSol;
+
+    if (finalSol > 0) {
+      actionsPerSolList.push(nonIdleActions.length / finalSol);
+    }
+
+    totalActions += nonIdleActions.length;
+    totalIdleActions += idleActions.length;
+
+    for (const action of result.actionsExecuted) {
+      if (action.category !== "idle") {
+        actionsByCategory[action.category] = (actionsByCategory[action.category] ?? 0) + 1;
+      }
+    }
+  }
+
+  if (actionsPerSolList.length === 0) {
+    output("  No action data available");
+    return;
+  }
+
+  const avgActionsPerSol =
+    actionsPerSolList.reduce((a, b) => a + b, 0) / actionsPerSolList.length;
+  const minActionsPerSol = Math.min(...actionsPerSolList);
+  const maxActionsPerSol = Math.max(...actionsPerSolList);
+
+  output(`  Avg Actions per Sol: ${avgActionsPerSol.toFixed(3)}`);
+  output(`  Min Actions per Sol: ${minActionsPerSol.toFixed(3)}`);
+  output(`  Max Actions per Sol: ${maxActionsPerSol.toFixed(3)}`);
+  output(`  Total Actions: ${totalActions}`);
+  output(`  Total Idle Sols: ${totalIdleActions}`);
+
+  const idlePct = ((totalIdleActions / (totalActions + totalIdleActions)) * 100).toFixed(1);
+  output(`  Idle Percentage: ${idlePct}%`);
+
+  output("\n  Actions by Category:");
+  const sortedCategories = Object.entries(actionsByCategory).sort((a, b) => b[1] - a[1]);
+  for (const [category, count] of sortedCategories) {
+    const pct = ((count / totalActions) * 100).toFixed(1);
+    output(`    ${category.padEnd(15)} ${count} (${pct}%)`);
+  }
+
+  // Distribution histogram
+  output("\n  Actions per Sol Distribution:");
+  const buckets = [0.2, 0.4, 0.6, 0.8, 1.0];
+  let prevBucket = 0;
+  for (const bucket of buckets) {
+    const count = actionsPerSolList.filter((v) => v > prevBucket && v <= bucket).length;
+    const bar = "#".repeat(Math.ceil(count / 3));
+    output(
+      `  ${prevBucket.toFixed(1)}-${bucket.toFixed(1)}: ${bar} (${count})`,
+    );
+    prevBucket = bucket;
+  }
+  const overflow = actionsPerSolList.filter((v) => v > 1.0).length;
+  if (overflow > 0) {
+    const bar = "#".repeat(Math.ceil(overflow / 3));
+    output(`  1.0+: ${bar} (${overflow})`);
+  }
+}
+
+/**
  * Analyze guild formation patterns across runs.
  */
 function analyzeGuilds(results: RunResult[]): void {
@@ -2112,6 +2280,7 @@ async function main(): Promise<void> {
   analyzeSocialCohesion(results);
   analyzeIdeology(results);
   analyzeGuilds(results);
+  analyzeActionsPerSol(results);
 
   output("\n" + "=".repeat(60));
 

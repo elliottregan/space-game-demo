@@ -268,8 +268,9 @@ function runSingleGame(seed: number): RunResult {
   // Game loop
   let solsRun = 0;
   while (!api.game.isGameOver() && solsRun < MAX_SOLS) {
-    // Execute strategy tick (make decisions)
-    strategy.executeTick();
+    // Execute strategy tick (make decisions) and record the action taken
+    const tickResult = strategy.executeTick();
+    strategy.recordAction(tickResult);
 
     // Advance sol
     api.game.advanceSol();
@@ -402,9 +403,10 @@ function runSingleGame(seed: number): RunResult {
     };
   }
 
-  // Get blocked decisions and events from strategy
+  // Get blocked decisions, events, and executed actions from strategy
   const blockedDecisions = strategy.getBlockedDecisions();
   const eventsOccurred = strategy.getEventsOccurred();
+  const actionsExecuted = strategy.getExecutedActions();
 
   // Capture earth crisis severity at game end
   const earthCrisisSeverity = api.game.earthCrisisSeverity();
@@ -440,6 +442,7 @@ function runSingleGame(seed: number): RunResult {
     eventsOccurred: eventsOccurred?.length ? eventsOccurred : undefined,
     ideologyTimeline: ideologyTimeline.length > 0 ? ideologyTimeline : undefined,
     earthCrisisSeverity,
+    actionsExecuted: actionsExecuted?.length ? actionsExecuted : undefined,
   };
 }
 

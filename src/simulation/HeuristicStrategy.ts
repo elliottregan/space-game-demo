@@ -9,7 +9,7 @@ import { getProjectsByFaction } from "../core/data/projects";
 import { rng } from "../core/utils/random";
 import type { GameAPI } from "../facade/GameAPI";
 import type { IdeologySnapshot } from "../facade/types/ideology";
-import type { BlockedDecision, EventOccurrence } from "./types";
+import type { ActionCategory, BlockedDecision, EventOccurrence, ExecutedAction } from "./types";
 
 // Center of the grid (5,5) for power source placement preference
 const GRID_CENTER: GridPosition = { x: 5, y: 5 };
@@ -59,9 +59,18 @@ export interface StrategyOptions {
   targetFaction?: NPCFaction;
 }
 
+/**
+ * Result of executing a strategy tick.
+ */
+export interface TickResult {
+  category: ActionCategory;
+  action: string;
+}
+
 export class HeuristicStrategy {
   private blockedDecisions: BlockedDecision[] = [];
   private eventsOccurred: EventOccurrence[] = [];
+  private executedActions: ExecutedAction[] = [];
 
   // Per-tick cache for hasBuilding() - avoids repeated snapshot() and O(n) searches
   private cachedBuildingIds: Set<BuildingId> | null = null;
@@ -99,6 +108,24 @@ export class HeuristicStrategy {
    */
   getEventsOccurred(): EventOccurrence[] {
     return this.eventsOccurred;
+  }
+
+  /**
+   * Get all actions executed during this game.
+   */
+  getExecutedActions(): ExecutedAction[] {
+    return this.executedActions;
+  }
+
+  /**
+   * Record an executed action for this sol.
+   */
+  recordAction(result: TickResult): void {
+    this.executedActions.push({
+      sol: this.api.game.currentSol(),
+      category: result.category,
+      action: result.action,
+    });
   }
 
   /**
@@ -306,8 +333,9 @@ export class HeuristicStrategy {
   /**
    * Main entry point - called each tick to make decisions.
    * Executes priority handlers in order until one takes action.
+   * @returns The action taken this tick, or idle if no action was needed
    */
-  executeTick(): void {
+  executeTick(): TickResult {
     // Invalidate per-tick caches
     this.cachedBuildingIds = null;
 
@@ -315,31 +343,48 @@ export class HeuristicStrategy {
     this.handleWorkerAssignment();
 
     // TOP PRIORITY: If capstone is completed, build megastructure to win!
-    if (this.committedFaction && this.tryBuildMegastructureIfReady()) return;
+    if (this.committedFaction && this.tryBuildMegastructureIfReady()) {
+      return { category: "victory", action: "build_megastructure" };
+    }
 
     // Early game bootstrap: ensure at least one farm and oxygen generator exist
     const currentSol = this.api.game.currentSol();
-    if (currentSol < 50 && this.handleEarlyGameBootstrap()) return;
+    if (currentSol < 50) {
+      const bootstrapResult = this.handleEarlyGameBootstrapWithResult();
+      if (bootstrapResult) return bootstrapResult;
+    }
 
     // Execute priority handlers in order
-    if (this.handleSurvival()) return;
-    if (this.handleEventResolution()) return;
-    if (this.handleMorale()) return;
+    const survivalResult = this.handleSurvivalWithResult();
+    if (survivalResult) return survivalResult;
+
+    const eventResult = this.handleEventResolutionWithResult();
+    if (eventResult) return eventResult;
+
+    const moraleResult = this.handleMoraleWithResult();
+    if (moraleResult) return moraleResult;
 
     // After basic needs, alternate between infrastructure and ideology
     // This ensures political progress happens alongside building
     if (currentSol % 2 === 0) {
-      if (this.handleIdeologyVictory()) return;
-      if (this.handleInfrastructure()) return;
+      const ideologyResult = this.handleIdeologyVictoryWithResult();
+      if (ideologyResult) return ideologyResult;
+      const infraResult = this.handleInfrastructureWithResult();
+      if (infraResult) return infraResult;
     } else {
-      if (this.handleInfrastructure()) return;
-      if (this.handleIdeologyVictory()) return;
+      const infraResult = this.handleInfrastructureWithResult();
+      if (infraResult) return infraResult;
+      const ideologyResult = this.handleIdeologyVictoryWithResult();
+      if (ideologyResult) return ideologyResult;
     }
 
     // Growth is lower priority - don't grow if we're saving for megastructure
     if (!this.shouldReserveMaterials()) {
-      if (this.handleGrowth()) return;
+      const growthResult = this.handleGrowthWithResult();
+      if (growthResult) return growthResult;
     }
+
+    return { category: "idle", action: "none" };
   }
 
   /**
@@ -389,6 +434,14 @@ export class HeuristicStrategy {
    * @returns true if an action was taken
    */
   private handleEarlyGameBootstrap(): boolean {
+    return this.handleEarlyGameBootstrapWithResult() !== null;
+  }
+
+  /**
+   * Early game bootstrap with action result tracking.
+   * @returns TickResult if an action was taken, null otherwise
+   */
+  private handleEarlyGameBootstrapWithResult(): TickResult | null {
     const buildings = this.api.buildings.snapshot();
 
     // Count active and pending survival buildings
@@ -408,16 +461,20 @@ export class HeuristicStrategy {
     // Critical: must have at least 1 farm and 1 oxygen generator
     // If missing either, try to build it immediately
     if (farmCount === 0) {
-      if (this.tryBuild(BuildingId.BASIC_FARM, "survival", false)) return true;
+      if (this.tryBuild(BuildingId.BASIC_FARM, "survival", false)) {
+        return { category: "survival", action: "build_basic_farm" };
+      }
     }
 
     if (oxygenGenCount === 0) {
-      if (this.tryBuild(BuildingId.OXYGEN_GENERATOR, "survival", false)) return true;
+      if (this.tryBuild(BuildingId.OXYGEN_GENERATOR, "survival", false)) {
+        return { category: "survival", action: "build_oxygen_generator" };
+      }
     }
 
     // If we have basic infrastructure, allow normal flow
     // The regular handleSurvival will continue building more as needed
-    return false;
+    return null;
   }
 
   /**
@@ -494,6 +551,14 @@ export class HeuristicStrategy {
    * @returns true if an action was taken
    */
   private handleSurvival(): boolean {
+    return this.handleSurvivalWithResult() !== null;
+  }
+
+  /**
+   * Priority 1 - Survival with action result tracking.
+   * @returns TickResult if an action was taken, null otherwise
+   */
+  private handleSurvivalWithResult(): TickResult | null {
     const resources = this.api.resources.snapshot();
     const buildings = this.api.buildings.snapshot();
     const currentFood = resources.current.food;
@@ -508,33 +573,43 @@ export class HeuristicStrategy {
 
     // Handle water production early - needed for morale recovery
     if (this.handleWaterProduction(waterProduction, waterConsumption, currentWater)) {
-      return true;
+      return { category: "survival", action: "build_water_extractor" };
     }
 
     const foodFlow = foodProduction - foodConsumption;
 
     // Critical food shortage
     if (currentFood < 50 || foodFlow < 0) {
-      if (this.tryBuild(BuildingId.BASIC_FARM, "survival", false)) return true;
+      if (this.tryBuild(BuildingId.BASIC_FARM, "survival", false)) {
+        return { category: "survival", action: "build_basic_farm" };
+      }
     }
 
     // Maintain positive flow with buffer for food
     // Food needs buffer of 4 to handle population growth and events
     if (foodFlow < 4) {
-      if (this.tryBuild(BuildingId.BASIC_FARM, "survival")) return true;
+      if (this.tryBuild(BuildingId.BASIC_FARM, "survival")) {
+        return { category: "survival", action: "build_basic_farm" };
+      }
     }
 
     // Air contribution needs to be maintained for air quality
     if (airContribution < 6) {
       // Oxygen generator provides the most air contribution
-      if (this.tryBuild(BuildingId.OXYGEN_GENERATOR, "survival")) return true;
+      if (this.tryBuild(BuildingId.OXYGEN_GENERATOR, "survival")) {
+        return { category: "survival", action: "build_oxygen_generator" };
+      }
       // Hydroponic garden provides air contribution without workers
-      if (this.tryBuild(BuildingId.HYDROPONIC_GARDEN, "survival")) return true;
+      if (this.tryBuild(BuildingId.HYDROPONIC_GARDEN, "survival")) {
+        return { category: "survival", action: "build_hydroponic_garden" };
+      }
       // Farm provides food AND air contribution (if workers are assigned)
-      if (this.tryBuild(BuildingId.BASIC_FARM, "survival")) return true;
+      if (this.tryBuild(BuildingId.BASIC_FARM, "survival")) {
+        return { category: "survival", action: "build_basic_farm" };
+      }
     }
 
-    return false;
+    return null;
   }
 
   /**
@@ -582,18 +657,26 @@ export class HeuristicStrategy {
    * @returns true if an event was resolved
    */
   private handleEventResolution(): boolean {
+    return this.handleEventResolutionWithResult() !== null;
+  }
+
+  /**
+   * Priority 2 - Event Resolution with action result tracking.
+   * @returns TickResult if an event was resolved, null otherwise
+   */
+  private handleEventResolutionWithResult(): TickResult | null {
     if (!this.api.events.hasActive()) {
-      return false;
+      return null;
     }
 
     const activeEvent = this.api.events.getActive();
     if (!activeEvent) {
-      return false;
+      return null;
     }
 
     const choices = activeEvent.choices;
     if (choices.length === 0) {
-      return false;
+      return null;
     }
 
     // Pick the best choice:
@@ -624,7 +707,7 @@ export class HeuristicStrategy {
       effects,
     });
 
-    return true;
+    return { category: "event", action: `resolve_${activeEvent.definition.id}` };
   }
 
   /**
@@ -693,6 +776,14 @@ export class HeuristicStrategy {
    * @returns true if an action was taken
    */
   private handleMorale(): boolean {
+    return this.handleMoraleWithResult() !== null;
+  }
+
+  /**
+   * Priority 3 - Morale with action result tracking.
+   * @returns TickResult if an action was taken, null otherwise
+   */
+  private handleMoraleWithResult(): TickResult | null {
     const colony = this.api.colony.snapshot({ lightweight: true });
     const buildings = this.api.buildings.snapshot();
 
@@ -700,7 +791,7 @@ export class HeuristicStrategy {
     const MORALE_TARGET = 70;
 
     // Don't build recreation if morale is healthy
-    if (colony.morale >= MORALE_TARGET) return false;
+    if (colony.morale >= MORALE_TARGET) return null;
 
     // Calculate current morale boost from buildings
     const currentMoraleBoost = buildings.moraleBoost;
@@ -711,7 +802,7 @@ export class HeuristicStrategy {
     // We want enough boost to recover morale reliably
 
     // If we already have decent morale boost (15+), don't over-build
-    if (currentMoraleBoost >= 15 && colony.morale > 50) return false;
+    if (currentMoraleBoost >= 15 && colony.morale > 50) return null;
 
     // Build recreation buildings in order of cost-effectiveness
     // COMMON_ROOM: 60 materials, +5 boost (0.083 boost per material)
@@ -720,20 +811,26 @@ export class HeuristicStrategy {
 
     // Start with common room - cheapest and good boost
     if (!this.hasBuilding(BuildingId.COMMON_ROOM)) {
-      if (this.tryBuild(BuildingId.COMMON_ROOM, "morale")) return true;
+      if (this.tryBuild(BuildingId.COMMON_ROOM, "morale")) {
+        return { category: "morale", action: "build_common_room" };
+      }
     }
 
     // Then gymnasium for additional boost
     if (!this.hasBuilding(BuildingId.GYMNASIUM)) {
-      if (this.tryBuild(BuildingId.GYMNASIUM, "morale")) return true;
+      if (this.tryBuild(BuildingId.GYMNASIUM, "morale")) {
+        return { category: "morale", action: "build_gymnasium" };
+      }
     }
 
     // Observatory dome if we have tech and need more boost
     if (currentMoraleBoost < 15) {
-      if (this.tryBuild(BuildingId.OBSERVATORY_DOME, "morale", false)) return true;
+      if (this.tryBuild(BuildingId.OBSERVATORY_DOME, "morale", false)) {
+        return { category: "morale", action: "build_observatory_dome" };
+      }
     }
 
-    return false;
+    return null;
   }
 
   /**
@@ -741,6 +838,14 @@ export class HeuristicStrategy {
    * @returns true if an action was taken
    */
   private handleInfrastructure(): boolean {
+    return this.handleInfrastructureWithResult() !== null;
+  }
+
+  /**
+   * Priority 4 - Infrastructure with action result tracking.
+   * @returns TickResult if an action was taken, null otherwise
+   */
+  private handleInfrastructureWithResult(): TickResult | null {
     const techSnapshot = this.api.technology.snapshot();
     const resources = this.api.resources.snapshot();
 
@@ -754,7 +859,7 @@ export class HeuristicStrategy {
         const cheapest = affordableTechs[0];
         if (cheapest) {
           this.api.technology.startResearch(cheapest.id);
-          return true;
+          return { category: "infrastructure", action: `research_${cheapest.id}` };
         }
       } else {
         // All available techs are blocked - record first one
@@ -771,7 +876,9 @@ export class HeuristicStrategy {
     }
 
     // Establish materials production early via basic mines
-    if (this.handleMaterialsProduction()) return true;
+    if (this.handleMaterialsProduction()) {
+      return { category: "infrastructure", action: "build_basic_mine" };
+    }
 
     // Build solar panel if we have unpowered buildings or production is near consumption
     const powerGrid = this.api.powerGrid.snapshot();
@@ -784,15 +891,19 @@ export class HeuristicStrategy {
           : 0;
     // Build more solar panels if we have unpowered buildings or less than 20% headroom
     if (hasUnpowered || productionRatio < 1.2) {
-      if (this.tryBuild(BuildingId.SOLAR_PANEL, "infrastructure")) return true;
+      if (this.tryBuild(BuildingId.SOLAR_PANEL, "infrastructure")) {
+        return { category: "infrastructure", action: "build_solar_panel" };
+      }
     }
 
     // Build mining station for more materials (requires asteroid_mining tech)
     if (resources.current.materials < 100) {
-      if (this.tryBuild(BuildingId.MINING_STATION, "infrastructure")) return true;
+      if (this.tryBuild(BuildingId.MINING_STATION, "infrastructure")) {
+        return { category: "infrastructure", action: "build_mining_station" };
+      }
     }
 
-    return false;
+    return null;
   }
 
   /**
@@ -800,11 +911,19 @@ export class HeuristicStrategy {
    * @returns true if an action was taken
    */
   private handleGrowth(): boolean {
+    return this.handleGrowthWithResult() !== null;
+  }
+
+  /**
+   * Priority 5 - Growth with action result tracking.
+   * @returns TickResult if an action was taken, null otherwise
+   */
+  private handleGrowthWithResult(): TickResult | null {
     const colony = this.api.colony.snapshot({ lightweight: true });
     const resources = this.api.resources.snapshot();
 
     // Only grow if population < 100 and morale > 60
-    if (colony.population >= 100 || colony.morale <= 60) return false;
+    if (colony.population >= 100 || colony.morale <= 60) return null;
 
     // Calculate resource surpluses
     const foodSurplus = (resources.production.food ?? 0) - (resources.consumption.food ?? 0);
@@ -812,19 +931,25 @@ export class HeuristicStrategy {
     // Need at least 4 food surplus before growing (increased from 2)
     // This prevents building habitats when food is barely sufficient
     if (foodSurplus < 4) {
-      if (this.tryBuild(BuildingId.BASIC_FARM, "growth", false)) return true;
+      if (this.tryBuild(BuildingId.BASIC_FARM, "growth", false)) {
+        return { category: "growth", action: "build_basic_farm" };
+      }
     }
 
     // Also check food stockpile - don't grow if food is low
     if (resources.current.food < 80) {
-      if (this.tryBuild(BuildingId.BASIC_FARM, "growth", false)) return true;
-      return false; // Don't build habitat if food stockpile is low
+      if (this.tryBuild(BuildingId.BASIC_FARM, "growth", false)) {
+        return { category: "growth", action: "build_basic_farm" };
+      }
+      return null; // Don't build habitat if food stockpile is low
     }
 
     // Build habitat to grow population
-    if (this.tryBuild(BuildingId.HABITAT, "growth")) return true;
+    if (this.tryBuild(BuildingId.HABITAT, "growth")) {
+      return { category: "growth", action: "build_habitat" };
+    }
 
-    return false;
+    return null;
   }
 
   /**
@@ -840,10 +965,18 @@ export class HeuristicStrategy {
    * @returns true if an action was taken
    */
   private handleIdeologyVictory(): boolean {
+    return this.handleIdeologyVictoryWithResult() !== null;
+  }
+
+  /**
+   * Ideology Victory with action result tracking.
+   * @returns TickResult if an action was taken, null otherwise
+   */
+  private handleIdeologyVictoryWithResult(): TickResult | null {
     const ideologySnapshot = this.api.ideology.snapshot();
     const council = ideologySnapshot.council;
 
-    if (council.length === 0) return false; // No council yet
+    if (council.length === 0) return null; // No council yet
 
     // Step 1: Check/update faction commitment (commit early!)
     if (!this.committedFaction) {
@@ -852,14 +985,16 @@ export class HeuristicStrategy {
         // Still opportunistic - aggressively lobby for the leading faction
         const leadingFaction = this.getLeadingFaction(ideologySnapshot);
         if (leadingFaction) {
-          return this.tryLobbyForFaction(leadingFaction);
+          if (this.tryLobbyForFaction(leadingFaction)) {
+            return { category: "victory", action: "lobby_faction" };
+          }
         }
-        return false;
+        return null;
       }
     }
 
     // Step 2: Try to advance toward victory
-    return this.advanceFactionVictory(this.committedFaction);
+    return this.advanceFactionVictoryWithResult(this.committedFaction);
   }
 
   /**
@@ -958,6 +1093,14 @@ export class HeuristicStrategy {
    * @returns true if an action was taken
    */
   private advanceFactionVictory(faction: NPCFaction): boolean {
+    return this.advanceFactionVictoryWithResult(faction) !== null;
+  }
+
+  /**
+   * Advance faction victory with action result tracking.
+   * @returns TickResult if an action was taken, null otherwise
+   */
+  private advanceFactionVictoryWithResult(faction: NPCFaction): TickResult | null {
     const completedProjects = this.api.ideology.getCompletedProjects();
     const failedProposals = this.api.ideology.getFailedProposals();
     const pendingProposals = this.api.ideology.getPendingProposals();
@@ -971,7 +1114,7 @@ export class HeuristicStrategy {
     // Step 0: If capstone is completed, build megastructure to win!
     if (completedProjects.includes(capstoneId)) {
       if (this.tryBuildMegastructure(megastructureId)) {
-        return true;
+        return { category: "victory", action: `build_${megastructureId}` };
       }
     }
 
@@ -987,13 +1130,13 @@ export class HeuristicStrategy {
     // This is critical because we can't pass capstone without 65% support
     if (needsMoreSupport) {
       if (this.tryLobbyForFaction(faction)) {
-        return true;
+        return { category: "victory", action: "lobby_faction" };
       }
     }
 
     // Step 2: Clear failed proposals that now have favorable vote projection
     if (this.clearRetryableProposals(faction, failedProposals)) {
-      return true;
+      return { category: "victory", action: "clear_failed_proposal" };
     }
 
     // Step 3: Check if we can propose a prerequisite
@@ -1003,16 +1146,16 @@ export class HeuristicStrategy {
       if (failedProposals.includes(project.id)) continue;
 
       if (this.tryProposeProject(project.id)) {
-        return true;
+        return { category: "victory", action: `propose_${project.id}` };
       }
     }
 
     // Step 4: Check if capstone is ready (need 65% + all prerequisites)
     if (this.tryProposeCapstone(capstoneId)) {
-      return true;
+      return { category: "victory", action: `propose_${capstoneId}` };
     }
 
-    return false;
+    return null;
   }
 
   /**
