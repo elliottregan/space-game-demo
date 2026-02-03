@@ -640,16 +640,40 @@ export class HeuristicStrategy {
    * Uses grid-based deposit placement instead of Operations site workflow.
    * @returns true if an action was taken
    */
-  private handleMaterialsProduction(): boolean {
+  /**
+   * Handle materials production - ensure adequate materials flow.
+   * Target at least 10 materials/sol production to sustain mid-game expansion.
+   * Progression: Basic Mine (4/sol) → 3D Fabricator (7/sol) → Automated Factory (15/sol)
+   * @returns the building ID that was started, or null if nothing was built
+   */
+  private handleMaterialsProduction(): BuildingId | null {
     const resources = this.api.resources.snapshot();
     const materialsProd = resources.production.materials ?? 0;
 
-    // Already have materials production
-    if (materialsProd > 0) return false;
+    // Target minimum production rate for sustainable expansion
+    const TARGET_MATERIALS_PRODUCTION = 10;
 
-    // Try to build basic mine on an available mineral deposit
-    // tryBuild() will automatically find an available mineral deposit via findBestPosition()
-    return this.tryBuild(BuildingId.BASIC_MINE, "infrastructure");
+    // If we have enough production, don't build more
+    if (materialsProd >= TARGET_MATERIALS_PRODUCTION) return null;
+
+    // Try advanced buildings first (better ROI if tech is available)
+    // Automated Factory: 15/sol, no workers needed, requires ROBOTICS
+    if (this.tryBuild(BuildingId.AUTOMATED_FACTORY, "infrastructure", false)) {
+      return BuildingId.AUTOMATED_FACTORY;
+    }
+
+    // 3D Fabricator: 7/sol, requires ADVANCED_MATERIALS
+    if (this.tryBuild(BuildingId.FABRICATOR_3D, "infrastructure", false)) {
+      return BuildingId.FABRICATOR_3D;
+    }
+
+    // Basic Mine: 4/sol, requires mineral deposit
+    // Build multiple mines to reach target production
+    if (this.tryBuild(BuildingId.BASIC_MINE, "infrastructure")) {
+      return BuildingId.BASIC_MINE;
+    }
+
+    return null;
   }
 
   /**
@@ -875,9 +899,10 @@ export class HeuristicStrategy {
       }
     }
 
-    // Establish materials production early via basic mines
-    if (this.handleMaterialsProduction()) {
-      return { category: "infrastructure", action: "build_basic_mine" };
+    // Establish materials production - build mines, fabricators, or factories
+    const materialsBuilding = this.handleMaterialsProduction();
+    if (materialsBuilding) {
+      return { category: "infrastructure", action: `build_${materialsBuilding}` };
     }
 
     // Build solar panel if we have unpowered buildings or production is near consumption
