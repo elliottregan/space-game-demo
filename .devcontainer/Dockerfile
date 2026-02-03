@@ -6,7 +6,7 @@ RUN apk add --no-cache \
     # Claude Code dependencies for native install
     libgcc libstdc++ ripgrep \
     # Context7 dependencies for install
-    nodejs \
+    nodejs npm \
     # Firewall dependencies
     iptables ipset bind-tools jq iproute2
 
