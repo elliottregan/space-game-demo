@@ -217,12 +217,14 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
       snapshot: mock(
         () =>
           overrides.powerGridSnapshot ?? {
-            gridStrain: 1,
-            production: 20,
-            consumption: 10,
-            efficiencyMultiplier: 1,
-            isComfortable: true,
-            isCritical: false,
+            totalProduction: 20,
+            totalConsumption: 10,
+            buildingCounts: {
+              powered: 5,
+              onBattery: 0,
+              lowBattery: 0,
+              unpowered: 0,
+            },
           },
       ),
     },
@@ -296,12 +298,14 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
 interface MockedAPI {
   resourceSnapshot?: ResourceSnapshot;
   powerGridSnapshot?: {
-    gridStrain: number;
-    production: number;
-    consumption: number;
-    efficiencyMultiplier: number;
-    isComfortable: boolean;
-    isCritical: boolean;
+    totalProduction: number;
+    totalConsumption: number;
+    buildingCounts: {
+      powered: number;
+      onBattery: number;
+      lowBattery: number;
+      unpowered: number;
+    };
   };
   colonySnapshot?: ColonySnapshot;
   techSnapshot?: TechnologySnapshot;
@@ -674,7 +678,7 @@ describe("HeuristicStrategy", () => {
       expect(researchCalls).toHaveLength(0);
     });
 
-    it("builds solar panel when power grid strain < 0.9", () => {
+    it("builds solar panel when power production is low", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         resourceSnapshot: {
@@ -684,12 +688,14 @@ describe("HeuristicStrategy", () => {
           netFlow: { food: 5 },
         },
         powerGridSnapshot: {
-          gridStrain: 0.7, // Below 0.9 threshold
-          production: 10,
-          consumption: 15,
-          efficiencyMultiplier: 1,
-          isComfortable: false,
-          isCritical: false,
+          totalProduction: 10,
+          totalConsumption: 15, // Production < consumption, ratio < 1.0
+          buildingCounts: {
+            powered: 3,
+            onBattery: 0,
+            lowBattery: 0,
+            unpowered: 1, // Has unpowered buildings
+          },
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -697,7 +703,7 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      // gridStrain 0.7 < 0.9, so should build solar panel
+      // Has unpowered buildings, so should build solar panel
       expect(buildCalls).toContain(BuildingId.SOLAR_PANEL);
     });
 

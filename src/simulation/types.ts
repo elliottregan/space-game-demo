@@ -123,7 +123,7 @@ export interface ResourceSnapshot {
   sol: number;
   food: number;
   water: number;
-  /** Power grid strain (0-1) - not a stockpiled resource */
+  /** Power ratio (0-1) where 1.0 = production >= consumption */
   powerGrid: number;
   materials: number;
   population: number;
