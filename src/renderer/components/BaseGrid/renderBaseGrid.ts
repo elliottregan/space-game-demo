@@ -54,6 +54,7 @@ export interface GridNodeData {
   constructionProgress?: number; // 0-1 for pending buildings
   powerSourceId?: string; // ID of the power source this building is connected to
   clusterId?: string; // ID of the transit cluster this building belongs to
+  depotRange?: number; // Range for depot buildings (transit connectivity extension)
   occupants?: OccupantSlot[]; // Colonists assigned/living in this building
 }
 
@@ -183,6 +184,67 @@ function renderClusterConnections(
   }
 }
 
+/**
+ * Calculate Manhattan distance between two grid positions.
+ */
+function calculateDistance(a: GridPosition, b: GridPosition): number {
+  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+}
+
+/**
+ * Render depot range highlights when a depot building is selected.
+ * Shows all cells within the depot's connectivity range.
+ */
+function renderDepotRange(
+  rangeLayer: Selection<SVGGElement, unknown, null, undefined>,
+  selectedBuildingId: string | undefined,
+  gridData: GridNodeData[],
+  width: number,
+  height: number,
+  colors: ReturnType<typeof getThemeColors>,
+): void {
+  if (!selectedBuildingId) return;
+
+  // Find selected building and check if it's a depot
+  const selectedCell = gridData.find((node) => node.buildingId === selectedBuildingId);
+  if (!selectedCell?.depotRange) return; // Not a depot or no range
+
+  const depotPos = selectedCell.position;
+  const range = selectedCell.depotRange;
+
+  // Highlight all cells within depot range
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const distance = calculateDistance(depotPos, { x, y });
+      if (distance > 0 && distance <= range) {
+        const screen = gridToScreen(x, y, width, height);
+
+        // Draw a diamond-shaped highlight on the tile
+        const points = [
+          [screen.x, screen.y - TILE_HEIGHT / 2 + 8],
+          [screen.x + TILE_WIDTH / 2 - 8, screen.y],
+          [screen.x, screen.y + TILE_HEIGHT / 2 - 8],
+          [screen.x - TILE_WIDTH / 2 + 8, screen.y],
+        ]
+          .map((p) => p.join(","))
+          .join(" ");
+
+        rangeLayer
+          .append("polygon")
+          .attr("class", "depot-range-highlight")
+          .attr("points", points)
+          .attr("fill", colors.warning)
+          .attr("fill-opacity", 0.15)
+          .attr("stroke", colors.warning)
+          .attr("stroke-width", 2)
+          .attr("stroke-opacity", 0.5)
+          .attr("stroke-dasharray", "4,3")
+          .style("pointer-events", "none");
+      }
+    }
+  }
+}
+
 export function renderBaseGrid(
   container: SVGSVGElement,
   data: BaseGridData,
@@ -217,6 +279,7 @@ export function renderBaseGrid(
 
   // Create layer groups - order matters for z-index
   const tileLayer = contentGroup.append("g").attr("class", "tile-layer");
+  const rangeLayer = contentGroup.append("g").attr("class", "range-layer");
   const depositLayer = contentGroup.append("g").attr("class", "deposit-layer");
   const connectionLayer = contentGroup.append("g").attr("class", "connection-layer");
   const buildingLayer = contentGroup.append("g").attr("class", "building-layer");
@@ -261,6 +324,9 @@ export function renderBaseGrid(
         .on("mouseleave", () => onCellHover(null));
     }
   }
+
+  // Render depot range highlights when a depot is selected
+  renderDepotRange(rangeLayer, data.selectedBuildingId, data.cells, width, height, colors);
 
   // Second pass: Render all deposits (middle layer)
   for (let y = 0; y < GRID_SIZE; y++) {

@@ -21,6 +21,7 @@ interface BuildingInfo {
   constructionProgress?: number;
   powerSourceId?: string;
   clusterId?: string;
+  depotRange?: number;
   occupants?: OccupantSlot[];
 }
 
@@ -154,6 +155,7 @@ const gridData = computed<BaseGridData>(() => {
         constructionProgress: building?.constructionProgress,
         powerSourceId: building?.powerSourceId,
         clusterId: building?.clusterId,
+        depotRange: building?.depotRange,
         occupants: building?.occupants,
       });
     }

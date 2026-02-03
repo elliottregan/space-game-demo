@@ -125,6 +125,7 @@ interface GameUIState {
     constructionProgress?: number; // 0-1 for pending buildings
     powerSourceId?: string; // ID of the power source this building is connected to
     clusterId?: string; // ID of the transit cluster this building belongs to
+    depotRange?: number; // Range for depot buildings (transit connectivity extension)
   }>;
   gridDeposits: Array<{
     position: { x: number; y: number };
@@ -411,6 +412,7 @@ class GameService {
               : undefined,
           powerSourceId: placement.powerSourceId,
           clusterId: placement.clusterId,
+          depotRange: def?.depotRange,
         });
       }
     }
