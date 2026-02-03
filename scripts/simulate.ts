@@ -2031,7 +2031,7 @@ function analyzeActionsPerSol(results: RunResult[]): void {
   let totalIdleActions = 0;
 
   // Track actions over time (by sol bucket)
-  const SOL_BUCKET_SIZE = 50;
+  const SOL_BUCKET_SIZE = 10;
   const actionsOverTime = new Map<number, { total: number; runsActive: number }>();
 
   for (const result of results) {
