@@ -9,6 +9,7 @@ import {
   ColonyFacade,
   EventsFacade,
   GameFlowFacade,
+  GridFacade,
   IdeologyFacade,
   OperationsFacade,
   PoliticsFacade,
@@ -60,6 +61,7 @@ export class GameAPI {
   private _airQuality: AirQualityFacade | null = null;
   private _powerGrid: PowerGridFacade | null = null;
   private _ideology: IdeologyFacade | null = null;
+  private _grid: GridFacade | null = null;
 
   constructor() {
     this.gameState = new GameState();
@@ -79,6 +81,7 @@ export class GameAPI {
     this._airQuality = null;
     this._powerGrid = null;
     this._ideology = null;
+    this._grid = null;
   }
 
   // ==========================================================================
@@ -304,6 +307,16 @@ export class GameAPI {
       this._ideology = new IdeologyFacade(this.gameState);
     }
     return this._ideology;
+  }
+
+  /**
+   * Grid queries (deposits, empty cells, power coverage).
+   */
+  get grid(): GridFacade {
+    if (!this._grid) {
+      this._grid = new GridFacade(this.gameState);
+    }
+    return this._grid;
   }
 
   // ==========================================================================

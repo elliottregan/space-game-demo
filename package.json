@@ -38,6 +38,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@vue-flow/core": "^1.48.2",
     "d3-array": "^3.2.4",
     "d3-axis": "^3.0.0",
     "d3-force": "^3.0.0",

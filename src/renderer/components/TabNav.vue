@@ -5,6 +5,7 @@ import { RouterLink } from "vue-router";
 <template>
   <nav class="tab-nav">
     <RouterLink to="/main" class="tab-link" active-class="active"> Main </RouterLink>
+    <RouterLink to="/base" class="tab-link" active-class="active"> Base </RouterLink>
     <RouterLink to="/colony" class="tab-link" active-class="active"> Colony </RouterLink>
     <RouterLink to="/operations" class="tab-link" active-class="active"> Operations </RouterLink>
     <RouterLink to="/politics" class="tab-link" active-class="active"> Politics </RouterLink>

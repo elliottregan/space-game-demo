@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { BuildingPurpose } from "../../../core/models/Building";
 import { ColonistRole } from "../../../core/models/Colonist";
 import { gameService } from "../../services/GameService";
 import { GButton, GPanel } from "../../ui";
-import { BuildingPanel } from "../BuildingPanel";
-import BuildableList from "../ColonyView/BuildableList.vue";
 import BuildingRoleGroup from "./BuildingRoleGroup.vue";
 import ColonistPool from "./ColonistPool.vue";
 
@@ -114,10 +111,6 @@ function handleToggleAutoAssign(e: Event) {
 
 <template>
   <div class="operations-page">
-    <BuildingPanel />
-    <GPanel title="Housing" accent="amber">
-      <BuildableList :purpose="BuildingPurpose.Residential" />
-    </GPanel>
     <GPanel title="Workforce Assignment" accent="amber">
       <div class="workforce-controls">
         <div class="workforce-left">

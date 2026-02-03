@@ -33,6 +33,11 @@ const router = createRouter({
       component: () => import("./components/OperationsPage/OperationsPage.vue"),
     },
     {
+      path: "/base",
+      name: "base",
+      component: () => import("./components/BaseTab.vue"),
+    },
+    {
       path: "/ui",
       name: "ui-showcase",
       component: () => import("./components/UIShowcase.vue"),

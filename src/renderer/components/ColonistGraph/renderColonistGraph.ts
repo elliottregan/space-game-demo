@@ -1,6 +1,11 @@
 import { select } from "d3-selection";
 import type { Colonist, ColonistIdeology } from "../../../core/models/Colonist";
 import type { PositionedColonist } from "../../utils/ColonistSimulationManager";
+import {
+  getIdeologyColorForGraph,
+  getFactionColorFromTheme,
+  type FactionId,
+} from "../../utils/ideologyDisplay";
 
 export interface IdeologyPressureData {
   pressure: { earthLoyalist: number; marsIndependence: number; corporateInterests: number };
@@ -65,53 +70,13 @@ function getIdeologyColor(
   ideology: ColonistIdeology | undefined,
   colors: ReturnType<typeof getThemeColors>,
 ): string {
-  if (!ideology) {
-    return colors.textMuted; // Gray for colonists without ideology
-  }
-
-  const { earthLoyalist, marsIndependence, corporateInterests } = ideology;
-
-  // Find the dominant faction
-  const max = Math.max(earthLoyalist, marsIndependence, corporateInterests);
-
-  // If all values are very low or equal, show as neutral
-  if (max < 0.2) {
-    return colors.textMuted;
-  }
-
-  // Determine dominant faction (with a threshold for "dominance")
-  const threshold = 0.15; // Must be this much higher than others to be dominant
-
-  if (
-    earthLoyalist >= max - 0.01 &&
-    earthLoyalist - marsIndependence >= threshold &&
-    earthLoyalist - corporateInterests >= threshold
-  ) {
-    return colors.info; // Blue for Earth Loyalists
-  }
-  if (
-    marsIndependence >= max - 0.01 &&
-    marsIndependence - earthLoyalist >= threshold &&
-    marsIndependence - corporateInterests >= threshold
-  ) {
-    return colors.positive; // Green for Mars Independence
-  }
-  if (
-    corporateInterests >= max - 0.01 &&
-    corporateInterests - earthLoyalist >= threshold &&
-    corporateInterests - marsIndependence >= threshold
-  ) {
-    return colors.warning; // Orange for Corporate Interests
-  }
-
-  // Mixed ideology - use a blend or neutral
-  return colors.textMuted;
+  return getIdeologyColorForGraph(ideology, colors);
 }
 
 function getDominantPressureColor(
   pressure: { earthLoyalist: number; marsIndependence: number; corporateInterests: number },
   colors: ReturnType<typeof getThemeColors>,
-): { color: string; faction: string } | null {
+): { color: string; faction: FactionId | "mixed" } | null {
   const { earthLoyalist, marsIndependence, corporateInterests } = pressure;
   const max = Math.max(earthLoyalist, marsIndependence, corporateInterests);
 
@@ -125,25 +90,25 @@ function getDominantPressureColor(
     earthLoyalist - marsIndependence >= threshold &&
     earthLoyalist - corporateInterests >= threshold
   ) {
-    return { color: colors.info, faction: "earth" };
+    return { color: getFactionColorFromTheme("earth", colors), faction: "earth" };
   }
   if (
     marsIndependence >= max - 0.01 &&
     marsIndependence - earthLoyalist >= threshold &&
     marsIndependence - corporateInterests >= threshold
   ) {
-    return { color: colors.positive, faction: "mars" };
+    return { color: getFactionColorFromTheme("mars", colors), faction: "mars" };
   }
   if (
     corporateInterests >= max - 0.01 &&
     corporateInterests - earthLoyalist >= threshold &&
     corporateInterests - marsIndependence >= threshold
   ) {
-    return { color: colors.warning, faction: "corporate" };
+    return { color: getFactionColorFromTheme("corporate", colors), faction: "corporate" };
   }
 
   // Mixed pressure - use muted color
-  return { color: colors.textMuted, faction: "mixed" };
+  return { color: getFactionColorFromTheme("neutral", colors), faction: "mixed" };
 }
 
 function getLinkColor(

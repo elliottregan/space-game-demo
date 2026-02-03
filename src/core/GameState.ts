@@ -11,6 +11,7 @@ import { BuildingManager } from "./systems/BuildingManager";
 import { ColonistMoraleManager } from "./systems/ColonistMoraleManager";
 import { ColonyManager } from "./systems/ColonyManager";
 import { EarthCrisisManager } from "./systems/EarthCrisisManager";
+import { GridManager } from "./systems/GridManager";
 import { EventManager } from "./systems/EventManager";
 import { IdeologyManager } from "./systems/IdeologyManager";
 import { OperationsManager } from "./systems/OperationsManager";
@@ -38,6 +39,7 @@ export class GameState {
   powerGrid: PowerGridManager;
   ideology: IdeologyManager;
   earthCrisis: EarthCrisisManager;
+  grid: GridManager;
 
   private tickRunner: TickRunner;
   private eventLog: GameEvent[] = [];
@@ -80,6 +82,8 @@ export class GameState {
     this.powerGrid = new PowerGridManager();
     this.ideology = new IdeologyManager();
     this.earthCrisis = new EarthCrisisManager();
+    this.grid = new GridManager();
+    this.grid.generateDeposits(Date.now()); // Use timestamp as seed for variety
     this.buildings.setIdeologyManager(this.ideology);
     this.buildings.setVictoryManager(this.victory);
 
@@ -94,6 +98,9 @@ export class GameState {
 
     // Create pre-built buildings
     this.createPreBuiltBuildings(condition.preBuiltBuildings);
+
+    // Place starting buildings on the grid
+    this.placeStartingBuildingsOnGrid();
 
     // Initialize colonist consumption (without triggering population growth)
     this.colony.updateConsumption(this.resources);
@@ -208,6 +215,84 @@ export class GameState {
     }
   }
 
+  private placeStartingBuildingsOnGrid(): void {
+    const activeBuildings = this.buildings.getActiveBuildings();
+
+    // Track positions we've used
+    const usedPositions = new Set<string>();
+    const posKey = (x: number, y: number) => `${x},${y}`;
+
+    // Place solar panels at center
+    const solarPanels = activeBuildings.filter((b) => b.definitionId === BuildingId.SOLAR_PANEL);
+    const solarPositions = [
+      { x: 5, y: 5 },
+      { x: 6, y: 5 },
+    ];
+    for (let i = 0; i < solarPanels.length; i++) {
+      const panel = solarPanels[i];
+      const pos = solarPositions[i] || { x: 5 + i, y: 5 };
+      this.grid.placeBuilding(panel.id, pos);
+      usedPositions.add(posKey(pos.x, pos.y));
+      const def = this.buildings.getDefinition(panel.definitionId);
+      if (def?.powerProduction) {
+        this.grid.registerPowerSource(panel.id, def.powerProduction);
+      }
+    }
+
+    // Place habitat adjacent (5,6)
+    const habitat = activeBuildings.find((b) => b.definitionId === BuildingId.HABITAT);
+    if (habitat) {
+      this.grid.placeBuilding(habitat.id, { x: 5, y: 6 });
+      usedPositions.add(posKey(5, 6));
+      const def = this.buildings.getDefinition(habitat.definitionId);
+      if (def?.powerConsumption) {
+        this.grid.setBuildingPowerConsumption(habitat.id, def.powerConsumption);
+      }
+    }
+
+    // Place farm (4,5)
+    const farm = activeBuildings.find((b) => b.definitionId === BuildingId.BASIC_FARM);
+    if (farm) {
+      this.grid.placeBuilding(farm.id, { x: 4, y: 5 });
+      usedPositions.add(posKey(4, 5));
+      const def = this.buildings.getDefinition(farm.definitionId);
+      if (def?.powerConsumption) {
+        this.grid.setBuildingPowerConsumption(farm.id, def.powerConsumption);
+      }
+    }
+
+    // Place oxygen generator (6,6)
+    const oxygenGen = activeBuildings.find((b) => b.definitionId === BuildingId.OXYGEN_GENERATOR);
+    if (oxygenGen) {
+      this.grid.placeBuilding(oxygenGen.id, { x: 6, y: 6 });
+      usedPositions.add(posKey(6, 6));
+      const def = this.buildings.getDefinition(oxygenGen.definitionId);
+      if (def?.powerConsumption) {
+        this.grid.setBuildingPowerConsumption(oxygenGen.id, def.powerConsumption);
+      }
+    }
+
+    // Place water extractor on nearest water deposit
+    const waterExtractor = activeBuildings.find(
+      (b) => b.definitionId === BuildingId.WATER_EXTRACTOR,
+    );
+    if (waterExtractor) {
+      const deposits = this.grid.getAllDeposits();
+      const waterDeposit = deposits.find((d) => d.type === "water");
+      if (waterDeposit) {
+        this.grid.placeBuilding(waterExtractor.id, waterDeposit.position);
+        const def = this.buildings.getDefinition(waterExtractor.definitionId);
+        if (def?.powerConsumption) {
+          this.grid.setBuildingPowerConsumption(waterExtractor.id, def.powerConsumption);
+        }
+      }
+    }
+
+    // Update power connections (only active buildings can provide power)
+    const activeBuildingIds = new Set(this.buildings.getActiveBuildings().map((b) => b.id));
+    this.grid.updatePowerConnections(false, activeBuildingIds);
+  }
+
   tick(): GameEvent[] {
     if (this.victory.isGameOver()) {
       return [];
@@ -232,6 +317,7 @@ export class GameState {
         airQualityManager: this.airQuality,
         powerGridManager: this.powerGrid,
         earthCrisis: this.earthCrisis,
+        grid: this.grid,
       },
       { autoAssignNewColonists: this.autoAssignNewColonists },
     );
@@ -296,6 +382,7 @@ export class GameState {
       powerGrid: this.powerGrid.toJSON(),
       ideology: this.ideology.toJSON(),
       earthCrisis: this.earthCrisis.toJSON(),
+      grid: this.grid.toJSON(),
       autoAssignNewColonists: this.autoAssignNewColonists,
     };
   }
@@ -336,6 +423,10 @@ export class GameState {
 
     if (data.earthCrisis) {
       state.earthCrisis = EarthCrisisManager.fromJSON(data.earthCrisis);
+    }
+
+    if (data.grid) {
+      state.grid.fromJSON(data.grid);
     }
 
     state.buildings.setVictoryManager(state.victory);

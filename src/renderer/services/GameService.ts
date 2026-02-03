@@ -16,6 +16,7 @@ import {
   type FactionSupportSnapshot,
   GameAPI,
   type GameEvent,
+  type GridPosition,
   type NPCFaction,
   ProjectId,
   type ProspectingSite,
@@ -28,6 +29,7 @@ import {
   type TechResearch,
   type VictoryState,
 } from "../../facade";
+import { type PowerState, type DepositType } from "../../core/models/Grid";
 
 /**
  * Individual colonist morale data for UI display.
@@ -110,6 +112,21 @@ interface GameUIState {
     severity: number;
     pointOfNoReturn: boolean;
   };
+  gridBuildings: Array<{
+    id: string;
+    defId: string;
+    name: string;
+    position: { x: number; y: number };
+    powerState: PowerState;
+    batteryLevel: number;
+    status: "pending" | "active" | "disabled" | "idle" | "recycling";
+    constructionProgress?: number; // 0-1 for pending buildings
+    powerSourceId?: string; // ID of the power source this building is connected to
+  }>;
+  gridDeposits: Array<{
+    position: { x: number; y: number };
+    type: DepositType;
+  }>;
 }
 
 /**
@@ -233,6 +250,8 @@ class GameService {
         severity: 0,
         pointOfNoReturn: false,
       },
+      gridBuildings: [],
+      gridDeposits: [],
     };
   }
 
@@ -360,6 +379,38 @@ class GameService {
       severity: this.facade.game.earthCrisisSeverity(),
       pointOfNoReturn: this.facade.game.earthCrisisPointOfNoReturn(),
     };
+
+    // Grid state - include both active and pending (under construction) buildings
+    const gridPlacements: GameUIState["gridBuildings"] = [];
+    const buildingSnapshot = this.facade.buildings.snapshot();
+    const allGridBuildings = [...buildingSnapshot.active, ...buildingSnapshot.pending];
+    for (const building of allGridBuildings) {
+      const pos = this.facade.game.getGridBuildingPosition(building.id);
+      const placement = this.facade.game.getGridPlacement(building.id);
+      if (pos && placement) {
+        const def = this.facade.buildings.getDefinition(building.definitionId as BuildingId);
+        const constructionTime = def?.constructionTime ?? 1;
+        gridPlacements.push({
+          id: building.id,
+          defId: building.definitionId,
+          name: def?.name ?? building.definitionId,
+          position: pos,
+          powerState: placement.powerState,
+          batteryLevel: placement.batteryLevel,
+          status: building.status,
+          constructionProgress:
+            building.status === "pending"
+              ? building.constructionProgress / constructionTime
+              : undefined,
+          powerSourceId: placement.powerSourceId,
+        });
+      }
+    }
+    this.state.gridBuildings = gridPlacements;
+    this.state.gridDeposits = this.facade.game.getGridDeposits().map((d) => ({
+      position: d.position,
+      type: d.type,
+    }));
   }
 
   /**
@@ -401,6 +452,11 @@ class GameService {
 
   startBuilding(defId: string): Building | null {
     const result = this.facade.buildings.build(defId as BuildingId);
+    return result.success ? result.data : null;
+  }
+
+  startBuildingAtPosition(defId: string, position: GridPosition): Building | null {
+    const result = this.facade.buildings.buildAtPosition(defId as BuildingId, position);
     return result.success ? result.data : null;
   }
 
@@ -503,6 +559,10 @@ class GameService {
 
   rushRecycling(buildingId: string): boolean {
     return this.facade.buildings.rushRecycling(buildingId).success;
+  }
+
+  cancelConstruction(buildingId: string): boolean {
+    return this.facade.buildings.cancelConstruction(buildingId).success;
   }
 
   // Repurposing methods

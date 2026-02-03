@@ -9,14 +9,15 @@ Welcome to Mars. You are the administrator of humanity's first permanent settlem
 1. [Getting Started](#getting-started)
 2. [Resources](#resources)
 3. [Buildings](#buildings)
-4. [Colony Management](#colony-management)
-5. [Workforce & Colonists](#workforce--colonists)
-6. [Technology](#technology)
-7. [Operations](#operations)
-8. [Politics](#politics)
-9. [Events](#events)
-10. [Victory & Defeat](#victory--defeat)
-11. [Strategy Guide](#strategy-guide)
+4. [Base Grid](#base-grid)
+5. [Colony Management](#colony-management)
+6. [Workforce & Colonists](#workforce--colonists)
+7. [Technology](#technology)
+8. [Operations](#operations)
+9. [Politics](#politics)
+10. [Events](#events)
+11. [Victory & Defeat](#victory--defeat)
+12. [Strategy Guide](#strategy-guide)
 
 ---
 
@@ -139,6 +140,70 @@ Dismantle buildings you no longer need:
 - **Depleted building**: 25% of materials
 - **Active building**: 50% of materials
 - **Damaged building**: 15% of materials
+
+---
+
+## Base Grid
+
+The Base tab displays your colony's physical layout on a 10x10 isometric grid. Here you can see building positions, power connections, and resource deposits.
+
+### The Power Grid
+
+Power distribution is spatial - buildings must be within range of a power source to receive electricity.
+
+**Power Sources:**
+- **Solar Panel Array**: 10 power, range of 2 cells
+- **Nuclear Reactor**: 100 power, range of 4 cells (requires technology)
+
+Power range is calculated using Manhattan distance (horizontal + vertical cells). A Solar Panel at position (5,5) can power buildings at (5,3), (7,5), (3,5), etc.
+
+### Building Placement
+
+Click an empty cell to see available buildings. The context menu shows:
+- **Power status**: Whether the cell has power coverage
+- **Deposits**: Water or mineral deposits at that location
+- **Recommended buildings**: Highlighted with a star based on context
+
+Buildings that produce power (like Solar Panels) are recommended when placing in unpowered areas. Resource extractors are recommended when placing on deposits.
+
+### Power States
+
+Buildings can be in four power states:
+
+| State | Icon | Meaning |
+|-------|------|---------|
+| **Powered** | - | Connected to power source, operating normally |
+| **On Battery** | Battery | Disconnected, running on backup power |
+| **Low Battery** | Low Battery | Battery below 33%, shutdown imminent |
+| **Unpowered** | No Power | No power, building offline |
+
+### Battery Backup
+
+Every building has a built-in battery that provides backup power:
+
+- **Full charge**: 3 sols of operation
+- **Drain rate**: Battery depletes linearly when disconnected
+- **Low battery warning**: Triggers at 33% remaining
+- **Recharging**: Instant when reconnected to power
+
+When battery depletes completely, the building becomes **Unpowered** and stops production until power is restored.
+
+### Strategic Tips
+
+**Power Planning:**
+- Place Solar Panels centrally to maximize coverage
+- Don't cluster all buildings - spread them to stay within power range
+- Build redundant power sources for critical areas
+
+**Deposit Utilization:**
+- Water deposits appear as blue indicators on the grid
+- Mineral deposits appear as orange indicators
+- Place extractors directly on deposits for production bonuses
+
+**Expansion Strategy:**
+- Expand power grid before expanding buildings
+- Keep a buffer of power capacity for emergencies
+- Consider Nuclear Reactors for large-scale expansion (requires research)
 
 ---
 
