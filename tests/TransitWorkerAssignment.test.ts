@@ -85,4 +85,32 @@ describe("Transit Worker Assignment", () => {
     const result = buildingManager.assignWorker(farmId, colonistId);
     expect(result).toBe(true);
   });
+
+  describe("disconnection handling", () => {
+    it("unassigns workers when building becomes disconnected", () => {
+      // Setup: chain of 3 buildings
+      const habId = createActiveBuilding(BuildingId.HABITAT, { x: 5, y: 5 });
+      const solarId = createActiveBuilding(BuildingId.SOLAR_PANEL, { x: 5, y: 6 });
+      const farmId = createActiveBuilding(BuildingId.BASIC_FARM, { x: 5, y: 7 });
+
+      // Trigger cluster update
+      buildingManager.triggerClusterUpdate();
+
+      const colonistId = createColonistWithHousing(habId);
+      buildingManager.assignWorker(farmId, colonistId);
+
+      // Verify assigned
+      const farmBefore = buildingManager.getBuilding(farmId);
+      expect(farmBefore?.assignedWorkers).toContain(colonistId);
+
+      // Remove middle building, breaking the chain
+      gridManager.removeBuilding({ x: 5, y: 6 });
+      buildingManager.removeBuilding(solarId);
+      buildingManager.triggerClusterUpdate();
+
+      // Worker should be unassigned
+      const farmAfter = buildingManager.getBuilding(farmId);
+      expect(farmAfter?.assignedWorkers).not.toContain(colonistId);
+    });
+  });
 });

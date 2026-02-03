@@ -425,6 +425,14 @@ setGridManager(gridManager: GridManager): void {
     return this.buildings.get(id);
   }
 
+  /** Remove a building directly (for testing or demolition). Does not refund resources. */
+  removeBuilding(buildingId: string): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+    this.buildings.delete(buildingId);
+    return true;
+  }
+
   setBuildingMode(
     buildingId: string,
     mode: "conservation" | "normal" | "overdrive",
@@ -784,10 +792,47 @@ setGridManager(gridManager: GridManager): void {
     return defs;
   }
 
-  /** Trigger cluster recalculation in GridManager */
-  triggerClusterUpdate(): void {
-    if (!this.gridManager) return;
+  /** Trigger cluster recalculation in GridManager and handle disconnected buildings */
+  triggerClusterUpdate(): string[] {
+    if (!this.gridManager) return [];
     this.gridManager.updateClusters(this.getBuildingDefinitionsMap(), this.getDepotRanges());
+    return this.handleDisconnectedBuildings();
+  }
+
+  /**
+   * Check all buildings for workers whose housing is no longer in the same cluster.
+   * Unassigns workers who can no longer reach their workplace.
+   * Returns list of unassigned colonist IDs.
+   */
+  handleDisconnectedBuildings(): string[] {
+    if (!this.gridManager || !this.colonyManager) return [];
+
+    const unassignedWorkers: string[] = [];
+
+    for (const [buildingId, building] of this.buildings) {
+      if (building.assignedWorkers.length === 0) continue;
+
+      const workplaceCluster = this.gridManager.getBuildingClusterId(buildingId);
+
+      // Check each worker's housing cluster
+      const workersToRemove: string[] = [];
+      for (const colonistId of building.assignedWorkers) {
+        const colonist = this.colonyManager.getColonist(colonistId);
+        if (!colonist?.housingId) continue;
+
+        const housingCluster = this.gridManager.getBuildingClusterId(colonist.housingId);
+        if (housingCluster !== workplaceCluster) {
+          workersToRemove.push(colonistId);
+        }
+      }
+
+      for (const colonistId of workersToRemove) {
+        this.removeWorker(buildingId, colonistId);
+        unassignedWorkers.push(colonistId);
+      }
+    }
+
+    return unassignedWorkers;
   }
 
   getBuildingsByDefinition(defId: BuildingId): Building[] {
