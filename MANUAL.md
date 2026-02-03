@@ -147,6 +147,8 @@ Dismantle buildings you no longer need:
 
 The Base tab displays your colony's physical layout on a 10x10 isometric grid. Here you can see building positions, power connections, and resource deposits.
 
+The header shows a power summary: how many buildings are **powered**, **on battery**, or **unpowered**. Use this to quickly identify power problems.
+
 ### The Power Grid
 
 Power distribution is spatial - buildings must be within range of a power source to receive electricity.
@@ -172,21 +174,23 @@ Buildings can be in four power states:
 
 | State | Icon | Meaning |
 |-------|------|---------|
-| **Powered** | - | Connected to power source, operating normally |
-| **On Battery** | Battery | Disconnected, running on backup power |
-| **Low Battery** | Low Battery | Battery below 33%, shutdown imminent |
-| **Unpowered** | No Power | No power, building offline |
+| **Powered** | Green | Connected to power source, operating normally |
+| **On Battery** | Yellow | Disconnected, running on backup power |
+| **Low Battery** | Red | Battery below 33%, shutdown imminent |
+| **Unpowered** | Gray | No power, building completely offline |
+
+**Important:** Unpowered buildings produce and consume nothing. Power is binary - a building either has power and operates normally, or has no power and is completely offline. There is no partial efficiency penalty.
 
 ### Battery Backup
 
-Every building has a built-in battery that provides backup power:
+Every building has a built-in battery that provides backup power when disconnected from a power source:
 
 - **Full charge**: 3 sols of operation
-- **Drain rate**: Battery depletes linearly when disconnected
+- **Drain rate**: ~33% per sol when disconnected
 - **Low battery warning**: Triggers at 33% remaining
 - **Recharging**: Instant when reconnected to power
 
-When battery depletes completely, the building becomes **Unpowered** and stops production until power is restored.
+**Critical:** When battery depletes completely, the building becomes **Unpowered** and shuts down entirely - no production, no consumption. This can cascade into resource crises if food or oxygen production goes offline. Always monitor buildings on battery and restore power before they shut down.
 
 ### Strategic Tips
 
@@ -194,6 +198,8 @@ When battery depletes completely, the building becomes **Unpowered** and stops p
 - Place Solar Panels centrally to maximize coverage
 - Don't cluster all buildings - spread them to stay within power range
 - Build redundant power sources for critical areas
+- Prioritize power for life support (Habitats, Farms, Oxygen Generators)
+- Watch the header for "on battery" warnings - you have 3 sols to fix it
 
 **Deposit Utilization:**
 - Water deposits appear as blue indicators on the grid
@@ -652,6 +658,7 @@ Your colony falls if:
 6. **Keep some colonists unassigned** - Flexibility for emergencies
 7. **Watch deposit reserves** - Plan replacements before depletion
 8. **Satisfy faction demands** - Political support enables projects
+9. **Never ignore power warnings** - Buildings on battery shut down in 3 sols
 
 ---
 
