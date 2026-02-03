@@ -31,6 +31,7 @@ import {
   Rocket,
   Globe,
   TowerControl,
+  Truck,
 } from "lucide-vue-next";
 
 const icons = [
@@ -56,6 +57,7 @@ const icons = [
   { id: BuildingId.HYDROPONIC_GARDEN, component: Flower },
   { id: BuildingId.OBSERVATORY_DOME, component: Telescope },
   { id: BuildingId.ASSEMBLY_HALL, component: Landmark },
+  { id: BuildingId.ROVER_DEPOT, component: Truck },
   { id: BuildingId.GENERATION_SHIP, component: Rocket },
   { id: BuildingId.UNITED_MARS_STATION, component: Globe },
   { id: BuildingId.SPACE_ELEVATOR, component: TowerControl },

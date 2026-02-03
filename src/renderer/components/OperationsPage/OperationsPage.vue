@@ -54,6 +54,20 @@ const roleOrder: ColonistRole[] = [
   ColonistRole.CIVIL_SCIENCE,
 ];
 
+// Compute assignable colonists for each building based on cluster connectivity
+const assignableColonistsByBuilding = computed(() => {
+  const result = new Map<string, Set<string>>();
+  for (const building of state.buildings) {
+    if (building.status !== "active") continue;
+    const def = state.buildingDefinitions.find((d) => d.id === building.definitionId);
+    if (!def?.workerSlots) continue;
+
+    const assignable = gameService.api.buildings.getAssignableWorkersForBuilding(building.id);
+    result.set(building.id, new Set(assignable.map((c) => c.id)));
+  }
+  return result;
+});
+
 function onSelect(colonistId: string | null) {
   selectedColonistId.value = selectedColonistId.value === colonistId ? null : colonistId;
 }
@@ -153,6 +167,7 @@ function handleToggleAutoAssign(e: Event) {
               :skill-definitions="state.skillDefinitions"
               :selected-colonist-id="selectedColonistId"
               :dragging-colonist-id="draggingColonistId"
+              :assignable-colonists-by-building="assignableColonistsByBuilding"
               @assign="onAssign"
               @unassign="onUnassign"
             />

@@ -184,4 +184,19 @@ export class GridFacade implements Queryable<GridSnapshot> {
   calculateDistance(a: GridPosition, b: GridPosition): number {
     return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
   }
+
+  /**
+   * Get the cluster ID for a building.
+   * Returns undefined if the building is not connected to any habitat.
+   */
+  getBuildingClusterId(buildingId: string): string | undefined {
+    return this.gameState.grid.getBuildingClusterId(buildingId);
+  }
+
+  /**
+   * Check if a building is connected to a habitat via transit connections.
+   */
+  isConnectedToHabitat(buildingId: string): boolean {
+    return this.gameState.grid.getBuildingClusterId(buildingId) !== undefined;
+  }
 }

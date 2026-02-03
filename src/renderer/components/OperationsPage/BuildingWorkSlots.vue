@@ -18,6 +18,7 @@ const props = defineProps<{
   skillDefinitions: SkillDefinition[];
   selectedColonistId: string | null;
   draggingColonistId: string | null;
+  assignableColonistIds: Set<string>;
 }>();
 
 const emit = defineEmits<{
@@ -62,7 +63,9 @@ const isValidDropTarget = computed(() => {
   if (!colonistId) return false;
   if (emptySlots.value === 0) return false;
 
-  // Any colonist can be assigned (role matching is soft - affects efficiency)
+  // Check if colonist's housing is in the same cluster as the building
+  if (!props.assignableColonistIds.has(colonistId)) return false;
+
   return true;
 });
 

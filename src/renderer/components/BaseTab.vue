@@ -97,6 +97,8 @@ const gridBuildings = computed(() =>
       status: b.status,
       constructionProgress: b.constructionProgress,
       powerSourceId: b.powerSourceId,
+      clusterId: b.clusterId,
+      depotRange: b.depotRange,
       occupants,
     };
   }),
@@ -269,6 +271,7 @@ const placementHints = computed(() => ({
           :deposits="gridDeposits"
           :selected-position="selectedPosition"
           :selected-building-def-id="pendingBuildingDefId"
+          :selected-building-id="selectedBuildingId ?? undefined"
           @cell-click="handleCellClick"
           @cell-hover="handleCellHover"
         />

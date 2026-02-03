@@ -1,6 +1,7 @@
 // src/core/systems/GridManager.ts
-import type { GridCell, GridPosition, BuildingPlacement } from "../models/Grid";
+import type { GridCell, GridPosition, BuildingPlacement, Cluster } from "../models/Grid";
 import { DepositType, GRID_SIZE, PowerState } from "../models/Grid";
+import { BuildingId } from "../models/Building";
 import {
   BATTERY_BACKUP_SOLS,
   LOW_BATTERY_THRESHOLD,
@@ -49,6 +50,8 @@ export class GridManager {
   private placements: Map<string, BuildingPlacement> = new Map();
   private powerSources: Map<string, PowerSource> = new Map();
   private buildingPowerConsumption: Map<string, number> = new Map();
+  private clusters: Map<string, Cluster> = new Map();
+  private buildingToCluster: Map<string, string> = new Map();
 
   constructor() {
     this.initializeGrid();
@@ -314,6 +317,113 @@ export class GridManager {
     }
 
     return hints;
+  }
+
+  getAdjacentPositions(pos: GridPosition): GridPosition[] {
+    const deltas = [
+      { x: -1, y: 0 },
+      { x: 1, y: 0 },
+      { x: 0, y: -1 },
+      { x: 0, y: 1 },
+    ];
+    return deltas
+      .map((d) => ({ x: pos.x + d.x, y: pos.y + d.y }))
+      .filter((p) => p.x >= 0 && p.x < GRID_SIZE && p.y >= 0 && p.y < GRID_SIZE);
+  }
+
+  getBuildingClusterId(buildingId: string): string | undefined {
+    return this.buildingToCluster.get(buildingId);
+  }
+
+  getCluster(clusterId: string): Cluster | undefined {
+    return this.clusters.get(clusterId);
+  }
+
+  updateClusters(
+    buildingDefinitions: Map<string, BuildingId>,
+    depotRanges: Map<string, number>,
+  ): void {
+    // Clear existing clusters
+    this.clusters.clear();
+    this.buildingToCluster.clear();
+
+    // Clear cluster IDs on placements
+    for (const placement of this.placements.values()) {
+      placement.clusterId = undefined;
+    }
+
+    // Find all habitats (cluster roots)
+    const habitats: string[] = [];
+    for (const [buildingId, defId] of buildingDefinitions) {
+      if (defId === BuildingId.HABITAT || defId === BuildingId.ADVANCED_HABITAT) {
+        if (this.placements.has(buildingId)) {
+          habitats.push(buildingId);
+        }
+      }
+    }
+
+    // Build clusters via flood-fill from each habitat
+    for (const habitatId of habitats) {
+      const clusterId = `cluster-${habitatId}`;
+      const cluster: Cluster = {
+        id: clusterId,
+        rootHabitatId: habitatId,
+        buildingIds: new Set(),
+      };
+
+      // BFS flood-fill
+      const visited = new Set<string>();
+      const queue: string[] = [habitatId];
+
+      while (queue.length > 0) {
+        const currentId = queue.shift();
+        if (!currentId || visited.has(currentId)) continue;
+        if (this.buildingToCluster.has(currentId)) continue; // Already in another cluster
+        visited.add(currentId);
+
+        const placement = this.placements.get(currentId);
+        if (!placement) continue;
+
+        // Add to cluster
+        cluster.buildingIds.add(currentId);
+        this.buildingToCluster.set(currentId, clusterId);
+        placement.clusterId = clusterId;
+
+        // Find adjacent buildings
+        const adjacentPositions = this.getAdjacentPositions(placement.position);
+        for (const adjPos of adjacentPositions) {
+          const cell = this.grid[adjPos.y][adjPos.x];
+          if (cell.buildingId && !visited.has(cell.buildingId)) {
+            queue.push(cell.buildingId);
+          }
+        }
+      }
+
+      this.clusters.set(clusterId, cluster);
+    }
+
+    // Second pass: depot range connections
+    for (const [depotId, range] of depotRanges) {
+      const depotPlacement = this.placements.get(depotId);
+      if (!depotPlacement || !depotPlacement.clusterId) continue;
+
+      const depotClusterId = depotPlacement.clusterId;
+      const depotCluster = this.clusters.get(depotClusterId);
+      if (!depotCluster) continue;
+
+      // Find buildings within depot range
+      for (const [buildingId, placement] of this.placements) {
+        if (placement.clusterId) continue; // Already in a cluster
+
+        const distance = this.calculateDistance(depotPlacement.position, placement.position);
+        if (distance <= range) {
+          // Add to depot's cluster
+          depotCluster.buildingIds.add(buildingId);
+          this.buildingToCluster.set(buildingId, depotClusterId);
+          placement.clusterId = depotClusterId;
+        }
+      }
+    }
   }
 
   tick(): void {

@@ -1,6 +1,7 @@
 <!-- src/renderer/components/BaseGrid/BuildingStatsCard.vue -->
 <script setup lang="ts">
 import { computed } from "vue";
+import { AlertTriangle } from "lucide-vue-next";
 import type { Building, BuildingDefinition } from "../../../core/models/Building";
 import type { Colonist, ColonistIdeology } from "../../../core/models/Colonist";
 import { type GridPosition, PowerState } from "../../../core/models/Grid";
@@ -12,6 +13,7 @@ import {
   FACTION_CSS_VARS,
   FACTION_SHORT_NAMES,
 } from "../../utils/ideologyDisplay";
+import { gameService } from "../../services/GameService";
 
 interface Props {
   building: Building;
@@ -103,6 +105,11 @@ const batteryVariant = computed(() => {
   if (props.batteryLevel < 0.66) return "warning";
   return "default";
 });
+
+const isConnected = computed(() => {
+  if (!props.building?.id) return true; // No building selected
+  return gameService.isConnectedToHabitat(props.building.id);
+});
 </script>
 
 <template>
@@ -113,6 +120,12 @@ const batteryVariant = computed(() => {
 
     <div class="card-content">
       <p class="description">{{ definition.description }}</p>
+
+      <!-- Connectivity warning for disconnected buildings -->
+      <div v-if="!isConnected" class="connectivity-warning">
+        <AlertTriangle :size="16" />
+        <span>Not connected to habitat</span>
+      </div>
 
       <!-- Construction progress for pending buildings -->
       <div v-if="isPending" class="stats-section construction-section">
@@ -409,5 +422,18 @@ const batteryVariant = computed(() => {
 .unassign-btn:hover {
   opacity: 1;
   color: var(--g-color-negative);
+}
+
+.connectivity-warning {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-xs);
+  padding: var(--g-space-sm);
+  margin-bottom: var(--g-space-md);
+  background: rgba(255, 152, 0, 0.15);
+  border: 1px solid var(--g-color-warning);
+  border-radius: var(--g-radius-sm);
+  color: var(--g-color-warning);
+  font-size: var(--g-font-size-sm);
 }
 </style>

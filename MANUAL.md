@@ -192,6 +192,66 @@ Every building has a built-in battery that provides backup power when disconnect
 
 **Critical:** When battery depletes completely, the building becomes **Unpowered** and shuts down entirely - no production, no consumption. This can cascade into resource crises if food or oxygen production goes offline. Always monitor buildings on battery and restore power before they shut down.
 
+### Transit Connections
+
+Colonists can only work at buildings they can physically reach. Transit connections determine which workplaces are accessible from each housing cluster.
+
+#### How Connections Work
+
+Buildings form **clusters** based on adjacency:
+- **Habitats are roots**: Each cluster starts from a Habitat Module or Advanced Habitat
+- **4-way adjacency**: Buildings connect along grid edges (up, down, left, right)
+- **Diagonal doesn't count**: Buildings touching only at corners are not connected
+
+A colonist living in a habitat can work at any building within the same cluster. If a building is not connected to their housing, they cannot be assigned there.
+
+#### Viewing Connections
+
+The Base Grid displays transit connections visually:
+- **Connected buildings** show a solid border when selected
+- **Disconnected buildings** appear dimmed
+- Hover over a habitat to highlight all buildings in its cluster
+
+#### Rover Depot
+
+The **Rover Depot** building extends connectivity beyond simple adjacency:
+
+| Property | Value |
+|----------|-------|
+| **Cost** | 80 materials |
+| **Range** | 3 cells |
+| **Effect** | Bridges separate clusters within range |
+
+Place a Rover Depot between distant building groups to connect them. The depot itself does not need to be adjacent to either cluster - it connects all buildings within its range to each other.
+
+#### Disconnection Effects
+
+When a building loses its transit connection (due to demolition or reconfiguration):
+- **Workers are immediately unassigned** from that building
+- The building continues to operate if it has power
+- Automated buildings (no worker requirement) are unaffected
+
+Plan carefully before demolishing buildings that serve as bridges between clusters.
+
+#### Layout Planning Tips
+
+**Keep clusters compact:**
+- Build habitats near workplaces to minimize connection chains
+- Long chains of buildings are fragile - one demolition breaks the connection
+
+**Use Rover Depots strategically:**
+- A single depot can connect multiple isolated clusters
+- Place depots centrally to maximize coverage
+- Depots are especially valuable for distant Mining Stations
+
+**Plan for growth:**
+- Leave space for future connections between clusters
+- Consider where new habitats will go before placing production buildings
+
+**Avoid island buildings:**
+- An isolated building without transit access is useless for staffing
+- Always verify connections before assigning workers
+
 ### Strategic Tips
 
 **Power Planning:**

@@ -64,8 +64,8 @@ export class BuildingManager {
     this.victoryManager = victory;
   }
 
-  setGridManager(grid: GridManager): void {
-    this.gridManager = grid;
+  setGridManager(gridManager: GridManager): void {
+    this.gridManager = gridManager;
   }
 
   constructor(defs: BuildingDefinition[]) {
@@ -119,8 +119,13 @@ export class BuildingManager {
     }
 
     // Delete buildings that were recycled (outside of iteration loop)
-    for (const id of buildingsToDelete) {
-      this.buildings.delete(id);
+    if (buildingsToDelete.length > 0) {
+      for (const id of buildingsToDelete) {
+        this.buildings.delete(id);
+      }
+      // Update transit clusters when buildings are removed
+      const disconnectionEvents = this.triggerClusterUpdate();
+      events.push(...disconnectionEvents);
     }
 
     return events;
@@ -168,6 +173,10 @@ export class BuildingManager {
           events.push(victoryEvent);
         }
       }
+
+      // Update transit clusters when a building becomes active
+      const disconnectionEvents = this.triggerClusterUpdate();
+      events.push(...disconnectionEvents);
     }
   }
 
@@ -194,9 +203,17 @@ export class BuildingManager {
   /**
    * Auto-assign available colonists to a newly completed building.
    * Prioritizes colonists with skill affinities matching the building's worker role.
+   * Respects transit connectivity - only assigns colonists whose housing is in the same cluster.
    */
   private autoAssignWorkers(building: Building, def: BuildingDefinition): void {
     if (!def.workerSlots || !this.colonyManager) return;
+
+    // Check if building is on the grid and get its cluster
+    const isOnGrid = this.gridManager?.getPlacement(building.id) !== undefined;
+    const workplaceCluster = this.gridManager?.getBuildingClusterId(building.id);
+
+    // Skip if building is on grid but not connected to a habitat
+    if (isOnGrid && !workplaceCluster) return;
 
     // Get all colonists not already assigned to any building
     const assignedColonistIds = new Set<string>();
@@ -207,7 +224,18 @@ export class BuildingManager {
     }
 
     const allColonists = this.colonyManager.getColonists();
-    const availableColonists = allColonists.filter((c) => !assignedColonistIds.has(c.id));
+    const availableColonists = allColonists.filter((c) => {
+      if (assignedColonistIds.has(c.id)) return false;
+
+      // Check transit connectivity when building is on grid with a cluster
+      if (isOnGrid && workplaceCluster && c.housingId) {
+        const housingCluster = this.gridManager?.getBuildingClusterId(c.housingId);
+        // Colonist's housing must be in the same cluster as workplace
+        if (!housingCluster || housingCluster !== workplaceCluster) return false;
+      }
+
+      return true;
+    });
 
     if (availableColonists.length === 0) return;
 
@@ -276,11 +304,30 @@ export class BuildingManager {
     for (const building of understaffed) {
       const def = this.definitions.get(building.definitionId);
       if (!def) continue;
+
+      // Check if building is on the grid and get its cluster
+      const isOnGrid = this.gridManager?.getPlacement(building.id) !== undefined;
+      const workplaceCluster = this.gridManager?.getBuildingClusterId(building.id);
+
+      // Skip buildings that are on the grid but not connected to a habitat
+      if (isOnGrid && !workplaceCluster) continue;
+
       const slotsNeeded = (def.workerSlots ?? 0) - building.assignedWorkers.length;
 
-      // Score and sort available colonists
+      // Score and sort available colonists, filtering by transit connectivity
       const scored = unassigned
-        .filter((c) => !assignedIds.has(c.id))
+        .filter((c) => {
+          if (assignedIds.has(c.id)) return false;
+
+          // Check transit connectivity when building is on grid with a cluster
+          if (isOnGrid && workplaceCluster && c.housingId) {
+            const housingCluster = this.gridManager?.getBuildingClusterId(c.housingId);
+            // Colonist's housing must be in the same cluster as workplace
+            if (!housingCluster || housingCluster !== workplaceCluster) return false;
+          }
+
+          return true;
+        })
         .map((c) => ({
           colonist: c,
           score: this.scoreColonistForBuilding(c, def),
@@ -418,6 +465,14 @@ export class BuildingManager {
     return this.buildings.get(id);
   }
 
+  /** Remove a building directly (for testing or demolition). Does not refund resources. */
+  removeBuilding(buildingId: string): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+    this.buildings.delete(buildingId);
+    return true;
+  }
+
   setBuildingMode(
     buildingId: string,
     mode: "conservation" | "normal" | "overdrive",
@@ -491,12 +546,18 @@ export class BuildingManager {
     if (building.status === "pending" || building.status === "recycling") return false;
 
     // Remove production/consumption if active
-    if (building.status === "active" && !building.broken) {
+    const wasActive = building.status === "active";
+    if (wasActive && !building.broken) {
       this.applyBuildingResourceFlow(buildingId, resources, false);
     }
 
     building.status = "recycling";
     building.recyclingProgress = 0;
+
+    // Update transit clusters when a building becomes inactive
+    if (wasActive) {
+      this.triggerClusterUpdate();
+    }
     return true;
   }
 
@@ -517,6 +578,8 @@ export class BuildingManager {
     }
 
     this.buildings.delete(buildingId);
+    // Update transit clusters when a building is removed
+    this.triggerClusterUpdate();
     return true;
   }
 
@@ -593,7 +656,8 @@ export class BuildingManager {
     if (!building) return false;
 
     // Remove production/consumption if active
-    if (building.status === "active" && !building.broken) {
+    const wasActive = building.status === "active";
+    if (wasActive && !building.broken) {
       this.applyBuildingResourceFlow(buildingId, resources, false);
     }
 
@@ -613,6 +677,11 @@ export class BuildingManager {
     // Clear depositId during repurposing - player must re-link to appropriate deposit
     // (deposit types may not be compatible between building types)
     building.depositId = undefined;
+
+    // Update transit clusters when a building becomes inactive
+    if (wasActive) {
+      this.triggerClusterUpdate();
+    }
 
     return true;
   }
@@ -740,6 +809,82 @@ export class BuildingManager {
     return Array.from(this.buildings.values()).filter((b) => b.status === "pending");
   }
 
+  /** Get depot ranges for all active depot buildings */
+  getDepotRanges(): Map<string, number> {
+    const ranges = new Map<string, number>();
+    for (const [id, building] of this.buildings) {
+      if (building.status !== "active") continue;
+      const def = this.definitions.get(building.definitionId);
+      if (def?.depotRange) {
+        ranges.set(id, def.depotRange);
+      }
+    }
+    return ranges;
+  }
+
+  /** Get building definition IDs for all active buildings */
+  getBuildingDefinitionsMap(): Map<string, BuildingId> {
+    const defs = new Map<string, BuildingId>();
+    for (const [id, building] of this.buildings) {
+      if (building.status !== "active") continue;
+      defs.set(id, building.definitionId);
+    }
+    return defs;
+  }
+
+  /** Trigger cluster recalculation in GridManager and handle disconnected buildings */
+  triggerClusterUpdate(): GameEvent[] {
+    if (!this.gridManager) return [];
+    this.gridManager.updateClusters(this.getBuildingDefinitionsMap(), this.getDepotRanges());
+    return this.handleDisconnectedBuildings();
+  }
+
+  /**
+   * Check all buildings for workers whose housing is no longer in the same cluster.
+   * Unassigns workers who can no longer reach their workplace.
+   * Returns transit disconnection events for the event log.
+   */
+  handleDisconnectedBuildings(): GameEvent[] {
+    if (!this.gridManager || !this.colonyManager) return [];
+
+    const events: GameEvent[] = [];
+
+    for (const [buildingId, building] of this.buildings) {
+      if (building.assignedWorkers.length === 0) continue;
+
+      const workplaceCluster = this.gridManager.getBuildingClusterId(buildingId);
+      const def = this.definitions.get(building.definitionId);
+
+      // Check each worker's housing cluster
+      const workersToRemove: string[] = [];
+      for (const colonistId of building.assignedWorkers) {
+        const colonist = this.colonyManager.getColonist(colonistId);
+        if (!colonist?.housingId) continue;
+
+        const housingCluster = this.gridManager.getBuildingClusterId(colonist.housingId);
+        if (housingCluster !== workplaceCluster) {
+          workersToRemove.push(colonistId);
+        }
+      }
+
+      if (workersToRemove.length > 0) {
+        for (const colonistId of workersToRemove) {
+          this.removeWorker(buildingId, colonistId);
+        }
+        events.push({
+          type: "TRANSIT_DISCONNECTION",
+          buildingId,
+          buildingName: def?.name ?? "Unknown Building",
+          unassignedWorkers: workersToRemove,
+          severity: "warning",
+          message: `${workersToRemove.length} worker(s) unassigned from ${def?.name ?? "building"} due to transit disconnection`,
+        });
+      }
+    }
+
+    return events;
+  }
+
   getBuildingsByDefinition(defId: BuildingId): Building[] {
     return Array.from(this.buildings.values()).filter((b) => b.definitionId === defId);
   }
@@ -795,6 +940,18 @@ export class BuildingManager {
     // Check if colonist is already assigned elsewhere
     for (const b of this.buildings.values()) {
       if (b.assignedWorkers.includes(colonistId)) return false;
+    }
+
+    // Validate transit connectivity - colonist's housing must be in same cluster as workplace
+    if (this.gridManager && this.colonyManager) {
+      const colonist = this.colonyManager.getColonist(colonistId);
+      if (colonist?.housingId) {
+        const housingCluster = this.gridManager.getBuildingClusterId(colonist.housingId);
+        const workplaceCluster = this.gridManager.getBuildingClusterId(buildingId);
+        if (housingCluster !== workplaceCluster) {
+          return false;
+        }
+      }
     }
 
     building.assignedWorkers.push(colonistId);

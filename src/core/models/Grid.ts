@@ -29,6 +29,13 @@ export interface BuildingPlacement {
   distanceToPower: number;
   batteryLevel: number; // 0-1, where 1 = full (3 sols)
   powerState: PowerState;
+  clusterId?: string;
+}
+
+export interface Cluster {
+  id: string;
+  rootHabitatId: string;
+  buildingIds: Set<string>;
 }
 
 export const GRID_SIZE = 10;

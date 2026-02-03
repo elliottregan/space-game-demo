@@ -12,6 +12,7 @@ const props = defineProps<{
   skillDefinitions: SkillDefinition[];
   selectedColonistId: string | null;
   draggingColonistId: string | null;
+  assignableColonistsByBuilding: Map<string, Set<string>>;
 }>();
 
 const emit = defineEmits<{
@@ -37,6 +38,10 @@ const stats = computed(() => {
 
 function getDefinition(building: Building): BuildingDefinition | undefined {
   return props.buildingDefinitions.find((d) => d.id === building.definitionId);
+}
+
+function getAssignableColonists(buildingId: string): Set<string> {
+  return props.assignableColonistsByBuilding.get(buildingId) ?? new Set();
 }
 
 function onAssign(colonistId: string, buildingId: string) {
@@ -68,6 +73,7 @@ function onUnassign(colonistId: string) {
         :skill-definitions="skillDefinitions"
         :selected-colonist-id="selectedColonistId"
         :dragging-colonist-id="draggingColonistId"
+        :assignable-colonist-ids="getAssignableColonists(building.id)"
         @assign="onAssign"
         @unassign="onUnassign"
       />

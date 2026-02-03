@@ -20,6 +20,8 @@ interface BuildingInfo {
   status?: "pending" | "active" | "disabled" | "idle" | "recycling";
   constructionProgress?: number;
   powerSourceId?: string;
+  clusterId?: string;
+  depotRange?: number;
   occupants?: OccupantSlot[];
 }
 
@@ -34,6 +36,8 @@ interface Props {
   selectedPosition: GridPosition | null;
   /** Building definition ID selected for placement preview */
   selectedBuildingDefId?: string;
+  /** Currently selected building ID (for showing cluster connections) */
+  selectedBuildingId?: string;
 }
 
 const props = defineProps<Props>();
@@ -150,6 +154,8 @@ const gridData = computed<BaseGridData>(() => {
         status: building?.status,
         constructionProgress: building?.constructionProgress,
         powerSourceId: building?.powerSourceId,
+        clusterId: building?.clusterId,
+        depotRange: building?.depotRange,
         occupants: building?.occupants,
       });
     }
@@ -159,6 +165,7 @@ const gridData = computed<BaseGridData>(() => {
     cells,
     selectedPosition: props.selectedPosition,
     selectedBuildingDefId: props.selectedBuildingDefId,
+    selectedBuildingId: props.selectedBuildingId,
   };
 });
 

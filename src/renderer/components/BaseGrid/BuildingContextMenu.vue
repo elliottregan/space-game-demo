@@ -30,6 +30,7 @@ import {
   Rocket,
   Globe,
   TowerControl,
+  Truck,
 } from "lucide-vue-next";
 
 // Map building IDs to Lucide Vue components
@@ -56,6 +57,7 @@ const BUILDING_ICONS: Record<string, Component> = {
   [BuildingId.HYDROPONIC_GARDEN]: Flower,
   [BuildingId.OBSERVATORY_DOME]: Telescope,
   [BuildingId.ASSEMBLY_HALL]: Landmark,
+  [BuildingId.ROVER_DEPOT]: Truck,
   [BuildingId.GENERATION_SHIP]: Rocket,
   [BuildingId.UNITED_MARS_STATION]: Globe,
   [BuildingId.SPACE_ELEVATOR]: TowerControl,

@@ -124,6 +124,8 @@ interface GameUIState {
     status: "pending" | "active" | "disabled" | "idle" | "recycling";
     constructionProgress?: number; // 0-1 for pending buildings
     powerSourceId?: string; // ID of the power source this building is connected to
+    clusterId?: string; // ID of the transit cluster this building belongs to
+    depotRange?: number; // Range for depot buildings (transit connectivity extension)
   }>;
   gridDeposits: Array<{
     position: { x: number; y: number };
@@ -409,6 +411,8 @@ class GameService {
               ? building.constructionProgress / constructionTime
               : undefined,
           powerSourceId: placement.powerSourceId,
+          clusterId: placement.clusterId,
+          depotRange: def?.depotRange,
         });
       }
     }
@@ -539,6 +543,19 @@ class GameService {
       this.syncState();
     }
     return result.success;
+  }
+
+  // Cluster/connectivity methods
+  getBuildingClusterId(buildingId: string): string | undefined {
+    // Use synced state for reactivity
+    const building = this.state.gridBuildings.find((b) => b.id === buildingId);
+    return building?.clusterId;
+  }
+
+  isConnectedToHabitat(buildingId: string): boolean {
+    // Use synced state for reactivity
+    const building = this.state.gridBuildings.find((b) => b.id === buildingId);
+    return building?.clusterId !== undefined;
   }
 
   // Deposit methods
