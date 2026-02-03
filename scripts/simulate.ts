@@ -2100,14 +2100,29 @@ function analyzeActionsPerSol(results: RunResult[]): void {
   drawAsciiHistogram(categoryData, 35);
 
   // Actions Over Time histogram (avg actions per sol bucket)
-  output("\n  Actions Over Time (avg per " + SOL_BUCKET_SIZE + "-sol period):");
-  const timelineData = Array.from(actionsOverTime.entries())
-    .sort((a, b) => a[0] - b[0])
+  // Show first 200 sols in detail, then summarize the rest
+  const MAX_DISPLAY_SOL = 200;
+  output("\n  Actions Over Time (avg per " + SOL_BUCKET_SIZE + "-sol period, sols 0-" + (MAX_DISPLAY_SOL - 1) + "):");
+  const allTimelineData = Array.from(actionsOverTime.entries())
+    .sort((a, b) => a[0] - b[0]);
+
+  const timelineData = allTimelineData
+    .filter(([bucket]) => bucket < MAX_DISPLAY_SOL)
     .map(([bucket, data]) => ({
       label: `${bucket}-${bucket + SOL_BUCKET_SIZE - 1}`,
       value: data.runsActive > 0 ? data.total / data.runsActive : 0,
     }));
   drawAsciiHistogramFloat(timelineData, 35);
+
+  // Summarize remaining sols
+  const laterData = allTimelineData.filter(([bucket]) => bucket >= MAX_DISPLAY_SOL);
+  if (laterData.length > 0) {
+    const totalLaterActions = laterData.reduce((sum, [, d]) => sum + d.total, 0);
+    const totalLaterRuns = laterData.reduce((sum, [, d]) => sum + d.runsActive, 0);
+    const avgLater = totalLaterRuns > 0 ? totalLaterActions / totalLaterRuns : 0;
+    const maxSol = Math.max(...laterData.map(([bucket]) => bucket + SOL_BUCKET_SIZE - 1));
+    output(`\n  Sols ${MAX_DISPLAY_SOL}-${maxSol}: avg ${avgLater.toFixed(2)} actions per ${SOL_BUCKET_SIZE}-sol period`);
+  }
 
   // Distribution histogram
   output("\n  Actions per Sol Distribution (per run):");
