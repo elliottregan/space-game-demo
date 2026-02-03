@@ -4,7 +4,6 @@ import { BuildingsTablePanel } from "./BuildingsTablePanel";
 import { ColonistsPanel } from "./ColonistsPanel";
 import { ColonyPanel } from "./ColonyPanel";
 import { HealthPanel } from "./HealthPanel";
-import { PowerGridPanel } from "./PowerGridPanel";
 </script>
 
 <template>
@@ -13,7 +12,6 @@ import { PowerGridPanel } from "./PowerGridPanel";
       <ColonyPanel />
       <HealthPanel />
       <AirQualityPanel />
-      <PowerGridPanel />
     </div>
     <div class="right-column">
       <ColonistsPanel />

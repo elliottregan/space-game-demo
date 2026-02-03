@@ -109,6 +109,8 @@ const gridDeposits = computed(() =>
   })),
 );
 
+const powerStats = computed(() => state.value.powerStats);
+
 // Selection state
 const selectedPosition = ref<GridPosition | null>(null);
 const selectedBuildingId = ref<string | null>(null);
@@ -248,7 +250,13 @@ const placementHints = computed(() => ({
     <header class="base-header">
       <h2>Base Grid</h2>
       <div class="power-summary">
-        <span>Buildings: {{ state.gridBuildings.length }}</span>
+        <span class="power-stat powered">{{ powerStats.poweredCount }} powered</span>
+        <span v-if="powerStats.onBatteryCount > 0" class="power-stat battery">
+          {{ powerStats.onBatteryCount }} on battery
+        </span>
+        <span v-if="powerStats.unpoweredCount > 0" class="power-stat unpowered">
+          {{ powerStats.unpoweredCount }} unpowered
+        </span>
       </div>
     </header>
 
@@ -327,9 +335,25 @@ const placementHints = computed(() => ({
 }
 
 .power-summary {
+  display: flex;
+  gap: var(--g-space-md);
+}
+
+.power-stat {
   font-family: var(--g-font-mono);
   font-size: var(--g-font-size-sm);
-  color: var(--g-color-text-muted);
+}
+
+.power-stat.powered {
+  color: var(--g-color-positive);
+}
+
+.power-stat.battery {
+  color: var(--g-color-warning);
+}
+
+.power-stat.unpowered {
+  color: var(--g-color-negative);
 }
 
 .base-content {
