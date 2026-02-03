@@ -63,7 +63,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     description: "Extracts materials from surface mineral deposits",
     cost: { materials: 50 },
     constructionTime: 10,
-    production: { materials: 4 },
+    production: { materials: 8 },
     powerConsumption: 3,
     workerSlots: 4,
     workerRole: ColonistRole.ENGINEERING,
