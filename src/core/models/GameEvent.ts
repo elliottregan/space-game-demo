@@ -17,6 +17,7 @@ export enum EventId {
   GEOLOGICAL_SURVEY = "geological_survey",
   EQUIPMENT_WINDFALL = "equipment_windfall",
   WORKER_AUTO_ASSIGNED = "worker_auto_assigned",
+  TRANSIT_DISCONNECTION = "transit_disconnection",
 }
 
 export type EventSeverity = "info" | "warning" | "critical";
@@ -26,6 +27,13 @@ export interface GameEvent {
   severity: EventSeverity;
   message?: string;
   [key: string]: unknown;
+}
+
+export interface TransitDisconnectionEvent extends GameEvent {
+  type: "TRANSIT_DISCONNECTION";
+  buildingId: string;
+  buildingName: string;
+  unassignedWorkers: string[];
 }
 
 export interface RandomEventDefinition {

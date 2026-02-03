@@ -124,7 +124,8 @@ setGridManager(gridManager: GridManager): void {
         this.buildings.delete(id);
       }
       // Update transit clusters when buildings are removed
-      this.triggerClusterUpdate();
+      const disconnectionEvents = this.triggerClusterUpdate();
+      events.push(...disconnectionEvents);
     }
 
     return events;
@@ -174,7 +175,8 @@ setGridManager(gridManager: GridManager): void {
       }
 
       // Update transit clusters when a building becomes active
-      this.triggerClusterUpdate();
+      const disconnectionEvents = this.triggerClusterUpdate();
+      events.push(...disconnectionEvents);
     }
   }
 
@@ -793,7 +795,7 @@ setGridManager(gridManager: GridManager): void {
   }
 
   /** Trigger cluster recalculation in GridManager and handle disconnected buildings */
-  triggerClusterUpdate(): string[] {
+  triggerClusterUpdate(): GameEvent[] {
     if (!this.gridManager) return [];
     this.gridManager.updateClusters(this.getBuildingDefinitionsMap(), this.getDepotRanges());
     return this.handleDisconnectedBuildings();
@@ -802,17 +804,18 @@ setGridManager(gridManager: GridManager): void {
   /**
    * Check all buildings for workers whose housing is no longer in the same cluster.
    * Unassigns workers who can no longer reach their workplace.
-   * Returns list of unassigned colonist IDs.
+   * Returns transit disconnection events for the event log.
    */
-  handleDisconnectedBuildings(): string[] {
+  handleDisconnectedBuildings(): GameEvent[] {
     if (!this.gridManager || !this.colonyManager) return [];
 
-    const unassignedWorkers: string[] = [];
+    const events: GameEvent[] = [];
 
     for (const [buildingId, building] of this.buildings) {
       if (building.assignedWorkers.length === 0) continue;
 
       const workplaceCluster = this.gridManager.getBuildingClusterId(buildingId);
+      const def = this.definitions.get(building.definitionId);
 
       // Check each worker's housing cluster
       const workersToRemove: string[] = [];
@@ -826,13 +829,22 @@ setGridManager(gridManager: GridManager): void {
         }
       }
 
-      for (const colonistId of workersToRemove) {
-        this.removeWorker(buildingId, colonistId);
-        unassignedWorkers.push(colonistId);
+      if (workersToRemove.length > 0) {
+        for (const colonistId of workersToRemove) {
+          this.removeWorker(buildingId, colonistId);
+        }
+        events.push({
+          type: "TRANSIT_DISCONNECTION",
+          buildingId,
+          buildingName: def?.name ?? "Unknown Building",
+          unassignedWorkers: workersToRemove,
+          severity: "warning",
+          message: `${workersToRemove.length} worker(s) unassigned from ${def?.name ?? "building"} due to transit disconnection`,
+        });
       }
     }
 
-    return unassignedWorkers;
+    return events;
   }
 
   getBuildingsByDefinition(defId: BuildingId): Building[] {
