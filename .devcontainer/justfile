@@ -44,24 +44,23 @@ refresh-auth:
     just restart
     @echo "Auth refreshed and container restarted"
 
-# Refresh token without restart - writes directly into the container's mounted file
+# Refresh token without restart - copies credentials into container
 refresh-token:
     #!/usr/bin/env bash
     set -euo pipefail
-    # Ensure host credentials file exists (bind mount requirement)
-    mkdir -p ~/.claude
-    touch ~/.claude/.credentials.json
     # Extract fresh credentials from macOS Keychain
     CREDS=$(security find-generic-password -s "Claude Code-credentials" -a "$(whoami)" -w 2>/dev/null) || {
         echo "ERROR: No credentials in Keychain. Run 'claude' on host to authenticate first."
         exit 1
     }
-    # Write in-place to the existing file (preserves inode for bind mount)
+    # Update host file (for container restarts via entrypoint)
+    mkdir -p ~/.claude
     echo "$CREDS" > ~/.claude/.credentials.json
-    # Verify container can read it
-    docker exec space-game-devcontainer cat /home/dev/.claude/.credentials.json > /dev/null 2>&1 && \
-        echo "Token refreshed. Container has new credentials." || \
-        echo "WARNING: Container couldn't read credentials. May need 'just restart'."
+    # Copy directly into running container (since credentials are no longer bind-mounted)
+    echo "$CREDS" | docker exec -i space-game-devcontainer tee /home/dev/.claude/.credentials.json > /dev/null
+    docker exec space-game-devcontainer chown dev:dev /home/dev/.claude/.credentials.json
+    docker exec space-game-devcontainer chmod 600 /home/dev/.claude/.credentials.json
+    echo "Token refreshed in both host and container."
 
 # Re-authenticate on host and refresh container token
 reauth:
