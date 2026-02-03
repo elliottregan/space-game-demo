@@ -64,8 +64,8 @@ export class BuildingManager {
     this.victoryManager = victory;
   }
 
-  setGridManager(grid: GridManager): void {
-    this.gridManager = grid;
+setGridManager(gridManager: GridManager): void {
+    this.gridManager = gridManager;
   }
 
   constructor(defs: BuildingDefinition[]) {
@@ -119,8 +119,12 @@ export class BuildingManager {
     }
 
     // Delete buildings that were recycled (outside of iteration loop)
-    for (const id of buildingsToDelete) {
-      this.buildings.delete(id);
+    if (buildingsToDelete.length > 0) {
+      for (const id of buildingsToDelete) {
+        this.buildings.delete(id);
+      }
+      // Update transit clusters when buildings are removed
+      this.triggerClusterUpdate();
     }
 
     return events;
@@ -168,6 +172,9 @@ export class BuildingManager {
           events.push(victoryEvent);
         }
       }
+
+      // Update transit clusters when a building becomes active
+      this.triggerClusterUpdate();
     }
   }
 
@@ -491,12 +498,18 @@ export class BuildingManager {
     if (building.status === "pending" || building.status === "recycling") return false;
 
     // Remove production/consumption if active
-    if (building.status === "active" && !building.broken) {
+    const wasActive = building.status === "active";
+    if (wasActive && !building.broken) {
       this.applyBuildingResourceFlow(buildingId, resources, false);
     }
 
     building.status = "recycling";
     building.recyclingProgress = 0;
+
+    // Update transit clusters when a building becomes inactive
+    if (wasActive) {
+      this.triggerClusterUpdate();
+    }
     return true;
   }
 
@@ -517,6 +530,8 @@ export class BuildingManager {
     }
 
     this.buildings.delete(buildingId);
+    // Update transit clusters when a building is removed
+    this.triggerClusterUpdate();
     return true;
   }
 
@@ -593,7 +608,8 @@ export class BuildingManager {
     if (!building) return false;
 
     // Remove production/consumption if active
-    if (building.status === "active" && !building.broken) {
+    const wasActive = building.status === "active";
+    if (wasActive && !building.broken) {
       this.applyBuildingResourceFlow(buildingId, resources, false);
     }
 
@@ -613,6 +629,11 @@ export class BuildingManager {
     // Clear depositId during repurposing - player must re-link to appropriate deposit
     // (deposit types may not be compatible between building types)
     building.depositId = undefined;
+
+    // Update transit clusters when a building becomes inactive
+    if (wasActive) {
+      this.triggerClusterUpdate();
+    }
 
     return true;
   }
@@ -738,6 +759,35 @@ export class BuildingManager {
 
   getPendingBuildings(): Building[] {
     return Array.from(this.buildings.values()).filter((b) => b.status === "pending");
+  }
+
+  /** Get depot ranges for all active depot buildings */
+  getDepotRanges(): Map<string, number> {
+    const ranges = new Map<string, number>();
+    for (const [id, building] of this.buildings) {
+      if (building.status !== "active") continue;
+      const def = this.definitions.get(building.definitionId);
+      if (def?.depotRange) {
+        ranges.set(id, def.depotRange);
+      }
+    }
+    return ranges;
+  }
+
+  /** Get building definition IDs for all active buildings */
+  getBuildingDefinitionsMap(): Map<string, BuildingId> {
+    const defs = new Map<string, BuildingId>();
+    for (const [id, building] of this.buildings) {
+      if (building.status !== "active") continue;
+      defs.set(id, building.definitionId);
+    }
+    return defs;
+  }
+
+  /** Trigger cluster recalculation in GridManager */
+  triggerClusterUpdate(): void {
+    if (!this.gridManager) return;
+    this.gridManager.updateClusters(this.getBuildingDefinitionsMap(), this.getDepotRanges());
   }
 
   getBuildingsByDefinition(defId: BuildingId): Building[] {
