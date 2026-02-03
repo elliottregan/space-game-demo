@@ -103,4 +103,61 @@ describe("GridManager - Transit Connectivity", () => {
       expect(cluster1).not.toBe(cluster2);
     });
   });
+
+  describe("depot connectivity", () => {
+    it("depot bridges disconnected building within range", () => {
+      manager.placeBuilding("hab-1", { x: 2, y: 2 });
+      manager.placeBuilding("depot-1", { x: 2, y: 3 });
+      manager.placeBuilding("farm-1", { x: 2, y: 6 }); // 3 cells from depot
+
+      manager.updateClusters(
+        new Map([
+          ["hab-1", BuildingId.HABITAT],
+          ["depot-1", BuildingId.ROVER_DEPOT],
+          ["farm-1", BuildingId.BASIC_FARM],
+        ]),
+        new Map([["depot-1", 3]]),
+      );
+
+      const habCluster = manager.getBuildingClusterId("hab-1");
+      const farmCluster = manager.getBuildingClusterId("farm-1");
+      expect(farmCluster).toBe(habCluster);
+    });
+
+    it("depot does not bridge building outside range", () => {
+      manager.placeBuilding("hab-1", { x: 2, y: 2 });
+      manager.placeBuilding("depot-1", { x: 2, y: 3 });
+      manager.placeBuilding("farm-1", { x: 2, y: 8 }); // 5 cells from depot
+
+      manager.updateClusters(
+        new Map([
+          ["hab-1", BuildingId.HABITAT],
+          ["depot-1", BuildingId.ROVER_DEPOT],
+          ["farm-1", BuildingId.BASIC_FARM],
+        ]),
+        new Map([["depot-1", 3]]),
+      );
+
+      const farmCluster = manager.getBuildingClusterId("farm-1");
+      expect(farmCluster).toBeUndefined();
+    });
+
+    it("depot must be in a cluster to bridge", () => {
+      manager.placeBuilding("hab-1", { x: 1, y: 1 });
+      manager.placeBuilding("depot-1", { x: 5, y: 5 }); // Not adjacent to habitat
+      manager.placeBuilding("farm-1", { x: 5, y: 6 }); // Adjacent to depot but not habitat
+
+      manager.updateClusters(
+        new Map([
+          ["hab-1", BuildingId.HABITAT],
+          ["depot-1", BuildingId.ROVER_DEPOT],
+          ["farm-1", BuildingId.BASIC_FARM],
+        ]),
+        new Map([["depot-1", 3]]),
+      );
+
+      const farmCluster = manager.getBuildingClusterId("farm-1");
+      expect(farmCluster).toBeUndefined();
+    });
+  });
 });
