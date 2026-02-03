@@ -847,6 +847,18 @@ setGridManager(gridManager: GridManager): void {
       if (b.assignedWorkers.includes(colonistId)) return false;
     }
 
+    // Validate transit connectivity - colonist's housing must be in same cluster as workplace
+    if (this.gridManager && this.colonyManager) {
+      const colonist = this.colonyManager.getColonist(colonistId);
+      if (colonist?.housingId) {
+        const housingCluster = this.gridManager.getBuildingClusterId(colonist.housingId);
+        const workplaceCluster = this.gridManager.getBuildingClusterId(buildingId);
+        if (housingCluster !== workplaceCluster) {
+          return false;
+        }
+      }
+    }
+
     building.assignedWorkers.push(colonistId);
     return true;
   }
