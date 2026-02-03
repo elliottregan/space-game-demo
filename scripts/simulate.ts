@@ -1987,6 +1987,38 @@ function drawAsciiHistogram(
 }
 
 /**
+ * Draw an ASCII histogram with float values (for averages).
+ * @param data Array of {label, value} objects
+ * @param maxBarWidth Maximum width for bars (default 40)
+ */
+function drawAsciiHistogramFloat(
+  data: Array<{ label: string; value: number }>,
+  maxBarWidth: number = 40,
+): void {
+  if (data.length === 0) return;
+
+  const maxValue = Math.max(...data.map((d) => d.value));
+  const maxLabelWidth = Math.max(...data.map((d) => d.label.length));
+
+  // Draw header
+  output("");
+  output("  " + " ".repeat(maxLabelWidth) + " ┬" + "─".repeat(maxBarWidth + 2));
+
+  for (const { label, value } of data) {
+    const barLength = maxValue > 0 ? Math.round((value / maxValue) * maxBarWidth) : 0;
+    const bar = "█".repeat(barLength);
+    const paddedLabel = label.padStart(maxLabelWidth);
+    const valueStr = value > 0 ? ` ${value.toFixed(2)}` : "";
+    output(`  ${paddedLabel} │${bar}${valueStr}`);
+  }
+
+  // Draw footer with scale
+  output("  " + " ".repeat(maxLabelWidth) + " ┴" + "─".repeat(maxBarWidth + 2));
+  const scaleLabel = `0${" ".repeat(maxBarWidth - String(maxValue.toFixed(2)).length - 1)}${maxValue.toFixed(2)}`;
+  output("  " + " ".repeat(maxLabelWidth) + "  " + scaleLabel);
+}
+
+/**
  * Analyze actions per sol patterns across runs.
  */
 function analyzeActionsPerSol(results: RunResult[]): void {
@@ -1997,6 +2029,10 @@ function analyzeActionsPerSol(results: RunResult[]): void {
   const actionsByCategory: Record<string, number> = {};
   let totalActions = 0;
   let totalIdleActions = 0;
+
+  // Track actions over time (by sol bucket)
+  const SOL_BUCKET_SIZE = 50;
+  const actionsOverTime = new Map<number, { total: number; runsActive: number }>();
 
   for (const result of results) {
     if (!result.actionsExecuted || result.actionsExecuted.length === 0) continue;
@@ -2016,6 +2052,22 @@ function analyzeActionsPerSol(results: RunResult[]): void {
       if (action.category !== "idle") {
         actionsByCategory[action.category] = (actionsByCategory[action.category] ?? 0) + 1;
       }
+    }
+
+    // Count actions per sol bucket for this run
+    const actionsByBucket = new Map<number, number>();
+    for (const action of result.actionsExecuted) {
+      if (action.category === "idle") continue;
+      const bucket = Math.floor(action.sol / SOL_BUCKET_SIZE) * SOL_BUCKET_SIZE;
+      actionsByBucket.set(bucket, (actionsByBucket.get(bucket) ?? 0) + 1);
+    }
+
+    // Aggregate into actionsOverTime
+    for (const [bucket, count] of actionsByBucket) {
+      const existing = actionsOverTime.get(bucket) ?? { total: 0, runsActive: 0 };
+      existing.total += count;
+      existing.runsActive++;
+      actionsOverTime.set(bucket, existing);
     }
   }
 
@@ -2047,8 +2099,18 @@ function analyzeActionsPerSol(results: RunResult[]): void {
   }));
   drawAsciiHistogram(categoryData, 35);
 
+  // Actions Over Time histogram (avg actions per sol bucket)
+  output("\n  Actions Over Time (avg per " + SOL_BUCKET_SIZE + "-sol period):");
+  const timelineData = Array.from(actionsOverTime.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([bucket, data]) => ({
+      label: `${bucket}-${bucket + SOL_BUCKET_SIZE - 1}`,
+      value: data.runsActive > 0 ? data.total / data.runsActive : 0,
+    }));
+  drawAsciiHistogramFloat(timelineData, 35);
+
   // Distribution histogram
-  output("\n  Actions per Sol Distribution:");
+  output("\n  Actions per Sol Distribution (per run):");
   const buckets = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
   const histogramData: Array<{ label: string; count: number }> = [];
   let prevBucket = 0;
