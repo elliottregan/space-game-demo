@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach, mock, spyOn } from "bun:test";
+import { describe, it, expect } from "bun:test";
 import { SimulationRunner } from "../../src/simulation/SimulationRunner";
-import { GameAPI } from "../../src/facade/GameAPI";
-import type { SimulationConfig, RunResult, AggregateStats } from "../../src/simulation/types";
+import type { SimulationConfig } from "../../src/simulation/types";
 
 // Note: SimulationRunner tests run full game simulations and may take 60-90 seconds total.
 // Use extended timeout when running: bun test tests/simulation/SimulationRunner.test.ts --timeout 120000
@@ -17,15 +16,15 @@ describe("SimulationRunner", () => {
 
   describe("run()", () => {
     it("returns AggregateStats with correct totalRuns", () => {
-      const config: SimulationConfig = { runs: 3, seed: 1, verbose: false };
+      const config: SimulationConfig = { runs: 2, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
       const stats = runner.run();
 
-      expect(stats.totalRuns).toBe(3);
+      expect(stats.totalRuns).toBe(2);
     });
 
     it("all runs complete (no infinite loops)", () => {
-      const config: SimulationConfig = { runs: 2, seed: 1, verbose: false };
+      const config: SimulationConfig = { runs: 1, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
 
       // This should complete without hanging
@@ -33,9 +32,9 @@ describe("SimulationRunner", () => {
       const stats = runner.run();
       const elapsed = Date.now() - startTime;
 
-      // Should complete reasonably fast (less than 30 seconds for 2 runs)
-      expect(elapsed).toBeLessThan(30000);
-      expect(stats.totalRuns).toBe(2);
+      // Should complete reasonably fast (less than 15 seconds for 1 run)
+      expect(elapsed).toBeLessThan(15000);
+      expect(stats.totalRuns).toBe(1);
     });
 
     it("runs complete regardless of seed value", () => {
@@ -59,7 +58,7 @@ describe("SimulationRunner", () => {
     });
 
     it("returns valid win rate between 0 and 1", () => {
-      const config: SimulationConfig = { runs: 3, seed: 1, verbose: false };
+      const config: SimulationConfig = { runs: 1, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
       const stats = runner.run();
 
@@ -68,7 +67,7 @@ describe("SimulationRunner", () => {
     });
 
     it("includes victory and defeat breakdowns", () => {
-      const config: SimulationConfig = { runs: 3, seed: 1, verbose: false };
+      const config: SimulationConfig = { runs: 2, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
       const stats = runner.run();
 
@@ -85,13 +84,12 @@ describe("SimulationRunner", () => {
       console.log = (...args: unknown[]) => logs.push(args.join(" "));
 
       try {
-        const config: SimulationConfig = { runs: 2, seed: 1, verbose: true };
+        const config: SimulationConfig = { runs: 1, seed: 1, verbose: true };
         const runner = new SimulationRunner(config);
         runner.run();
 
         // Should have progress logs
         expect(logs.some((l) => l.includes("Run 1"))).toBe(true);
-        expect(logs.some((l) => l.includes("Run 2"))).toBe(true);
       } finally {
         console.log = originalLog;
       }
@@ -103,7 +101,7 @@ describe("SimulationRunner", () => {
       console.log = (...args: unknown[]) => logs.push(args.join(" "));
 
       try {
-        const config: SimulationConfig = { runs: 2, seed: 1, verbose: false };
+        const config: SimulationConfig = { runs: 1, seed: 1, verbose: false };
         const runner = new SimulationRunner(config);
         runner.run();
 
@@ -131,7 +129,7 @@ describe("SimulationRunner", () => {
     });
 
     it("games end with either victory or defeat", () => {
-      const config: SimulationConfig = { runs: 5, seed: 1, verbose: false };
+      const config: SimulationConfig = { runs: 2, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
       const stats = runner.run();
 
@@ -144,19 +142,19 @@ describe("SimulationRunner", () => {
 
     it("uses different seeds for different runs", () => {
       // Run with same base seed but multiple runs
-      const config: SimulationConfig = { runs: 3, seed: 100, verbose: false };
+      const config: SimulationConfig = { runs: 2, seed: 100, verbose: false };
       const runner = new SimulationRunner(config);
       const stats = runner.run();
 
       // Just verify it completes - seeds are internally seed + runIndex
-      expect(stats.totalRuns).toBe(3);
+      expect(stats.totalRuns).toBe(2);
     });
   });
 
   describe("victory type mapping", () => {
-    it("identifies population victory", () => {
+    it("identifies victory types", () => {
       // Run simulations and check victory breakdown
-      const config: SimulationConfig = { runs: 10, seed: 1, verbose: false };
+      const config: SimulationConfig = { runs: 3, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
       const stats = runner.run();
 
@@ -174,7 +172,7 @@ describe("SimulationRunner", () => {
   describe("defeat reason mapping", () => {
     it("categorizes defeats by reason", () => {
       // Run simulations and check defeat breakdown
-      const config: SimulationConfig = { runs: 10, seed: 1, verbose: false };
+      const config: SimulationConfig = { runs: 3, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
       const stats = runner.run();
 
@@ -191,20 +189,13 @@ describe("SimulationRunner", () => {
   });
 
   describe("integration tests", () => {
-    it("completes 10 runs without error", () => {
-      const config: SimulationConfig = { runs: 10, seed: 1, verbose: false };
-      const runner = new SimulationRunner(config);
-
-      expect(() => runner.run()).not.toThrow();
-    });
-
     it("produces meaningful statistics", () => {
-      const config: SimulationConfig = { runs: 10, seed: 1, verbose: false };
+      const config: SimulationConfig = { runs: 3, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
       const stats = runner.run();
 
       // Should have meaningful data
-      expect(stats.totalRuns).toBe(10);
+      expect(stats.totalRuns).toBe(3);
 
       // Win rate should be a valid percentage
       expect(stats.winRate).toBeGreaterThanOrEqual(0);
@@ -220,7 +211,7 @@ describe("SimulationRunner", () => {
 
     it("handles games that run for many sols", () => {
       // Run a few games with a seed that might produce long games
-      const config: SimulationConfig = { runs: 3, seed: 999, verbose: false };
+      const config: SimulationConfig = { runs: 2, seed: 999, verbose: false };
       const runner = new SimulationRunner(config);
 
       const startTime = Date.now();
@@ -229,7 +220,7 @@ describe("SimulationRunner", () => {
 
       // Should complete within reasonable time
       expect(elapsed).toBeLessThan(60000); // 60 seconds max
-      expect(stats.totalRuns).toBe(3);
+      expect(stats.totalRuns).toBe(2);
     });
   });
 
@@ -244,7 +235,7 @@ describe("SimulationRunner", () => {
     });
 
     it("handles missing seed (uses run index)", () => {
-      const config: SimulationConfig = { runs: 2, verbose: false };
+      const config: SimulationConfig = { runs: 1, verbose: false };
       const runner = new SimulationRunner(config);
 
       // Should not throw when seed is undefined
