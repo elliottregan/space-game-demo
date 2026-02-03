@@ -64,7 +64,7 @@ export class BuildingManager {
     this.victoryManager = victory;
   }
 
-setGridManager(gridManager: GridManager): void {
+  setGridManager(gridManager: GridManager): void {
     this.gridManager = gridManager;
   }
 
@@ -285,11 +285,26 @@ setGridManager(gridManager: GridManager): void {
     for (const building of understaffed) {
       const def = this.definitions.get(building.definitionId);
       if (!def) continue;
+
+      // Get workplace cluster for transit connectivity check
+      const workplaceCluster = this.gridManager?.getBuildingClusterId(building.id);
+
       const slotsNeeded = (def.workerSlots ?? 0) - building.assignedWorkers.length;
 
-      // Score and sort available colonists
+      // Score and sort available colonists, filtering by transit connectivity
       const scored = unassigned
-        .filter((c) => !assignedIds.has(c.id))
+        .filter((c) => {
+          if (assignedIds.has(c.id)) return false;
+
+          // Check transit connectivity - colonist's housing must be in same cluster
+          // Only enforce when both workplace and housing have cluster assignments
+          if (this.gridManager && workplaceCluster && c.housingId) {
+            const housingCluster = this.gridManager.getBuildingClusterId(c.housingId);
+            if (housingCluster && housingCluster !== workplaceCluster) return false;
+          }
+
+          return true;
+        })
         .map((c) => ({
           colonist: c,
           score: this.scoreColonistForBuilding(c, def),
