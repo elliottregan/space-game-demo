@@ -3,10 +3,8 @@ import { SimulationRunner } from "../../src/simulation/SimulationRunner";
 import { GameAPI } from "../../src/facade/GameAPI";
 import type { SimulationConfig, RunResult, AggregateStats } from "../../src/simulation/types";
 
-// Note: Many SimulationRunner tests are skipped because they run full game simulations
-// which can take 5-30+ seconds each, exceeding the default 5000ms test timeout.
-// These are integration tests that should be run manually with extended timeouts.
-// To run: bun test tests/simulation/SimulationRunner.test.ts --timeout 120000
+// Note: SimulationRunner tests run full game simulations and may take 60-90 seconds total.
+// Use extended timeout when running: bun test tests/simulation/SimulationRunner.test.ts --timeout 120000
 
 describe("SimulationRunner", () => {
   describe("constructor", () => {
@@ -18,8 +16,7 @@ describe("SimulationRunner", () => {
   });
 
   describe("run()", () => {
-    // Skipped: runs 3 full simulations, exceeds 5000ms timeout
-    it.skip("returns AggregateStats with correct totalRuns", () => {
+    it("returns AggregateStats with correct totalRuns", () => {
       const config: SimulationConfig = { runs: 3, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
       const stats = runner.run();
@@ -27,8 +24,7 @@ describe("SimulationRunner", () => {
       expect(stats.totalRuns).toBe(3);
     });
 
-    // Skipped: runs full simulations, exceeds 5000ms timeout
-    it.skip("all runs complete (no infinite loops)", () => {
+    it("all runs complete (no infinite loops)", () => {
       const config: SimulationConfig = { runs: 2, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
 
@@ -42,8 +38,7 @@ describe("SimulationRunner", () => {
       expect(stats.totalRuns).toBe(2);
     });
 
-    // Skipped: runs full simulations, exceeds 5000ms timeout
-    it.skip("runs complete regardless of seed value", () => {
+    it("runs complete regardless of seed value", () => {
       // Note: The game has random events that are not seeded, so we can't
       // guarantee deterministic results. This test verifies runs complete
       // with various seed values.
@@ -63,8 +58,7 @@ describe("SimulationRunner", () => {
       expect(stats2.winRate).toBeGreaterThanOrEqual(0);
     });
 
-    // Skipped: runs full simulations, exceeds 5000ms timeout
-    it.skip("returns valid win rate between 0 and 1", () => {
+    it("returns valid win rate between 0 and 1", () => {
       const config: SimulationConfig = { runs: 3, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
       const stats = runner.run();
@@ -73,8 +67,7 @@ describe("SimulationRunner", () => {
       expect(stats.winRate).toBeLessThanOrEqual(1);
     });
 
-    // Skipped: runs full simulations, exceeds 5000ms timeout
-    it.skip("includes victory and defeat breakdowns", () => {
+    it("includes victory and defeat breakdowns", () => {
       const config: SimulationConfig = { runs: 3, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
       const stats = runner.run();
@@ -86,8 +79,7 @@ describe("SimulationRunner", () => {
       expect(totalVictories + totalDefeats).toBe(stats.totalRuns);
     });
 
-    // Skipped: runs full simulations, exceeds 5000ms timeout
-    it.skip("logs progress when verbose is true", () => {
+    it("logs progress when verbose is true", () => {
       const logs: string[] = [];
       const originalLog = console.log;
       console.log = (...args: unknown[]) => logs.push(args.join(" "));
@@ -105,8 +97,7 @@ describe("SimulationRunner", () => {
       }
     });
 
-    // Skipped: runs full simulations, exceeds 5000ms timeout
-    it.skip("does not log when verbose is false", () => {
+    it("does not log when verbose is false", () => {
       const logs: string[] = [];
       const originalLog = console.log;
       console.log = (...args: unknown[]) => logs.push(args.join(" "));
@@ -125,8 +116,7 @@ describe("SimulationRunner", () => {
   });
 
   describe("runSingleGame (via run)", () => {
-    // Skipped: runs full simulation, exceeds 5000ms timeout
-    it.skip("tracks peak population", () => {
+    it("tracks peak population", () => {
       // Run a single game and verify the result
       const config: SimulationConfig = { runs: 1, seed: 42, verbose: false };
       const runner = new SimulationRunner(config);
@@ -140,8 +130,7 @@ describe("SimulationRunner", () => {
       expect(stats.totalRuns).toBe(1);
     });
 
-    // Skipped: runs full simulations, exceeds 5000ms timeout
-    it.skip("games end with either victory or defeat", () => {
+    it("games end with either victory or defeat", () => {
       const config: SimulationConfig = { runs: 5, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
       const stats = runner.run();
@@ -153,8 +142,7 @@ describe("SimulationRunner", () => {
       expect(victories + defeats).toBe(stats.totalRuns);
     });
 
-    // Skipped: runs full simulations, exceeds 5000ms timeout
-    it.skip("uses different seeds for different runs", () => {
+    it("uses different seeds for different runs", () => {
       // Run with same base seed but multiple runs
       const config: SimulationConfig = { runs: 3, seed: 100, verbose: false };
       const runner = new SimulationRunner(config);
@@ -166,8 +154,7 @@ describe("SimulationRunner", () => {
   });
 
   describe("victory type mapping", () => {
-    // Skipped: runs 10 full simulations, exceeds 5000ms timeout
-    it.skip("identifies population victory", () => {
+    it("identifies population victory", () => {
       // Run simulations and check victory breakdown
       const config: SimulationConfig = { runs: 10, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
@@ -185,8 +172,7 @@ describe("SimulationRunner", () => {
   });
 
   describe("defeat reason mapping", () => {
-    // Skipped: runs 10 full simulations, exceeds 5000ms timeout
-    it.skip("categorizes defeats by reason", () => {
+    it("categorizes defeats by reason", () => {
       // Run simulations and check defeat breakdown
       const config: SimulationConfig = { runs: 10, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
@@ -197,23 +183,22 @@ describe("SimulationRunner", () => {
         const hasCategories =
           stats.defeatBreakdown["starvation"] !== undefined ||
           stats.defeatBreakdown["suffocation"] !== undefined ||
-          stats.defeatBreakdown["population_collapse"] !== undefined;
+          stats.defeatBreakdown["population_collapse"] !== undefined ||
+          stats.defeatBreakdown["earth_collapse"] !== undefined;
         expect(hasCategories).toBe(true);
       }
     });
   });
 
   describe("integration tests", () => {
-    // Skipped: runs 10 full simulations, exceeds 5000ms timeout
-    it.skip("completes 10 runs without error", () => {
+    it("completes 10 runs without error", () => {
       const config: SimulationConfig = { runs: 10, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
 
       expect(() => runner.run()).not.toThrow();
     });
 
-    // Skipped: runs 10 full simulations, exceeds 5000ms timeout
-    it.skip("produces meaningful statistics", () => {
+    it("produces meaningful statistics", () => {
       const config: SimulationConfig = { runs: 10, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
       const stats = runner.run();
@@ -233,8 +218,7 @@ describe("SimulationRunner", () => {
       }
     });
 
-    // Skipped: runs full simulations with potentially long games
-    it.skip("handles games that run for many sols", () => {
+    it("handles games that run for many sols", () => {
       // Run a few games with a seed that might produce long games
       const config: SimulationConfig = { runs: 3, seed: 999, verbose: false };
       const runner = new SimulationRunner(config);
@@ -259,8 +243,7 @@ describe("SimulationRunner", () => {
       expect(stats.winRate).toBe(0);
     });
 
-    // Skipped: runs full simulations, exceeds 5000ms timeout
-    it.skip("handles missing seed (uses run index)", () => {
+    it("handles missing seed (uses run index)", () => {
       const config: SimulationConfig = { runs: 2, verbose: false };
       const runner = new SimulationRunner(config);
 
@@ -268,8 +251,7 @@ describe("SimulationRunner", () => {
       expect(() => runner.run()).not.toThrow();
     });
 
-    // Skipped: runs full simulations, exceeds 5000ms timeout
-    it.skip("handles single run", () => {
+    it("handles single run", () => {
       const config: SimulationConfig = { runs: 1, seed: 1, verbose: false };
       const runner = new SimulationRunner(config);
       const stats = runner.run();
