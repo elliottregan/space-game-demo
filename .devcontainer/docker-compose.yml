@@ -20,13 +20,13 @@ services:
 
     volumes:
       - ..:/workspace:cached
-      - ~/.claude/.credentials.json:/home/dev/.claude/.credentials.json
+      - ~/.claude/.credentials.json:/tmp/host-credentials.json:ro
       - ~/.claude/settings.json:/home/dev/.claude/settings.json:ro
       - ~/.claude/plugins:/tmp/host-claude-plugins:ro
       - devcontainer-claude-plugins:/home/dev/.claude/plugins
       - devcontainer-gh-config:/home/dev/.config/gh
       - ~/.ssh:/home/dev/.ssh:ro
-      - ~/.claude.json:/home/dev/.claude.json
+      - ~/.claude.json:/tmp/host-claude.json:ro
 
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
