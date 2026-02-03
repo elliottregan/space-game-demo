@@ -286,8 +286,12 @@ export class BuildingManager {
       const def = this.definitions.get(building.definitionId);
       if (!def) continue;
 
-      // Get workplace cluster for transit connectivity check
+      // Check if building is on the grid and get its cluster
+      const isOnGrid = this.gridManager?.getPlacement(building.id) !== undefined;
       const workplaceCluster = this.gridManager?.getBuildingClusterId(building.id);
+
+      // Skip buildings that are on the grid but not connected to a habitat
+      if (isOnGrid && !workplaceCluster) continue;
 
       const slotsNeeded = (def.workerSlots ?? 0) - building.assignedWorkers.length;
 
@@ -296,11 +300,11 @@ export class BuildingManager {
         .filter((c) => {
           if (assignedIds.has(c.id)) return false;
 
-          // Check transit connectivity - colonist's housing must be in same cluster
-          // Only enforce when both workplace and housing have cluster assignments
-          if (this.gridManager && workplaceCluster && c.housingId) {
-            const housingCluster = this.gridManager.getBuildingClusterId(c.housingId);
-            if (housingCluster && housingCluster !== workplaceCluster) return false;
+          // Check transit connectivity when building is on grid with a cluster
+          if (isOnGrid && workplaceCluster && c.housingId) {
+            const housingCluster = this.gridManager?.getBuildingClusterId(c.housingId);
+            // Colonist's housing must be in the same cluster as workplace
+            if (!housingCluster || housingCluster !== workplaceCluster) return false;
           }
 
           return true;
