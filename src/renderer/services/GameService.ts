@@ -94,12 +94,14 @@ interface GameUIState {
   airQualityHealthEffect: number;
   airQualityMoraleEffect: number;
   airQualityEfficiency: number;
-  powerGrid: number;
-  powerGridProduction: number;
-  powerGridConsumption: number;
-  powerGridEfficiency: number;
-  powerGridIsComfortable: boolean;
-  powerGridIsCritical: boolean;
+  powerStats: {
+    totalProduction: number;
+    totalConsumption: number;
+    poweredCount: number;
+    onBatteryCount: number;
+    lowBatteryCount: number;
+    unpoweredCount: number;
+  };
   ideology: {
     council: CouncilMemberSnapshot[];
     councilFactionCounts: Record<string, number>;
@@ -232,12 +234,14 @@ class GameService {
       airQualityHealthEffect: 0,
       airQualityMoraleEffect: 0,
       airQualityEfficiency: 1,
-      powerGrid: 1,
-      powerGridProduction: 0,
-      powerGridConsumption: 0,
-      powerGridEfficiency: 1,
-      powerGridIsComfortable: true,
-      powerGridIsCritical: false,
+      powerStats: {
+        totalProduction: 0,
+        totalConsumption: 0,
+        poweredCount: 0,
+        onBatteryCount: 0,
+        lowBatteryCount: 0,
+        unpoweredCount: 0,
+      },
       ideology: {
         council: [],
         councilFactionCounts: {},
@@ -350,14 +354,16 @@ class GameService {
     this.state.airQualityMoraleEffect = airQualityData.moraleEffect;
     this.state.airQualityEfficiency = airQualityData.efficiencyMultiplier;
 
-    // Power Grid
-    const powerGridData = this.facade.powerGrid.snapshot();
-    this.state.powerGrid = powerGridData.gridStrain;
-    this.state.powerGridProduction = powerGridData.production;
-    this.state.powerGridConsumption = powerGridData.consumption;
-    this.state.powerGridEfficiency = powerGridData.efficiencyMultiplier;
-    this.state.powerGridIsComfortable = powerGridData.isComfortable;
-    this.state.powerGridIsCritical = powerGridData.isCritical;
+    // Power Stats
+    const powerData = this.facade.powerGrid.snapshot();
+    this.state.powerStats = {
+      totalProduction: powerData.totalProduction,
+      totalConsumption: powerData.totalConsumption,
+      poweredCount: powerData.buildingCounts.powered,
+      onBatteryCount: powerData.buildingCounts.onBattery,
+      lowBatteryCount: powerData.buildingCounts.lowBattery,
+      unpoweredCount: powerData.buildingCounts.unpowered,
+    };
 
     // Ideology
     const ideologyData = this.facade.ideology.snapshot();
