@@ -545,11 +545,15 @@ class GameService {
 
   // Cluster/connectivity methods
   getBuildingClusterId(buildingId: string): string | undefined {
-    return this.facade.grid.getBuildingClusterId(buildingId);
+    // Use synced state for reactivity
+    const building = this.state.gridBuildings.find((b) => b.id === buildingId);
+    return building?.clusterId;
   }
 
   isConnectedToHabitat(buildingId: string): boolean {
-    return this.facade.grid.isConnectedToHabitat(buildingId);
+    // Use synced state for reactivity
+    const building = this.state.gridBuildings.find((b) => b.id === buildingId);
+    return building?.clusterId !== undefined;
   }
 
   // Deposit methods
