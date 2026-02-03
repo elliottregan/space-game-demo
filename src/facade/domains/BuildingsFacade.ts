@@ -11,6 +11,7 @@ import type {
   BuildingDefinition,
   BuildingMode,
   BuildingSnapshot,
+  Colonist,
   EntityLookup,
   Queryable,
   ResourceDelta,
@@ -225,6 +226,29 @@ export class BuildingsFacade
    */
   getRepurposeCost(targetDefId: BuildingId): ResourceDelta | undefined {
     return this.gameState.buildings.getRepurposeCost(targetDefId);
+  }
+
+  /**
+   * Get colonists who can be assigned to a building based on cluster connectivity.
+   * Only returns unassigned colonists whose housing is in the same cluster as the workplace.
+   */
+  getAssignableWorkersForBuilding(buildingId: string): readonly Colonist[] {
+    const workplaceCluster = this.gameState.grid.getBuildingClusterId(buildingId);
+
+    // Get unassigned colonists
+    const unassigned = this.gameState.colony.getColonists().filter((c) => {
+      const workplace = this.gameState.workforce.getColonistWorkplace(
+        c.id,
+        this.gameState.buildings,
+      );
+      return !workplace;
+    });
+
+    return unassigned.filter((colonist) => {
+      if (!colonist.housingId) return false;
+      const housingCluster = this.gameState.grid.getBuildingClusterId(colonist.housingId);
+      return housingCluster === workplaceCluster;
+    });
   }
 
   // ==========================================================================

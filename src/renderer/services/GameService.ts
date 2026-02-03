@@ -124,6 +124,7 @@ interface GameUIState {
     status: "pending" | "active" | "disabled" | "idle" | "recycling";
     constructionProgress?: number; // 0-1 for pending buildings
     powerSourceId?: string; // ID of the power source this building is connected to
+    clusterId?: string; // ID of the transit cluster this building belongs to
   }>;
   gridDeposits: Array<{
     position: { x: number; y: number };
@@ -409,6 +410,7 @@ class GameService {
               ? building.constructionProgress / constructionTime
               : undefined,
           powerSourceId: placement.powerSourceId,
+          clusterId: placement.clusterId,
         });
       }
     }
@@ -539,6 +541,15 @@ class GameService {
       this.syncState();
     }
     return result.success;
+  }
+
+  // Cluster/connectivity methods
+  getBuildingClusterId(buildingId: string): string | undefined {
+    return this.facade.grid.getBuildingClusterId(buildingId);
+  }
+
+  isConnectedToHabitat(buildingId: string): boolean {
+    return this.facade.grid.isConnectedToHabitat(buildingId);
   }
 
   // Deposit methods
