@@ -203,9 +203,17 @@ export class BuildingManager {
   /**
    * Auto-assign available colonists to a newly completed building.
    * Prioritizes colonists with skill affinities matching the building's worker role.
+   * Respects transit connectivity - only assigns colonists whose housing is in the same cluster.
    */
   private autoAssignWorkers(building: Building, def: BuildingDefinition): void {
     if (!def.workerSlots || !this.colonyManager) return;
+
+    // Check if building is on the grid and get its cluster
+    const isOnGrid = this.gridManager?.getPlacement(building.id) !== undefined;
+    const workplaceCluster = this.gridManager?.getBuildingClusterId(building.id);
+
+    // Skip if building is on grid but not connected to a habitat
+    if (isOnGrid && !workplaceCluster) return;
 
     // Get all colonists not already assigned to any building
     const assignedColonistIds = new Set<string>();
@@ -216,7 +224,18 @@ export class BuildingManager {
     }
 
     const allColonists = this.colonyManager.getColonists();
-    const availableColonists = allColonists.filter((c) => !assignedColonistIds.has(c.id));
+    const availableColonists = allColonists.filter((c) => {
+      if (assignedColonistIds.has(c.id)) return false;
+
+      // Check transit connectivity when building is on grid with a cluster
+      if (isOnGrid && workplaceCluster && c.housingId) {
+        const housingCluster = this.gridManager?.getBuildingClusterId(c.housingId);
+        // Colonist's housing must be in the same cluster as workplace
+        if (!housingCluster || housingCluster !== workplaceCluster) return false;
+      }
+
+      return true;
+    });
 
     if (availableColonists.length === 0) return;
 
