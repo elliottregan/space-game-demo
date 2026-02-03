@@ -24,3 +24,16 @@ export function calculatePowerRange(powerOutput: number, hasTechBonus: boolean):
   const techBonus = hasTechBonus ? TECH_RANGE_BONUS : 0;
   return POWER_RANGE_BASE + outputBonus + techBonus;
 }
+
+// Transit connectivity
+/** Base range for transit depots */
+export const DEPOT_RANGE_BASE = 3;
+
+/**
+ * Calculate depot range for transit connectivity.
+ * Range = base + tech bonus
+ */
+export function calculateDepotRange(hasTechBonus: boolean): number {
+  const techBonus = hasTechBonus ? 1 : 0;
+  return DEPOT_RANGE_BASE + techBonus;
+}
