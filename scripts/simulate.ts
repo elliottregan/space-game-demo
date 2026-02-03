@@ -2018,6 +2018,79 @@ function drawAsciiHistogramFloat(
   output("  " + " ".repeat(maxLabelWidth) + "  " + scaleLabel);
 }
 
+// Category shading characters (in order of typical frequency)
+const CATEGORY_CHARS: Record<string, string> = {
+  infrastructure: "█",
+  victory: "▓",
+  event: "▒",
+  survival: "░",
+  morale: "▪",
+  growth: "·",
+};
+
+/**
+ * Draw a stacked ASCII histogram showing category breakdown.
+ * @param data Array of {label, categories} where categories maps category name to value
+ * @param maxBarWidth Maximum width for bars (default 40)
+ */
+function drawStackedAsciiHistogram(
+  data: Array<{ label: string; categories: Record<string, number> }>,
+  maxBarWidth: number = 40,
+): void {
+  if (data.length === 0) return;
+
+  // Calculate max total for scaling
+  const maxTotal = Math.max(...data.map((d) => Object.values(d.categories).reduce((a, b) => a + b, 0)));
+  const maxLabelWidth = Math.max(...data.map((d) => d.label.length));
+
+  // Collect all categories in consistent order
+  const categoryOrder = ["infrastructure", "victory", "event", "survival", "morale", "growth"];
+
+  // Draw legend
+  output("");
+  const legendParts = categoryOrder
+    .filter((cat) => data.some((d) => (d.categories[cat] ?? 0) > 0))
+    .map((cat) => `${CATEGORY_CHARS[cat] || "?"} ${cat}`);
+  output("  Legend: " + legendParts.join("  "));
+
+  // Draw header
+  output("");
+  output("  " + " ".repeat(maxLabelWidth) + " ┬" + "─".repeat(maxBarWidth + 2));
+
+  for (const { label, categories } of data) {
+    const total = Object.values(categories).reduce((a, b) => a + b, 0);
+    const totalBarLength = maxTotal > 0 ? Math.round((total / maxTotal) * maxBarWidth) : 0;
+
+    // Build stacked bar
+    let bar = "";
+    let remainingLength = totalBarLength;
+
+    for (const cat of categoryOrder) {
+      const catValue = categories[cat] ?? 0;
+      if (catValue > 0 && remainingLength > 0) {
+        const catLength = Math.round((catValue / total) * totalBarLength);
+        const actualLength = Math.min(catLength, remainingLength);
+        bar += (CATEGORY_CHARS[cat] || "?").repeat(actualLength);
+        remainingLength -= actualLength;
+      }
+    }
+
+    // Fill any rounding gaps
+    if (remainingLength > 0 && bar.length > 0) {
+      bar += bar[bar.length - 1].repeat(remainingLength);
+    }
+
+    const paddedLabel = label.padStart(maxLabelWidth);
+    const valueStr = total > 0 ? ` ${total.toFixed(2)}` : "";
+    output(`  ${paddedLabel} │${bar}${valueStr}`);
+  }
+
+  // Draw footer with scale
+  output("  " + " ".repeat(maxLabelWidth) + " ┴" + "─".repeat(maxBarWidth + 2));
+  const scaleLabel = `0${" ".repeat(maxBarWidth - String(maxTotal.toFixed(2)).length - 1)}${maxTotal.toFixed(2)}`;
+  output("  " + " ".repeat(maxLabelWidth) + "  " + scaleLabel);
+}
+
 /**
  * Analyze actions per sol patterns across runs.
  */
@@ -2032,7 +2105,7 @@ function analyzeActionsPerSol(results: RunResult[]): void {
 
   // Track actions over time (by sol bucket)
   const SOL_BUCKET_SIZE = 10;
-  const actionsOverTime = new Map<number, { total: number; runsActive: number }>();
+  const actionsOverTime = new Map<number, { total: number; runsActive: number; byCategory: Record<string, number> }>();
 
   for (const result of results) {
     if (!result.actionsExecuted || result.actionsExecuted.length === 0) continue;
@@ -2054,19 +2127,25 @@ function analyzeActionsPerSol(results: RunResult[]): void {
       }
     }
 
-    // Count actions per sol bucket for this run
-    const actionsByBucket = new Map<number, number>();
+    // Count actions per sol bucket for this run (with category breakdown)
+    const actionsByBucket = new Map<number, { total: number; byCategory: Record<string, number> }>();
     for (const action of result.actionsExecuted) {
       if (action.category === "idle") continue;
       const bucket = Math.floor(action.sol / SOL_BUCKET_SIZE) * SOL_BUCKET_SIZE;
-      actionsByBucket.set(bucket, (actionsByBucket.get(bucket) ?? 0) + 1);
+      const existing = actionsByBucket.get(bucket) ?? { total: 0, byCategory: {} };
+      existing.total++;
+      existing.byCategory[action.category] = (existing.byCategory[action.category] ?? 0) + 1;
+      actionsByBucket.set(bucket, existing);
     }
 
     // Aggregate into actionsOverTime
-    for (const [bucket, count] of actionsByBucket) {
-      const existing = actionsOverTime.get(bucket) ?? { total: 0, runsActive: 0 };
-      existing.total += count;
+    for (const [bucket, data] of actionsByBucket) {
+      const existing = actionsOverTime.get(bucket) ?? { total: 0, runsActive: 0, byCategory: {} };
+      existing.total += data.total;
       existing.runsActive++;
+      for (const [cat, count] of Object.entries(data.byCategory)) {
+        existing.byCategory[cat] = (existing.byCategory[cat] ?? 0) + count;
+      }
       actionsOverTime.set(bucket, existing);
     }
   }
@@ -2099,20 +2178,26 @@ function analyzeActionsPerSol(results: RunResult[]): void {
   }));
   drawAsciiHistogram(categoryData, 35);
 
-  // Actions Over Time histogram (avg actions per sol bucket)
+  // Actions Over Time histogram (avg actions per sol bucket, with category breakdown)
   // Show first 200 sols in detail, then summarize the rest
   const MAX_DISPLAY_SOL = 200;
   output("\n  Actions Over Time (avg per " + SOL_BUCKET_SIZE + "-sol period, sols 0-" + (MAX_DISPLAY_SOL - 1) + "):");
   const allTimelineData = Array.from(actionsOverTime.entries())
     .sort((a, b) => a[0] - b[0]);
 
-  const timelineData = allTimelineData
+  const stackedTimelineData = allTimelineData
     .filter(([bucket]) => bucket < MAX_DISPLAY_SOL)
-    .map(([bucket, data]) => ({
-      label: `${bucket}-${bucket + SOL_BUCKET_SIZE - 1}`,
-      value: data.runsActive > 0 ? data.total / data.runsActive : 0,
-    }));
-  drawAsciiHistogramFloat(timelineData, 35);
+    .map(([bucket, data]) => {
+      const categories: Record<string, number> = {};
+      for (const [cat, count] of Object.entries(data.byCategory)) {
+        categories[cat] = data.runsActive > 0 ? count / data.runsActive : 0;
+      }
+      return {
+        label: `${bucket}-${bucket + SOL_BUCKET_SIZE - 1}`,
+        categories,
+      };
+    });
+  drawStackedAsciiHistogram(stackedTimelineData, 35);
 
   // Summarize remaining sols
   const laterData = allTimelineData.filter(([bucket]) => bucket >= MAX_DISPLAY_SOL);
