@@ -98,6 +98,7 @@ const gridBuildings = computed(() =>
       constructionProgress: b.constructionProgress,
       powerSourceId: b.powerSourceId,
       clusterId: b.clusterId,
+      depotRange: b.depotRange,
       occupants,
     };
   }),
