@@ -53,6 +53,7 @@ export interface GridNodeData {
   status?: "pending" | "active" | "disabled" | "idle" | "recycling";
   constructionProgress?: number; // 0-1 for pending buildings
   powerSourceId?: string; // ID of the power source this building is connected to
+  clusterId?: string; // ID of the transit cluster this building belongs to
   occupants?: OccupantSlot[]; // Colonists assigned/living in this building
 }
 
@@ -61,6 +62,8 @@ export interface BaseGridData {
   selectedPosition: GridPosition | null;
   /** Building definition ID selected for placement (shows ghost preview) */
   selectedBuildingDefId?: string;
+  /** Currently selected building ID (for showing cluster connections) */
+  selectedBuildingId?: string;
 }
 
 export interface BaseGridOptions {
@@ -110,6 +113,74 @@ function getFactionColor(
   colors: ReturnType<typeof getThemeColors>,
 ): string {
   return getFactionColorFromTheme(faction ?? "neutral", colors);
+}
+
+interface ScreenPosition {
+  x: number;
+  y: number;
+}
+
+/**
+ * Render cluster connection highlights when a building is selected.
+ * Shows visual indicators on all buildings in the same transit cluster.
+ */
+function renderClusterConnections(
+  connectionLayer: Selection<SVGGElement, unknown, null, undefined>,
+  selectedBuildingId: string | undefined,
+  gridData: GridNodeData[],
+  buildingPositions: Map<string, ScreenPosition>,
+  colors: ReturnType<typeof getThemeColors>,
+): void {
+  if (!selectedBuildingId) return;
+
+  // Find the selected building's cluster
+  const selectedCell = gridData.find((node) => node.buildingId === selectedBuildingId);
+  const clusterId = selectedCell?.clusterId;
+
+  if (!clusterId) return;
+
+  // Find all buildings in the same cluster
+  const clusterBuildings = gridData.filter(
+    (node) => node.buildingId && node.clusterId === clusterId,
+  );
+
+  // Draw highlight circles on cluster buildings (except the selected one)
+  for (const node of clusterBuildings) {
+    if (!node.buildingId || node.buildingId === selectedBuildingId) continue;
+
+    const pos = buildingPositions.get(node.buildingId);
+    if (!pos) continue;
+
+    // Draw a glowing ring around cluster members
+    connectionLayer
+      .append("circle")
+      .attr("class", "transit-connection cluster-highlight")
+      .attr("cx", pos.x)
+      .attr("cy", pos.y)
+      .attr("r", 24)
+      .attr("fill", "none")
+      .attr("stroke", colors.info)
+      .attr("stroke-width", 2)
+      .attr("stroke-opacity", 0.5)
+      .attr("stroke-dasharray", "4,2")
+      .style("pointer-events", "none");
+  }
+
+  // Draw a highlight on the selected building to show its cluster membership
+  const selectedPos = buildingPositions.get(selectedBuildingId);
+  if (selectedPos && clusterBuildings.length > 1) {
+    connectionLayer
+      .append("circle")
+      .attr("class", "transit-connection cluster-selected")
+      .attr("cx", selectedPos.x)
+      .attr("cy", selectedPos.y)
+      .attr("r", 26)
+      .attr("fill", "none")
+      .attr("stroke", colors.info)
+      .attr("stroke-width", 3)
+      .attr("stroke-opacity", 0.7)
+      .style("pointer-events", "none");
+  }
 }
 
 export function renderBaseGrid(
@@ -231,6 +302,15 @@ export function renderBaseGrid(
       }
     }
   }
+
+  // Render cluster connections when a building is selected
+  renderClusterConnections(
+    connectionLayer,
+    data.selectedBuildingId,
+    data.cells,
+    buildingPositions,
+    colors,
+  );
 
   // Fourth pass: Render all buildings and ghost previews (top layer)
   for (let y = 0; y < GRID_SIZE; y++) {
