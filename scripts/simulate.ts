@@ -1955,6 +1955,38 @@ function analyzeIdeology(results: RunResult[]): void {
 }
 
 /**
+ * Draw an ASCII histogram.
+ * @param data Array of {label, count} objects
+ * @param maxBarWidth Maximum width for bars (default 40)
+ */
+function drawAsciiHistogram(
+  data: Array<{ label: string; count: number }>,
+  maxBarWidth: number = 40,
+): void {
+  if (data.length === 0) return;
+
+  const maxCount = Math.max(...data.map((d) => d.count));
+  const maxLabelWidth = Math.max(...data.map((d) => d.label.length));
+
+  // Draw header
+  output("");
+  output("  " + " ".repeat(maxLabelWidth) + " ┬" + "─".repeat(maxBarWidth + 2));
+
+  for (const { label, count } of data) {
+    const barLength = maxCount > 0 ? Math.round((count / maxCount) * maxBarWidth) : 0;
+    const bar = "█".repeat(barLength);
+    const paddedLabel = label.padStart(maxLabelWidth);
+    const countStr = count > 0 ? ` ${count}` : "";
+    output(`  ${paddedLabel} │${bar}${countStr}`);
+  }
+
+  // Draw footer with scale
+  output("  " + " ".repeat(maxLabelWidth) + " ┴" + "─".repeat(maxBarWidth + 2));
+  const scaleLabel = `0${" ".repeat(maxBarWidth - String(maxCount).length - 1)}${maxCount}`;
+  output("  " + " ".repeat(maxLabelWidth) + "  " + scaleLabel);
+}
+
+/**
  * Analyze actions per sol patterns across runs.
  */
 function analyzeActionsPerSol(results: RunResult[]): void {
@@ -2006,30 +2038,31 @@ function analyzeActionsPerSol(results: RunResult[]): void {
   const idlePct = ((totalIdleActions / (totalActions + totalIdleActions)) * 100).toFixed(1);
   output(`  Idle Percentage: ${idlePct}%`);
 
+  // Actions by Category histogram
   output("\n  Actions by Category:");
   const sortedCategories = Object.entries(actionsByCategory).sort((a, b) => b[1] - a[1]);
-  for (const [category, count] of sortedCategories) {
-    const pct = ((count / totalActions) * 100).toFixed(1);
-    output(`    ${category.padEnd(15)} ${count} (${pct}%)`);
-  }
+  const categoryData = sortedCategories.map(([category, count]) => ({
+    label: category,
+    count,
+  }));
+  drawAsciiHistogram(categoryData, 35);
 
   // Distribution histogram
   output("\n  Actions per Sol Distribution:");
-  const buckets = [0.2, 0.4, 0.6, 0.8, 1.0];
+  const buckets = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+  const histogramData: Array<{ label: string; count: number }> = [];
   let prevBucket = 0;
   for (const bucket of buckets) {
     const count = actionsPerSolList.filter((v) => v > prevBucket && v <= bucket).length;
-    const bar = "#".repeat(Math.ceil(count / 3));
-    output(
-      `  ${prevBucket.toFixed(1)}-${bucket.toFixed(1)}: ${bar} (${count})`,
-    );
+    histogramData.push({ label: `${prevBucket.toFixed(1)}-${bucket.toFixed(1)}`, count });
     prevBucket = bucket;
   }
+  // Overflow bucket
   const overflow = actionsPerSolList.filter((v) => v > 1.0).length;
   if (overflow > 0) {
-    const bar = "#".repeat(Math.ceil(overflow / 3));
-    output(`  1.0+: ${bar} (${overflow})`);
+    histogramData.push({ label: "1.0+", count: overflow });
   }
+  drawAsciiHistogram(histogramData, 35);
 }
 
 /**
