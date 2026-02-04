@@ -8,13 +8,14 @@ describe("StartingConditions", () => {
   it("should have a default condition with minimal life support buildings", () => {
     const defaultCondition = STARTING_CONDITIONS.find((c) => c.id === StartingConditionId.DEFAULT);
     expect(defaultCondition).toBeDefined();
-    // Default has minimal life support: 2 solar panels, 1 habitat, 1 farm, 1 oxygen generator, 1 water extractor
+    // Default has minimal life support: 2 solar panels, 1 habitat, 1 farm, 1 oxygen generator, 1 water extractor, 1 basic mine
     expect(defaultCondition!.preBuiltBuildings).toContain(BuildingId.SOLAR_PANEL);
     expect(defaultCondition!.preBuiltBuildings).toContain(BuildingId.HABITAT);
     expect(defaultCondition!.preBuiltBuildings).toContain(BuildingId.BASIC_FARM);
     expect(defaultCondition!.preBuiltBuildings).toContain(BuildingId.OXYGEN_GENERATOR);
     expect(defaultCondition!.preBuiltBuildings).toContain(BuildingId.WATER_EXTRACTOR);
-    expect(defaultCondition!.preBuiltBuildings.length).toBe(6);
+    expect(defaultCondition!.preBuiltBuildings).toContain(BuildingId.BASIC_MINE);
+    expect(defaultCondition!.preBuiltBuildings.length).toBe(7);
     expect(defaultCondition!.population).toBe(14);
   });
 
@@ -40,8 +41,8 @@ describe("GameState with StartingConditions", () => {
   it("should create default state when no condition specified", () => {
     const state = new GameState();
     expect(state.colony.getPopulation()).toBe(14);
-    // Default now has 6 starting buildings (includes water extractor)
-    expect(state.buildings.getBuildingCount()).toBe(6);
+    // Default now has 7 starting buildings (includes water extractor and basic mine)
+    expect(state.buildings.getBuildingCount()).toBe(7);
   });
 
   it("should create state with pre-built buildings for established base", () => {
@@ -70,8 +71,8 @@ describe("GameAPI with StartingConditions", () => {
     const api = new GameAPI();
     api.newGame();
     expect(api.colony.snapshot().population).toBe(14);
-    // Default now has 6 starting buildings (includes water extractor)
-    expect(api.buildings.snapshot().active.length).toBe(6);
+    // Default now has 7 starting buildings (includes water extractor and basic mine)
+    expect(api.buildings.snapshot().active.length).toBe(7);
   });
 
   it("should start new game with specified condition", () => {

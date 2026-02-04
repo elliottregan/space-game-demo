@@ -102,15 +102,15 @@ describe("Distributed Oxygen System", () => {
 
   describe("BuildingManager.getTotalAirContribution", () => {
     it("should return starting buildings oxygen contribution", () => {
-      // Default starting condition has: 1 habitat (+2), 1 farm (+2), 1 oxygen generator (+5) = 9
+      // Default starting condition has: 1 habitat (+2), 1 farm (+2), 1 oxygen generator (+5), 1 basic mine (-2) = 7
       const total = gameState.buildings.getTotalAirContribution();
-      expect(total).toBe(9);
+      expect(total).toBe(7);
     });
 
     it("should sum oxygen contributions from active buildings", () => {
-      // Starting contribution is 9 (habitat +2, farm +2, oxygen generator +5)
+      // Starting contribution is 7 (habitat +2, farm +2, oxygen generator +5, basic mine -2)
       const startingOxygen = gameState.buildings.getTotalAirContribution();
-      expect(startingOxygen).toBe(9);
+      expect(startingOxygen).toBe(7);
 
       // Build another habitat (+2) and basic_farm (+2)
       gameState.resources.add({ materials: 500 });
@@ -132,11 +132,11 @@ describe("Distributed Oxygen System", () => {
       }
 
       const total = gameState.buildings.getTotalAirContribution();
-      expect(total).toBe(13); // 9 + 2 + 2
+      expect(total).toBe(11); // 7 + 2 + 2
     });
 
     it("should include negative contributions", () => {
-      // Starting contribution is 9
+      // Starting contribution is 7
       gameState.resources.add({ materials: 500 });
 
       // Research advanced_materials for research_lab
@@ -159,13 +159,13 @@ describe("Distributed Oxygen System", () => {
       }
 
       const total = gameState.buildings.getTotalAirContribution();
-      expect(total).toBe(10); // 9 + 2 + (-1) = 10
+      expect(total).toBe(8); // 7 + 2 + (-1) = 8
     });
 
     it("should not count broken buildings", () => {
-      // Starting contribution is 9
+      // Starting contribution is 7
       const startingOxygen = gameState.buildings.getTotalAirContribution();
-      expect(startingOxygen).toBe(9);
+      expect(startingOxygen).toBe(7);
 
       // Get a starting habitat and break it
       const buildings = gameState.buildings.getActiveBuildings();
@@ -175,13 +175,13 @@ describe("Distributed Oxygen System", () => {
       gameState.buildings.breakBuilding(habitat!.id, gameState.resources);
 
       const total = gameState.buildings.getTotalAirContribution();
-      expect(total).toBe(7); // 9 - 2 = 7 (broken habitat doesn't contribute)
+      expect(total).toBe(5); // 7 - 2 = 5 (broken habitat doesn't contribute)
     });
 
     it("should not count pending buildings", () => {
-      // Starting contribution is 9
+      // Starting contribution is 7
       const startingOxygen = gameState.buildings.getTotalAirContribution();
-      expect(startingOxygen).toBe(9);
+      expect(startingOxygen).toBe(7);
 
       gameState.resources.add({ materials: 500 });
 
@@ -193,7 +193,7 @@ describe("Distributed Oxygen System", () => {
 
       // Don't advance time - new building is still pending
       const total = gameState.buildings.getTotalAirContribution();
-      expect(total).toBe(9); // Still 9, pending building doesn't count
+      expect(total).toBe(7); // Still 7, pending building doesn't count
     });
   });
 });

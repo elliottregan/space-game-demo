@@ -61,8 +61,8 @@ describe("Housing Assignment", () => {
       }
     }
 
-    // Add 6 colonists - only 4 should be housed
-    for (let i = 0; i < 6; i++) {
+    // Add 8 colonists - only 6 should be housed (habitat capacity is 6)
+    for (let i = 0; i < 8; i++) {
       colonyManager.addColonist();
     }
     colonyManager.assignHousing(buildingManager);
@@ -71,7 +71,7 @@ describe("Housing Assignment", () => {
     expect(unhoused.length).toBe(2);
 
     const housed = colonyManager.getColonists().filter((c) => c.housingId);
-    expect(housed.length).toBe(4);
+    expect(housed.length).toBe(6);
   });
 
   it("getHousingAssignments returns colonists grouped by habitat", () => {

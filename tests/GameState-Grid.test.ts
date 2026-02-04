@@ -29,16 +29,18 @@ describe("GameState - Grid Integration", () => {
   it("game tick updates grid power state", () => {
     const state = new GameState();
 
-    // Place building outside power range
-    state.grid.placeBuilding("test-building", { x: 0, y: 0 });
+    // Place building at grid edge, far from starting buildings (grid is 10x10, so 0-9 valid)
+    state.grid.placeBuilding("test-building", { x: 9, y: 9 });
     state.grid.setBuildingPowerConsumption("test-building", 4);
     state.grid.updatePowerConnections(false);
 
     const initialBattery = state.grid.getPlacement("test-building")?.batteryLevel;
+    expect(initialBattery).toBeDefined();
 
     state.tick();
 
     const afterBattery = state.grid.getPlacement("test-building")?.batteryLevel;
-    expect(afterBattery).toBeLessThan(initialBattery ?? 1);
+    expect(afterBattery).toBeDefined();
+    expect(afterBattery).toBeLessThan(initialBattery!);
   });
 });

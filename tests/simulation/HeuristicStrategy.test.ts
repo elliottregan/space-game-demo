@@ -683,9 +683,9 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         resourceSnapshot: {
           current: { food: 100, water: 100, materials: 100 },
-          production: { food: 10 },
+          production: { food: 10, materials: 10 }, // Materials production >= 10 to skip materials handler
           consumption: { food: 5 },
-          netFlow: { food: 5 },
+          netFlow: { food: 5, materials: 10 },
         },
         powerGridSnapshot: {
           totalProduction: 10,
@@ -712,10 +712,10 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         resourceSnapshot: {
           current: { food: 100, water: 100, materials: 50 },
-          // Has materials production already, so handleMaterialsProduction won't trigger
-          production: { food: 10, materials: 5 },
+          // Materials production >= 10 to skip handleMaterialsProduction
+          production: { food: 10, materials: 10 },
           consumption: { food: 5 },
-          netFlow: { food: 5, materials: 5 },
+          netFlow: { food: 5, materials: 10 },
         },
         canBuild: (defId) => {
           if (defId === BuildingId.MINING_STATION) return { allowed: true };
@@ -749,9 +749,9 @@ describe("HeuristicStrategy", () => {
         },
         resourceSnapshot: {
           current: { food: 100, water: 100, materials: 100 },
-          production: { food: 10 },
+          production: { food: 10, materials: 10 }, // Materials production >= 10 to skip materials handler
           consumption: { food: 5 },
-          netFlow: { food: 5, materials: 5 },
+          netFlow: { food: 5, materials: 10 },
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
