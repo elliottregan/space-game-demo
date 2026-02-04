@@ -1222,6 +1222,8 @@ export class BuildingManager {
         repairProgress: b.repairProgress ?? 0,
         recyclingProgress: b.recyclingProgress,
         repurposeFromDefId: b.repurposeFromDefId,
+        upgradeProgress: b.upgradeProgress,
+        upgradeTargetDefId: b.upgradeTargetDefId,
       };
       manager.buildings.set(building.id, building);
     });

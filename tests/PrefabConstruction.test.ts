@@ -264,6 +264,39 @@ describe("Upgrade Progress", () => {
   });
 });
 
+describe("Upgrade Serialization", () => {
+  test("upgrade state survives save/load", () => {
+    const buildings = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 100 });
+
+    const habitat = buildings.addBuilding({
+      definitionId: BuildingId.HABITAT,
+      status: "active",
+      constructionProgress: 10,
+      assignedWorkers: [],
+      mode: "normal",
+      broken: false,
+      repairProgress: 0,
+    });
+
+    buildings.startUpgrade(habitat.id, resources);
+
+    // Tick a few times
+    for (let i = 0; i < 3; i++) {
+      buildings.tick(resources);
+    }
+
+    // Serialize and restore
+    const json = buildings.toJSON();
+    const restored = BuildingManager.fromJSON(json, BUILDINGS);
+
+    const restoredBuilding = restored.getBuilding(habitat.id);
+    expect(restoredBuilding?.status).toBe("upgrading");
+    expect(restoredBuilding?.upgradeProgress).toBe(3);
+    expect(restoredBuilding?.upgradeTargetDefId).toBe(BuildingId.ADVANCED_HABITAT);
+  });
+});
+
 describe("Auto-Housing Tick Phase", () => {
   test("auto-housing triggers during game tick when conditions met", () => {
     const state = new GameState();
