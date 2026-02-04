@@ -107,13 +107,29 @@ Buildings are the backbone of your colony. Each building has:
 | **Medical Center** | 200 | Advanced Medicine | Healthcare services |
 | **Cryogenic Facility** | 220 | Cryosleep | Colonist preservation |
 
-#### Habitat Upgrades
+#### Building Upgrades
+
+Some buildings can be upgraded in-place to more advanced versions. Upgrades preserve the building's location and continue operating during construction.
+
+##### Habitat Upgrades
 
 Basic Habitats can be upgraded to Advanced Habitats:
 - **Cost:** 70 materials
 - **Duration:** 8 sols
+- **Requires:** No technology
 - Colonists remain housed during the upgrade
 - Capacity increases from 6 to 8 upon completion
+
+##### Science Station Upgrades
+
+Science Stations can be upgraded to Research Labs:
+- **Cost:** 90 materials
+- **Duration:** 10 sols
+- **Requires:** Habitat Fabrication technology
+- Workers remain assigned during upgrade
+- Research output increases from 1.0/sol to 3.0/sol upon completion
+
+This is more cost-effective than building a new Research Lab (150 materials) and demolishing the Science Station.
 
 #### Recreation Buildings (Boost Morale)
 
@@ -519,7 +535,7 @@ This automation helps maintain housing without constant micromanagement.
 - **Build a Science Station immediately** - Without one, research progress is zero
 - Assign experienced Researchers for maximum efficiency (Master = 160% output)
 - Queue multiple technologies to maintain continuous progress
-- Upgrade to Research Labs (3.0/sol) once you unlock Habitat Fabrication
+- **Upgrade Science Stations to Research Labs** once you research Habitat Fabrication (90 materials vs 150 for new build)
 - Multiple research buildings stack - two Science Stations = 2x research speed
 
 ---
