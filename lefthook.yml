@@ -22,24 +22,24 @@ pre-commit:
     typecheck-core:
       priority: 2
       glob: "src/core/**/*.ts"
-      run: tsc -p tsconfig.core.json --noEmit
+      run: tsc -p tsconfig.core.json --noEmit --incremental
     typecheck-app:
       priority: 2
       glob: "src/{renderer,visualization}/**/*.{ts,tsx,vue}"
-      run: tsc -p tsconfig.app.json --noEmit
+      run: tsc -p tsconfig.app.json --noEmit --incremental
     typecheck-facade:
       priority: 2
       glob: "src/facade/**/*.ts"
-      run: tsc -p tsconfig.app.json --noEmit
+      run: tsc -p tsconfig.app.json --noEmit --incremental
     typecheck-scripts:
       priority: 2
       glob: "{scripts,src/simulation}/**/*.ts"
-      run: tsc -p tsconfig.scripts.json --noEmit
+      run: tsc -p tsconfig.scripts.json --noEmit --incremental
     typecheck-node:
       priority: 2
       glob: "vite*.ts"
-      run: tsc -p tsconfig.node.json --noEmit
+      run: tsc -p tsconfig.node.json --noEmit --incremental
     typecheck-tests:
       priority: 2
       glob: "tests/**/*.ts"
-      run: tsc -p tsconfig.test.json --noEmit
+      run: tsc -p tsconfig.test.json --noEmit --incremental
