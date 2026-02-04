@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { gameService } from "../../services/GameService";
+import { AIR_QUALITY_COMFORTABLE } from "../../../core/balance/AirQualityBalance";
 import { BuildingId } from "../../../core/models/Building";
+import { gameService } from "../../services/GameService";
 
 interface ColonyNeed {
   id: string;
@@ -32,15 +33,14 @@ const needs = computed<ColonyNeed[]>(() => {
     });
   }
 
-  // Priority 2: Air - contribution < population * 0.5
-  const airContribution = state.value.airQualityProduction;
-  const airNeeded = state.value.population * 0.5;
-  if (airContribution < airNeeded) {
+  // Priority 2: Air - quality below comfortable threshold
+  const airQuality = state.value.airQuality;
+  if (airQuality < AIR_QUALITY_COMFORTABLE) {
     result.push({
       id: "air",
       icon: "🌬️",
       label: "Air Quality",
-      reason: "Contribution low",
+      reason: `${Math.round(airQuality * 100)}% (low)`,
       building: "Oxygen Generator",
       buildingId: BuildingId.OXYGEN_GENERATOR,
       priority: 2,
