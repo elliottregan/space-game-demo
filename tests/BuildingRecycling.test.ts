@@ -43,8 +43,8 @@ describe("Building Recycling", () => {
       manager.tick(resources);
     }
 
-    const success = manager.startRecycling(building!.id, resources);
-    expect(success).toBe(true);
+    const events = manager.startRecycling(building!.id, resources);
+    expect(events.length).toBeGreaterThan(0);
 
     const updatedBuilding = manager.getBuilding(building!.id);
     expect(updatedBuilding?.status).toBe("recycling");
@@ -161,8 +161,8 @@ describe("Building Recycling", () => {
     const building = manager.startBuilding(BuildingId.SOLAR_PANEL, resources, tech);
 
     // Don't complete construction - should fail
-    const success = manager.startRecycling(building!.id, resources);
-    expect(success).toBe(false);
+    const events = manager.startRecycling(building!.id, resources);
+    expect(events.length).toBe(0);
   });
 
   test("startRecycling removes production/consumption from active building", () => {

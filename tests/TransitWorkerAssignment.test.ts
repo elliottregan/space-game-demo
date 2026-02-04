@@ -55,7 +55,7 @@ describe("Transit Worker Assignment", () => {
     const colonistId = createColonistWithHousing(habId);
 
     const result = buildingManager.assignWorker(farmId, colonistId);
-    expect(result).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
   });
 
   it("rejects assignment when colonist housing and workplace are in different clusters", () => {
@@ -69,7 +69,7 @@ describe("Transit Worker Assignment", () => {
     const colonistId = createColonistWithHousing(habId);
 
     const result = buildingManager.assignWorker(farmId, colonistId);
-    expect(result).toBe(false);
+    expect(result.length).toBe(0);
   });
 
   it("allows assignment when depot bridges the gap", () => {
@@ -84,7 +84,7 @@ describe("Transit Worker Assignment", () => {
     const colonistId = createColonistWithHousing(habId);
 
     const result = buildingManager.assignWorker(farmId, colonistId);
-    expect(result).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
   });
 
   describe("disconnection handling", () => {

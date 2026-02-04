@@ -467,9 +467,9 @@ export class BuildingsFacade
         });
       }
 
-      const success = this.gameState.buildings.startRecycling(buildingId, this.gameState.resources);
+      const events = this.gameState.buildings.startRecycling(buildingId, this.gameState.resources);
 
-      if (!success) {
+      if (events.length === 0) {
         return err({
           type: "INVALID_TARGET",
           target: buildingId,

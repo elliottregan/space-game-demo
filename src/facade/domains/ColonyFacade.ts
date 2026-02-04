@@ -213,8 +213,8 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
       const oldProd = this.gameState.buildings.getEffectiveProduction(buildingId);
       const oldCons = this.gameState.buildings.getEffectiveConsumption(buildingId);
 
-      const success = this.gameState.buildings.assignWorker(buildingId, colonistId);
-      if (!success) {
+      const events = this.gameState.buildings.assignWorker(buildingId, colonistId);
+      if (events.length === 0) {
         return err({
           type: "INVALID_STATE",
           current: "cannot assign",

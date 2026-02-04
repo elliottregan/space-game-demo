@@ -548,16 +548,27 @@ export class BuildingManager {
     return true;
   }
 
-  breakBuilding(buildingId: string, resources: ResourceManager): boolean {
+  breakBuilding(buildingId: string, resources: ResourceManager): GameEvent[] {
     const building = this.buildings.get(buildingId);
-    if (!building || building.status !== "active") return false;
+    if (!building || building.status !== "active") return [];
+
+    const def = this.definitions.get(building.definitionId);
 
     // Remove production/consumption before breaking
     this.applyBuildingResourceFlow(buildingId, resources, false);
 
     building.broken = true;
     building.mode = "normal";
-    return true;
+
+    return [
+      {
+        type: "BUILDING_BROKEN",
+        buildingId,
+        buildingName: def?.name ?? building.definitionId,
+        severity: "warning",
+        message: `${def?.name ?? building.definitionId} has broken down!`,
+      },
+    ];
   }
 
   getRepairCost(buildingId: string): ResourceDelta | undefined {
@@ -566,16 +577,27 @@ export class BuildingManager {
     return calculateRepairCost(result.def);
   }
 
-  startRepair(buildingId: string, resources: ResourceManager): boolean {
+  startRepair(buildingId: string, resources: ResourceManager): GameEvent[] {
     const building = this.buildings.get(buildingId);
-    if (!building || !building.broken) return false;
+    if (!building || !building.broken) return [];
 
     const cost = this.getRepairCost(buildingId);
-    if (!cost || !resources.canAfford(cost)) return false;
+    if (!cost || !resources.canAfford(cost)) return [];
+
+    const def = this.definitions.get(building.definitionId);
 
     resources.deduct(cost);
     building.repairProgress = 0.01; // Mark as repairing
-    return true;
+
+    return [
+      {
+        type: "BUILDING_REPAIR_STARTED",
+        buildingId,
+        buildingName: def?.name ?? building.definitionId,
+        severity: "info",
+        message: `${def?.name ?? building.definitionId} repair started.`,
+      },
+    ];
   }
 
   isRepairing(buildingId: string): boolean {
@@ -594,10 +616,12 @@ export class BuildingManager {
     return result ? calculateRecycleTime(result.def) : 0;
   }
 
-  startRecycling(buildingId: string, resources: ResourceManager): boolean {
+  startRecycling(buildingId: string, resources: ResourceManager): GameEvent[] {
     const building = this.buildings.get(buildingId);
-    if (!building) return false;
-    if (building.status === "pending" || building.status === "recycling") return false;
+    if (!building) return [];
+    if (building.status === "pending" || building.status === "recycling") return [];
+
+    const def = this.definitions.get(building.definitionId);
 
     // Remove production/consumption if active
     const wasActive = building.status === "active";
@@ -612,7 +636,16 @@ export class BuildingManager {
     if (wasActive) {
       this.triggerClusterUpdate();
     }
-    return true;
+
+    return [
+      {
+        type: "BUILDING_RECYCLING_STARTED",
+        buildingId,
+        buildingName: def?.name ?? building.definitionId,
+        severity: "info",
+        message: `${def?.name ?? building.definitionId} recycling started.`,
+      },
+    ];
   }
 
   rushRecycling(buildingId: string, resources: ResourceManager): boolean {
@@ -1012,17 +1045,17 @@ export class BuildingManager {
     return this.constructionSpeedBonus;
   }
 
-  assignWorker(buildingId: string, colonistId: string): boolean {
+  assignWorker(buildingId: string, colonistId: string): GameEvent[] {
     const result = this.getBuildingWithDef(buildingId);
-    if (!result || result.building.status !== "active") return false;
+    if (!result || result.building.status !== "active") return [];
     const { building, def } = result;
 
-    if (!def.workerSlots || building.assignedWorkers.length >= def.workerSlots) return false;
-    if (building.assignedWorkers.includes(colonistId)) return false;
+    if (!def.workerSlots || building.assignedWorkers.length >= def.workerSlots) return [];
+    if (building.assignedWorkers.includes(colonistId)) return [];
 
     // Check if colonist is already assigned elsewhere
     for (const b of this.buildings.values()) {
-      if (b.assignedWorkers.includes(colonistId)) return false;
+      if (b.assignedWorkers.includes(colonistId)) return [];
     }
 
     // Validate transit connectivity - colonist's housing must be in same cluster as workplace
@@ -1032,24 +1065,40 @@ export class BuildingManager {
         const housingCluster = this.gridQueries?.getBuildingClusterId(colonist.housingId);
         const workplaceCluster = this.gridQueries?.getBuildingClusterId(buildingId);
         if (housingCluster !== workplaceCluster) {
-          return false;
+          return [];
         }
       }
     }
 
     building.assignedWorkers.push(colonistId);
-    return true;
+    return [
+      {
+        type: "WORKER_ASSIGNED",
+        severity: "info",
+        buildingId,
+        colonistId,
+        message: `Worker assigned to ${def.name}`,
+      },
+    ];
   }
 
-  removeWorker(buildingId: string, colonistId: string): boolean {
+  removeWorker(buildingId: string, colonistId: string): GameEvent[] {
     const building = this.buildings.get(buildingId);
-    if (!building) return false;
+    if (!building) return [];
 
     const index = building.assignedWorkers.indexOf(colonistId);
-    if (index === -1) return false;
+    if (index === -1) return [];
 
     building.assignedWorkers.splice(index, 1);
-    return true;
+    return [
+      {
+        type: "WORKER_UNASSIGNED",
+        severity: "info",
+        buildingId,
+        colonistId,
+        message: `Worker unassigned from building`,
+      },
+    ];
   }
 
   /**
