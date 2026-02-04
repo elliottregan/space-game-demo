@@ -12,7 +12,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     cost: { materials: 50 },
     constructionTime: 10,
     powerConsumption: 4,
-    capacity: 4, // Houses 4 colonists
+    capacity: 6, // Houses 6 colonists
     airContribution: 2,
     purpose: BuildingPurpose.Residential,
   },
@@ -63,7 +63,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     description: "Extracts materials from surface mineral deposits",
     cost: { materials: 50 },
     constructionTime: 10,
-    production: { materials: 4 },
+    production: { materials: 8 },
     powerConsumption: 3,
     workerSlots: 4,
     workerRole: ColonistRole.ENGINEERING,
@@ -135,7 +135,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     cost: { materials: 120 },
     constructionTime: 18,
     powerConsumption: 5,
-    requiredTech: TechnologyId.ADVANCED_MATERIALS,
     capacity: 8, // Houses 8 colonists
     airContribution: 2,
     purpose: BuildingPurpose.Residential,

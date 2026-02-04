@@ -87,6 +87,8 @@ export interface RunResult {
   guildsFormed?: number;
   /** Earth crisis severity at game end (0-100) */
   earthCrisisSeverity?: number;
+  /** Actions executed each sol */
+  actionsExecuted?: ExecutedAction[];
 }
 
 /**
@@ -266,6 +268,18 @@ export interface GuildAnalysis {
 }
 
 /**
+ * Action categories for tracking what the strategy does each sol.
+ */
+export type ActionCategory =
+  | "survival"
+  | "morale"
+  | "infrastructure"
+  | "growth"
+  | "victory"
+  | "event"
+  | "idle";
+
+/**
  * Represents a decision that was blocked due to resource constraints.
  */
 export interface BlockedDecision {
@@ -274,6 +288,15 @@ export interface BlockedDecision {
   action: string;
   reason: string;
   missingResources?: Record<string, number>;
+}
+
+/**
+ * Tracks an executed action for per-sol analysis.
+ */
+export interface ExecutedAction {
+  sol: number;
+  category: ActionCategory;
+  action: string;
 }
 
 /**
@@ -439,6 +462,24 @@ export interface SocialCohesionAnalysis {
 }
 
 /**
+ * Actions per sol analysis results.
+ */
+export interface ActionsPerSolAnalysis {
+  /** Average actions per sol across all runs */
+  avgActionsPerSol: number;
+  /** Min actions per sol observed */
+  minActionsPerSol: number;
+  /** Max actions per sol observed */
+  maxActionsPerSol: number;
+  /** Total actions by category across all runs */
+  actionsByCategory: Record<string, number>;
+  /** Histogram of actions per sol distribution */
+  histogram: Array<{ range: string; count: number }>;
+  /** Actions per sol over time (aggregated across runs at intervals) */
+  actionsOverTime: Array<{ sol: number; avgActions: number; runsActive: number }>;
+}
+
+/**
  * Ideology analysis results.
  */
 export interface IdeologyAnalysis {
@@ -501,5 +542,6 @@ export interface AnalysisOutput {
     socialCohesion: SocialCohesionAnalysis;
     ideology: IdeologyAnalysis;
     guilds: GuildAnalysis;
+    actionsPerSol: ActionsPerSolAnalysis;
   };
 }

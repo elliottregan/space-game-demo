@@ -2,6 +2,7 @@
 // Re-export types from simulation for use in visualization
 
 export type {
+  ActionsPerSolAnalysis,
   AggregatedSnapshot,
   AggregatedIdeologySnapshot,
   AnalysisOutput,

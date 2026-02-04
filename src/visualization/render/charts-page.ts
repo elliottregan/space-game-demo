@@ -32,13 +32,18 @@ export function renderChartsContent(): string {
     </div>
     <div class="charts-row">
       <div class="chart-panel">
+        <h2>Actions per Sol Distribution</h2>
+        ${batchB ? renderLegend() : ""}
+        <div id="actions-histogram" class="chart-container"></div>
+      </div>
+      <div class="chart-panel">
         <h2>Crisis Heatmap</h2>
         <div id="heatmap" class="chart-container"></div>
       </div>
-      <div class="chart-panel">
-        <h2>Tech/Building Progression</h2>
-        <div id="progression" class="chart-container"></div>
-      </div>
+    </div>
+    <div class="chart-panel">
+      <h2>Tech/Building Progression</h2>
+      <div id="progression" class="chart-container"></div>
     </div>
     ${batchB ? renderComparison() : ""}
   `;
@@ -182,5 +187,8 @@ export function renderCharts(): void {
   import("../charts/heatmap.ts").then((m) => m.renderHeatmap("heatmap", batchA, batchB));
   import("../charts/progression.ts").then((m) =>
     m.renderProgression("progression", batchA, batchB),
+  );
+  import("../charts/actions-histogram.ts").then((m) =>
+    m.renderActionsHistogram("actions-histogram", batchA, batchB),
   );
 }
