@@ -121,7 +121,7 @@ interface GameUIState {
     position: { x: number; y: number };
     powerState: PowerState;
     batteryLevel: number;
-    status: "pending" | "active" | "disabled" | "idle" | "recycling";
+    status: "pending" | "active" | "disabled" | "idle" | "recycling" | "upgrading";
     constructionProgress?: number; // 0-1 for pending buildings
     powerSourceId?: string; // ID of the power source this building is connected to
     clusterId?: string; // ID of the transit cluster this building belongs to
