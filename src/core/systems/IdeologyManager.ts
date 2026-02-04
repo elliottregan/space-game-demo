@@ -17,6 +17,7 @@ import * as IdeologyBalance from "../balance/IdeologyBalance";
 import { getProject, getProjectsByFaction } from "../data/projects";
 import { rng } from "../utils/random";
 import type { ProjectQueries } from "../interfaces/Queries";
+import type { GameEvent } from "../models/GameEvent";
 
 /**
  * A council member selected from high-influence colonists.
@@ -824,9 +825,20 @@ export class IdeologyManager implements ProjectQueries {
 
   /**
    * Mark a project as completed.
+   * Returns a PROJECT_COMPLETED event.
    */
-  completeProject(projectId: ProjectId): void {
+  completeProject(projectId: ProjectId): GameEvent[] {
     this.completedProjects.add(projectId);
+    const project = getProject(projectId);
+    return [
+      {
+        type: "PROJECT_COMPLETED",
+        projectId,
+        projectName: project?.name ?? projectId,
+        severity: "info",
+        message: `Project completed: ${project?.name ?? projectId}`,
+      },
+    ];
   }
 
   /**
