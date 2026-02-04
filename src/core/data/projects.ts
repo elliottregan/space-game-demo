@@ -1,7 +1,14 @@
 // src/core/data/projects.ts
 
 import { BuildingId } from "../models/Building.ts";
-import { NPCFaction, ProjectEffectType, type Project, ProjectId } from "../models/NPCInfluence.ts";
+import {
+  NPCFaction,
+  ProjectEffectType,
+  ProjectRequirementType,
+  type Project,
+  ProjectId,
+} from "../models/NPCInfluence.ts";
+import { TechnologyId } from "../models/Technology.ts";
 
 export const PROJECTS: Project[] = [
   // Earth Loyalists projects
@@ -12,12 +19,35 @@ export const PROJECTS: Project[] = [
     type: NPCFaction.EarthLoyalists,
     proposalCost: { materials: 120 },
     requiredSupport: 0.35,
+    requirements: [
+      { type: ProjectRequirementType.TECHNOLOGY, techId: TechnologyId.HABITAT_FABRICATION },
+    ],
     effects: {
       unlockBuilding: "immigration_center",
       populationBonus: 3,
       supporterMoraleBoost: 0.1,
       supporterConvictionBoost: 0.05,
     },
+    onCompletionEffects: [
+      {
+        type: ProjectEffectType.RECURRING_EVENT,
+        name: "Immigration Wave",
+        description: "New settlers arrive every 10 sols",
+        params: { eventType: "immigration", intervalSols: 10 },
+      },
+      {
+        type: ProjectEffectType.PRODUCTION_MODIFIER,
+        name: "Settlement Supplies",
+        description: "+5 materials/sol for housing construction",
+        params: { resource: "materials", amount: 5 },
+      },
+      {
+        type: ProjectEffectType.CONVICTION_BOOST,
+        name: "Renewed Hope",
+        description: "Earth Loyalists feel vindicated",
+        params: { faction: NPCFaction.EarthLoyalists, amount: 0.1 },
+      },
+    ],
   },
   {
     id: ProjectId.EARTH_MEMORIAL,
