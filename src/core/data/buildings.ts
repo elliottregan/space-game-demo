@@ -316,8 +316,8 @@ export const BUILDINGS: BuildingDefinition[] = [
     name: "Asteroid Mining Platform",
     description:
       "A massive orbital station that captures and processes asteroids. Infinite resources mean infinite profit and permanent corporate dominance.",
-    cost: { materials: 600 },
-    constructionTime: 50,
+    cost: { materials: 1000 },
+    constructionTime: 115,
     airContribution: 10,
     purpose: BuildingPurpose.Industrial,
     requiredProject: ProjectId.DEEP_SPACE_MINING_CHARTER,
@@ -328,8 +328,8 @@ export const BUILDINGS: BuildingDefinition[] = [
     name: "United Mars Station",
     description:
       "An orbital station symbolizing Martian unity and independence. A beacon of sovereignty visible from Earth.",
-    cost: { materials: 550 },
-    constructionTime: 45,
+    cost: { materials: 950 },
+    constructionTime: 110,
     airContribution: 8,
     purpose: BuildingPurpose.Industrial,
     requiredProject: ProjectId.DECLARATION_OF_SOVEREIGNTY,
@@ -340,8 +340,8 @@ export const BUILDINGS: BuildingDefinition[] = [
     name: "Space Elevator",
     description:
       "A tether to orbit enabling cheap, mass transportation between Earth and Mars. The gateway for humanity's great migration.",
-    cost: { materials: 500 },
-    constructionTime: 40,
+    cost: { materials: 900 },
+    constructionTime: 105,
     airContribution: 5,
     purpose: BuildingPurpose.Industrial,
     requiredProject: ProjectId.EARTH_RELIEF_COMPACT,
