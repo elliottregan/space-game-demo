@@ -33,10 +33,26 @@ const emit = defineEmits<{
   demolish: [buildingId: string];
   cancel: [buildingId: string];
   unassignWorker: [colonistId: string];
+  upgrade: [buildingId: string];
 }>();
 
 const isPending = computed(() => props.building.status === "pending");
+const isUpgrading = computed(() => props.building.status === "upgrading");
 const constructionPercent = computed(() => Math.round((props.constructionProgress ?? 0) * 100));
+
+// Upgrade progress (0-100)
+const upgradePercent = computed(() => {
+  if (!props.building.upgradeProgress) return 0;
+  const upgradeTime = gameService.getUpgradeTime(props.building.id);
+  if (upgradeTime === 0) return 0;
+  return Math.round((props.building.upgradeProgress / upgradeTime) * 100);
+});
+
+// Check if building can be upgraded
+const canUpgrade = computed(() => gameService.canUpgradeBuilding(props.building.id));
+
+// Get upgrade cost
+const upgradeCost = computed(() => gameService.getUpgradeCost(props.building.id));
 
 // Get workers assigned to this building
 const assignedWorkers = computed(() => {
@@ -135,6 +151,16 @@ const isConnected = computed(() => {
           <span class="construction-percent">{{ constructionPercent }}%</span>
         </div>
         <p class="construction-note">Building under construction</p>
+      </div>
+
+      <!-- Upgrade progress for upgrading buildings -->
+      <div v-if="isUpgrading" class="stats-section upgrade-section">
+        <h4>Upgrading</h4>
+        <div class="construction-progress">
+          <GProgress :percent="upgradePercent" variant="info" />
+          <span class="construction-percent">{{ upgradePercent }}%</span>
+        </div>
+        <p class="construction-note">Upgrading to Advanced Habitat</p>
       </div>
 
       <div class="stats-section">
@@ -241,17 +267,38 @@ const isConnected = computed(() => {
     </div>
 
     <template #footer>
-      <GButton
-        v-if="isPending"
-        variant="warning"
-        class="action-btn"
-        @click="emit('cancel', building.id)"
-      >
-        Cancel Construction
-      </GButton>
-      <GButton v-else variant="danger" class="action-btn" @click="emit('demolish', building.id)">
-        Demolish
-      </GButton>
+      <div class="footer-buttons">
+        <GButton
+          v-if="isPending"
+          variant="warning"
+          class="action-btn"
+          @click="emit('cancel', building.id)"
+        >
+          Cancel Construction
+        </GButton>
+        <template v-else-if="isUpgrading">
+          <GButton variant="secondary" class="action-btn" disabled> Upgrading... </GButton>
+        </template>
+        <template v-else>
+          <GButton
+            v-if="upgradeCost"
+            variant="primary"
+            class="action-btn"
+            :disabled="!canUpgrade"
+            :title="
+              canUpgrade
+                ? `Upgrade for ${upgradeCost.materials} materials`
+                : 'Cannot upgrade (check resources)'
+            "
+            @click="emit('upgrade', building.id)"
+          >
+            Upgrade ({{ upgradeCost.materials }}m)
+          </GButton>
+          <GButton variant="danger" class="action-btn" @click="emit('demolish', building.id)">
+            Demolish
+          </GButton>
+        </template>
+      </div>
     </template>
   </GPanel>
 </template>
@@ -435,5 +482,19 @@ const isConnected = computed(() => {
   border-radius: var(--g-radius-sm);
   color: var(--g-color-warning);
   font-size: var(--g-font-size-sm);
+}
+
+.footer-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-xs);
+}
+
+.upgrade-section {
+  background: rgba(33, 150, 243, 0.1);
+  padding: var(--g-space-sm);
+  margin: 0 calc(-1 * var(--g-space-md)) var(--g-space-md);
+  border-top: 1px solid var(--g-color-info);
+  border-bottom: 1px solid var(--g-color-info);
 }
 </style>

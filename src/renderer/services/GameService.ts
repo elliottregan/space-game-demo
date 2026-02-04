@@ -601,6 +601,27 @@ class GameService {
     return this.facade.buildings.repurpose(buildingId, targetDefId as BuildingId).success;
   }
 
+  // Upgrade methods (e.g., Basic Habitat -> Advanced Habitat)
+  canUpgradeBuilding(buildingId: string): boolean {
+    return this.facade.buildings.canUpgrade(buildingId).allowed;
+  }
+
+  getUpgradeCost(buildingId: string): ResourceDelta | undefined {
+    return this.facade.buildings.getUpgradeCost(buildingId);
+  }
+
+  getUpgradeTime(buildingId: string): number {
+    return this.facade.buildings.getUpgradeTime(buildingId);
+  }
+
+  startUpgrade(buildingId: string): boolean {
+    const result = this.facade.buildings.upgrade(buildingId);
+    if (result.success) {
+      this.syncState();
+    }
+    return result.success;
+  }
+
   // Workforce optimization
   optimizeWorkforce(): { success: boolean; assignmentsChanged: number } {
     const result = this.facade.colony.optimizeWorkforce();

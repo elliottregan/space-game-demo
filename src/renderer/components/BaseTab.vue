@@ -227,6 +227,11 @@ function handleCancelConstruction(buildingId: string) {
   selectedBuildingId.value = null;
 }
 
+function handleUpgrade(buildingId: string) {
+  gameService.startUpgrade(buildingId);
+  // Don't clear selection - let user see the upgrade progress
+}
+
 function handleUnassignWorker(colonistId: string) {
   gameService.api.colony.unassignFromBuilding(colonistId);
 }
@@ -308,6 +313,7 @@ const placementHints = computed(() => ({
         @close="closeStatsCard"
         @demolish="handleDemolish"
         @cancel="handleCancelConstruction"
+        @upgrade="handleUpgrade"
         @unassign-worker="handleUnassignWorker"
       />
     </div>
