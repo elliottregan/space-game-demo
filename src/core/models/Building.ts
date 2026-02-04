@@ -27,6 +27,7 @@ export enum BuildingId {
   OBSERVATORY_DOME = "observatory_dome",
   ASSEMBLY_HALL = "assembly_hall",
   ROVER_DEPOT = "rover_depot",
+  SCIENCE_STATION = "science_station",
   // Victory megastructures
   ASTEROID_MINING_PLATFORM = "asteroid_mining_platform",
   UNITED_MARS_STATION = "united_mars_station",
