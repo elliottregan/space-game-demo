@@ -111,6 +111,9 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
       rushRecycling: mock(() => successResult(undefined)),
       repurpose: mock(() => successResult(undefined)),
       linkToDeposit: mock(() => successResult(undefined)),
+      canUpgrade: mock(() => notAllowed),
+      getUpgradeCost: mock(() => undefined),
+      upgrade: mock(() => successResult(undefined)),
     },
     technology: {
       snapshot: mock(() => overrides.techSnapshot ?? defaultTechSnapshot),
