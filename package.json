@@ -13,7 +13,6 @@
     "format": "oxfmt ./src ./scripts",
     "format:check": "oxfmt --check ./src ./scripts",
     "typecheck": "bun run typecheck:core && bun run typecheck:app && bun run typecheck:test && bun run typecheck:scripts && bun run typecheck:node",
-    "typecheck:src": "bun run typecheck:core && bun run typecheck:app && bun run typecheck:scripts && bun run typecheck:node",
     "typecheck:core": "tsc -p tsconfig.core.json --noEmit",
     "typecheck:app": "tsc -p tsconfig.app.json --noEmit",
     "typecheck:test": "tsc -p tsconfig.test.json --noEmit",
