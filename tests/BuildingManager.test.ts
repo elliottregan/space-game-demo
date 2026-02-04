@@ -12,7 +12,7 @@ import { ProjectId } from "../src/core/models/NPCInfluence";
 describe("Project-gated buildings", () => {
   test("should not allow building victory buildings without completed project", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ food: 0, water: 0, materials: 700, power: 200 });
+    const resources = new ResourceManager({ food: 0, water: 0, materials: 1100, power: 200 });
     const technology = new TechnologyTree(TECHNOLOGIES);
     const ideology = new IdeologyManager();
 
@@ -25,7 +25,7 @@ describe("Project-gated buildings", () => {
 
   test("should allow building victory buildings after project is completed", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ food: 0, water: 0, materials: 700, power: 200 });
+    const resources = new ResourceManager({ food: 0, water: 0, materials: 1100, power: 200 });
     const technology = new TechnologyTree(TECHNOLOGIES);
     const ideology = new IdeologyManager();
 

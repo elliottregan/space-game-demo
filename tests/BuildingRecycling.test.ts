@@ -191,9 +191,9 @@ describe("Building Recycling", () => {
     // Verify oxygen is positive to avoid efficiency penalty
     expect(manager.getTotalAirContribution()).toBeGreaterThan(0);
 
-    // Automated Factory produces 15 materials
+    // Automated Factory produces 12 materials
     const prodBefore = resources.getProduction();
-    expect(prodBefore.materials).toBe(15);
+    expect(prodBefore.materials).toBe(12);
 
     manager.startRecycling(building!.id, resources);
 

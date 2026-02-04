@@ -40,8 +40,8 @@ describe("Distributed Oxygen System", () => {
 
       const effectiveProd = gameState.buildings.getEffectiveProduction(factories[0]!.id);
 
-      // Base production is 15 materials, with 50% penalty should be 7.5
-      expect(effectiveProd.materials).toBe(7.5);
+      // Base production is 12 materials, with 50% penalty should be 6
+      expect(effectiveProd.materials).toBe(6);
     });
 
     it("should not apply penalty when air quality efficiency is full", () => {
@@ -72,8 +72,8 @@ describe("Distributed Oxygen System", () => {
 
       const effectiveProd = gameState.buildings.getEffectiveProduction(factories[0]!.id);
 
-      // Base production is 15 materials, no penalty (automated, no workers needed, air quality full)
-      expect(effectiveProd.materials).toBe(15);
+      // Base production is 12 materials, no penalty (automated, no workers needed, air quality full)
+      expect(effectiveProd.materials).toBe(12);
     });
   });
 

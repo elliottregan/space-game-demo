@@ -56,9 +56,9 @@ describe("Victory Megastructures Integration", () => {
     );
     expect(building).not.toBeNull();
 
-    // Fast-forward construction (50 sols)
+    // Fast-forward construction (115 sols for Asteroid Mining Platform)
     let victoryEvent = null;
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 120; i++) {
       const events = state.tick();
       const victory = events.find((e) => e.type === "VICTORY");
       if (victory) {
@@ -83,8 +83,8 @@ describe("Victory Megastructures Integration", () => {
     // Start building
     state.buildings.startBuilding(BuildingId.SPACE_ELEVATOR, state.resources, state.technology);
 
-    // Fast-forward construction (40 sols)
-    for (let i = 0; i < 45; i++) {
+    // Fast-forward construction (105 sols for Space Elevator)
+    for (let i = 0; i < 110; i++) {
       state.tick();
     }
 

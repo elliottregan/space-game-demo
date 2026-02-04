@@ -93,7 +93,7 @@ describe("3D Fabricator", () => {
     it("produces materials when defined", () => {
       const def = api.buildings.getDefinition(BuildingId.FABRICATOR_3D);
       expect(def).toBeDefined();
-      expect(def?.production?.materials).toBe(7);
+      expect(def?.production?.materials).toBe(5);
     });
   });
 
