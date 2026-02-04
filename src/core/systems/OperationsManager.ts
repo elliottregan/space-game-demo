@@ -88,7 +88,7 @@ export class OperationsManager {
 
     this.sites.push({
       id: `site_initial_minerals_${this.nextSiteId++}`,
-      resourceType: "minerals",
+      resourceType: "materials",
       quality,
       revealed: false,
       developed: false,

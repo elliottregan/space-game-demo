@@ -16,8 +16,6 @@ describe("ColonistMoraleManager", () => {
     resourceManager = new ResourceManager({
       food: 100,
       water: 100,
-      oxygen: 100,
-
       materials: 100,
     });
     relationshipManager = new RelationshipManager();
@@ -39,7 +37,7 @@ describe("ColonistMoraleManager", () => {
       }
 
       // Positive resource flow
-      resourceManager.addProduction({ food: 10, water: 10, oxygen: 10 });
+      resourceManager.addProduction({ food: 10, water: 10 });
 
       const baseMorale = moraleManager.calculateBaseMorale(
         colonist,
@@ -56,8 +54,6 @@ describe("ColonistMoraleManager", () => {
       const lowResourceManager = new ResourceManager({
         food: 5, // Below critical threshold (10)
         water: 5,
-        oxygen: 5,
-
         materials: 100,
       });
 
@@ -81,7 +77,7 @@ describe("ColonistMoraleManager", () => {
       colonist.housingId = "habitat_1";
 
       // High consumption (negative net flow) but good stockpiles
-      resourceManager.addConsumption({ food: 200, water: 200, oxygen: 200 });
+      resourceManager.addConsumption({ food: 200, water: 200 });
 
       // Test after grace period - stockpiles are still at 100 (satisfied threshold is 50)
       const baseMorale = moraleManager.calculateBaseMorale(
@@ -101,8 +97,6 @@ describe("ColonistMoraleManager", () => {
       const lowResourceManager = new ResourceManager({
         food: 5,
         water: 5,
-        oxygen: 5,
-
         materials: 100,
       });
 
@@ -129,7 +123,7 @@ describe("ColonistMoraleManager", () => {
       housed.housingId = "habitat_1";
       // unhoused has no housingId
 
-      resourceManager.addProduction({ food: 10, water: 10, oxygen: 10 });
+      resourceManager.addProduction({ food: 10, water: 10 });
 
       const housedMorale = moraleManager.calculateBaseMorale(
         housed,
@@ -165,7 +159,7 @@ describe("ColonistMoraleManager", () => {
         initialStrength: 0.7,
       });
 
-      resourceManager.addProduction({ food: 10, water: 10, oxygen: 10 });
+      resourceManager.addProduction({ food: 10, water: 10 });
 
       const connectedMorale = moraleManager.calculateBaseMorale(
         connected,
@@ -241,7 +235,7 @@ describe("ColonistMoraleManager", () => {
     it("isolated colonist morale converges to base morale", () => {
       const colonist = colonyManager.getColonists()[0]!;
       colonist.housingId = "h1";
-      resourceManager.addProduction({ food: 10, water: 10, oxygen: 10 });
+      resourceManager.addProduction({ food: 10, water: 10 });
 
       // Set initial morale different from base
       moraleManager.setMorale(colonist.id, 30);
@@ -277,7 +271,7 @@ describe("ColonistMoraleManager", () => {
       // House everyone
       hub.housingId = "h1";
       neighbor.housingId = "h2";
-      resourceManager.addProduction({ food: 10, water: 10, oxygen: 10 });
+      resourceManager.addProduction({ food: 10, water: 10 });
 
       // Create star topology (hub connected to all)
       for (const other of colonists.slice(1)) {
@@ -312,7 +306,7 @@ describe("ColonistMoraleManager", () => {
 
       hub.housingId = "h1";
       neighbor.housingId = "h2";
-      resourceManager.addProduction({ food: 10, water: 10, oxygen: 10 });
+      resourceManager.addProduction({ food: 10, water: 10 });
 
       // Create connections
       for (const other of colonists.slice(1)) {

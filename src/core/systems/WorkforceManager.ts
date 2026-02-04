@@ -994,12 +994,12 @@ export class WorkforceManager implements WorkforceQueries {
       GUILD_FORMATION_RELATIONSHIP_THRESHOLD,
     );
 
-    if (groups.length === 0) {
+    // Try to form one guild (prevent explosion)
+    const founderIds = groups[0];
+    if (!founderIds || founderIds.length < 2) {
       return events;
     }
 
-    // Try to form one guild (prevent explosion)
-    const founderIds = groups[0];
     const founders = founderIds
       .map((id) => colonists.find((c) => c.id === id))
       .filter((c): c is Colonist => c !== undefined);
@@ -1097,6 +1097,8 @@ export class WorkforceManager implements WorkforceQueries {
           import("./workforce/types").CoworkerRelationship
         >,
         adjacencyList: Object.fromEntries(adjacencyList),
+        centralityCache: {},
+        lastCentralitySol: 0,
       });
     }
 

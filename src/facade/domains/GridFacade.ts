@@ -3,6 +3,7 @@
 
 import type { GameState } from "../../core/GameState";
 import type { DepositType, GridPosition } from "../../core/models/Grid";
+import { TechnologyId } from "../../core/models/Technology";
 import { calculatePowerRange } from "../../core/balance/GridBalance";
 import type { Queryable } from "../types/interfaces";
 import type { DepositInfo, GridSnapshot, PlacementHints } from "../types/grid";
@@ -21,7 +22,7 @@ export class GridFacade implements Queryable<GridSnapshot> {
    */
   snapshot(): GridSnapshot {
     const gridSize = this.gameState.grid.getGridSize();
-    const hasTechBonus = this.gameState.technology.isResearched("improved-power-grid");
+    const hasTechBonus = this.gameState.technology.isResearched(TechnologyId.NUCLEAR_FISSION);
 
     // Get all deposits with occupancy info
     const deposits = this.gameState.grid.getAllDeposits().map((d) => {
@@ -111,7 +112,7 @@ export class GridFacade implements Queryable<GridSnapshot> {
    */
   getCellsInPowerRange(): GridPosition[] {
     const gridSize = this.gameState.grid.getGridSize();
-    const hasTechBonus = this.gameState.technology.isResearched("improved-power-grid");
+    const hasTechBonus = this.gameState.technology.isResearched(TechnologyId.NUCLEAR_FISSION);
     const activeBuildingIds = new Set(
       this.gameState.buildings.getActiveBuildings().map((b) => b.id),
     );
@@ -141,8 +142,8 @@ export class GridFacade implements Queryable<GridSnapshot> {
     }
 
     return Array.from(poweredCells).map((key) => {
-      const [x, y] = key.split(",").map(Number);
-      return { x, y };
+      const parts = key.split(",").map(Number);
+      return { x: parts[0] ?? 0, y: parts[1] ?? 0 };
     });
   }
 
@@ -150,7 +151,7 @@ export class GridFacade implements Queryable<GridSnapshot> {
    * Get placement hints for a specific position.
    */
   getPlacementHints(position: GridPosition): PlacementHints {
-    const hasTechBonus = this.gameState.technology.isResearched("improved-power-grid");
+    const hasTechBonus = this.gameState.technology.isResearched(TechnologyId.NUCLEAR_FISSION);
     return this.gameState.grid.getPlacementHints(position, hasTechBonus);
   }
 

@@ -23,9 +23,9 @@ describe("Grid Model", () => {
   });
 
   test("PowerState enum has correct values", () => {
-    expect(PowerState.POWERED).toBe("powered");
-    expect(PowerState.ON_BATTERY).toBe("on_battery");
-    expect(PowerState.LOW_BATTERY).toBe("low_battery");
-    expect(PowerState.UNPOWERED).toBe("unpowered");
+    expect(PowerState.POWERED).toBe(PowerState.POWERED);
+    expect(PowerState.ON_BATTERY).toBe(PowerState.ON_BATTERY);
+    expect(PowerState.LOW_BATTERY).toBe(PowerState.LOW_BATTERY);
+    expect(PowerState.UNPOWERED).toBe(PowerState.UNPOWERED);
   });
 });

@@ -321,7 +321,7 @@ export class BuildingManager {
    * Prioritizes food buildings, then buildings with more empty slots.
    * Never steals workers from other buildings.
    */
-  autoAssignAllWorkers(colonyManager: ColonyManager): GameEvent[] {
+  autoAssignAllWorkers(colonistQueries: ColonistQueries): GameEvent[] {
     const events: GameEvent[] = [];
     const understaffed = this.getUnderstaffedBuildings();
     if (understaffed.length === 0) return events;
@@ -331,7 +331,9 @@ export class BuildingManager {
     for (const b of this.buildings.values()) {
       for (const id of b.assignedWorkers) assignedIds.add(id);
     }
-    const unassigned = colonyManager.getColonists().filter((c) => !assignedIds.has(c.id));
+    const unassigned = colonistQueries
+      .getColonists()
+      .filter((c: Colonist) => !assignedIds.has(c.id));
     if (unassigned.length === 0) return events;
 
     for (const building of understaffed) {
@@ -349,7 +351,7 @@ export class BuildingManager {
 
       // Score and sort available colonists, filtering by transit connectivity
       const scored = unassigned
-        .filter((c) => {
+        .filter((c: Colonist) => {
           if (assignedIds.has(c.id)) return false;
 
           // Check transit connectivity when building is on grid with a cluster
@@ -361,11 +363,14 @@ export class BuildingManager {
 
           return true;
         })
-        .map((c) => ({
+        .map((c: Colonist) => ({
           colonist: c,
           score: this.scoreColonistForBuilding(c, def),
         }))
-        .sort((a, b) => b.score - a.score);
+        .sort(
+          (a: { colonist: Colonist; score: number }, b: { colonist: Colonist; score: number }) =>
+            b.score - a.score,
+        );
 
       const toAssign = scored.slice(0, slotsNeeded);
       for (const { colonist } of toAssign) {
