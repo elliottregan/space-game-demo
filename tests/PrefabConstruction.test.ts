@@ -119,6 +119,112 @@ describe("Auto-Housing", () => {
   });
 });
 
+describe("Habitat Upgrade", () => {
+  test("canUpgradeHabitat returns false for non-habitat buildings", () => {
+    const buildings = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 200 });
+
+    const farm = buildings.addBuilding({
+      definitionId: BuildingId.BASIC_FARM,
+      status: "active",
+      constructionProgress: 12,
+      assignedWorkers: [],
+      mode: "normal",
+      broken: false,
+      repairProgress: 0,
+    });
+
+    expect(buildings.canUpgradeHabitat(farm.id, resources)).toBe(false);
+  });
+
+  test("canUpgradeHabitat returns false for pending habitat", () => {
+    const buildings = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 200 });
+
+    const habitat = buildings.addBuilding({
+      definitionId: BuildingId.HABITAT,
+      status: "pending",
+      constructionProgress: 5,
+      assignedWorkers: [],
+      mode: "normal",
+      broken: false,
+      repairProgress: 0,
+    });
+
+    expect(buildings.canUpgradeHabitat(habitat.id, resources)).toBe(false);
+  });
+
+  test("canUpgradeHabitat returns false when insufficient materials", () => {
+    const buildings = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 50 });
+
+    const habitat = buildings.addBuilding({
+      definitionId: BuildingId.HABITAT,
+      status: "active",
+      constructionProgress: 10,
+      assignedWorkers: [],
+      mode: "normal",
+      broken: false,
+      repairProgress: 0,
+    });
+
+    expect(buildings.canUpgradeHabitat(habitat.id, resources)).toBe(false);
+  });
+
+  test("canUpgradeHabitat returns true for active habitat with materials", () => {
+    const buildings = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 100 });
+
+    const habitat = buildings.addBuilding({
+      definitionId: BuildingId.HABITAT,
+      status: "active",
+      constructionProgress: 10,
+      assignedWorkers: [],
+      mode: "normal",
+      broken: false,
+      repairProgress: 0,
+    });
+
+    expect(buildings.canUpgradeHabitat(habitat.id, resources)).toBe(true);
+  });
+
+  test("startUpgrade deducts materials and sets upgrading status", () => {
+    const buildings = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 100 });
+
+    const habitat = buildings.addBuilding({
+      definitionId: BuildingId.HABITAT,
+      status: "active",
+      constructionProgress: 10,
+      assignedWorkers: [],
+      mode: "normal",
+      broken: false,
+      repairProgress: 0,
+    });
+
+    const result = buildings.startUpgrade(habitat.id, resources);
+
+    expect(result).toBe(true);
+    expect(resources.getResources().materials).toBe(30); // 100 - 70
+    const updated = buildings.getBuilding(habitat.id);
+    expect(updated?.status).toBe("upgrading");
+    expect(updated?.upgradeProgress).toBe(0);
+    expect(updated?.upgradeTargetDefId).toBe(BuildingId.ADVANCED_HABITAT);
+  });
+
+  test("getUpgradeCost returns 70 materials for habitat", () => {
+    const buildings = new BuildingManager(BUILDINGS);
+    const cost = buildings.getUpgradeCost(BuildingId.HABITAT);
+    expect(cost).toEqual({ materials: 70 });
+  });
+
+  test("getUpgradeTime returns 8 sols for habitat", () => {
+    const buildings = new BuildingManager(BUILDINGS);
+    const time = buildings.getUpgradeTime(BuildingId.HABITAT);
+    expect(time).toBe(8);
+  });
+});
+
 describe("Auto-Housing Tick Phase", () => {
   test("auto-housing triggers during game tick when conditions met", () => {
     const state = new GameState();

@@ -32,6 +32,17 @@ export class BuildingManager {
   private buildings: Map<string, Building> = new Map();
   private nextId: number = 1;
   private constructionSpeedBonus: number = 0;
+
+  /** Upgrade costs: cost difference between basic and advanced versions */
+  private static readonly UPGRADE_COSTS: Partial<
+    Record<BuildingId, { cost: ResourceDelta; time: number; target: BuildingId }>
+  > = {
+    [BuildingId.HABITAT]: {
+      cost: { materials: 70 }, // 120 (advanced) - 50 (basic)
+      time: 8,
+      target: BuildingId.ADVANCED_HABITAT,
+    },
+  };
   private autoHousingBlockedShown: boolean = false;
   private colonyManager: ColonyManager | null = null;
   private technologyTree: TechnologyTree | null = null;
@@ -1097,6 +1108,59 @@ export class BuildingManager {
       }
     }
     return false;
+  }
+
+  /**
+   * Get the upgrade cost for a building definition.
+   * Returns undefined if the building cannot be upgraded.
+   */
+  getUpgradeCost(defId: BuildingId): ResourceDelta | undefined {
+    return BuildingManager.UPGRADE_COSTS[defId]?.cost;
+  }
+
+  /**
+   * Get the upgrade time in sols for a building definition.
+   * Returns 0 if the building cannot be upgraded.
+   */
+  getUpgradeTime(defId: BuildingId): number {
+    return BuildingManager.UPGRADE_COSTS[defId]?.time ?? 0;
+  }
+
+  /**
+   * Check if a habitat building can be upgraded.
+   * Requires: active status, not broken, and sufficient resources.
+   */
+  canUpgradeHabitat(buildingId: string, resources: ResourceManager): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+    if (building.status !== "active") return false;
+    if (building.broken) return false;
+
+    const upgradeInfo = BuildingManager.UPGRADE_COSTS[building.definitionId];
+    if (!upgradeInfo) return false;
+
+    return resources.canAfford(upgradeInfo.cost);
+  }
+
+  /**
+   * Start upgrading a building. Deducts materials and sets upgrading status.
+   * Returns true if upgrade started successfully.
+   */
+  startUpgrade(buildingId: string, resources: ResourceManager): boolean {
+    if (!this.canUpgradeHabitat(buildingId, resources)) return false;
+
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+
+    const upgradeInfo = BuildingManager.UPGRADE_COSTS[building.definitionId];
+    if (!upgradeInfo) return false;
+
+    resources.deduct(upgradeInfo.cost);
+    building.status = "upgrading";
+    building.upgradeProgress = 0;
+    building.upgradeTargetDefId = upgradeInfo.target;
+
+    return true;
   }
 
   toJSON() {
