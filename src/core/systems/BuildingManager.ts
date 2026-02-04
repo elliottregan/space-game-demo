@@ -19,13 +19,16 @@ import {
   calculateAverageWorkerEfficiency,
   calculateStaffingEfficiency,
 } from "../utils/workerEfficiency";
-import type { ColonyManager } from "./ColonyManager";
 import type { GridManager } from "./GridManager";
-import type { IdeologyManager } from "./IdeologyManager";
 import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
 import type { VictoryManager } from "./VictoryManager";
-import type { WorkforceManager } from "./WorkforceManager";
+import type {
+  ColonistQueries,
+  GridQueries,
+  ProjectQueries,
+  WorkforceQueries,
+} from "../interfaces/Queries";
 
 export class BuildingManager {
   private definitions: Map<BuildingId, BuildingDefinition> = new Map();
@@ -44,32 +47,23 @@ export class BuildingManager {
     },
   };
   private autoHousingBlockedShown: boolean = false;
-  private colonyManager: ColonyManager | null = null;
   private technologyTree: TechnologyTree | null = null;
-  private workforceManager: WorkforceManager | null = null;
-  private ideologyManager: IdeologyManager | null = null;
   private victoryManager: VictoryManager | null = null;
   private gridManager: GridManager | null = null;
   private airQualityEfficiency: number = 1;
 
-  setColonyManager(colony: ColonyManager): void {
-    this.colonyManager = colony;
-  }
+  // Query interfaces for read-only access
+  private colonistQueries: ColonistQueries | null = null;
+  private workforceQueries: WorkforceQueries | null = null;
+  private projectQueries: ProjectQueries | null = null;
+  private gridQueries: GridQueries | null = null;
 
   setTechnologyTree(tech: TechnologyTree): void {
     this.technologyTree = tech;
   }
 
-  setWorkforceManager(workforce: WorkforceManager): void {
-    this.workforceManager = workforce;
-  }
-
   setAirQualityEfficiency(multiplier: number): void {
     this.airQualityEfficiency = Math.max(0, Math.min(1, multiplier));
-  }
-
-  setIdeologyManager(ideology: IdeologyManager): void {
-    this.ideologyManager = ideology;
   }
 
   setVictoryManager(victory: VictoryManager): void {
@@ -78,6 +72,23 @@ export class BuildingManager {
 
   setGridManager(gridManager: GridManager): void {
     this.gridManager = gridManager;
+  }
+
+  // Query interface setters
+  setColonistQueries(queries: ColonistQueries): void {
+    this.colonistQueries = queries;
+  }
+
+  setWorkforceQueries(queries: WorkforceQueries): void {
+    this.workforceQueries = queries;
+  }
+
+  setProjectQueries(queries: ProjectQueries): void {
+    this.projectQueries = queries;
+  }
+
+  setGridQueries(queries: GridQueries): void {
+    this.gridQueries = queries;
   }
 
   constructor(defs: BuildingDefinition[]) {
@@ -219,7 +230,7 @@ export class BuildingManager {
    * Respects transit connectivity - only assigns colonists whose housing is in the same cluster.
    */
   private autoAssignWorkers(building: Building, def: BuildingDefinition): void {
-    if (!def.workerSlots || !this.colonyManager) return;
+    if (!def.workerSlots || !this.colonistQueries) return;
 
     // Check if building is on the grid and get its cluster
     const isOnGrid = this.gridManager?.getPlacement(building.id) !== undefined;
@@ -236,7 +247,7 @@ export class BuildingManager {
       }
     }
 
-    const allColonists = this.colonyManager.getColonists();
+    const allColonists = this.colonistQueries?.getColonists() ?? [];
     const availableColonists = allColonists.filter((c) => {
       if (assignedColonistIds.has(c.id)) return false;
 
@@ -457,7 +468,7 @@ export class BuildingManager {
 
     // Check project requirements for victory buildings
     if (def.requiredProject) {
-      if (!this.ideologyManager || !this.ideologyManager.isProjectCompleted(def.requiredProject)) {
+      if (!this.projectQueries || !this.projectQueries.isProjectCompleted(def.requiredProject)) {
         return false;
       }
     }
@@ -754,14 +765,14 @@ export class BuildingManager {
    * Workers who have worked together longer are more efficient as a team.
    */
   private getTeamCohesionMultiplier(buildingId: string): number {
-    if (!this.workforceManager) return 1.0;
+    if (!this.workforceQueries) return 1.0;
 
     const building = this.buildings.get(buildingId);
     if (!building || building.assignedWorkers.length < 2) {
       return 1.0;
     }
 
-    return this.workforceManager.getTeamCohesionMultiplier(building.assignedWorkers);
+    return this.workforceQueries.getTeamCohesionMultiplier(building.assignedWorkers);
   }
 
   getEffectiveProduction(buildingId: string): ResourceDelta {
@@ -772,7 +783,7 @@ export class BuildingManager {
     // Gate on power state - unpowered buildings produce nothing
     // Only check if building is placed on grid (has a placement record)
     if (this.gridManager) {
-      const placement = this.gridManager.getPlacement(buildingId);
+      const placement = this.gridQueries?.getPlacement(buildingId);
       if (placement && placement.powerState === PowerState.UNPOWERED) {
         return {};
       }
@@ -791,7 +802,7 @@ export class BuildingManager {
     // Gate on power state - unpowered buildings consume nothing
     // Only check if building is placed on grid (has a placement record)
     if (this.gridManager) {
-      const placement = this.gridManager.getPlacement(buildingId);
+      const placement = this.gridQueries?.getPlacement(buildingId);
       if (placement && placement.powerState === PowerState.UNPOWERED) {
         return {};
       }
@@ -917,23 +928,23 @@ export class BuildingManager {
    * Returns transit disconnection events for the event log.
    */
   handleDisconnectedBuildings(): GameEvent[] {
-    if (!this.gridManager || !this.colonyManager) return [];
+    if (!this.gridManager || !this.colonistQueries) return [];
 
     const events: GameEvent[] = [];
 
     for (const [buildingId, building] of this.buildings) {
       if (building.assignedWorkers.length === 0) continue;
 
-      const workplaceCluster = this.gridManager.getBuildingClusterId(buildingId);
+      const workplaceCluster = this.gridQueries?.getBuildingClusterId(buildingId);
       const def = this.definitions.get(building.definitionId);
 
       // Check each worker's housing cluster
       const workersToRemove: string[] = [];
       for (const colonistId of building.assignedWorkers) {
-        const colonist = this.colonyManager.getColonist(colonistId);
+        const colonist = this.colonistQueries?.getColonist(colonistId);
         if (!colonist?.housingId) continue;
 
-        const housingCluster = this.gridManager.getBuildingClusterId(colonist.housingId);
+        const housingCluster = this.gridQueries?.getBuildingClusterId(colonist.housingId);
         if (housingCluster !== workplaceCluster) {
           workersToRemove.push(colonistId);
         }
@@ -1015,11 +1026,11 @@ export class BuildingManager {
     }
 
     // Validate transit connectivity - colonist's housing must be in same cluster as workplace
-    if (this.gridManager && this.colonyManager) {
-      const colonist = this.colonyManager.getColonist(colonistId);
+    if (this.gridManager && this.colonistQueries) {
+      const colonist = this.colonistQueries?.getColonist(colonistId);
       if (colonist?.housingId) {
-        const housingCluster = this.gridManager.getBuildingClusterId(colonist.housingId);
-        const workplaceCluster = this.gridManager.getBuildingClusterId(buildingId);
+        const housingCluster = this.gridQueries?.getBuildingClusterId(colonist.housingId);
+        const workplaceCluster = this.gridQueries?.getBuildingClusterId(buildingId);
         if (housingCluster !== workplaceCluster) {
           return false;
         }
@@ -1076,10 +1087,10 @@ export class BuildingManager {
     const { building, def } = result;
 
     if (!def.workerSlots || building.assignedWorkers.length === 0) return 1;
-    if (!this.colonyManager) return 1;
+    if (!this.colonistQueries) return 1;
 
     const colonists = building.assignedWorkers
-      .map((id) => this.colonyManager?.getColonist(id))
+      .map((id) => this.colonistQueries?.getColonist(id))
       .filter((c) => c !== undefined);
 
     return calculateAverageWorkerEfficiency(colonists, def.workerRole);
