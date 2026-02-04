@@ -9,6 +9,9 @@ pre-commit:
       glob: "*.{ts,tsx,vue,css}"
       run: bunx oxfmt --write --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
-    typecheck:
-      glob: "*.{ts,tsx,vue}"
+    typecheck-src:
+      glob: "src/**/*.{ts,tsx,vue}"
       run: bun run typecheck:src
+    typecheck-tests:
+      glob: "tests/**/*.ts"
+      run: bun run typecheck:test
