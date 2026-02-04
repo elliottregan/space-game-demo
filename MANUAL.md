@@ -42,8 +42,9 @@ With 10 colonists, you need **5 food, 3 oxygen, and 2 water per sol** just to su
 
 1. **Build a Basic Farm** (45 materials) - Assign 2 workers to produce 10 food/sol
 2. **Build a Water Extractor** (35 materials) on a water deposit - Produces 4 water/sol
-3. **Build Solar Panels** (30 materials) as needed for power
-4. **Build Habitat Modules** (50 materials) when population grows
+3. **Build a Science Station** (60 materials) - Enables research progress (essential!)
+4. **Build Solar Panels** (30 materials) as needed for power
+5. **Build Habitat Modules** (50 materials) when population grows
 
 ---
 
@@ -89,6 +90,7 @@ Buildings are the backbone of your colony. Each building has:
 | **Water Extractor** | 35 | Produces 4 water (requires water deposit) |
 | **Storage Depot** | 40 | Increases storage capacity |
 | **Basic Farm** | 45 | Produces 10 food (requires 2 workers) |
+| **Science Station** | 60 | Enables research, 1.0 research/sol (requires 2 workers) |
 
 #### Advanced Buildings (Require Technology)
 
@@ -96,7 +98,7 @@ Buildings are the backbone of your colony. Each building has:
 |----------|------|----------|--------|
 | **Greenhouse** | 100 | Hydroponics | Produces 25 food |
 | **Water Reclaimer** | 60 | Water Recycling | Produces 8 water |
-| **Research Lab** | 150 | Advanced Materials | Accelerates research (3 workers) |
+| **Research Lab** | 150 | Habitat Fabrication | 3.0 research/sol (3 workers) |
 | **Advanced Habitat** | 120 | Advanced Materials | Houses 8 colonists |
 | **Automated Factory** | 200 | Robotics | Produces 15 materials |
 | **Mining Station** | 300 | Asteroid Mining | Produces 30 materials (requires deposit) |
@@ -444,7 +446,25 @@ Use this visualization to identify social hubs, isolated colonists, and bridge i
 
 ## Technology
 
-Research unlocks advanced buildings and bonuses. Queue technologies and assign researchers to labs to progress.
+Research unlocks advanced buildings and bonuses. Queue technologies to progress - but **you need research buildings to make progress**.
+
+### Research Buildings
+
+Research progress depends on active, staffed research buildings:
+
+| Building | Research Output | Workers | Requirements |
+|----------|-----------------|---------|--------------|
+| **Science Station** | 1.0/sol | 2 | None (basic) |
+| **Research Lab** | 3.0/sol | 3 | Habitat Fabrication |
+
+**No research buildings = no research progress.** Build a Science Station early to start researching.
+
+Research output is affected by:
+- **Staffing**: Understaffed buildings produce less
+- **Worker efficiency**: Mastery level and skills affect output
+- **Power**: Unpowered buildings produce nothing
+
+Multiple research buildings stack additively. Two fully-staffed Science Stations produce 2.0 research/sol.
 
 ### Technology Tree
 
@@ -496,10 +516,11 @@ This automation helps maintain housing without constant micromanagement.
 
 ### Research Tips
 
-- Build Research Labs early to accelerate progress
-- Assign experienced Researchers for maximum efficiency
+- **Build a Science Station immediately** - Without one, research progress is zero
+- Assign experienced Researchers for maximum efficiency (Master = 160% output)
 - Queue multiple technologies to maintain continuous progress
-- Robotics provides a 1.2x speed bonus to all research
+- Upgrade to Research Labs (3.0/sol) once you unlock Habitat Fabrication
+- Multiple research buildings stack - two Science Stations = 2x research speed
 
 ---
 
@@ -695,7 +716,12 @@ Your colony falls if:
 - Build Water Extractor on a water deposit (35 materials)
 - Build Solar Panels as needed (30 materials each)
 
-**Priority 3: Prepare for Growth**
+**Priority 3: Research Infrastructure**
+- Build a Science Station (60 materials) - **critical for any research**
+- Assign 2 colonists as Researchers
+- Without this, technology progress is zero
+
+**Priority 4: Prepare for Growth**
 - Build additional Habitat Modules before immigration events
 - First immigration typically arrives around Sol 20
 
@@ -733,7 +759,7 @@ Your colony falls if:
 
 1. **Never let resources hit zero** - Oxygen and food depletion means defeat
 2. **Balance growth with stability** - More colonists means more consumption
-3. **Invest in Research Labs early** - Technology unlocks powerful buildings
+3. **Build a Science Station early** - No research buildings = no tech progress
 4. **Monitor building condition** - Maintenance is cheaper than repairs
 5. **Use Overdrive sparingly** - The morale penalty compounds
 6. **Keep some colonists unassigned** - Flexibility for emergencies
