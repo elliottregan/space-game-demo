@@ -3,10 +3,12 @@ import { BuildingManager } from "../src/core/systems/BuildingManager";
 import { ResourceManager } from "../src/core/systems/ResourceManager";
 import { ColonyManager } from "../src/core/systems/ColonyManager";
 import { WorkforceManager } from "../src/core/systems/WorkforceManager";
+import { TechnologyTree } from "../src/core/systems/TechnologyTree";
 import { BUILDINGS } from "../src/core/data/buildings";
+import { TECHNOLOGIES } from "../src/core/data/technologies";
 import { BuildingId } from "../src/core/models/Building";
 import { ColonistRole } from "../src/core/models/Colonist";
-import type { TechnologyTree } from "../src/core/systems/TechnologyTree";
+import { TechnologyId } from "../src/core/models/Technology";
 
 describe("Research Buildings", () => {
   let buildings: BuildingManager;
@@ -117,6 +119,52 @@ describe("Research Buildings", () => {
       const totalOutput = buildings.getTotalResearchOutput();
       expect(totalOutput).toBeGreaterThan(firstStationOutput);
       expect(totalOutput).toBeGreaterThan(1.0); // Should be at least 1.0 with two buildings
+    });
+  });
+
+  describe("Integration: Research Progress", () => {
+    it("should require research building for tech progress", () => {
+      const tree = new TechnologyTree(TECHNOLOGIES);
+
+      tree.startResearch(TechnologyId.WATER_RECYCLING, resources);
+
+      // No research buildings = 0 output
+      const researchRate = buildings.getTotalResearchOutput();
+      expect(researchRate).toBe(0);
+
+      // Tick with 0 rate
+      tree.tick(resources, researchRate);
+
+      expect(tree.getResearchProgress(TechnologyId.WATER_RECYCLING)).toBe(0);
+    });
+
+    it("should progress research when Science Station is active and staffed", () => {
+      const tree = new TechnologyTree(TECHNOLOGIES);
+
+      // Build and staff Science Station
+      const ssBuilding = buildings.startBuilding(BuildingId.SCIENCE_STATION, resources, mockTech);
+      const ssId = ssBuilding!.id;
+      const ssDef = buildings.getDefinition(BuildingId.SCIENCE_STATION)!;
+      for (let i = 0; i < ssDef.constructionTime; i++) {
+        buildings.tick(resources, i);
+      }
+
+      // Add colonists with RESEARCH role and assign them
+      const c1 = colony.addColonist({ role: ColonistRole.RESEARCH });
+      const c2 = colony.addColonist({ role: ColonistRole.RESEARCH });
+      buildings.assignWorker(ssId, c1.id);
+      buildings.assignWorker(ssId, c2.id);
+
+      // Start research
+      tree.startResearch(TechnologyId.WATER_RECYCLING, resources);
+
+      // Get research rate and tick
+      const researchRate = buildings.getTotalResearchOutput();
+      expect(researchRate).toBeGreaterThan(0);
+
+      tree.tick(resources, researchRate);
+
+      expect(tree.getResearchProgress(TechnologyId.WATER_RECYCLING)).toBeGreaterThan(0);
     });
   });
 });
