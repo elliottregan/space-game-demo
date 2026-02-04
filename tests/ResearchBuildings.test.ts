@@ -28,8 +28,8 @@ describe("Research Buildings", () => {
     workforce = new WorkforceManager();
     mockTech = { isResearched: () => true } as unknown as TechnologyTree;
 
-    buildings.setColonyManager(colony);
-    buildings.setWorkforceManager(workforce);
+    buildings.setColonistQueries(colony);
+    buildings.setWorkforceQueries(workforce);
   });
 
   describe("getTotalResearchOutput", () => {
