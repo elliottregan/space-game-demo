@@ -7,6 +7,7 @@ import { BuildingManager } from "../src/core/systems/BuildingManager";
 import { ResourceManager } from "../src/core/systems/ResourceManager";
 import { TechnologyTree } from "../src/core/systems/TechnologyTree";
 import { BUILDINGS } from "../src/core/data/buildings";
+import { GameState } from "../src/core/GameState";
 
 describe("Prefab Construction", () => {
   test("TechnologyId includes PREFAB_CONSTRUCTION", () => {
@@ -115,5 +116,37 @@ describe("Auto-Housing", () => {
     expect(events.length).toBe(1);
     expect(events[0].type).toBe("AUTO_HOUSING_BLOCKED");
     expect(events[0].severity).toBe("warning");
+  });
+});
+
+describe("Auto-Housing Tick Phase", () => {
+  test("auto-housing triggers during game tick when conditions met", () => {
+    const state = new GameState();
+
+    // Research prerequisites
+    state.technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+    state.technology.completeResearch(TechnologyId.PREFAB_CONSTRUCTION);
+
+    // Give enough materials
+    state.resources.add({ materials: 200 });
+
+    // Get current housing capacity and set population to 85%+
+    const capacity = state.colony.getHousingCapacity(state.buildings);
+    const targetPop = Math.ceil(capacity * 0.86);
+
+    // Add colonists to reach threshold
+    while (state.colony.getPopulation() < targetPop) {
+      state.colony.addColonist();
+    }
+
+    const initialPending = state.buildings.getPendingBuildings().length;
+
+    // Run a tick
+    const events = state.tick();
+
+    // Should have auto-started a habitat
+    const autoHousingEvent = events.find((e) => e.type === "AUTO_HOUSING_STARTED");
+    expect(autoHousingEvent).toBeDefined();
+    expect(state.buildings.getPendingBuildings().length).toBe(initialPending + 1);
   });
 });
