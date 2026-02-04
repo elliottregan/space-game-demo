@@ -3,6 +3,7 @@
 
 import type { GameState } from "../../core/GameState";
 import { BuildingId } from "../../core/models/Building";
+import { TechnologyId } from "../../core/models/Technology";
 import type { GridPosition } from "../../core/models/Grid";
 import type {
   ActionChecker,
@@ -241,11 +242,11 @@ export class BuildingsFacade
 
     if (!canDo) {
       // Check specific reasons
-      if (building.status !== "active") {
-        return { allowed: false, reason: "Building must be active" };
-      }
       if (building.status === "upgrading") {
         return { allowed: false, reason: "Building is already being upgraded" };
+      }
+      if (building.status !== "active") {
+        return { allowed: false, reason: "Building must be active" };
       }
 
       const upgradeCost = this.gameState.buildings.getUpgradeCost(building.definitionId);
@@ -419,7 +420,7 @@ export class BuildingsFacade
       }
 
       // Update power connections (only active buildings can provide power)
-      const hasTechBonus = this.gameState.technology.isResearched("improved-power-grid");
+      const hasTechBonus = this.gameState.technology.isResearched(TechnologyId.NUCLEAR_FISSION);
       const activeBuildingIds = new Set(
         this.gameState.buildings.getActiveBuildings().map((b) => b.id),
       );
@@ -492,7 +493,7 @@ export class BuildingsFacade
       if (pos) {
         this.gameState.grid.removeBuilding(pos);
         // Update power connections after removal
-        const hasTechBonus = this.gameState.technology.isResearched("improved-power-grid");
+        const hasTechBonus = this.gameState.technology.isResearched(TechnologyId.NUCLEAR_FISSION);
         const activeBuildingIds = new Set(
           this.gameState.buildings.getActiveBuildings().map((b) => b.id),
         );

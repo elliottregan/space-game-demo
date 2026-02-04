@@ -451,7 +451,7 @@ function runSingleGame(seed: number): RunResult {
  */
 function captureIdeologySnapshot(
   sol: number,
-  colonists: Array<{ ideology?: ColonistIdeology }>,
+  colonists: readonly { ideology?: ColonistIdeology }[],
 ): IdeologySnapshot {
   let sumEarth = 0;
   let sumMars = 0;

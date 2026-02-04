@@ -23,7 +23,7 @@ describe("Prospecting", () => {
     const sites = operations.getSites();
     expect(sites.length).toBe(3);
     expect(sites.filter((s) => s.resourceType === "water").length).toBe(2);
-    expect(sites.filter((s) => s.resourceType === "minerals").length).toBe(1);
+    expect(sites.filter((s) => s.resourceType === "materials").length).toBe(1);
     expect(sites.every((s) => !s.revealed)).toBe(true);
   });
 
