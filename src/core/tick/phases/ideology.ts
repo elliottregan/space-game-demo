@@ -1,5 +1,12 @@
 import { getProject } from "../../data/projects";
 import type { GameEvent } from "../../events/GameEvent";
+import {
+  ProjectEffectType,
+  type ConvictionBoostParams,
+  type ProductionModifierParams,
+  type Project,
+  type RecurringEventParams,
+} from "../../models/NPCInfluence";
 import { definePhase } from "../TickPhase";
 import { IdeologyManager } from "../../systems/IdeologyManager";
 import * as IdeologyBalance from "../../balance/IdeologyBalance";
@@ -28,6 +35,55 @@ function isNeutralIdeology(colonist: {
 
   // Only imprint if conviction is low (new colonist)
   return isNeutral && conviction <= IdeologyBalance.NEW_COLONIST_IDEOLOGY.conviction;
+}
+
+/**
+ * Process onCompletionEffects for a project.
+ * This handles recurring events, production modifiers, and conviction boosts.
+ */
+function processProjectOnCompletionEffects(
+  project: Project,
+  ctx: {
+    scheduler: {
+      register: (projectId: string, params: RecurringEventParams, currentSol: number) => void;
+    };
+    resources: { addProductionBonus: (sourceId: string, resource: string, amount: number) => void };
+    ideology: {
+      boostFactionConviction: (faction: string, amount: number, colonists: unknown[]) => void;
+    };
+    colony: { getColonists: () => unknown[] };
+    currentSol: number;
+  },
+): void {
+  if (!project.onCompletionEffects) return;
+
+  for (const effect of project.onCompletionEffects) {
+    switch (effect.type) {
+      case ProjectEffectType.RECURRING_EVENT: {
+        const params = effect.params as RecurringEventParams;
+        ctx.scheduler.register(project.id, params, ctx.currentSol);
+        break;
+      }
+      case ProjectEffectType.PRODUCTION_MODIFIER: {
+        const params = effect.params as ProductionModifierParams;
+        ctx.resources.addProductionBonus(project.id, params.resource, params.amount);
+        break;
+      }
+      case ProjectEffectType.CONVICTION_BOOST: {
+        const params = effect.params as ConvictionBoostParams;
+        ctx.ideology.boostFactionConviction(
+          params.faction,
+          params.amount,
+          ctx.colony.getColonists(),
+        );
+        break;
+      }
+      case ProjectEffectType.IMMIGRATION_IDEOLOGY_BIAS: {
+        // Handled elsewhere during immigration events
+        break;
+      }
+    }
+  }
 }
 
 /**
@@ -78,8 +134,8 @@ export const propagateIdeology = definePhase({
 export const processProjectVotes = definePhase({
   id: "ideology:processProjectVotes",
   name: "Process Project Votes",
-  reads: ["ideology", "colony", "workforce", "currentSol", "victory"],
-  writes: ["ideology", "victory"],
+  reads: ["ideology", "colony", "workforce", "currentSol", "victory", "scheduler"],
+  writes: ["ideology", "victory", "resources", "scheduler"],
   execute(ctx) {
     const events: GameEvent[] = [];
     const colonists = ctx.colony.getColonists();
@@ -121,6 +177,9 @@ export const processProjectVotes = definePhase({
         if (project.effects?.materialsBonus) {
           ctx.resources.addProduction({ materials: project.effects.materialsBonus });
         }
+
+        // Process onCompletionEffects (recurring events, production modifiers, etc.)
+        processProjectOnCompletionEffects(project, ctx);
 
         events.push({
           type: "project_passed",

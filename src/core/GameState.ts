@@ -6,6 +6,13 @@ import { FOUNDING_COLONISTS, FOUNDING_RELATIONSHIPS } from "./data/foundingColon
 import { TECHNOLOGIES } from "./data/technologies";
 import { BuildingId } from "./models/Building";
 import type { GameEvent } from "./models/GameEvent";
+import {
+  ProjectEffectType,
+  type ConvictionBoostParams,
+  type ProductionModifierParams,
+  type Project,
+  type RecurringEventParams,
+} from "./models/NPCInfluence";
 import { AirQualityManager } from "./systems/AirQualityManager";
 import { BuildingManager } from "./systems/BuildingManager";
 import { ColonistMoraleManager } from "./systems/ColonistMoraleManager";
@@ -15,6 +22,7 @@ import { GridManager } from "./systems/GridManager";
 import { EventManager } from "./systems/EventManager";
 import { IdeologyManager } from "./systems/IdeologyManager";
 import { OperationsManager } from "./systems/OperationsManager";
+import { RecurringEventScheduler } from "./systems/RecurringEventScheduler";
 import { ResourceManager } from "./systems/ResourceManager";
 import { TechnologyTree } from "./systems/TechnologyTree";
 import { VictoryManager } from "./systems/VictoryManager";
@@ -38,6 +46,7 @@ export class GameState {
   ideology: IdeologyManager;
   earthCrisis: EarthCrisisManager;
   grid: GridManager;
+  scheduler: RecurringEventScheduler;
 
   private tickRunner: TickRunner;
   private eventLog: GameEvent[] = [];
@@ -81,6 +90,7 @@ export class GameState {
     this.earthCrisis = new EarthCrisisManager();
     this.grid = new GridManager();
     this.grid.generateDeposits(Date.now()); // Use timestamp as seed for variety
+    this.scheduler = new RecurringEventScheduler();
     this.buildings.setGridManager(this.grid);
     this.buildings.setIdeologyManager(this.ideology);
     this.buildings.setVictoryManager(this.victory);
@@ -186,6 +196,42 @@ export class GameState {
             target.id,
             INITIAL_COLONIST_RELATIONSHIP,
           );
+        }
+      }
+    }
+  }
+
+  /**
+   * Process the onCompletionEffects of a project when it passes.
+   * This handles scheduling recurring events, production modifiers, and conviction boosts.
+   */
+  processProjectEffects(project: Project): void {
+    if (!project.onCompletionEffects) return;
+
+    for (const effect of project.onCompletionEffects) {
+      switch (effect.type) {
+        case ProjectEffectType.RECURRING_EVENT: {
+          const params = effect.params as RecurringEventParams;
+          this.scheduler.register(project.id, params, this.currentSol);
+          break;
+        }
+        case ProjectEffectType.PRODUCTION_MODIFIER: {
+          const params = effect.params as ProductionModifierParams;
+          this.resources.addProductionBonus(project.id, params.resource, params.amount);
+          break;
+        }
+        case ProjectEffectType.CONVICTION_BOOST: {
+          const params = effect.params as ConvictionBoostParams;
+          this.ideology.boostFactionConviction(
+            params.faction,
+            params.amount,
+            this.colony.getColonists(),
+          );
+          break;
+        }
+        case ProjectEffectType.IMMIGRATION_IDEOLOGY_BIAS: {
+          // Handled elsewhere during immigration events
+          break;
         }
       }
     }
@@ -319,12 +365,17 @@ export class GameState {
         airQualityManager: this.airQuality,
         earthCrisis: this.earthCrisis,
         grid: this.grid,
+        scheduler: this.scheduler,
       },
       { autoAssignNewColonists: this.autoAssignNewColonists },
     );
 
     // Execute all phases through the runner
     const events = this.tickRunner.tick(ctx);
+
+    // Process scheduled recurring events
+    const scheduledEvents = this.scheduler.tick(this.currentSol);
+    events.push(...scheduledEvents);
 
     // Log events
     this.eventLog.push(...events);
@@ -383,6 +434,7 @@ export class GameState {
       ideology: this.ideology.toJSON(),
       earthCrisis: this.earthCrisis.toJSON(),
       grid: this.grid.toJSON(),
+      scheduler: this.scheduler.toJSON(),
       autoAssignNewColonists: this.autoAssignNewColonists,
     };
   }
@@ -423,6 +475,10 @@ export class GameState {
 
     if (data.grid) {
       state.grid.fromJSON(data.grid);
+    }
+
+    if (data.scheduler) {
+      state.scheduler = RecurringEventScheduler.fromJSON(data.scheduler);
     }
 
     // Re-establish grid manager reference and update clusters after grid is restored
