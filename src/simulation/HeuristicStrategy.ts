@@ -631,8 +631,13 @@ export class HeuristicStrategy {
     const airContribution = buildings.totalAirContribution;
 
     // Handle water production early - needed for morale recovery
-    if (this.handleWaterProduction(waterProduction, waterConsumption, currentWater)) {
-      return { category: "survival", action: "build_water_extractor" };
+    const waterBuilding = this.handleWaterProduction(
+      waterProduction,
+      waterConsumption,
+      currentWater,
+    );
+    if (waterBuilding) {
+      return { category: "survival", action: `build_${waterBuilding}` };
     }
 
     const foodFlow = foodProduction - foodConsumption;
@@ -672,26 +677,38 @@ export class HeuristicStrategy {
   }
 
   /**
-   * Handle water production by building water extractors on grid deposits.
-   * Uses grid-based deposit placement instead of Operations site workflow.
-   * @returns true if an action was taken
+   * Handle water production by building water extractors or reclaimers.
+   * Water Extractor: +4/sol, requires water deposit
+   * Water Reclaimer: +8/sol, requires WATER_RECYCLING tech, no deposit needed
+   * @returns the building ID if built, null otherwise
    */
   private handleWaterProduction(
     waterProduction: number,
     waterConsumption: number,
     currentWater: number,
-  ): boolean {
+  ): BuildingId | null {
     const waterFlow = waterProduction - waterConsumption;
 
+    // Maintain water buffer of +2 flow to handle population growth and events
+    // Also ensure stockpile doesn't drop too low
+    const WATER_BUFFER = 2;
+    const MIN_WATER_STOCKPILE = 40;
+
     // Water is fine - no action needed
-    if (waterFlow > 0 && currentWater > 30) return false;
+    if (waterFlow >= WATER_BUFFER && currentWater > MIN_WATER_STOCKPILE) return null;
 
-    // Already have a water extractor and not in crisis
-    if (this.hasBuilding(BuildingId.WATER_EXTRACTOR) && waterFlow >= 0) return false;
+    // Proactively build water production before crises happen
+    // Prefer Water Reclaimer (+8/sol) if tech is available - no deposit needed
+    if (this.tryBuild(BuildingId.WATER_RECLAIMER, "survival", false)) {
+      return BuildingId.WATER_RECLAIMER;
+    }
 
-    // Try to build water extractor on an available water deposit
-    // tryBuild() will automatically find an available water deposit via findBestPosition()
-    return this.tryBuild(BuildingId.WATER_EXTRACTOR, "survival");
+    // Fall back to Water Extractor (+4/sol) on water deposits
+    if (this.tryBuild(BuildingId.WATER_EXTRACTOR, "survival")) {
+      return BuildingId.WATER_EXTRACTOR;
+    }
+
+    return null;
   }
 
   /**
