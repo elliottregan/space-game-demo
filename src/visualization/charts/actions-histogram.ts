@@ -69,12 +69,13 @@ export function renderActionsHistogram(
     .domain([0, bins * binWidth])
     .thresholds(bins)(actionsA);
 
-  const histogramB = batchB && actionsB.length > 0
-    ? d3
-        .bin()
-        .domain([0, bins * binWidth])
-        .thresholds(bins)(actionsB)
-    : null;
+  const histogramB =
+    batchB && actionsB.length > 0
+      ? d3
+          .bin()
+          .domain([0, bins * binWidth])
+          .thresholds(bins)(actionsB)
+      : null;
 
   // Scales
   const x = d3

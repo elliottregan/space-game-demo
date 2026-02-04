@@ -84,6 +84,19 @@ export const BUILDINGS: BuildingDefinition[] = [
     airContribution: 5,
     purpose: BuildingPurpose.Industrial,
   },
+  {
+    id: BuildingId.SCIENCE_STATION,
+    name: "Science Station",
+    description: "Basic research facility for analyzing Martian data",
+    cost: { materials: 60 },
+    constructionTime: 12,
+    powerConsumption: 5,
+    workerSlots: 2,
+    workerRole: ColonistRole.RESEARCH,
+    researchOutput: 1.0,
+    airContribution: 0,
+    purpose: BuildingPurpose.Industrial,
+  },
 
   // Tech-gated buildings
   {
@@ -125,6 +138,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 3,
     workerRole: ColonistRole.RESEARCH,
     requiredTech: TechnologyId.HABITAT_FABRICATION,
+    researchOutput: 3.0,
     airContribution: -1,
     purpose: BuildingPurpose.Industrial,
   },

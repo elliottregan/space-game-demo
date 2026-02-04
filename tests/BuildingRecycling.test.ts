@@ -301,7 +301,6 @@ describe("Building Repurposing", () => {
           TechnologyId.ASTEROID_MINING,
         ],
         currentResearch: null,
-        researchSpeedBonus: 0,
       },
       TECHNOLOGIES,
     );
@@ -362,7 +361,6 @@ describe("Building Repurposing", () => {
           TechnologyId.ASTEROID_MINING,
         ],
         currentResearch: null,
-        researchSpeedBonus: 0,
       },
       TECHNOLOGIES,
     );
@@ -404,7 +402,6 @@ describe("Building Repurposing", () => {
           TechnologyId.ASTEROID_MINING,
         ],
         currentResearch: null,
-        researchSpeedBonus: 0,
       },
       TECHNOLOGIES,
     );
@@ -450,7 +447,6 @@ describe("Building Repurposing", () => {
           TechnologyId.ASTEROID_MINING,
         ],
         currentResearch: null,
-        researchSpeedBonus: 0,
       },
       TECHNOLOGIES,
     );
@@ -505,7 +501,6 @@ describe("Building Repurposing", () => {
           TechnologyId.ASTEROID_MINING,
         ],
         currentResearch: null,
-        researchSpeedBonus: 0,
       },
       TECHNOLOGIES,
     );
@@ -545,7 +540,6 @@ describe("Building Repurposing", () => {
           TechnologyId.ASTEROID_MINING,
         ],
         currentResearch: null,
-        researchSpeedBonus: 0,
       },
       TECHNOLOGIES,
     );
@@ -587,7 +581,6 @@ describe("Building Repurposing", () => {
           TechnologyId.ASTEROID_MINING,
         ],
         currentResearch: null,
-        researchSpeedBonus: 0,
       },
       TECHNOLOGIES,
     );

@@ -201,4 +201,22 @@ export class TechnologyFacade implements Queryable<TechnologySnapshot>, EntityLo
       return ok(undefined);
     });
   }
+
+  /**
+   * Instantly complete research on a technology (for testing).
+   * Bypasses prerequisites and resource costs.
+   */
+  completeResearch(techId: TechnologyId): Result<void> {
+    return this.executeCommand(() => {
+      const success = this.gameState.technology.completeResearch(techId);
+      if (!success) {
+        return err({
+          type: "NOT_FOUND",
+          entity: "technology",
+          id: techId,
+        });
+      }
+      return ok(undefined);
+    });
+  }
 }

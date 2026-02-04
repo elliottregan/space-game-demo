@@ -27,6 +27,7 @@ export enum BuildingId {
   OBSERVATORY_DOME = "observatory_dome",
   ASSEMBLY_HALL = "assembly_hall",
   ROVER_DEPOT = "rover_depot",
+  SCIENCE_STATION = "science_station",
   // Victory megastructures
   ASTEROID_MINING_PLATFORM = "asteroid_mining_platform",
   UNITED_MARS_STATION = "united_mars_station",
@@ -67,6 +68,8 @@ export interface BuildingDefinition {
   isVictoryBuilding?: boolean; // Completing this building wins the game
   /** Range in tiles for extending transit connectivity */
   depotRange?: number;
+  /** Research output per sol when active (for research buildings) */
+  researchOutput?: number;
 }
 
 export interface Building {

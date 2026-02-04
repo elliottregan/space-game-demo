@@ -30,13 +30,12 @@ describe("BuildingsFacade", () => {
     }
   };
 
-  // Helper to research all prerequisites for a technology
+  // Helper to research a technology and all prerequisites (for testing)
   const researchTech = (techId: TechnologyId) => {
-    // Queue research (automatically includes prerequisites)
-    api.technology.queueResearch(techId);
-    // Advance time until research is complete
-    while (!api.technology.isResearched(techId)) {
-      api.game.advanceSol();
+    // Get all prerequisites in order and complete them
+    const chain = api.technology.getPrerequisiteChain(techId);
+    for (const prereq of chain) {
+      api.technology.completeResearch(prereq);
     }
   };
 

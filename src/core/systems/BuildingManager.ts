@@ -760,6 +760,35 @@ export class BuildingManager {
   }
 
   /**
+   * Calculate total research output from all active research buildings.
+   * Accounts for staffing efficiency, worker efficiency, air quality, and team cohesion.
+   * @returns Total research output per sol
+   */
+  getTotalResearchOutput(): number {
+    let total = 0;
+
+    for (const [buildingId, building] of this.buildings) {
+      if (building.status !== "active" || building.broken) continue;
+
+      const def = this.definitions.get(building.definitionId);
+      if (!def?.researchOutput) continue;
+
+      // Check power state
+      if (this.gridManager) {
+        const placement = this.gridManager.getPlacement(buildingId);
+        if (placement && placement.powerState === PowerState.UNPOWERED) {
+          continue;
+        }
+      }
+
+      const efficiencyMultiplier = this.getBuildingEfficiencyMultiplier(buildingId);
+      total += def.researchOutput * efficiencyMultiplier;
+    }
+
+    return total;
+  }
+
+  /**
    * Helper to add or remove building's production/consumption from resource manager.
    * @param buildingId - The building to process
    * @param resources - Resource manager to update
