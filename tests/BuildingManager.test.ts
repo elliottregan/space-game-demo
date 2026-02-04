@@ -16,7 +16,7 @@ describe("Project-gated buildings", () => {
     const technology = new TechnologyTree(TECHNOLOGIES);
     const ideology = new IdeologyManager();
 
-    manager.setIdeologyManager(ideology);
+    manager.setProjectQueries(ideology);
 
     // Asteroid Mining Platform requires DEEP_SPACE_MINING_CHARTER project (Corporate Interests)
     const canBuild = manager.canBuild(BuildingId.ASTEROID_MINING_PLATFORM, resources, technology);
@@ -29,7 +29,7 @@ describe("Project-gated buildings", () => {
     const technology = new TechnologyTree(TECHNOLOGIES);
     const ideology = new IdeologyManager();
 
-    manager.setIdeologyManager(ideology);
+    manager.setProjectQueries(ideology);
 
     // Complete the required project
     ideology.completeProject(ProjectId.DEEP_SPACE_MINING_CHARTER);

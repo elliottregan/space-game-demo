@@ -9,8 +9,8 @@ describe("Job Assignment", () => {
 
   beforeEach(() => {
     gameState = new GameState();
-    // Wire up colonyManager for worker efficiency tests
-    gameState.buildings.setColonyManager(gameState.colony);
+    // Wire up colonistQueries for worker efficiency tests
+    gameState.buildings.setColonistQueries(gameState.colony);
   });
 
   describe("getColonistWorkplace", () => {

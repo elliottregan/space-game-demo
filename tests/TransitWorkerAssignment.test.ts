@@ -16,7 +16,8 @@ describe("Transit Worker Assignment", () => {
     buildingManager = new BuildingManager(BUILDINGS);
     colonyManager = new ColonyManager(0); // Start with 0 colonists
     buildingManager.setGridManager(gridManager);
-    buildingManager.setColonyManager(colonyManager);
+    buildingManager.setGridQueries(gridManager);
+    buildingManager.setColonistQueries(colonyManager);
   });
 
   function createActiveBuilding(defId: BuildingId, position: GridPosition): string {
