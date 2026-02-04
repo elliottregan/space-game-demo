@@ -55,6 +55,12 @@ refresh-token:
     }
     # Update host file (for container restarts via entrypoint)
     mkdir -p ~/.claude
+    # Check if .credentials.json is accidentally a directory
+    if [ -d ~/.claude/.credentials.json ]; then
+        echo "ERROR: ~/.claude/.credentials.json is a directory, not a file."
+        echo "Fix with: rm -rf ~/.claude/.credentials.json"
+        exit 1
+    fi
     echo "$CREDS" > ~/.claude/.credentials.json
     # Copy directly into running container (since credentials are no longer bind-mounted)
     echo "$CREDS" | docker exec -i space-game-devcontainer tee /home/dev/.claude/.credentials.json > /dev/null
