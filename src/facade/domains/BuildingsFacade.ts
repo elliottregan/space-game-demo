@@ -229,7 +229,7 @@ export class BuildingsFacade
   }
 
   /**
-   * Check if a building can be upgraded (e.g., Basic Habitat -> Advanced Habitat).
+   * Check if a building can be upgraded (e.g., Basic Habitat -> Advanced Habitat, Science Station -> Research Lab).
    */
   canUpgrade(buildingId: string): CanDoResult {
     const building = this.gameState.buildings.getBuilding(buildingId);
@@ -251,6 +251,16 @@ export class BuildingsFacade
       const upgradeCost = this.gameState.buildings.getUpgradeCost(building.definitionId);
       if (!upgradeCost) {
         return { allowed: false, reason: "This building cannot be upgraded" };
+      }
+
+      // Check tech requirement
+      const requiredTech = this.gameState.buildings.getUpgradeRequiredTech(building.definitionId);
+      if (requiredTech && !this.gameState.technology.isResearched(requiredTech)) {
+        const techDef = this.gameState.technology.getTech(requiredTech);
+        return {
+          allowed: false,
+          reason: `Requires technology: ${techDef?.name ?? requiredTech}`,
+        };
       }
 
       const affordability = this.checkAffordability(upgradeCost);

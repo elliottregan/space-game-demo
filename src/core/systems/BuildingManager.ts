@@ -35,12 +35,21 @@ export class BuildingManager {
 
   /** Upgrade costs: cost difference between basic and advanced versions */
   private static readonly UPGRADE_COSTS: Partial<
-    Record<BuildingId, { cost: ResourceDelta; time: number; target: BuildingId }>
+    Record<
+      BuildingId,
+      { cost: ResourceDelta; time: number; target: BuildingId; requiredTech?: TechnologyId }
+    >
   > = {
     [BuildingId.HABITAT]: {
       cost: { materials: 70 }, // 120 (advanced) - 50 (basic)
       time: 8,
       target: BuildingId.ADVANCED_HABITAT,
+    },
+    [BuildingId.SCIENCE_STATION]: {
+      cost: { materials: 90 }, // 150 (research lab) - 60 (science station)
+      time: 10,
+      target: BuildingId.RESEARCH_LAB,
+      requiredTech: TechnologyId.HABITAT_FABRICATION,
     },
   };
   private autoHousingBlockedShown: boolean = false;
@@ -1187,8 +1196,8 @@ export class BuildingManager {
   }
 
   /**
-   * Check if a habitat building can be upgraded.
-   * Requires: active status, not broken, and sufficient resources.
+   * Check if a building can be upgraded.
+   * Requires: active status, not broken, sufficient resources, and required tech (if any).
    */
   canUpgradeHabitat(buildingId: string, resources: ResourceManager): boolean {
     const building = this.buildings.get(buildingId);
@@ -1199,7 +1208,21 @@ export class BuildingManager {
     const upgradeInfo = BuildingManager.UPGRADE_COSTS[building.definitionId];
     if (!upgradeInfo) return false;
 
+    // Check tech requirement if specified
+    if (upgradeInfo.requiredTech && this.technologyTree) {
+      if (!this.technologyTree.isResearched(upgradeInfo.requiredTech)) {
+        return false;
+      }
+    }
+
     return resources.canAfford(upgradeInfo.cost);
+  }
+
+  /**
+   * Get the required tech for upgrading a building, if any.
+   */
+  getUpgradeRequiredTech(defId: BuildingId): TechnologyId | undefined {
+    return BuildingManager.UPGRADE_COSTS[defId]?.requiredTech;
   }
 
   /**
