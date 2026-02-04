@@ -27,13 +27,12 @@ export class TechnologyTree {
     return [...this.researchQueue];
   }
 
-  tick(resources?: ResourceManager): GameEvent[] {
+  tick(resources?: ResourceManager, researchRate: number = 0): GameEvent[] {
     const events: GameEvent[] = [];
 
     if (this.currentResearchId) {
-      const speedMultiplier = 1.0 + this.researchSpeedBonus;
       const currentProgress = this.researchProgress.get(this.currentResearchId) ?? 0;
-      const newProgress = currentProgress + speedMultiplier;
+      const newProgress = currentProgress + researchRate;
       this.researchProgress.set(this.currentResearchId, newProgress);
 
       const tech = this.technologies.get(this.currentResearchId);

@@ -47,7 +47,7 @@ describe("TechnologyTree", () => {
 
     const tech = tree.getTech(TechnologyId.WATER_RECYCLING)!;
     for (let i = 0; i < tech.cost.sols; i++) {
-      tree.tick();
+      tree.tick(resources, 1.0);
     }
 
     expect(tree.isResearched(TechnologyId.WATER_RECYCLING)).toBe(true);
@@ -60,7 +60,7 @@ describe("TechnologyTree", () => {
     const tech = tree.getTech(TechnologyId.WATER_RECYCLING)!;
     let events: any[] = [];
     for (let i = 0; i < tech.cost.sols; i++) {
-      events = tree.tick();
+      events = tree.tick(resources, 1.0);
     }
 
     const completeEvent = events.find((e) => e.type === "RESEARCH_COMPLETE");
@@ -73,7 +73,7 @@ describe("TechnologyTree", () => {
 
     const tech = tree.getTech(TechnologyId.HABITAT_FABRICATION)!;
     for (let i = 0; i < tech.cost.sols; i++) {
-      tree.tick();
+      tree.tick(resources, 1.0);
     }
 
     expect(tree.canResearch(TechnologyId.ROBOTICS)).toBe(true);
@@ -85,7 +85,7 @@ describe("TechnologyTree", () => {
 
       // Advance 10 sols
       for (let i = 0; i < 10; i++) {
-        tree.tick();
+        tree.tick(resources, 1.0);
       }
 
       expect(tree.getResearchProgress(TechnologyId.HYDROPONICS)).toBe(10);
@@ -93,8 +93,8 @@ describe("TechnologyTree", () => {
 
     it("should increment progress in the map during tick", () => {
       tree.startResearch(TechnologyId.HYDROPONICS, resources);
-      tree.tick();
-      tree.tick();
+      tree.tick(resources, 1.0);
+      tree.tick(resources, 1.0);
 
       expect(tree.getResearchProgress(TechnologyId.HYDROPONICS)).toBe(2);
       expect(tree.getCurrentResearchId()).toBe(TechnologyId.HYDROPONICS);
@@ -112,7 +112,7 @@ describe("TechnologyTree", () => {
 
       // Advance 10 sols
       for (let i = 0; i < 10; i++) {
-        tree.tick();
+        tree.tick(resources, 1.0);
       }
 
       // Cancel (simulate changing target)
@@ -128,7 +128,7 @@ describe("TechnologyTree", () => {
       tree.startResearch(TechnologyId.HYDROPONICS, resources);
 
       for (let i = 0; i < 20; i++) {
-        tree.tick();
+        tree.tick(resources, 1.0);
       }
 
       tree.cancelResearch();
@@ -171,7 +171,7 @@ describe("TechnologyTree", () => {
       tree.startResearch(TechnologyId.HYDROPONICS, resources);
       const tech = tree.getTech(TechnologyId.HYDROPONICS)!;
       for (let i = 0; i < tech.cost.sols; i++) {
-        tree.tick();
+        tree.tick(resources, 1.0);
       }
 
       const chain = tree.getPrerequisiteChain(TechnologyId.GENETICS);
@@ -195,7 +195,7 @@ describe("TechnologyTree", () => {
 
       // Advance hydroponics 10 sols
       for (let i = 0; i < 10; i++) {
-        tree.tick();
+        tree.tick(resources, 1.0);
       }
       expect(tree.getResearchProgress(TechnologyId.HYDROPONICS)).toBe(10);
 
@@ -234,7 +234,7 @@ describe("TechnologyTree", () => {
       // Complete hydroponics (60 sols)
       const hydroTech = tree.getTech(TechnologyId.HYDROPONICS)!;
       for (let i = 0; i < hydroTech.cost.sols; i++) {
-        tree.tick(resources);
+        tree.tick(resources, 1.0);
       }
 
       expect(tree.isResearched(TechnologyId.HYDROPONICS)).toBe(true);
@@ -250,13 +250,13 @@ describe("TechnologyTree", () => {
       // Complete habitat_fabrication
       const amTech = tree.getTech(TechnologyId.HABITAT_FABRICATION)!;
       for (let i = 0; i < amTech.cost.sols; i++) {
-        tree.tick(resources);
+        tree.tick(resources, 1.0);
       }
 
       // Complete robotics
       const robTech = tree.getTech(TechnologyId.ROBOTICS)!;
       for (let i = 0; i < robTech.cost.sols; i++) {
-        tree.tick(resources);
+        tree.tick(resources, 1.0);
       }
 
       // Now queue asteroid_mining with insufficient resources
@@ -278,7 +278,7 @@ describe("TechnologyTree", () => {
       tree.startResearch(TechnologyId.HYDROPONICS, resources);
 
       for (let i = 0; i < 10; i++) {
-        tree.tick();
+        tree.tick(resources, 1.0);
       }
 
       const research = tree.getCurrentResearch();
@@ -293,7 +293,7 @@ describe("TechnologyTree", () => {
 
       // Advance 15 sols
       for (let i = 0; i < 15; i++) {
-        tree.tick();
+        tree.tick(resources, 1.0);
       }
 
       const json = tree.toJSON();
@@ -305,6 +305,48 @@ describe("TechnologyTree", () => {
         TechnologyId.HYDROPONICS,
         TechnologyId.GENETICS,
       ]);
+    });
+  });
+
+  describe("Research Rate", () => {
+    it("should use provided research rate instead of fixed 1.0", () => {
+      tree.startResearch(TechnologyId.WATER_RECYCLING, resources);
+
+      // Tick with research rate of 2.0
+      tree.tick(resources, 2.0);
+
+      expect(tree.getResearchProgress(TechnologyId.WATER_RECYCLING)).toBe(2);
+    });
+
+    it("should not progress when research rate is 0", () => {
+      tree.startResearch(TechnologyId.WATER_RECYCLING, resources);
+
+      // Tick with research rate of 0
+      tree.tick(resources, 0);
+
+      expect(tree.getResearchProgress(TechnologyId.WATER_RECYCLING)).toBe(0);
+    });
+
+    it("should complete research faster with higher rate", () => {
+      tree.startResearch(TechnologyId.WATER_RECYCLING, resources);
+      const tech = tree.getTech(TechnologyId.WATER_RECYCLING)!;
+
+      // With rate 5.0, need cost.sols / 5 ticks
+      const ticksNeeded = Math.ceil(tech.cost.sols / 5);
+      for (let i = 0; i < ticksNeeded; i++) {
+        tree.tick(resources, 5.0);
+      }
+
+      expect(tree.isResearched(TechnologyId.WATER_RECYCLING)).toBe(true);
+    });
+
+    it("should default to 0 research rate when not provided", () => {
+      tree.startResearch(TechnologyId.WATER_RECYCLING, resources);
+
+      // Tick without research rate (simulates no research buildings)
+      tree.tick(resources);
+
+      expect(tree.getResearchProgress(TechnologyId.WATER_RECYCLING)).toBe(0);
     });
   });
 });
