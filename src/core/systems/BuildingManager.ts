@@ -128,6 +128,7 @@ export class BuildingManager {
       this.processConstruction(building, def, resources, events);
       this.processRepairs(building, def, resources, events);
       this.processRecycling(building, def, resources, events, buildingsToDelete);
+      this.processUpgrades(building, def, resources, events);
     }
 
     // Delete buildings that were recycled (outside of iteration loop)
@@ -413,6 +414,36 @@ export class BuildingManager {
       });
 
       buildingsToDelete.push(building.id);
+    }
+  }
+
+  private processUpgrades(
+    building: Building,
+    def: BuildingDefinition,
+    resources: ResourceManager,
+    events: GameEvent[],
+  ): void {
+    if (building.status !== "upgrading") return;
+    if (building.upgradeTargetDefId === undefined) return;
+
+    building.upgradeProgress = (building.upgradeProgress ?? 0) + 1;
+
+    const upgradeTime = this.getUpgradeTime(building.definitionId);
+    if (building.upgradeProgress >= upgradeTime) {
+      // Complete the upgrade
+      const targetDef = this.definitions.get(building.upgradeTargetDefId);
+      building.definitionId = building.upgradeTargetDefId;
+      building.status = "active";
+      building.upgradeProgress = undefined;
+      building.upgradeTargetDefId = undefined;
+
+      events.push({
+        type: "BUILDING_UPGRADE_COMPLETE",
+        buildingId: building.id,
+        buildingName: targetDef?.name ?? "Unknown",
+        severity: "info",
+        message: `Habitat upgraded to ${targetDef?.name ?? "Advanced Habitat"}!`,
+      });
     }
   }
 

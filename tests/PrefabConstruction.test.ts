@@ -225,6 +225,45 @@ describe("Habitat Upgrade", () => {
   });
 });
 
+describe("Upgrade Progress", () => {
+  test("tick progresses upgrade and completes after 8 sols", () => {
+    const buildings = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 100 });
+
+    const habitat = buildings.addBuilding({
+      definitionId: BuildingId.HABITAT,
+      status: "active",
+      constructionProgress: 10,
+      assignedWorkers: [],
+      mode: "normal",
+      broken: false,
+      repairProgress: 0,
+    });
+
+    buildings.startUpgrade(habitat.id, resources);
+
+    // Tick 7 times - should still be upgrading
+    for (let i = 0; i < 7; i++) {
+      buildings.tick(resources);
+    }
+    expect(buildings.getBuilding(habitat.id)?.status).toBe("upgrading");
+    expect(buildings.getBuilding(habitat.id)?.upgradeProgress).toBe(7);
+
+    // Tick once more - should complete
+    const events = buildings.tick(resources);
+    const updated = buildings.getBuilding(habitat.id);
+
+    expect(updated?.status).toBe("active");
+    expect(updated?.definitionId).toBe(BuildingId.ADVANCED_HABITAT);
+    expect(updated?.upgradeProgress).toBeUndefined();
+    expect(updated?.upgradeTargetDefId).toBeUndefined();
+
+    const completeEvent = events.find((e) => e.type === "BUILDING_UPGRADE_COMPLETE");
+    expect(completeEvent).toBeDefined();
+    expect(completeEvent?.buildingName).toBe("Advanced Habitat");
+  });
+});
+
 describe("Auto-Housing Tick Phase", () => {
   test("auto-housing triggers during game tick when conditions met", () => {
     const state = new GameState();
