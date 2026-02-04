@@ -123,6 +123,7 @@ interface GameUIState {
     batteryLevel: number;
     status: "pending" | "active" | "disabled" | "idle" | "recycling" | "upgrading";
     constructionProgress?: number; // 0-1 for pending buildings
+    upgradeProgress?: number; // 0-1 for upgrading buildings
     powerSourceId?: string; // ID of the power source this building is connected to
     clusterId?: string; // ID of the transit cluster this building belongs to
     depotRange?: number; // Range for depot buildings (transit connectivity extension)
@@ -398,6 +399,7 @@ class GameService {
       if (pos && placement) {
         const def = this.facade.buildings.getDefinition(building.definitionId as BuildingId);
         const constructionTime = def?.constructionTime ?? 1;
+        const upgradeTime = this.facade.buildings.getUpgradeTime(building.id) || 1;
         gridPlacements.push({
           id: building.id,
           defId: building.definitionId,
@@ -409,6 +411,10 @@ class GameService {
           constructionProgress:
             building.status === "pending"
               ? building.constructionProgress / constructionTime
+              : undefined,
+          upgradeProgress:
+            building.status === "upgrading" && building.upgradeProgress !== undefined
+              ? building.upgradeProgress / upgradeTime
               : undefined,
           powerSourceId: placement.powerSourceId,
           clusterId: placement.clusterId,
