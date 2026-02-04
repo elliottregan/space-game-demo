@@ -67,6 +67,8 @@ export interface BuildingDefinition {
   isVictoryBuilding?: boolean; // Completing this building wins the game
   /** Range in tiles for extending transit connectivity */
   depotRange?: number;
+  /** Research output per sol when active (for research buildings) */
+  researchOutput?: number;
 }
 
 export interface Building {
