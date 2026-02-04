@@ -10,8 +10,9 @@ describe("Grid Integration", () => {
     it("placing solar panel powers nearby buildings", () => {
       const state = new GameState();
 
-      // Place a habitat outside initial power range
-      state.grid.placeBuilding("test-habitat", { x: 0, y: 0 });
+      // Use positions in center 4x4 area (3-6) where deposits can't spawn
+      // but away from starting buildings (which are around 4-6, 5-6)
+      state.grid.placeBuilding("test-habitat", { x: 3, y: 3 });
       state.grid.setBuildingPowerConsumption("test-habitat", 4);
       state.grid.updatePowerConnections(false);
 
@@ -19,7 +20,7 @@ describe("Grid Integration", () => {
       expect(state.grid.getPowerState("test-habitat")).toBe(PowerState.ON_BATTERY);
 
       // Place a solar panel next to it
-      state.grid.placeBuilding("test-solar", { x: 0, y: 1 });
+      state.grid.placeBuilding("test-solar", { x: 3, y: 4 });
       state.grid.registerPowerSource("test-solar", 10);
       state.grid.updatePowerConnections(false);
 
@@ -64,10 +65,10 @@ describe("Grid Integration", () => {
     it("removing power source causes battery mode", () => {
       const state = new GameState();
 
-      // Setup: building with power
-      state.grid.placeBuilding("powered-building", { x: 1, y: 1 });
+      // Use positions in center 4x4 area (3-6) where deposits can't spawn
+      state.grid.placeBuilding("powered-building", { x: 3, y: 3 });
       state.grid.setBuildingPowerConsumption("powered-building", 4);
-      state.grid.placeBuilding("power-source", { x: 1, y: 2 });
+      state.grid.placeBuilding("power-source", { x: 3, y: 4 });
       state.grid.registerPowerSource("power-source", 10);
       state.grid.updatePowerConnections(false);
 
@@ -120,8 +121,8 @@ describe("Grid Integration", () => {
     it("tick drains battery for unpowered buildings", () => {
       const state = new GameState();
 
-      // Setup unpowered building
-      state.grid.placeBuilding("drain-test", { x: 0, y: 0 });
+      // Use position in center 4x4 area (3-6) where deposits can't spawn
+      state.grid.placeBuilding("drain-test", { x: 3, y: 3 });
       state.grid.setBuildingPowerConsumption("drain-test", 4);
       state.grid.updatePowerConnections(false);
 
@@ -173,8 +174,8 @@ describe("Grid Integration", () => {
     it("battery fully depletes after BATTERY_BACKUP_SOLS ticks", () => {
       const state = new GameState();
 
-      // Setup building that will lose power
-      state.grid.placeBuilding("deplete-test", { x: 0, y: 0 });
+      // Use position in center 4x4 area (3-6) where deposits can't spawn
+      state.grid.placeBuilding("deplete-test", { x: 3, y: 3 });
       state.grid.setBuildingPowerConsumption("deplete-test", 4);
       state.grid.updatePowerConnections(false);
 
