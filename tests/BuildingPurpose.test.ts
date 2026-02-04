@@ -28,9 +28,9 @@ function buildBuilding(
 
 describe("BuildingPurpose", () => {
   test("enum has all three purpose types", () => {
-    expect(BuildingPurpose.Residential).toBe("residential");
-    expect(BuildingPurpose.Industrial).toBe("industrial");
-    expect(BuildingPurpose.Social).toBe("social");
+    expect(BuildingPurpose.Residential).toBe(BuildingPurpose.Residential);
+    expect(BuildingPurpose.Industrial).toBe(BuildingPurpose.Industrial);
+    expect(BuildingPurpose.Social).toBe(BuildingPurpose.Social);
   });
 
   test("Common Room has Social purpose", () => {

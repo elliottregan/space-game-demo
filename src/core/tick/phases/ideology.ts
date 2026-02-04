@@ -1,10 +1,13 @@
+import type { Colonist } from "../../models/Colonist";
 import { getProject } from "../../data/projects";
-import type { GameEvent } from "../../events/GameEvent";
+import type { GameEvent } from "../../models/GameEvent";
 import {
+  NPCFaction,
   ProjectEffectType,
   type ConvictionBoostParams,
   type ProductionModifierParams,
   type Project,
+  type ProjectId,
   type RecurringEventParams,
 } from "../../models/NPCInfluence";
 import { definePhase } from "../TickPhase";
@@ -45,13 +48,19 @@ function processProjectOnCompletionEffects(
   project: Project,
   ctx: {
     scheduler: {
-      register: (projectId: string, params: RecurringEventParams, currentSol: number) => void;
+      register: (projectId: ProjectId, params: RecurringEventParams, currentSol: number) => void;
     };
-    resources: { addProductionBonus: (sourceId: string, resource: string, amount: number) => void };
+    resources: {
+      addProductionBonus: (
+        sourceId: string,
+        resource: "food" | "water" | "materials",
+        amount: number,
+      ) => void;
+    };
     ideology: {
-      boostFactionConviction: (faction: string, amount: number, colonists: unknown[]) => void;
+      boostFactionConviction: (faction: NPCFaction, amount: number, colonists: Colonist[]) => void;
     };
-    colony: { getColonists: () => unknown[] };
+    colony: { getColonists: () => Colonist[] };
     currentSol: number;
   },
 ): void {
@@ -66,7 +75,10 @@ function processProjectOnCompletionEffects(
       }
       case ProjectEffectType.PRODUCTION_MODIFIER: {
         const params = effect.params as ProductionModifierParams;
-        ctx.resources.addProductionBonus(project.id, params.resource, params.amount);
+        // Power is handled by the grid system, not resource production
+        if (params.resource !== "power") {
+          ctx.resources.addProductionBonus(project.id, params.resource, params.amount);
+        }
         break;
       }
       case ProjectEffectType.CONVICTION_BOOST: {
@@ -183,6 +195,7 @@ export const processProjectVotes = definePhase({
 
         events.push({
           type: "project_passed",
+          severity: "info",
           message: `Project "${project.name}" passed the council vote (${result.votesFor}-${result.votesAgainst})`,
           details: {
             projectId: result.projectId,
@@ -193,6 +206,7 @@ export const processProjectVotes = definePhase({
       } else {
         events.push({
           type: "project_failed",
+          severity: "info",
           message: `Project "${project.name}" failed the council vote (${result.votesFor}-${result.votesAgainst})`,
           details: {
             projectId: result.projectId,

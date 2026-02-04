@@ -1,14 +1,16 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    // Tests run in Bun environment
-    "lib": ["ESNext"],
+    // Tests run in Bun environment with DOM types for renderer tests
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "types": ["bun"]
   },
   "include": [
     "tests/**/*.ts",
     "src/core/**/*.ts",
-    "src/facade/**/*.ts"
+    "src/facade/**/*.ts",
+    "src/renderer/**/*.ts",
+    "src/shims-vue.d.ts"
   ],
   "exclude": ["node_modules"]
 }

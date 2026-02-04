@@ -66,14 +66,15 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
         id: "hunker_down",
         text: "Hunker down and wait it out",
         effects: {
-          resources: { power: -50 },
+          // Dust storms reduce food production temporarily
+          resources: { food: -20 },
         },
       },
       {
         id: "emergency_repairs",
         text: "Send engineers for emergency repairs",
         effects: {
-          resources: { power: -20, materials: -30 },
+          resources: { materials: -30 },
         },
       },
     ],
@@ -379,7 +380,7 @@ export const RANDOM_EVENTS: RandomEventDefinition[] = [
         id: "accept",
         text: "Gratefully accept the supplies",
         effects: {
-          resources: { materials: 30, power: 20 },
+          resources: { materials: 50 },
         },
       },
     ],

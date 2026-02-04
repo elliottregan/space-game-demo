@@ -197,7 +197,7 @@ class GameService {
   private createInitialState(): GameUIState {
     return {
       currentSol: 0,
-      resources: { food: 0, water: 0, power: 0, materials: 0 },
+      resources: { food: 0, water: 0, materials: 0 },
       production: {},
       consumption: {},
       netFlow: {},

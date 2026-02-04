@@ -32,7 +32,7 @@ export const TECHNOLOGIES: Technology[] = [
     id: TechnologyId.PREFAB_CONSTRUCTION,
     name: "Prefab Construction",
     description: "Modular prefabricated housing units enable automatic colony expansion",
-    prerequisites: [TechnologyId.ADVANCED_MATERIALS],
+    prerequisites: [TechnologyId.HABITAT_FABRICATION],
     cost: { sols: 45 },
     unlocks: [],
     effects: [{ type: "auto_housing" }],

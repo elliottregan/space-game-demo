@@ -137,9 +137,12 @@ export class ColonistSimulationManager {
     this.links = [];
     for (const [key, weight] of relationships) {
       if (weight < 0.05) continue;
-      const [id1, id2] = key.split(":");
-      const node1 = id1 ? nodeById.get(id1) : undefined;
-      const node2 = id2 ? nodeById.get(id2) : undefined;
+      const parts = key.split(":");
+      const id1 = parts[0];
+      const id2 = parts[1];
+      if (!id1 || !id2) continue;
+      const node1 = nodeById.get(id1);
+      const node2 = nodeById.get(id2);
       if (node1 && node2) {
         this.links.push({ source: id1, target: id2, weight });
       }

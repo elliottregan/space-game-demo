@@ -18,7 +18,7 @@ const GRID_CENTER: GridPosition = { x: 5, y: 5 };
 const POWER_SOURCE_BUILDINGS = new Set([BuildingId.SOLAR_PANEL, BuildingId.NUCLEAR_REACTOR]);
 
 // Buildings that require deposits
-const RESOURCE_EXTRACTORS: Record<BuildingId, DepositType> = {
+const RESOURCE_EXTRACTORS: Partial<Record<BuildingId, DepositType>> = {
   [BuildingId.WATER_EXTRACTOR]: DepositType.WATER,
   [BuildingId.BASIC_MINE]: DepositType.MINERAL,
   [BuildingId.MINING_STATION]: DepositType.MINERAL,
@@ -259,11 +259,12 @@ export class HeuristicStrategy {
    */
   private findBestPosition(buildingId: BuildingId): GridPosition | null {
     // Resource extractors need matching deposit
-    const requiredDeposit = RESOURCE_EXTRACTORS[buildingId as keyof typeof RESOURCE_EXTRACTORS];
+    const requiredDeposit = RESOURCE_EXTRACTORS[buildingId];
     if (requiredDeposit) {
       const deposits = this.api.grid.getAvailableDeposits(requiredDeposit);
-      if (deposits.length > 0) {
-        return deposits[0].position;
+      const firstDeposit = deposits[0];
+      if (firstDeposit) {
+        return firstDeposit.position;
       }
       return null; // No available deposit of required type
     }
@@ -287,7 +288,7 @@ export class HeuristicStrategy {
 
     if (candidates.length === 0) {
       // Fallback: use any empty cell (even if on deposit)
-      return emptyCells.length > 0 ? emptyCells[0] : null;
+      return emptyCells[0] ?? null;
     }
 
     // Sort by distance to center (closest first)
@@ -297,7 +298,7 @@ export class HeuristicStrategy {
       return distA - distB;
     });
 
-    return candidates[0];
+    return candidates[0] ?? null;
   }
 
   /**
@@ -322,7 +323,7 @@ export class HeuristicStrategy {
         const distB = this.api.grid.calculateDistance(b, GRID_CENTER);
         return distA - distB;
       });
-      return poweredCandidates[0];
+      return poweredCandidates[0] ?? null;
     }
 
     // Fallback: any empty cell not on deposit (building will be unpowered until power expands)
@@ -334,11 +335,11 @@ export class HeuristicStrategy {
         const distB = this.api.grid.calculateDistance(b, GRID_CENTER);
         return distA - distB;
       });
-      return fallbackCandidates[0];
+      return fallbackCandidates[0] ?? null;
     }
 
     // Last resort: any empty cell
-    return emptyCells.length > 0 ? emptyCells[0] : null;
+    return emptyCells[0] ?? null;
   }
 
   /**

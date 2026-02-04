@@ -11,7 +11,7 @@ import { GameState } from "../src/core/GameState";
 
 describe("Prefab Construction", () => {
   test("TechnologyId includes PREFAB_CONSTRUCTION", () => {
-    expect(TechnologyId.PREFAB_CONSTRUCTION).toBe("prefab_construction");
+    expect(TechnologyId.PREFAB_CONSTRUCTION).toBe(TechnologyId.PREFAB_CONSTRUCTION);
   });
 
   test("TECHNOLOGIES includes Prefab Construction with correct properties", () => {
@@ -19,7 +19,7 @@ describe("Prefab Construction", () => {
     expect(tech).toBeDefined();
     expect(tech!.name).toBe("Prefab Construction");
     expect(tech!.cost.sols).toBe(45);
-    expect(tech!.prerequisites).toEqual([TechnologyId.ADVANCED_MATERIALS]);
+    expect(tech!.prerequisites).toEqual([TechnologyId.HABITAT_FABRICATION]);
     expect(tech!.effects).toContainEqual({ type: "auto_housing" });
   });
 });
@@ -62,7 +62,7 @@ describe("Auto-Housing", () => {
     const buildings = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({ materials: 100, food: 0, water: 0 });
     const technology = new TechnologyTree(TECHNOLOGIES);
-    technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+    technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
     technology.completeResearch(TechnologyId.PREFAB_CONSTRUCTION);
 
     // 4 population, 6 capacity = 67% (below 85%)
@@ -74,7 +74,7 @@ describe("Auto-Housing", () => {
     const buildings = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({ materials: 100, food: 0, water: 0 });
     const technology = new TechnologyTree(TECHNOLOGIES);
-    technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+    technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
     technology.completeResearch(TechnologyId.PREFAB_CONSTRUCTION);
 
     // 6 population, 7 capacity = 86% (above 85%)
@@ -91,7 +91,7 @@ describe("Auto-Housing", () => {
     const buildings = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({ materials: 200, food: 0, water: 0 });
     const technology = new TechnologyTree(TECHNOLOGIES);
-    technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+    technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
     technology.completeResearch(TechnologyId.PREFAB_CONSTRUCTION);
 
     // First auto-build
@@ -108,7 +108,7 @@ describe("Auto-Housing", () => {
     const buildings = new BuildingManager(BUILDINGS);
     const resources = new ResourceManager({ materials: 30, food: 0, water: 0 });
     const technology = new TechnologyTree(TECHNOLOGIES);
-    technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+    technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
     technology.completeResearch(TechnologyId.PREFAB_CONSTRUCTION);
 
     const events = buildings.checkAutoHousing(resources, technology, 6, 7);
@@ -122,7 +122,7 @@ describe("Auto-Housing", () => {
 describe("Habitat Upgrade", () => {
   test("canUpgradeHabitat returns false for non-habitat buildings", () => {
     const buildings = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 200 });
+    const resources = new ResourceManager({ food: 0, water: 0, materials: 200 });
 
     const farm = buildings.addBuilding({
       definitionId: BuildingId.BASIC_FARM,
@@ -139,7 +139,7 @@ describe("Habitat Upgrade", () => {
 
   test("canUpgradeHabitat returns false for pending habitat", () => {
     const buildings = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 200 });
+    const resources = new ResourceManager({ food: 0, water: 0, materials: 200 });
 
     const habitat = buildings.addBuilding({
       definitionId: BuildingId.HABITAT,
@@ -156,7 +156,7 @@ describe("Habitat Upgrade", () => {
 
   test("canUpgradeHabitat returns false when insufficient materials", () => {
     const buildings = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 50 });
+    const resources = new ResourceManager({ food: 0, water: 0, materials: 50 });
 
     const habitat = buildings.addBuilding({
       definitionId: BuildingId.HABITAT,
@@ -173,7 +173,7 @@ describe("Habitat Upgrade", () => {
 
   test("canUpgradeHabitat returns true for active habitat with materials", () => {
     const buildings = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 100 });
+    const resources = new ResourceManager({ food: 0, water: 0, materials: 100 });
 
     const habitat = buildings.addBuilding({
       definitionId: BuildingId.HABITAT,
@@ -190,7 +190,7 @@ describe("Habitat Upgrade", () => {
 
   test("startUpgrade deducts materials and sets upgrading status", () => {
     const buildings = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 100 });
+    const resources = new ResourceManager({ food: 0, water: 0, materials: 100 });
 
     const habitat = buildings.addBuilding({
       definitionId: BuildingId.HABITAT,
@@ -228,7 +228,7 @@ describe("Habitat Upgrade", () => {
 describe("Upgrade Progress", () => {
   test("tick progresses upgrade and completes after 8 sols", () => {
     const buildings = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 100 });
+    const resources = new ResourceManager({ food: 0, water: 0, materials: 100 });
 
     const habitat = buildings.addBuilding({
       definitionId: BuildingId.HABITAT,
@@ -267,7 +267,7 @@ describe("Upgrade Progress", () => {
 describe("Upgrade Serialization", () => {
   test("upgrade state survives save/load", () => {
     const buildings = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 100 });
+    const resources = new ResourceManager({ food: 0, water: 0, materials: 100 });
 
     const habitat = buildings.addBuilding({
       definitionId: BuildingId.HABITAT,
@@ -302,7 +302,7 @@ describe("Auto-Housing Tick Phase", () => {
     const state = new GameState();
 
     // Research prerequisites
-    state.technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+    state.technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
     state.technology.completeResearch(TechnologyId.PREFAB_CONSTRUCTION);
 
     // Give enough materials
@@ -350,7 +350,7 @@ describe("Science Station Upgrade", () => {
 
   test("canUpgradeHabitat returns false without required tech", () => {
     const buildings = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 200 });
+    const resources = new ResourceManager({ food: 0, water: 0, materials: 200 });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     buildings.setTechnologyTree(tech);
@@ -371,11 +371,11 @@ describe("Science Station Upgrade", () => {
 
   test("canUpgradeHabitat returns true with required tech and resources", () => {
     const buildings = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 200 });
+    const resources = new ResourceManager({ food: 0, water: 0, materials: 200 });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     // Research the required tech
-    tech.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+    tech.completeResearch(TechnologyId.HABITAT_FABRICATION);
     tech.completeResearch(TechnologyId.HABITAT_FABRICATION);
 
     buildings.setTechnologyTree(tech);
@@ -395,10 +395,10 @@ describe("Science Station Upgrade", () => {
 
   test("startUpgrade works for Science Station with required tech", () => {
     const buildings = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 200 });
+    const resources = new ResourceManager({ food: 0, water: 0, materials: 200 });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
-    tech.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+    tech.completeResearch(TechnologyId.HABITAT_FABRICATION);
     tech.completeResearch(TechnologyId.HABITAT_FABRICATION);
     buildings.setTechnologyTree(tech);
 
@@ -424,10 +424,10 @@ describe("Science Station Upgrade", () => {
 
   test("Science Station upgrade completes after 10 sols", () => {
     const buildings = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ materials: 200 });
+    const resources = new ResourceManager({ food: 0, water: 0, materials: 200 });
     const tech = new TechnologyTree(TECHNOLOGIES);
 
-    tech.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+    tech.completeResearch(TechnologyId.HABITAT_FABRICATION);
     tech.completeResearch(TechnologyId.HABITAT_FABRICATION);
     buildings.setTechnologyTree(tech);
 

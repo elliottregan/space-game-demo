@@ -74,9 +74,6 @@ describe("Building Model Extensions", () => {
       broken: false,
       repairProgress: 0,
       depositId: "site_1",
-      condition: 100,
-      age: 0,
-      lastMaintenance: 0,
     };
 
     expect(building.status).toBe("idle");

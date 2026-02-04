@@ -108,8 +108,9 @@ const server = Bun.serve({
           target: "browser",
           external: [], // Bundle everything
         });
-        if (result.outputs.length > 0) {
-          const text = await result.outputs[0].text();
+        const firstOutput = result.outputs[0];
+        if (firstOutput) {
+          const text = await firstOutput.text();
           return new Response(text, {
             headers: { "Content-Type": "application/javascript" },
           });

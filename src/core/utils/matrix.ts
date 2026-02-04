@@ -92,9 +92,9 @@ export function updateSupport(
   for (let i = 0; i < N; i++) {
     const current = currentSupport[i] ?? 0;
     const targetVal = target[i] ?? 0;
-    newSupport[i] = current + alpha * (targetVal - current);
+    const newVal = current + alpha * (targetVal - current);
     // Clamp to valid range
-    newSupport[i] = Math.max(-1.0, Math.min(1.0, newSupport[i]));
+    newSupport[i] = Math.max(-1.0, Math.min(1.0, newVal));
   }
 
   return newSupport;

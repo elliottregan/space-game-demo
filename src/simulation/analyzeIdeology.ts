@@ -417,7 +417,7 @@ function analyzeRelationshipStrengths(api: GameAPI): void {
 
   strengths.sort((a, b) => a - b);
 
-  const buckets = [0, 0, 0, 0, 0]; // <0.2, 0.2-0.4, 0.4-0.6, 0.6-0.8, 0.8+
+  const buckets: [number, number, number, number, number] = [0, 0, 0, 0, 0]; // <0.2, 0.2-0.4, 0.4-0.6, 0.6-0.8, 0.8+
   for (const s of strengths) {
     if (s < 0.2) buckets[0]++;
     else if (s < 0.4) buckets[1]++;

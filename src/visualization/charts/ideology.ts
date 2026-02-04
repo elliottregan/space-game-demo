@@ -220,7 +220,7 @@ function renderLegend(
     // Metrics in group
     for (const metricKey of group.metrics) {
       const color = COLORS[metricKey as keyof typeof COLORS];
-      const displayName = DISPLAY_NAMES[metricKey];
+      const displayName = DISPLAY_NAMES[metricKey] ?? metricKey;
 
       const g = legend.append("g").attr("transform", `translate(0,${yOffset})`);
 
@@ -296,6 +296,7 @@ export function renderIdeologyTimeline(
   let yOffset = 0;
   for (let i = 0; i < CHART_CONFIGS.length; i++) {
     const config = CHART_CONFIGS[i];
+    if (!config) continue;
     const isLastChart = i === CHART_CONFIGS.length - 1;
 
     const chartGroup = svg.append("g").attr("transform", `translate(0,${yOffset})`);

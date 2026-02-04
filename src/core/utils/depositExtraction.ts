@@ -36,7 +36,7 @@ function createDepositEvent(
     type: config.type,
     depositId: site.id,
     buildingId: building.id,
-    ...(config.includeBuildingName && { buildingName }),
+    ...("includeBuildingName" in config && config.includeBuildingName && { buildingName }),
     severity: config.severity,
     message: config.getMessage(buildingName, site),
   };

@@ -53,7 +53,6 @@ const CHART_CONFIGS: ChartConfig[] = [
     metrics: [
       { key: "food", accessor: (d) => d.food, color: COLORS.food },
       { key: "water", accessor: (d) => d.water, color: COLORS.water },
-      { key: "power", accessor: (d) => d.power, color: COLORS.power },
     ],
   },
   {
@@ -248,7 +247,7 @@ function renderLegend(
     // Metrics in group
     for (const metricKey of group.metrics) {
       const color = COLORS[metricKey as keyof typeof COLORS];
-      const displayName = DISPLAY_NAMES[metricKey];
+      const displayName = DISPLAY_NAMES[metricKey] ?? metricKey;
 
       const g = legend.append("g").attr("transform", `translate(0,${yOffset})`);
 
@@ -326,6 +325,7 @@ export function renderTimeline(
   let yOffset = 0;
   for (let i = 0; i < CHART_CONFIGS.length; i++) {
     const config = CHART_CONFIGS[i];
+    if (!config) continue;
     const isLastChart = i === CHART_CONFIGS.length - 1;
 
     const chartGroup = svg.append("g").attr("transform", `translate(0,${yOffset})`);

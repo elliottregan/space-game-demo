@@ -9,7 +9,7 @@ function profileTick(colonistCount: number, buildingCount: number): void {
 
   // Add buildings (mix of types)
   const buildingTypes: BuildingId[] = [
-    BuildingId.FARM,
+    BuildingId.BASIC_FARM,
     BuildingId.WATER_EXTRACTOR,
     BuildingId.SOLAR_PANEL,
     BuildingId.HABITAT,
@@ -17,6 +17,7 @@ function profileTick(colonistCount: number, buildingCount: number): void {
 
   for (let i = 0; i < buildingCount; i++) {
     const defId = buildingTypes[i % buildingTypes.length];
+    if (!defId) continue;
     const def = state.buildings.getDefinition(defId);
     if (!def) continue;
 
@@ -28,9 +29,6 @@ function profileTick(colonistCount: number, buildingCount: number): void {
       mode: "normal",
       broken: false,
       repairProgress: 0,
-      condition: 100,
-      age: 0,
-      lastMaintenance: 0,
     });
 
     // Register production/consumption
@@ -46,7 +44,8 @@ function profileTick(colonistCount: number, buildingCount: number): void {
     const def = state.buildings.getDefinition(building.definitionId);
     if (!def?.workerSlots) continue;
     for (let s = 0; s < def.workerSlots && colonistIdx < colonists.length; s++) {
-      building.assignedWorkers.push(colonists[colonistIdx++].id);
+      const colonist = colonists[colonistIdx++];
+      if (colonist) building.assignedWorkers.push(colonist.id);
     }
   }
 
