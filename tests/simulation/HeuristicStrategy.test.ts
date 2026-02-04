@@ -24,10 +24,14 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
     population: 50,
     health: 80,
     morale: 70,
+    socialCohesion: 0.5,
     colonists: [],
     skillDefinitions: [],
     housingAssignments: {},
     unhoused: [],
+    coworkerRelationships: new Map(),
+    guilds: [],
+    communities: [],
   };
 
   const defaultTechSnapshot: TechnologySnapshot = {
@@ -130,7 +134,7 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
       cancelResearch: mock(() => successResult(undefined)),
     },
     colony: {
-      snapshot: mock(() => overrides.colonySnapshot ?? defaultColonySnapshot),
+      snapshot: mock(() => ({ ...defaultColonySnapshot, ...overrides.colonySnapshot })),
       getById: mock(() => undefined),
       canTrain: mock(() => allowed),
       getByRole: mock(() => []),
@@ -317,7 +321,7 @@ interface MockedAPI {
       unpowered: number;
     };
   };
-  colonySnapshot?: ColonySnapshot;
+  colonySnapshot?: Partial<ColonySnapshot>;
   techSnapshot?: TechnologySnapshot;
   buildingsSnapshot?: BuildingSnapshot;
   canBuild?: (defId: string) => CanDoResult;

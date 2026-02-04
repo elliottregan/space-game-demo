@@ -37,9 +37,6 @@ function createBuilding(overrides: Partial<Building> = {}): Building {
     mode: "normal",
     broken: false,
     repairProgress: 0,
-    condition: 100,
-    age: 0,
-    lastMaintenance: 0,
     depositId: "site-1",
     ...overrides,
   };
@@ -60,7 +57,11 @@ function createDefinition(overrides: Partial<BuildingDefinition> = {}): Building
 
 describe("createDepositWarningEvent", () => {
   it("creates a warning event with correct structure", () => {
-    const site = createSite({ id: "site-1", resourceType: "water", estimatedReserves: { min: 200, max: 300 } });
+    const site = createSite({
+      id: "site-1",
+      resourceType: "water",
+      estimatedReserves: { min: 200, max: 300 },
+    });
     const building = createBuilding({ id: "building-1" });
 
     const event = createDepositWarningEvent(site, building, "Water Extractor");
@@ -78,7 +79,11 @@ describe("createDepositWarningEvent", () => {
 
 describe("createDepositCriticalEvent", () => {
   it("creates a critical event with correct structure", () => {
-    const site = createSite({ id: "site-2", resourceType: "materials", estimatedReserves: { min: 50, max: 100 } });
+    const site = createSite({
+      id: "site-2",
+      resourceType: "materials",
+      estimatedReserves: { min: 50, max: 100 },
+    });
     const building = createBuilding({ id: "building-2" });
 
     const event = createDepositCriticalEvent(site, building, "Mine");
@@ -150,7 +155,9 @@ describe("getDepletionEvents", () => {
   it("emits no events when state does not change", () => {
     expect(getDepletionEvents("none", "none", site, building, buildingName)).toHaveLength(0);
     expect(getDepletionEvents("warning", "warning", site, building, buildingName)).toHaveLength(0);
-    expect(getDepletionEvents("critical", "critical", site, building, buildingName)).toHaveLength(0);
+    expect(getDepletionEvents("critical", "critical", site, building, buildingName)).toHaveLength(
+      0,
+    );
   });
 
   it("emits no events when transitioning from critical to critical (already warned)", () => {

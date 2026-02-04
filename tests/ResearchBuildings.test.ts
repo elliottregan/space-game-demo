@@ -24,7 +24,7 @@ describe("Research Buildings", () => {
       water: 500,
       materials: 500,
     });
-    colony = new ColonyManager();
+    colony = new ColonyManager(0);
     workforce = new WorkforceManager();
     mockTech = { isResearched: () => true } as unknown as TechnologyTree;
 
@@ -150,8 +150,10 @@ describe("Research Buildings", () => {
       }
 
       // Add colonists with RESEARCH role and assign them
-      const c1 = colony.addColonist({ role: ColonistRole.RESEARCH });
-      const c2 = colony.addColonist({ role: ColonistRole.RESEARCH });
+      const c1 = colony.addColonist();
+      c1.role = ColonistRole.RESEARCH;
+      const c2 = colony.addColonist();
+      c2.role = ColonistRole.RESEARCH;
       buildings.assignWorker(ssId, c1.id);
       buildings.assignWorker(ssId, c2.id);
 

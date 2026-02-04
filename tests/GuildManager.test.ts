@@ -83,9 +83,9 @@ describe("GuildManager", () => {
 
       manager.disbandGuild(guild!.id, colonists);
 
-      expect(colonists[0].guildIds).toEqual([]);
-      expect(colonists[1].guildIds).toEqual([]);
-      expect(colonists[2].guildIds).toEqual(["other_guild"]);
+      expect(colonists[0]!.guildIds).toEqual([]);
+      expect(colonists[1]!.guildIds).toEqual([]);
+      expect(colonists[2]!.guildIds).toEqual(["other_guild"]);
     });
 
     it("should work without colonists parameter", () => {

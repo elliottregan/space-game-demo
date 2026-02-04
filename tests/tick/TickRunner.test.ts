@@ -209,7 +209,7 @@ describe("TickRunner", () => {
       writes: ["derived.valueA"],
       execute: (_ctx: TickContext) => {
         executionLog.push("A");
-        return [{ type: "test", message: "Event from A" }];
+        return [{ type: "test", severity: "info", message: "Event from A" }];
       },
     });
 
@@ -220,7 +220,7 @@ describe("TickRunner", () => {
       writes: ["derived.valueB"],
       execute: (_ctx: TickContext) => {
         executionLog.push("B");
-        return [{ type: "test", message: "Event from B" }];
+        return [{ type: "test", severity: "info", message: "Event from B" }];
       },
     });
 
@@ -237,7 +237,7 @@ describe("TickRunner", () => {
         airContribution: 0,
       },
       settings: { autoAssignNewColonists: false },
-    } as TickContext;
+    } as unknown as TickContext;
 
     const events = runner.tick(mockContext);
 
@@ -246,8 +246,8 @@ describe("TickRunner", () => {
 
     // Verify events were collected
     expect(events.length).toBe(2);
-    expect(events[0].message).toBe("Event from A");
-    expect(events[1].message).toBe("Event from B");
+    expect(events[0]!.message).toBe("Event from A");
+    expect(events[1]!.message).toBe("Event from B");
   });
 
   test("tick auto-recomputes order if dirty", () => {
@@ -289,7 +289,7 @@ describe("TickRunner", () => {
         airContribution: 0,
       },
       settings: { autoAssignNewColonists: false },
-    } as TickContext;
+    } as unknown as TickContext;
 
     // tick() should auto-recompute and run A before B
     runner.tick(mockContext);

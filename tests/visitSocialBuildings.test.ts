@@ -11,7 +11,7 @@ describe("visitSocialBuildings phase", () => {
     const game = new GameState();
     // Give plenty of resources
     game.resources.add({ materials: 500, food: 500, water: 500 });
-    game.resources.addProduction({ food: 50, water: 50, oxygen: 50 });
+    game.resources.addProduction({ food: 50, water: 50 });
 
     // Build and complete the building
     game.buildings.startBuilding(buildingId, game.resources, game.technology);
@@ -52,6 +52,10 @@ describe("visitSocialBuildings phase", () => {
         events: game.events,
         victory: game.victory,
         ideology: game.ideology,
+        airQualityManager: game.airQuality,
+        earthCrisis: game.earthCrisis,
+        grid: game.grid,
+        scheduler: game.scheduler,
       },
       { autoAssignNewColonists: false },
     );
@@ -65,7 +69,7 @@ describe("visitSocialBuildings phase", () => {
   it("multiple buildings stack", () => {
     const game = new GameState();
     game.resources.add({ materials: 500 });
-    game.resources.addProduction({ food: 50, water: 50, oxygen: 50 });
+    game.resources.addProduction({ food: 50, water: 50 });
 
     // Build both buildings
     game.buildings.startBuilding(BuildingId.COMMON_ROOM, game.resources, game.technology);
@@ -101,6 +105,10 @@ describe("visitSocialBuildings phase", () => {
         events: game.events,
         victory: game.victory,
         ideology: game.ideology,
+        airQualityManager: game.airQuality,
+        earthCrisis: game.earthCrisis,
+        grid: game.grid,
+        scheduler: game.scheduler,
       },
       { autoAssignNewColonists: false },
     );
@@ -148,6 +156,10 @@ describe("visitSocialBuildings phase", () => {
         events: game.events,
         victory: game.victory,
         ideology: game.ideology,
+        airQualityManager: game.airQuality,
+        earthCrisis: game.earthCrisis,
+        grid: game.grid,
+        scheduler: game.scheduler,
       },
       { autoAssignNewColonists: false },
     );
@@ -185,6 +197,10 @@ describe("visitSocialBuildings phase", () => {
         events: game.events,
         victory: game.victory,
         ideology: game.ideology,
+        airQualityManager: game.airQuality,
+        earthCrisis: game.earthCrisis,
+        grid: game.grid,
+        scheduler: game.scheduler,
       },
       { autoAssignNewColonists: false },
     );
@@ -219,6 +235,10 @@ describe("visitSocialBuildings phase", () => {
         events: game.events,
         victory: game.victory,
         ideology: game.ideology,
+        airQualityManager: game.airQuality,
+        earthCrisis: game.earthCrisis,
+        grid: game.grid,
+        scheduler: game.scheduler,
       },
       { autoAssignNewColonists: false },
     );

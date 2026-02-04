@@ -125,8 +125,8 @@ describe("Colonist Morale Integration", () => {
     }
 
     // Add resources to ensure colony survives
-    game.resources.add({ food: 1000, water: 1000, oxygen: 1000 });
-    game.resources.addProduction({ food: 50, water: 50, oxygen: 50 });
+    game.resources.add({ food: 1000, water: 1000 });
+    game.resources.addProduction({ food: 50, water: 50 });
 
     // Run one tick
     game.tick();

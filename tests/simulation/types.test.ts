@@ -36,7 +36,7 @@ describe("simulation/types", () => {
       const result: RunResult = {
         seed: 12345,
         outcome: "victory",
-        victoryType: "population",
+        victoryType: "earth_relief_compact",
         finalSol: 250,
         peakPopulation: 100,
         techsResearched: ["hydroponics", "water_recycling"],
@@ -44,7 +44,7 @@ describe("simulation/types", () => {
       };
 
       expect(result.outcome).toBe("victory");
-      expect(result.victoryType).toBe("population");
+      expect(result.victoryType).toBe("earth_relief_compact");
       expect(result.defeatReason).toBeUndefined();
     });
 
@@ -125,6 +125,8 @@ describe("simulation/types", () => {
         },
         fastestWin: 180,
         slowestWin: 450,
+        earthCollapseLosses: 0,
+        avgSeverityAtVictory: 35.5,
       };
 
       expect(stats.totalRuns).toBe(1000);
@@ -147,6 +149,8 @@ describe("simulation/types", () => {
         victoryBreakdown: {},
         fastestWin: 0,
         slowestWin: 0,
+        earthCollapseLosses: 0,
+        avgSeverityAtVictory: 0,
       };
 
       expect(stats.winRate).toBe(0);
@@ -167,6 +171,8 @@ describe("simulation/types", () => {
         },
         fastestWin: 250,
         slowestWin: 400,
+        earthCollapseLosses: 0,
+        avgSeverityAtVictory: 20.0,
       };
 
       expect(stats.defeatBreakdown.starvation).toBe(10);

@@ -81,10 +81,10 @@ describe("Auto-Housing", () => {
     const events = buildings.checkAutoHousing(resources, technology, 6, 7);
 
     expect(events.length).toBe(1);
-    expect(events[0].type).toBe("AUTO_HOUSING_STARTED");
+    expect(events[0]!.type).toBe("AUTO_HOUSING_STARTED");
     expect(resources.getResources().materials).toBe(50); // 100 - 50 cost
     expect(buildings.getPendingBuildings().length).toBe(1);
-    expect(buildings.getPendingBuildings()[0].definitionId).toBe(BuildingId.HABITAT);
+    expect(buildings.getPendingBuildings()[0]!.definitionId).toBe(BuildingId.HABITAT);
   });
 
   test("checkAutoHousing does not build when habitat already pending", () => {
@@ -114,8 +114,8 @@ describe("Auto-Housing", () => {
     const events = buildings.checkAutoHousing(resources, technology, 6, 7);
 
     expect(events.length).toBe(1);
-    expect(events[0].type).toBe("AUTO_HOUSING_BLOCKED");
-    expect(events[0].severity).toBe("warning");
+    expect(events[0]!.type).toBe("AUTO_HOUSING_BLOCKED");
+    expect(events[0]!.severity).toBe("warning");
   });
 });
 
