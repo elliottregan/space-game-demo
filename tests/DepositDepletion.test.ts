@@ -227,6 +227,6 @@ describe("Resource Events", () => {
   test("equipment windfall event provides supplies", () => {
     const windfallEvent = RANDOM_EVENTS.find((e) => e.id === "equipment_windfall");
     expect(windfallEvent).toBeDefined();
-    expect(windfallEvent!.choices[0]!.effects?.resources?.materials).toBe(30);
+    expect(windfallEvent!.choices[0]!.effects?.resources?.materials).toBe(50);
   });
 });
