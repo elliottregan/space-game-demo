@@ -148,6 +148,65 @@ export class HeuristicStrategy {
   }
 
   /**
+   * Try to upgrade a building of the specified type.
+   * Returns the building ID if upgraded, null otherwise.
+   * @param buildingDefId The definition ID of buildings to consider upgrading
+   * @param category The category for blocked decision recording
+   * @param recordIfBlocked Whether to record blocked decisions
+   */
+  private tryUpgrade(
+    buildingDefId: BuildingId,
+    category: BlockedDecision["category"],
+    recordIfBlocked = true,
+  ): string | null {
+    const buildings = this.api.buildings.snapshot();
+
+    // Find active buildings of this type that can be upgraded
+    const candidates = buildings.active.filter(
+      (b) => b.definitionId === buildingDefId && b.status === "active",
+    );
+
+    if (candidates.length === 0) {
+      return null;
+    }
+
+    // Try to upgrade the first candidate
+    for (const building of candidates) {
+      const canUpgrade = this.api.buildings.canUpgrade(building.id);
+      if (canUpgrade.allowed) {
+        // Check material reserve when committed to a faction
+        if (this.committedFaction) {
+          const upgradeCost = this.api.buildings.getUpgradeCost(building.id);
+          const materialsCost = upgradeCost?.materials ?? 0;
+          if (materialsCost > 0) {
+            const currentMaterials = this.api.resources.snapshot().current.materials;
+            const reserve = this.getProjectMaterialsReserve();
+            if (currentMaterials - materialsCost < reserve) {
+              // Don't upgrade - would drop below materials reserve for projects
+              continue;
+            }
+          }
+        }
+
+        const result = this.api.buildings.upgrade(building.id);
+        if (result.success) {
+          return building.id;
+        }
+      } else if (recordIfBlocked) {
+        this.recordBlockedDecision(
+          category,
+          `upgrade_${buildingDefId}`,
+          canUpgrade.reason ?? "unknown",
+        );
+        // Only record one blocked decision per type
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Try to build a building at an optimal grid position.
    * Returns true if built, records blocked decision if not.
    * When committed to a faction, reserves materials for ideology projects.
@@ -880,6 +939,18 @@ export class HeuristicStrategy {
       }
     }
 
+    // Upgrade Science Station → Research Lab for 3x research output (requires HABITAT_FABRICATION)
+    // This is very cost-effective: 90 materials for +2.0 research output vs 150 for a new lab
+    if (
+      this.hasBuilding(BuildingId.SCIENCE_STATION) &&
+      !this.hasBuilding(BuildingId.RESEARCH_LAB)
+    ) {
+      const upgradedId = this.tryUpgrade(BuildingId.SCIENCE_STATION, "infrastructure");
+      if (upgradedId) {
+        return { category: "infrastructure", action: "upgrade_science_station" };
+      }
+    }
+
     // Start cheapest available research if none active
     if (!techSnapshot.currentResearch && techSnapshot.available.length > 0) {
       const affordableTechs = techSnapshot.available
@@ -979,6 +1050,17 @@ export class HeuristicStrategy {
     // Build habitat to grow population
     if (this.tryBuild(BuildingId.HABITAT, "growth")) {
       return { category: "growth", action: "build_habitat" };
+    }
+
+    // Fallback: Upgrade existing habitats when grid space is limited
+    // Habitat upgrade: 70 materials for +2 capacity (6→8)
+    // Less efficient than new habitat (50 mat for 6 cap), but saves grid space
+    const emptyCells = this.api.grid.getEmptyCells();
+    if (emptyCells.length < 10 && this.hasBuilding(BuildingId.HABITAT)) {
+      const upgradedId = this.tryUpgrade(BuildingId.HABITAT, "growth");
+      if (upgradedId) {
+        return { category: "growth", action: "upgrade_habitat" };
+      }
     }
 
     return null;
