@@ -104,15 +104,15 @@ export class TechnologyTree {
     return tech.prerequisites.every((prereq) => this.researched.has(prereq));
   }
 
-  startResearch(techId: TechnologyId, resources: ResourceManager): boolean {
-    if (!this.canResearch(techId)) return false;
-    if (this.currentResearchId) return false;
+  startResearch(techId: TechnologyId, resources: ResourceManager): GameEvent[] {
+    if (!this.canResearch(techId)) return [];
+    if (this.currentResearchId) return [];
 
     const tech = this.technologies.get(techId);
-    if (!tech) return false;
+    if (!tech) return [];
 
     if (tech.cost.resources && !resources.canAfford(tech.cost.resources)) {
-      return false;
+      return [];
     }
 
     if (tech.cost.resources) {
@@ -138,7 +138,15 @@ export class TechnologyTree {
       requiredSols: tech.cost.sols,
     };
 
-    return true;
+    return [
+      {
+        type: "RESEARCH_STARTED",
+        techId,
+        techName: tech.name,
+        severity: "info",
+        message: `Research started: ${tech.name}`,
+      },
+    ];
   }
 
   cancelResearch(): void {
@@ -158,11 +166,19 @@ export class TechnologyTree {
    * Instantly completes research on a technology (test helper).
    * Bypasses prerequisites and resource costs.
    */
-  completeResearch(techId: TechnologyId): boolean {
+  completeResearch(techId: TechnologyId): GameEvent[] {
     const tech = this.technologies.get(techId);
-    if (!tech) return false;
+    if (!tech) return [];
     this.researched.add(techId);
-    return true;
+    return [
+      {
+        type: "TECH_RESEARCHED",
+        techId,
+        techName: tech.name,
+        severity: "info",
+        message: `Technology researched: ${tech.name}`,
+      },
+    ];
   }
 
   getTech(techId: TechnologyId): Technology | undefined {
