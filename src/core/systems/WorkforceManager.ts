@@ -52,6 +52,7 @@ import {
 import { calculateMasteryLevel, getMasteryEfficiency, getMasteryName } from "./workforce/mastery";
 import { getTrainingTime } from "./workforce/training";
 import { getRelationshipKey } from "./workforce/socialGraph";
+import type { WorkforceQueries } from "../interfaces/Queries";
 
 // Re-export types for backward compatibility
 export type {
@@ -60,7 +61,7 @@ export type {
   SocialCommunity,
 } from "./workforce/types";
 
-export class WorkforceManager {
+export class WorkforceManager implements WorkforceQueries {
   /** Manages colonist relationships - delegated to RelationshipManager */
   private relationshipManager: RelationshipManager = new RelationshipManager();
 

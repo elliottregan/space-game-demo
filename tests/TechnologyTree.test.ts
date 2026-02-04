@@ -30,16 +30,17 @@ describe("TechnologyTree", () => {
   });
 
   it("should start research", () => {
-    const result = tree.startResearch(TechnologyId.HYDROPONICS, resources);
-    expect(result).toBe(true);
+    const events = tree.startResearch(TechnologyId.HYDROPONICS, resources);
+    expect(events.length).toBeGreaterThan(0);
+    expect(events[0]?.type).toBe("RESEARCH_STARTED");
     expect(tree.getCurrentResearch()).not.toBeNull();
     expect(tree.getCurrentResearch()?.techId).toBe(TechnologyId.HYDROPONICS);
   });
 
   it("should not allow multiple simultaneous research", () => {
     tree.startResearch(TechnologyId.HYDROPONICS, resources);
-    const result = tree.startResearch(TechnologyId.WATER_RECYCLING, resources);
-    expect(result).toBe(false);
+    const events = tree.startResearch(TechnologyId.WATER_RECYCLING, resources);
+    expect(events.length).toBe(0);
   });
 
   it("should complete research after required sols", () => {

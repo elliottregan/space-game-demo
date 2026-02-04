@@ -77,10 +77,10 @@ export class GameState {
     this.technology = new TechnologyTree(TECHNOLOGIES);
     this.buildings = new BuildingManager(BUILDINGS);
     this.colony = new ColonyManager(condition.population);
-    this.buildings.setColonyManager(this.colony);
+    this.buildings.setColonistQueries(this.colony);
     this.buildings.setTechnologyTree(this.technology);
     this.workforce = new WorkforceManager();
-    this.buildings.setWorkforceManager(this.workforce);
+    this.buildings.setWorkforceQueries(this.workforce);
     this.colonistMorale = new ColonistMoraleManager();
     this.events = new EventManager(RANDOM_EVENTS);
     this.victory = new VictoryManager();
@@ -92,9 +92,9 @@ export class GameState {
     this.grid.generateDeposits(Date.now()); // Use timestamp as seed for variety
     this.scheduler = new RecurringEventScheduler();
     this.buildings.setGridManager(this.grid);
-    this.buildings.setIdeologyManager(this.ideology);
+    this.buildings.setGridQueries(this.grid);
+    this.buildings.setProjectQueries(this.ideology);
     this.buildings.setVictoryManager(this.victory);
-    this.buildings.setGridManager(this.grid);
 
     // Initialize tick runner
     this.tickRunner = createStandardTickRunner();
@@ -447,7 +447,7 @@ export class GameState {
     state.technology = TechnologyTree.fromJSON(data.technology, TECHNOLOGIES);
     state.buildings = BuildingManager.fromJSON(data.buildings, BUILDINGS);
     state.colony = ColonyManager.fromJSON(data.colony);
-    state.buildings.setColonyManager(state.colony);
+    state.buildings.setColonistQueries(state.colony);
     state.buildings.setTechnologyTree(state.technology);
     state.events = EventManager.fromJSON(data.events, RANDOM_EVENTS);
     state.victory = VictoryManager.fromJSON(data.victory);
@@ -466,7 +466,7 @@ export class GameState {
 
     if (data.ideology) {
       state.ideology = IdeologyManager.fromJSON(data.ideology);
-      state.buildings.setIdeologyManager(state.ideology);
+      state.buildings.setProjectQueries(state.ideology);
     }
 
     if (data.earthCrisis) {
@@ -483,10 +483,11 @@ export class GameState {
 
     // Re-establish grid manager reference and update clusters after grid is restored
     state.buildings.setGridManager(state.grid);
+    state.buildings.setGridQueries(state.grid);
+    state.buildings.setWorkforceQueries(state.workforce);
     state.buildings.triggerClusterUpdate();
 
     state.buildings.setVictoryManager(state.victory);
-    state.buildings.setGridManager(state.grid);
 
     if (data.autoAssignNewColonists !== undefined) {
       state.autoAssignNewColonists = data.autoAssignNewColonists;

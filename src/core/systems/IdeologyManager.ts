@@ -16,6 +16,8 @@ import type { ColonistMoraleManager } from "./ColonistMoraleManager";
 import * as IdeologyBalance from "../balance/IdeologyBalance";
 import { getProject, getProjectsByFaction } from "../data/projects";
 import { rng } from "../utils/random";
+import type { ProjectQueries } from "../interfaces/Queries";
+import type { GameEvent } from "../models/GameEvent";
 
 /**
  * A council member selected from high-influence colonists.
@@ -74,7 +76,7 @@ export interface VoteResult {
  * Manages colonist ideology, council selection, and faction support.
  * Ideology spreads through the social network similar to morale.
  */
-export class IdeologyManager {
+export class IdeologyManager implements ProjectQueries {
   private council: CouncilMember[] = [];
   private lastCouncilUpdateSol: number = -1;
   private lastSpreadSol: number = -1;
@@ -823,9 +825,20 @@ export class IdeologyManager {
 
   /**
    * Mark a project as completed.
+   * Returns a PROJECT_COMPLETED event.
    */
-  completeProject(projectId: ProjectId): void {
+  completeProject(projectId: ProjectId): GameEvent[] {
     this.completedProjects.add(projectId);
+    const project = getProject(projectId);
+    return [
+      {
+        type: "PROJECT_COMPLETED",
+        projectId,
+        projectName: project?.name ?? projectId,
+        severity: "info",
+        message: `Project completed: ${project?.name ?? projectId}`,
+      },
+    ];
   }
 
   /**

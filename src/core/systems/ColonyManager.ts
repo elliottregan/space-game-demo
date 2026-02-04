@@ -17,6 +17,7 @@ import { BuildingPurpose } from "../models/Building";
 import type { BuildingManager } from "./BuildingManager";
 import type { ResourceManager } from "./ResourceManager";
 import { rng } from "../utils/random";
+import type { ColonistQueries } from "../interfaces/Queries";
 
 const FIRST_NAMES = [
   "Alex",
@@ -123,7 +124,7 @@ const LAST_NAMES = [
   "Vega",
 ];
 
-export class ColonyManager {
+export class ColonyManager implements ColonistQueries {
   private colonists: Map<string, Colonist> = new Map();
   private nextId: number = 1;
   private health: number = 100;
@@ -395,9 +396,11 @@ export class ColonyManager {
     return colonist;
   }
 
-  removeColonist(id: string, buildings?: BuildingManager): boolean {
+  removeColonist(id: string, buildings?: BuildingManager): GameEvent[] {
     const colonist = this.colonists.get(id);
-    if (!colonist) return false;
+    if (!colonist) return [];
+
+    const colonistName = colonist.name;
 
     // Remove from any building assignments
     if (buildings) {
@@ -411,7 +414,17 @@ export class ColonyManager {
       colonist.housingId = undefined;
     }
 
-    return this.colonists.delete(id);
+    this.colonists.delete(id);
+
+    return [
+      {
+        type: "COLONIST_DIED",
+        colonistId: id,
+        colonistName,
+        severity: "warning",
+        message: `${colonistName} has died.`,
+      },
+    ];
   }
 
   getColonist(id: string): Colonist | undefined {
