@@ -77,20 +77,6 @@ const needs = computed<ColonyNeed[]>(() => {
     });
   }
 
-  // Priority 5: Power - grid strain >= 90%
-  const gridStrain = state.value.powerGrid;
-  if (gridStrain >= 0.9) {
-    result.push({
-      id: "power",
-      icon: "⚡",
-      label: "Power",
-      reason: "Grid strained",
-      building: "Solar Panel",
-      buildingId: BuildingId.SOLAR_PANEL,
-      priority: 5,
-    });
-  }
-
   // Sort by priority
   return result.sort((a, b) => a.priority - b.priority);
 });
