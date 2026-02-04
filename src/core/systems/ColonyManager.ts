@@ -17,6 +17,7 @@ import { BuildingPurpose } from "../models/Building";
 import type { BuildingManager } from "./BuildingManager";
 import type { ResourceManager } from "./ResourceManager";
 import { rng } from "../utils/random";
+import type { ColonistQueries } from "../interfaces/Queries";
 
 const FIRST_NAMES = [
   "Alex",
@@ -123,7 +124,7 @@ const LAST_NAMES = [
   "Vega",
 ];
 
-export class ColonyManager {
+export class ColonyManager implements ColonistQueries {
   private colonists: Map<string, Colonist> = new Map();
   private nextId: number = 1;
   private health: number = 100;

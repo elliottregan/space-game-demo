@@ -7,6 +7,7 @@ import {
   LOW_BATTERY_THRESHOLD,
   calculatePowerRange,
 } from "../balance/GridBalance";
+import type { GridQueries } from "../interfaces/Queries";
 
 interface DepositInfo {
   position: GridPosition;
@@ -45,7 +46,7 @@ export interface GridManagerJSON {
   powerConsumption: Array<{ buildingId: string; consumption: number }>;
 }
 
-export class GridManager {
+export class GridManager implements GridQueries {
   private grid: GridCell[][] = [];
   private placements: Map<string, BuildingPlacement> = new Map();
   private powerSources: Map<string, PowerSource> = new Map();
