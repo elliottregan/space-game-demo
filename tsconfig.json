@@ -1,39 +1,12 @@
 {
-  "include": ["src/**/*", "tests/**/*"],
-  "exclude": ["scripts/**/*"],
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    // Environment setup & latest features
+    // Default IDE config - includes everything for editor support
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "target": "ESNext",
-    "module": "Preserve",
-    "moduleDetection": "force",
-    "jsx": "react-jsx",
-    "allowJs": true,
-
-    // Bundler mode
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "noEmit": true,
-
-    // Path aliases
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"],
-      "@core/*": ["src/core/*"],
-      "@ui/*": ["src/renderer/*"]
-    },
-
-    // Best practices
-    "strict": true,
-    "skipLibCheck": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-
-    // Some stricter flags (disabled by default)
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false
-  }
+    "jsx": "preserve",
+    "jsxImportSource": "vue",
+    "types": ["bun", "node"]
+  },
+  "include": ["src/**/*", "tests/**/*"],
+  "exclude": ["scripts/**/*"]
 }

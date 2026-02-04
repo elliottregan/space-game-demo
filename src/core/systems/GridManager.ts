@@ -77,7 +77,8 @@ export class GridManager implements GridQueries {
     if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) {
       return null;
     }
-    return this.grid[y][x];
+    // Safe: bounds are checked above
+    return this.grid[y]![x]!;
   }
 
   generateDeposits(seed: number): void {
@@ -106,7 +107,7 @@ export class GridManager implements GridQueries {
       // Skip center 4x4 area (cells 3-6)
       if (x >= 3 && x <= 6 && y >= 3 && y <= 6) continue;
 
-      const cell = this.grid[y][x];
+      const cell = this.grid[y]![x]!;
       if (cell.deposit) continue; // Already has deposit
 
       cell.deposit = type;
@@ -126,7 +127,7 @@ export class GridManager implements GridQueries {
     const deposits: DepositInfo[] = [];
     for (let y = 0; y < GRID_SIZE; y++) {
       for (let x = 0; x < GRID_SIZE; x++) {
-        const cell = this.grid[y][x];
+        const cell = this.grid[y]![x]!;
         if (cell.deposit) {
           deposits.push({ position: { x, y }, type: cell.deposit });
         }
@@ -393,7 +394,7 @@ export class GridManager implements GridQueries {
         // Find adjacent buildings
         const adjacentPositions = this.getAdjacentPositions(placement.position);
         for (const adjPos of adjacentPositions) {
-          const cell = this.grid[adjPos.y][adjPos.x];
+          const cell = this.grid[adjPos.y]![adjPos.x]!;
           if (cell.buildingId && !visited.has(cell.buildingId)) {
             queue.push(cell.buildingId);
           }
@@ -455,7 +456,7 @@ export class GridManager implements GridQueries {
     const deposits: GridManagerJSON["deposits"] = [];
     for (let y = 0; y < GRID_SIZE; y++) {
       for (let x = 0; x < GRID_SIZE; x++) {
-        const cell = this.grid[y][x];
+        const cell = this.grid[y]![x]!;
         if (cell.deposit) {
           deposits.push({ x, y, type: cell.deposit });
         }
@@ -491,7 +492,7 @@ export class GridManager implements GridQueries {
 
     // Restore deposits
     for (const deposit of json.deposits) {
-      const cell = this.grid[deposit.y][deposit.x];
+      const cell = this.grid[deposit.y]![deposit.x]!;
       cell.deposit = deposit.type;
     }
 
@@ -507,7 +508,7 @@ export class GridManager implements GridQueries {
 
     // Restore placements
     for (const p of json.placements) {
-      const cell = this.grid[p.y][p.x];
+      const cell = this.grid[p.y]![p.x]!;
       cell.buildingId = p.buildingId;
 
       this.placements.set(p.buildingId, {

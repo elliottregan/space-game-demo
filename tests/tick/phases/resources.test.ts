@@ -37,6 +37,10 @@ describe("resources phases", () => {
           events: state.events,
           victory: state.victory,
           ideology: state.ideology,
+          airQualityManager: state.airQuality,
+          earthCrisis: state.earthCrisis,
+          grid: state.grid,
+          scheduler: state.scheduler,
         },
         { autoAssignNewColonists: true },
       );

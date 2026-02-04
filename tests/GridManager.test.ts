@@ -126,7 +126,7 @@ describe("GridManager - Power Connections", () => {
 
     const sources = manager.getPowerSources();
     expect(sources.length).toBe(1);
-    expect(sources[0].buildingId).toBe("solar-1");
+    expect(sources[0]!.buildingId).toBe("solar-1");
   });
 
   it("calculateDistance returns Manhattan distance", () => {

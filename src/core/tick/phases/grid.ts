@@ -1,4 +1,5 @@
 import type { GameEvent } from "../../models/GameEvent";
+import { TechnologyId } from "../../models/Technology";
 import { definePhase } from "../TickPhase";
 import type { TickContext } from "../TickContext";
 
@@ -17,7 +18,8 @@ export const processGridTick = definePhase({
     const events: GameEvent[] = [];
 
     // Check if player has the improved power grid technology
-    const hasTechBonus = ctx.technology.isResearched("improved-power-grid");
+    // Note: NUCLEAR_FISSION provides power efficiency bonus
+    const hasTechBonus = ctx.technology.isResearched(TechnologyId.NUCLEAR_FISSION);
 
     // Get active building IDs - only active buildings can provide power
     const activeBuildings = ctx.buildings.getActiveBuildings();

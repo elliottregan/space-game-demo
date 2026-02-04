@@ -80,7 +80,6 @@ describe("scaleCost", () => {
     const cost = { materials: 100, food: undefined };
     const result = scaleCost(cost, 0.5);
     expect(result.materials).toBe(50);
-    expect(result.power).toBeUndefined();
     expect(result.food).toBeUndefined();
   });
 

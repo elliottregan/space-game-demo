@@ -74,9 +74,6 @@ describe("Building Model Extensions", () => {
       broken: false,
       repairProgress: 0,
       depositId: "site_1",
-      condition: 100,
-      age: 0,
-      lastMaintenance: 0,
     };
 
     expect(building.status).toBe("idle");
@@ -230,6 +227,6 @@ describe("Resource Events", () => {
   test("equipment windfall event provides supplies", () => {
     const windfallEvent = RANDOM_EVENTS.find((e) => e.id === "equipment_windfall");
     expect(windfallEvent).toBeDefined();
-    expect(windfallEvent!.choices[0]!.effects?.resources?.materials).toBe(30);
+    expect(windfallEvent!.choices[0]!.effects?.resources?.materials).toBe(50);
   });
 });

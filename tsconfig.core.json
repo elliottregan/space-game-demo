@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    // Core is pure TypeScript - no DOM, no Node, no Bun globals
+    "lib": ["ESNext"],
+    "types": []
+  },
+  "include": ["src/core/**/*.ts"],
+  "exclude": ["node_modules"]
+}

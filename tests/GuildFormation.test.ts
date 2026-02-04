@@ -144,7 +144,7 @@ describe("findEligibleFounderGroups", () => {
     const groups = findEligibleFounderGroups(colonists, relationships, 0.7);
 
     expect(groups.length).toBeGreaterThan(0);
-    expect(groups[0].length).toBe(3);
+    expect(groups[0]!.length).toBe(3);
   });
 
   it("should exclude colonists at max guild memberships", () => {
@@ -214,7 +214,7 @@ describe("findEligibleFounderGroups", () => {
 
     const groups = findEligibleFounderGroups(colonists, relationships, 0.7);
 
-    expect(groups[0].length).toBeLessThanOrEqual(4);
+    expect(groups[0]!.length).toBeLessThanOrEqual(4);
   });
 });
 

@@ -23,8 +23,8 @@ describe("Colonist Morale Integration", () => {
     }
 
     // Ensure positive resources
-    game.resources.add({ food: 500, water: 500, oxygen: 500 });
-    game.resources.addProduction({ food: 20, water: 20, oxygen: 20 });
+    game.resources.add({ food: 500, water: 500 });
+    game.resources.addProduction({ food: 20, water: 20 });
 
     // Set varied initial morale
     const moraleManager = game.getColonistMoraleManager();
@@ -125,8 +125,8 @@ describe("Colonist Morale Integration", () => {
     }
 
     // Add resources to ensure colony survives
-    game.resources.add({ food: 1000, water: 1000, oxygen: 1000 });
-    game.resources.addProduction({ food: 50, water: 50, oxygen: 50 });
+    game.resources.add({ food: 1000, water: 1000 });
+    game.resources.addProduction({ food: 50, water: 50 });
 
     // Run one tick
     game.tick();

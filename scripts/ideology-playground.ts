@@ -116,13 +116,15 @@ function printTimeline(
     .map((v) => {
       const normalized = (v - min) / range;
       const index = Math.min(Math.floor(normalized * 8), 7);
-      return blocks[index];
+      return blocks[index] ?? "▁";
     })
     .join("");
 
-  const start = (values[0] * 100).toFixed(0).padStart(3);
-  const end = (values[values.length - 1] * 100).toFixed(0).padStart(3);
-  const delta = ((values[values.length - 1] - values[0]) * 100).toFixed(0);
+  const startVal = values[0] ?? 0;
+  const endVal = values[values.length - 1] ?? 0;
+  const start = (startVal * 100).toFixed(0).padStart(3);
+  const end = (endVal * 100).toFixed(0).padStart(3);
+  const delta = ((endVal - startVal) * 100).toFixed(0);
   const deltaStr = Number(delta) >= 0 ? `+${delta}` : delta;
 
   console.log(`  ${label.padEnd(10)} ${start}% ${sparkline} ${end}%  (${deltaStr})`);
@@ -186,7 +188,7 @@ recordSnapshot(0, colonists);
 const ideologyManager = new IdeologyManager();
 
 for (let sol = 1; sol <= SOLS; sol++) {
-  ideologyManager.propagateIdeology(colonists, relationshipManager);
+  ideologyManager.propagateIdeology(colonists, relationshipManager, sol);
   recordSnapshot(sol, colonists);
 }
 
@@ -217,6 +219,7 @@ for (const c of colonists) {
   const snapshots = history.get(c.id)!;
   const start = snapshots[0];
   const end = snapshots[snapshots.length - 1];
+  if (!start || !end) continue;
 
   const startIdeology: ColonistIdeology = {
     earthLoyalist: start.earth,

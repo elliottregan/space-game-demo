@@ -24,10 +24,14 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
     population: 50,
     health: 80,
     morale: 70,
+    socialCohesion: 0.5,
     colonists: [],
     skillDefinitions: [],
     housingAssignments: {},
     unhoused: [],
+    coworkerRelationships: new Map(),
+    guilds: [],
+    communities: [],
   };
 
   const defaultTechSnapshot: TechnologySnapshot = {
@@ -111,6 +115,9 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
       rushRecycling: mock(() => successResult(undefined)),
       repurpose: mock(() => successResult(undefined)),
       linkToDeposit: mock(() => successResult(undefined)),
+      canUpgrade: mock(() => notAllowed),
+      getUpgradeCost: mock(() => undefined),
+      upgrade: mock(() => successResult(undefined)),
     },
     technology: {
       snapshot: mock(() => overrides.techSnapshot ?? defaultTechSnapshot),
@@ -127,7 +134,7 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
       cancelResearch: mock(() => successResult(undefined)),
     },
     colony: {
-      snapshot: mock(() => overrides.colonySnapshot ?? defaultColonySnapshot),
+      snapshot: mock(() => ({ ...defaultColonySnapshot, ...overrides.colonySnapshot })),
       getById: mock(() => undefined),
       canTrain: mock(() => allowed),
       getByRole: mock(() => []),
@@ -314,7 +321,7 @@ interface MockedAPI {
       unpowered: number;
     };
   };
-  colonySnapshot?: ColonySnapshot;
+  colonySnapshot?: Partial<ColonySnapshot>;
   techSnapshot?: TechnologySnapshot;
   buildingsSnapshot?: BuildingSnapshot;
   canBuild?: (defId: string) => CanDoResult;
@@ -372,9 +379,9 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         resourceSnapshot: {
           current: { food: 40, water: 100, materials: 100 },
-          production: { food: 10 },
-          consumption: { food: 5 },
-          netFlow: { food: 5 },
+          production: { food: 10, water: 10 },
+          consumption: { food: 5, water: 5 },
+          netFlow: { food: 5, water: 5 },
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -390,9 +397,9 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         resourceSnapshot: {
           current: { food: 100, water: 100, materials: 100 },
-          production: { food: 10 },
-          consumption: { food: 5 },
-          netFlow: { food: 5 },
+          production: { food: 10, water: 10 },
+          consumption: { food: 5, water: 5 },
+          netFlow: { food: 5, water: 5 },
         },
         buildingsSnapshot: {
           active: [],
@@ -415,9 +422,9 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         resourceSnapshot: {
           current: { food: 100, water: 100, materials: 100 },
-          production: { food: 5 },
-          consumption: { food: 5 },
-          netFlow: { food: 0 },
+          production: { food: 5, water: 10 },
+          consumption: { food: 5, water: 5 },
+          netFlow: { food: 0, water: 5 },
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -433,9 +440,9 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         resourceSnapshot: {
           current: { food: 100, water: 100, materials: 100 },
-          production: { food: 10 },
-          consumption: { food: 5 },
-          netFlow: { food: 5 },
+          production: { food: 10, water: 10 },
+          consumption: { food: 5, water: 5 },
+          netFlow: { food: 5, water: 5 },
         },
         buildingsSnapshot: {
           active: [],
@@ -690,9 +697,9 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         resourceSnapshot: {
           current: { food: 100, water: 100, materials: 100 },
-          production: { food: 10, materials: 10 }, // Materials production >= 10 to skip materials handler
-          consumption: { food: 5 },
-          netFlow: { food: 5, materials: 10 },
+          production: { food: 10, water: 10, materials: 10 }, // Materials production >= 10 to skip materials handler
+          consumption: { food: 5, water: 5 },
+          netFlow: { food: 5, water: 5, materials: 10 },
         },
         powerGridSnapshot: {
           totalProduction: 10,
@@ -720,9 +727,9 @@ describe("HeuristicStrategy", () => {
         resourceSnapshot: {
           current: { food: 100, water: 100, materials: 50 },
           // Materials production >= 10 to skip handleMaterialsProduction
-          production: { food: 10, materials: 10 },
-          consumption: { food: 5 },
-          netFlow: { food: 5, materials: 10 },
+          production: { food: 10, water: 10, materials: 10 },
+          consumption: { food: 5, water: 5 },
+          netFlow: { food: 5, water: 5, materials: 10 },
         },
         canBuild: (defId) => {
           if (defId === BuildingId.MINING_STATION) return { allowed: true };
@@ -756,9 +763,9 @@ describe("HeuristicStrategy", () => {
         },
         resourceSnapshot: {
           current: { food: 100, water: 100, materials: 100 },
-          production: { food: 10, materials: 10 }, // Materials production >= 10 to skip materials handler
-          consumption: { food: 5 },
-          netFlow: { food: 5, materials: 10 },
+          production: { food: 10, water: 10, materials: 10 }, // Materials production >= 10 to skip materials handler
+          consumption: { food: 5, water: 5 },
+          netFlow: { food: 5, water: 5, materials: 10 },
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -867,9 +874,9 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         resourceSnapshot: {
           current: { food: 100, water: 100, materials: 1000 },
-          production: { food: 20 },
-          consumption: { food: 10 },
-          netFlow: { food: 10, materials: 10 },
+          production: { food: 20, water: 10 },
+          consumption: { food: 10, water: 5 },
+          netFlow: { food: 10, water: 5, materials: 10 },
         },
         colonySnapshot: {
           population: 100,
@@ -969,9 +976,9 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         resourceSnapshot: {
           current: { food: 30, water: 100, materials: 100 },
-          production: { food: 10 },
-          consumption: { food: 5 },
-          netFlow: { food: 5 },
+          production: { food: 10, water: 10 },
+          consumption: { food: 5, water: 5 },
+          netFlow: { food: 5, water: 5 },
         },
         hasActiveEvent: true,
         activeEvent: {
@@ -1005,9 +1012,9 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         resourceSnapshot: {
           current: { food: 100, water: 100, materials: 100 },
-          production: { food: 10 },
-          consumption: { food: 5 },
-          netFlow: { food: 5 - 5 },
+          production: { food: 10, water: 10 },
+          consumption: { food: 5, water: 5 },
+          netFlow: { food: 0, water: 5 },
         },
         hasActiveEvent: true,
         activeEvent: {

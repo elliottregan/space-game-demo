@@ -365,16 +365,15 @@ export class ColonyManager implements ColonistQueries {
     const population = this.colonists.size;
 
     // Clear previous consumption and set new based on population
+    // Note: Power consumption is handled by the grid system, not per-colonist
     resources.removeConsumption({
       food: resources.getConsumption().food || 0,
       water: resources.getConsumption().water || 0,
-      power: resources.getConsumption().power || 0,
     });
 
     resources.addConsumption({
       food: population * COLONIST_NEEDS.food,
       water: population * COLONIST_NEEDS.water,
-      power: population * COLONIST_NEEDS.power,
     });
   }
 

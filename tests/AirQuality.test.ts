@@ -206,13 +206,16 @@ describe("Building efficiency with air quality", () => {
       .getActiveBuildings()
       .filter((b) => b.definitionId === BuildingId.BASIC_FARM);
 
+    expect(farms.length).toBeGreaterThan(0);
+    const farm = farms[0]!;
+
     // Get production with air quality at 1.0 (full efficiency)
     gameState.buildings.setAirQualityEfficiency(1.0);
-    const fullProd = gameState.buildings.getEffectiveProduction(farms[0].id);
+    const fullProd = gameState.buildings.getEffectiveProduction(farm.id);
 
     // Set air quality efficiency multiplier to 50%
     gameState.buildings.setAirQualityEfficiency(0.5);
-    const reducedProd = gameState.buildings.getEffectiveProduction(farms[0].id);
+    const reducedProd = gameState.buildings.getEffectiveProduction(farm.id);
 
     // Production should be halved when air quality efficiency is 50%
     expect(reducedProd.food).toBe(fullProd.food! * 0.5);

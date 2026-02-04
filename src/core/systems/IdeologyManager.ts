@@ -505,9 +505,9 @@ export class IdeologyManager implements ProjectQueries {
 
         // Get neighbor's value for this colonist's primary faction
         const neighborFactionValue =
-          primaryFaction === "earth"
+          primaryFaction === NPCFaction.EarthLoyalists
             ? neighbor.ideology.earthLoyalist
-            : primaryFaction === "mars"
+            : primaryFaction === NPCFaction.MarsIndependence
               ? neighbor.ideology.marsIndependence
               : neighbor.ideology.corporateInterests;
 

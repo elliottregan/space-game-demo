@@ -22,7 +22,7 @@ describe("GameState - Grid Integration", () => {
       .filter((b) => b.definitionId === "solar_panel");
 
     expect(solarBuildings.length).toBeGreaterThan(0);
-    const pos = state.grid.getBuildingPosition(solarBuildings[0].id);
+    const pos = state.grid.getBuildingPosition(solarBuildings[0]!.id);
     expect(pos).not.toBeNull();
   });
 

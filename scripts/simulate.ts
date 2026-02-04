@@ -208,11 +208,18 @@ function runSingleGame(seed: number): RunResult {
     // Take periodic snapshots
     if (currentSol % SNAPSHOT_INTERVAL === 0) {
       const powerGrid = api.powerGrid.snapshot();
+      // Calculate power ratio: 1.0 = production meets consumption
+      const powerRatio =
+        powerGrid.totalConsumption > 0
+          ? Math.min(1.0, powerGrid.totalProduction / powerGrid.totalConsumption)
+          : powerGrid.totalProduction > 0
+            ? 1.0
+            : 0;
       resourceTimeline.push({
         sol: currentSol,
         food: resources.current.food,
         water: resources.current.water,
-        powerGrid: powerGrid.gridStrain,
+        powerGrid: powerRatio,
         materials: resources.current.materials,
         population: currentPop,
         morale: colony.morale,
@@ -322,14 +329,21 @@ function runSingleGame(seed: number): RunResult {
     defeatSol = finalSol;
     const resources = api.resources.snapshot();
     const colony = api.colony.snapshot();
+    const powerGrid = api.powerGrid.snapshot();
     const isolatedCount = colony.colonists.filter(
       (c) => !colony.coworkerRelationships.has(c.id),
     ).length;
+    const powerRatio =
+      powerGrid.totalConsumption > 0
+        ? Math.min(1.0, powerGrid.totalProduction / powerGrid.totalConsumption)
+        : powerGrid.totalProduction > 0
+          ? 1.0
+          : 0;
     resourcesAtDeath = {
       sol: finalSol,
       food: resources.current.food,
       water: resources.current.water,
-      powerGrid: api.powerGrid.snapshot().gridStrain,
+      powerGrid: powerRatio,
       materials: resources.current.materials,
       population: colony.population,
       morale: colony.morale,
@@ -376,7 +390,7 @@ function runSingleGame(seed: number): RunResult {
  */
 function captureIdeologySnapshot(
   sol: number,
-  colonists: Array<{ ideology?: ColonistIdeology }>,
+  colonists: readonly { ideology?: ColonistIdeology }[],
 ): IdeologySnapshot {
   let sumEarth = 0;
   let sumMars = 0;
@@ -2080,7 +2094,8 @@ function drawStackedAsciiHistogram(
 
     // Fill any rounding gaps
     if (remainingLength > 0 && bar.length > 0) {
-      bar += bar[bar.length - 1].repeat(remainingLength);
+      const lastChar = bar[bar.length - 1] ?? "?";
+      bar += lastChar.repeat(remainingLength);
     }
 
     const paddedLabel = label.padStart(maxLabelWidth);

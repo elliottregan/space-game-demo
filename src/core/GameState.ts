@@ -217,7 +217,10 @@ export class GameState {
         }
         case ProjectEffectType.PRODUCTION_MODIFIER: {
           const params = effect.params as ProductionModifierParams;
-          this.resources.addProductionBonus(project.id, params.resource, params.amount);
+          // Power is handled by the grid system, not resource production
+          if (params.resource !== "power") {
+            this.resources.addProductionBonus(project.id, params.resource, params.amount);
+          }
           break;
         }
         case ProjectEffectType.CONVICTION_BOOST: {
@@ -278,7 +281,8 @@ export class GameState {
     ];
     for (let i = 0; i < solarPanels.length; i++) {
       const panel = solarPanels[i];
-      const pos = solarPositions[i] || { x: 5 + i, y: 5 };
+      if (!panel) continue;
+      const pos = solarPositions[i] ?? { x: 5 + i, y: 5 };
       this.grid.placeBuilding(panel.id, pos);
       usedPositions.add(posKey(pos.x, pos.y));
       const def = this.buildings.getDefinition(panel.definitionId);

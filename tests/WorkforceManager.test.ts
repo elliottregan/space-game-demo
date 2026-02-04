@@ -1770,7 +1770,7 @@ describe("WorkforceManager", () => {
       rng.chance = originalChance;
 
       expect(events.length).toBe(1);
-      expect(events[0].type).toBe("GUILD_FORMED");
+      expect(events[0]!.type).toBe("GUILD_FORMED");
       expect(manager.getGuilds().length).toBe(1);
     });
 
@@ -1893,9 +1893,9 @@ describe("WorkforceManager", () => {
 
       rng.chance = originalChance;
 
-      expect(colonists[0].guildIds?.length).toBe(1);
-      expect(colonists[1].guildIds?.length).toBe(1);
-      expect(colonists[0].guildIds?.[0]).toBe(colonists[1].guildIds?.[0]);
+      expect(colonists[0]!.guildIds?.length).toBe(1);
+      expect(colonists[1]!.guildIds?.length).toBe(1);
+      expect(colonists[0]!.guildIds?.[0]).toBe(colonists[1]!.guildIds?.[0]);
     });
   });
 

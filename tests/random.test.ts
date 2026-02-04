@@ -110,8 +110,9 @@ describe("SeededRandom", () => {
       const seen = new Set<string>();
       for (let i = 0; i < 100; i++) {
         const value = random.pick(items);
-        expect(items).toContain(value);
-        if (value) seen.add(value);
+        expect(value).toBeDefined();
+        expect(items).toContain(value!);
+        seen.add(value!);
       }
       // Should see all items
       expect(seen.size).toBe(3);
@@ -193,14 +194,14 @@ describe("SeededRandom", () => {
 
       const counts: Record<string, number> = { rare: 0, common: 0, very_common: 0 };
       for (let i = 0; i < 10000; i++) {
-        const item = random.weightedPick(items, (i) => weights[i]!);
-        if (item) counts[item]++;
+        const item = random.weightedPick(items, (idx) => weights[idx] ?? 0);
+        if (item) counts[item]!++;
       }
 
       // very_common should be picked most (~90%), common ~9%, rare ~1%
-      expect(counts.very_common).toBeGreaterThan(counts.common);
-      expect(counts.common).toBeGreaterThan(counts.rare);
-      expect(counts.very_common).toBeGreaterThan(8000);
+      expect(counts.very_common!).toBeGreaterThan(counts.common!);
+      expect(counts.common!).toBeGreaterThan(counts.rare!);
+      expect(counts.very_common!).toBeGreaterThan(8000);
     });
 
     test("returns undefined for empty array", () => {

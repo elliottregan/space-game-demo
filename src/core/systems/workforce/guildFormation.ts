@@ -149,7 +149,7 @@ function toRoman(n: number): string {
  */
 export function findEligibleFounderGroups(
   colonists: readonly Colonist[],
-  relationships: Map<string, CoworkerRelationship>,
+  relationships: ReadonlyMap<string, CoworkerRelationship>,
   threshold: number,
 ): string[][] {
   // Filter to eligible colonists (not at max memberships)
@@ -241,7 +241,7 @@ export function canJoinGuild(
   colonist: Colonist,
   guild: Guild,
   members: readonly Colonist[],
-  relationships: Map<string, CoworkerRelationship>,
+  relationships: ReadonlyMap<string, CoworkerRelationship>,
 ): boolean {
   // Can't join if already a member
   if (guild.memberIds.includes(colonist.id)) return false;
