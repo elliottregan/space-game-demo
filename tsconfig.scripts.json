@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    // Scripts run in Bun with Node API compatibility
+    "lib": ["ESNext"],
+    "types": ["bun"]
+  },
+  "include": [
+    "scripts/**/*.ts",
+    "src/simulation/**/*.ts",
+    "src/core/**/*.ts",
+    "src/facade/**/*.ts",
+    "index.ts"
+  ],
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    // Tests run in Bun environment
+    "lib": ["ESNext"],
+    "types": ["bun"]
+  },
+  "include": [
+    "tests/**/*.ts",
+    "src/core/**/*.ts",
+    "src/facade/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}
