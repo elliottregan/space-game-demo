@@ -9,9 +9,21 @@ pre-commit:
       glob: "*.{ts,tsx,vue,css}"
       run: bunx oxfmt --write --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
-    typecheck-src:
-      glob: "src/**/*.{ts,tsx,vue}"
-      run: bun run typecheck:src
+    typecheck-core:
+      glob: "src/core/**/*.ts"
+      run: tsc -p tsconfig.core.json --noEmit
+    typecheck-app:
+      glob: "src/{renderer,visualization}/**/*.{ts,tsx,vue},src/main.ts"
+      run: tsc -p tsconfig.app.json --noEmit
+    typecheck-facade:
+      glob: "src/facade/**/*.ts"
+      run: tsc -p tsconfig.app.json --noEmit
+    typecheck-scripts:
+      glob: "scripts/**/*.ts,src/simulation/**/*.ts,index.ts"
+      run: tsc -p tsconfig.scripts.json --noEmit
+    typecheck-node:
+      glob: "vite*.ts"
+      run: tsc -p tsconfig.node.json --noEmit
     typecheck-tests:
       glob: "tests/**/*.ts"
-      run: bun run typecheck:test
+      run: tsc -p tsconfig.test.json --noEmit
