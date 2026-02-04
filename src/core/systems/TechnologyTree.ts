@@ -9,7 +9,6 @@ export class TechnologyTree {
   private currentResearchId: TechnologyId | null = null;
   private researchQueue: TechnologyId[] = [];
   private currentResearch: TechResearch | null = null;
-  private researchSpeedBonus: number = 0;
 
   constructor(techs: Technology[]) {
     techs.forEach((t) => this.technologies.set(t.id, t));
@@ -199,10 +198,6 @@ export class TechnologyTree {
     return this.researched.size;
   }
 
-  setResearchSpeedBonus(bonus: number): void {
-    this.researchSpeedBonus = bonus;
-  }
-
   /**
    * Queue a technology and all its prerequisites.
    * Preserves progress for all techs. Starts researching the first
@@ -284,7 +279,6 @@ export class TechnologyTree {
       researchProgress: Object.fromEntries(this.researchProgress),
       currentResearchId: this.currentResearchId,
       researchQueue: this.researchQueue,
-      researchSpeedBonus: this.researchSpeedBonus,
     };
   }
 
@@ -296,13 +290,11 @@ export class TechnologyTree {
       researchQueue?: TechnologyId[];
       // Legacy field
       currentResearch?: TechResearch | null;
-      researchSpeedBonus: number;
     },
     techs: Technology[],
   ): TechnologyTree {
     const tree = new TechnologyTree(techs);
     tree.researched = new Set(data.researched);
-    tree.researchSpeedBonus = data.researchSpeedBonus || 0;
 
     // Handle new format
     if (data.researchProgress) {
