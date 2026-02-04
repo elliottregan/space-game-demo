@@ -396,9 +396,11 @@ export class ColonyManager implements ColonistQueries {
     return colonist;
   }
 
-  removeColonist(id: string, buildings?: BuildingManager): boolean {
+  removeColonist(id: string, buildings?: BuildingManager): GameEvent[] {
     const colonist = this.colonists.get(id);
-    if (!colonist) return false;
+    if (!colonist) return [];
+
+    const colonistName = colonist.name;
 
     // Remove from any building assignments
     if (buildings) {
@@ -412,7 +414,17 @@ export class ColonyManager implements ColonistQueries {
       colonist.housingId = undefined;
     }
 
-    return this.colonists.delete(id);
+    this.colonists.delete(id);
+
+    return [
+      {
+        type: "COLONIST_DIED",
+        colonistId: id,
+        colonistName,
+        severity: "warning",
+        message: `${colonistName} has died.`,
+      },
+    ];
   }
 
   getColonist(id: string): Colonist | undefined {
