@@ -10,6 +10,7 @@
     "src/core/**/*.ts",
     "src/facade/**/*.ts",
     "src/renderer/**/*.ts",
+    "src/simulation/**/*.ts",
     "src/shims-vue.d.ts"
   ],
   "exclude": ["node_modules"]
