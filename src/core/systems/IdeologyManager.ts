@@ -1,7 +1,16 @@
 // src/core/systems/IdeologyManager.ts
 
 import type { Colonist, ColonistIdeology } from "../models/Colonist";
-import { NPCFaction, type Project, type ProjectId } from "../models/NPCInfluence";
+import {
+  NPCFaction,
+  ProjectRequirementType,
+  type Project,
+  type ProjectId,
+} from "../models/NPCInfluence";
+import type { TechnologyTree } from "./TechnologyTree";
+import type { BuildingManager } from "./BuildingManager";
+import type { ColonyManager } from "./ColonyManager";
+import type { ResourceManager } from "./ResourceManager";
 import type { RelationshipManager } from "./RelationshipManager";
 import type { ColonistMoraleManager } from "./ColonistMoraleManager";
 import * as IdeologyBalance from "../balance/IdeologyBalance";
@@ -942,6 +951,118 @@ export class IdeologyManager {
    */
   getFailedProposals(): readonly ProjectId[] {
     return [...this.failedProposals];
+  }
+
+  /**
+   * Check if a project can be proposed based on its requirements.
+   * Returns an object indicating whether the project can be proposed and why not if it cannot.
+   */
+  canProposeProject(
+    project: Project,
+    context: {
+      technology?: TechnologyTree;
+      buildings?: BuildingManager;
+      colony?: ColonyManager;
+      resources?: ResourceManager;
+    },
+  ): { canPropose: boolean; reason?: string } {
+    // Check if already completed, pending, or failed
+    if (this.completedProjects.has(project.id)) {
+      return { canPropose: false, reason: "Project already completed" };
+    }
+    if (this.pendingProposals.has(project.id)) {
+      return { canPropose: false, reason: "Project already pending vote" };
+    }
+    if (this.failedProposals.has(project.id)) {
+      return { canPropose: false, reason: "Project previously failed (must clear first)" };
+    }
+
+    // Check prerequisites
+    const prerequisites = project.prerequisites ?? [];
+    for (const prereq of prerequisites) {
+      if (!this.completedProjects.has(prereq)) {
+        return { canPropose: false, reason: `Prerequisite project not completed: ${prereq}` };
+      }
+    }
+
+    // Check requirements
+    const requirements = project.requirements ?? [];
+    for (const req of requirements) {
+      switch (req.type) {
+        case ProjectRequirementType.TECHNOLOGY: {
+          if (!context.technology) {
+            return { canPropose: false, reason: "Cannot verify technology requirements" };
+          }
+          if (!context.technology.isResearched(req.techId)) {
+            return { canPropose: false, reason: `Technology not researched: ${req.techId}` };
+          }
+          break;
+        }
+        case ProjectRequirementType.BUILDING: {
+          if (!context.buildings) {
+            return { canPropose: false, reason: "Cannot verify building requirements" };
+          }
+          const buildingCount = context.buildings.getBuildingsByDefinition(req.buildingId).length;
+          const requiredCount = req.count ?? 1;
+          if (buildingCount < requiredCount) {
+            return {
+              canPropose: false,
+              reason: `Insufficient buildings: need ${requiredCount} ${req.buildingId}, have ${buildingCount}`,
+            };
+          }
+          break;
+        }
+        case ProjectRequirementType.POPULATION: {
+          if (!context.colony) {
+            return { canPropose: false, reason: "Cannot verify population requirements" };
+          }
+          const population = context.colony.getPopulation();
+          if (population < req.min) {
+            return {
+              canPropose: false,
+              reason: `Insufficient population: need ${req.min}, have ${population}`,
+            };
+          }
+          break;
+        }
+        case ProjectRequirementType.RESOURCE: {
+          if (!context.resources) {
+            return { canPropose: false, reason: "Cannot verify resource requirements" };
+          }
+          const resourceAmount = context.resources.getResources()[req.resource];
+          if (resourceAmount < req.min) {
+            return {
+              canPropose: false,
+              reason: `Insufficient ${req.resource}: need ${req.min}, have ${resourceAmount}`,
+            };
+          }
+          break;
+        }
+      }
+    }
+
+    return { canPropose: true };
+  }
+
+  // ============ Faction Conviction ============
+
+  /**
+   * Boost conviction for all colonists aligned with a faction.
+   * Only colonists with moderate or higher affinity (>0.2) receive the boost.
+   */
+  boostFactionConviction(faction: NPCFaction, amount: number, colonists: Colonist[]): void {
+    const affinityKey = IdeologyManager.factionToKey(faction);
+
+    for (const colonist of colonists) {
+      if (!colonist.ideology) continue;
+
+      const currentAffinity = colonist.ideology[affinityKey] ?? 0;
+
+      // Only boost if they have some alignment with this faction
+      if (currentAffinity > 0.2) {
+        colonist.ideology.conviction = Math.min(1, (colonist.ideology.conviction ?? 0) + amount);
+      }
+    }
   }
 
   // ============ Capstone Projects ============

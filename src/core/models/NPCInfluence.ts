@@ -1,4 +1,6 @@
-import type { ResourceDelta } from "./Resources";
+import type { BuildingId } from "./Building.js";
+import type { ResourceDelta, Resources } from "./Resources.js";
+import type { TechnologyId } from "./Technology.js";
 
 /**
  * Political factions in the Mars colony.
@@ -91,6 +93,26 @@ export const ALL_PROJECT_IDS: readonly ProjectId[] = [
   ProjectId.DEEP_SPACE_MINING_CHARTER,
 ] as const;
 
+/**
+ * Types of requirements that must be met before a project can be proposed.
+ */
+export enum ProjectRequirementType {
+  TECHNOLOGY = "technology",
+  BUILDING = "building",
+  POPULATION = "population",
+  RESOURCE = "resource",
+}
+
+/**
+ * A requirement that must be met before a project can be proposed.
+ * Discriminated union based on requirement type.
+ */
+export type ProjectRequirement =
+  | { type: ProjectRequirementType.TECHNOLOGY; techId: TechnologyId }
+  | { type: ProjectRequirementType.BUILDING; buildingId: BuildingId; count?: number }
+  | { type: ProjectRequirementType.POPULATION; min: number }
+  | { type: ProjectRequirementType.RESOURCE; resource: keyof Resources; min: number };
+
 export interface NPC {
   id: NPCId;
   name: string;
@@ -111,6 +133,8 @@ export interface Project {
   proposalCost: ResourceDelta;
   /** Required faction support level to propose (0-1) */
   requiredSupport: number;
+  /** Requirements that must be met before this project can be proposed */
+  requirements?: ProjectRequirement[];
   /** Effects applied if project passes */
   effects?: {
     resources?: ResourceDelta;
@@ -245,6 +269,12 @@ export interface TriadicClosureEvent {
 export enum ProjectEffectType {
   /** Modifies ideology distribution of new colonists from immigration events */
   IMMIGRATION_IDEOLOGY_BIAS = "immigration_ideology_bias",
+  /** Schedules a recurring event to fire at regular intervals */
+  RECURRING_EVENT = "recurring_event",
+  /** Modifies production output for a specific resource */
+  PRODUCTION_MODIFIER = "production_modifier",
+  /** Boosts conviction gain for a specific faction */
+  CONVICTION_BOOST = "conviction_boost",
 }
 
 /**
@@ -266,7 +296,11 @@ export interface ProjectEffect {
 /**
  * Union type of all possible effect parameter objects.
  */
-export type ProjectEffectParams = ImmigrationIdeologyBiasParams;
+export type ProjectEffectParams =
+  | ImmigrationIdeologyBiasParams
+  | RecurringEventParams
+  | ProductionModifierParams
+  | ConvictionBoostParams;
 
 /**
  * Parameters for IMMIGRATION_IDEOLOGY_BIAS effect.
@@ -277,4 +311,39 @@ export interface ImmigrationIdeologyBiasParams {
   faction: NPCFaction;
   /** Strength of the bias (0-1, where 1 is maximum bias) */
   strength: number;
+}
+
+/**
+ * Parameters for RECURRING_EVENT effect.
+ * Schedules an event to fire at regular intervals.
+ */
+export interface RecurringEventParams {
+  /** The type of event to trigger */
+  eventType: string;
+  /** How often the event fires (in sols) */
+  intervalSols: number;
+  /** Additional parameters passed to the event */
+  params?: Record<string, unknown>;
+}
+
+/**
+ * Parameters for PRODUCTION_MODIFIER effect.
+ * Modifies production output for a specific resource.
+ */
+export interface ProductionModifierParams {
+  /** Which resource production to modify */
+  resource: "food" | "water" | "materials" | "power";
+  /** Amount to add to production (can be negative) */
+  amount: number;
+}
+
+/**
+ * Parameters for CONVICTION_BOOST effect.
+ * Boosts conviction gain for colonists of a specific faction.
+ */
+export interface ConvictionBoostParams {
+  /** Which faction's conviction to boost */
+  faction: NPCFaction;
+  /** Amount to add to conviction gain rate */
+  amount: number;
 }

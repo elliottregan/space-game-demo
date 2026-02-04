@@ -6,6 +6,7 @@ export class ResourceManager {
   private resources: Resources;
   private production: ResourceDelta = {};
   private consumption: ResourceDelta = {};
+  private productionBonuses: Map<string, { resource: keyof Resources; amount: number }> = new Map();
 
   constructor(initial: Resources) {
     this.resources = { ...initial };
@@ -29,8 +30,9 @@ export class ResourceManager {
 
     for (const key of RESOURCE_KEYS) {
       const produced = this.production[key] || 0;
+      const bonus = this.getProductionBonus(key);
       const consumed = this.consumption[key] || 0;
-      const net = produced - consumed;
+      const net = produced + bonus - consumed;
 
       this.resources[key] += net;
 
@@ -75,6 +77,24 @@ export class ResourceManager {
     this.updateDelta(this.consumption, delta, true);
   }
 
+  addProductionBonus(sourceId: string, resource: keyof Resources, amount: number): void {
+    this.productionBonuses.set(sourceId, { resource, amount });
+  }
+
+  removeProductionBonus(sourceId: string): void {
+    this.productionBonuses.delete(sourceId);
+  }
+
+  getProductionBonus(resource: keyof Resources): number {
+    let total = 0;
+    for (const bonus of this.productionBonuses.values()) {
+      if (bonus.resource === resource) {
+        total += bonus.amount;
+      }
+    }
+    return total;
+  }
+
   canAfford(cost: ResourceDelta): boolean {
     return Object.entries(cost).every(([resource, amount]) => {
       const key = resource as keyof Resources;
@@ -117,8 +137,9 @@ export class ResourceManager {
 
     for (const key of RESOURCE_KEYS) {
       const produced = this.production[key] || 0;
+      const bonus = this.getProductionBonus(key);
       const consumed = this.consumption[key] || 0;
-      net[key] = produced - consumed;
+      net[key] = produced + bonus - consumed;
     }
 
     return net;
@@ -129,17 +150,28 @@ export class ResourceManager {
       resources: this.resources,
       production: this.production,
       consumption: this.consumption,
+      productionBonuses: Array.from(this.productionBonuses.entries()),
     };
+  }
+
+  reset(): void {
+    this.production = {};
+    this.consumption = {};
+    this.productionBonuses.clear();
   }
 
   static fromJSON(data: {
     resources: Resources;
     production: ResourceDelta;
     consumption: ResourceDelta;
+    productionBonuses?: [string, { resource: keyof Resources; amount: number }][];
   }): ResourceManager {
     const manager = new ResourceManager(data.resources);
     manager.production = data.production;
     manager.consumption = data.consumption;
+    if (data.productionBonuses) {
+      manager.productionBonuses = new Map(data.productionBonuses);
+    }
     return manager;
   }
 }

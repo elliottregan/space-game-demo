@@ -17,7 +17,7 @@ const nodePositions: Record<string, { x: number; y: number }> = {
   // Early Tier (y: 0)
   hydroponics: { x: 0, y: 0 },
   water_recycling: { x: 200, y: 0 },
-  advanced_materials: { x: 400, y: 0 },
+  habitat_fabrication: { x: 400, y: 0 },
 
   // Mid Tier (y: 150)
   genetics: { x: 0, y: 150 },

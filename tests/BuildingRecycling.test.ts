@@ -176,7 +176,7 @@ describe("Building Recycling", () => {
     const tech = new TechnologyTree(TECHNOLOGIES);
 
     // Use Automated Factory - truly automated, no workers needed
-    tech.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+    tech.completeResearch(TechnologyId.HABITAT_FABRICATION);
     tech.completeResearch(TechnologyId.ROBOTICS);
 
     // Build habitat first for positive oxygen (factory has -1 oxygen contribution)
@@ -191,9 +191,9 @@ describe("Building Recycling", () => {
     // Verify oxygen is positive to avoid efficiency penalty
     expect(manager.getTotalAirContribution()).toBeGreaterThan(0);
 
-    // Automated Factory produces 15 materials
+    // Automated Factory produces 12 materials
     const prodBefore = resources.getProduction();
-    expect(prodBefore.materials).toBe(15);
+    expect(prodBefore.materials).toBe(12);
 
     manager.startRecycling(building!.id, resources);
 
@@ -296,7 +296,7 @@ describe("Building Repurposing", () => {
     const tech = TechnologyTree.fromJSON(
       {
         researched: [
-          TechnologyId.ADVANCED_MATERIALS,
+          TechnologyId.HABITAT_FABRICATION,
           TechnologyId.ROBOTICS,
           TechnologyId.ASTEROID_MINING,
         ],
@@ -357,7 +357,7 @@ describe("Building Repurposing", () => {
     const tech = TechnologyTree.fromJSON(
       {
         researched: [
-          TechnologyId.ADVANCED_MATERIALS,
+          TechnologyId.HABITAT_FABRICATION,
           TechnologyId.ROBOTICS,
           TechnologyId.ASTEROID_MINING,
         ],
@@ -399,7 +399,7 @@ describe("Building Repurposing", () => {
     const tech = TechnologyTree.fromJSON(
       {
         researched: [
-          TechnologyId.ADVANCED_MATERIALS,
+          TechnologyId.HABITAT_FABRICATION,
           TechnologyId.ROBOTICS,
           TechnologyId.ASTEROID_MINING,
         ],
@@ -445,7 +445,7 @@ describe("Building Repurposing", () => {
     const tech = TechnologyTree.fromJSON(
       {
         researched: [
-          TechnologyId.ADVANCED_MATERIALS,
+          TechnologyId.HABITAT_FABRICATION,
           TechnologyId.ROBOTICS,
           TechnologyId.ASTEROID_MINING,
         ],
@@ -500,7 +500,7 @@ describe("Building Repurposing", () => {
     const tech = TechnologyTree.fromJSON(
       {
         researched: [
-          TechnologyId.ADVANCED_MATERIALS,
+          TechnologyId.HABITAT_FABRICATION,
           TechnologyId.ROBOTICS,
           TechnologyId.ASTEROID_MINING,
         ],
@@ -540,7 +540,7 @@ describe("Building Repurposing", () => {
     const tech = TechnologyTree.fromJSON(
       {
         researched: [
-          TechnologyId.ADVANCED_MATERIALS,
+          TechnologyId.HABITAT_FABRICATION,
           TechnologyId.ROBOTICS,
           TechnologyId.ASTEROID_MINING,
         ],
@@ -582,7 +582,7 @@ describe("Building Repurposing", () => {
     const tech = TechnologyTree.fromJSON(
       {
         researched: [
-          TechnologyId.ADVANCED_MATERIALS,
+          TechnologyId.HABITAT_FABRICATION,
           TechnologyId.ROBOTICS,
           TechnologyId.ASTEROID_MINING,
         ],

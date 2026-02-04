@@ -261,7 +261,7 @@ describe("MetricsCollector", () => {
       expect(calls.some((c) => c.includes("Average Time to Win"))).toBe(true);
       expect(calls.some((c) => c.includes("Fastest Win"))).toBe(true);
       expect(calls.some((c) => c.includes("Starvation"))).toBe(true);
-      expect(calls.some((c) => c.includes("Return Mission"))).toBe(true);
+      expect(calls.some((c) => c.includes("Earth Relief Compact"))).toBe(true);
 
       consoleSpy.mockRestore();
     });

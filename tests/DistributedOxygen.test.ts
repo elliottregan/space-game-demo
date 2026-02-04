@@ -15,7 +15,7 @@ describe("Distributed Oxygen System", () => {
       gameState.resources.add({ materials: 1000 });
 
       // Research needed techs
-      gameState.technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+      gameState.technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
       gameState.technology.completeResearch(TechnologyId.ROBOTICS);
 
       // Build factory
@@ -40,15 +40,15 @@ describe("Distributed Oxygen System", () => {
 
       const effectiveProd = gameState.buildings.getEffectiveProduction(factories[0]!.id);
 
-      // Base production is 15 materials, with 50% penalty should be 7.5
-      expect(effectiveProd.materials).toBe(7.5);
+      // Base production is 12 materials, with 50% penalty should be 6
+      expect(effectiveProd.materials).toBe(6);
     });
 
     it("should not apply penalty when air quality efficiency is full", () => {
       gameState.resources.add({ materials: 1000 });
 
       // Research needed tech for automated factory
-      gameState.technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+      gameState.technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
       gameState.technology.completeResearch(TechnologyId.ROBOTICS);
 
       // Build automated factory (truly automated)
@@ -72,8 +72,8 @@ describe("Distributed Oxygen System", () => {
 
       const effectiveProd = gameState.buildings.getEffectiveProduction(factories[0]!.id);
 
-      // Base production is 15 materials, no penalty (automated, no workers needed, air quality full)
-      expect(effectiveProd.materials).toBe(15);
+      // Base production is 12 materials, no penalty (automated, no workers needed, air quality full)
+      expect(effectiveProd.materials).toBe(12);
     });
   });
 
@@ -139,8 +139,8 @@ describe("Distributed Oxygen System", () => {
       // Starting contribution is 7
       gameState.resources.add({ materials: 500 });
 
-      // Research advanced_materials for research_lab
-      gameState.technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+      // Research habitat_fabrication for research_lab
+      gameState.technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
 
       gameState.buildings.startBuilding(
         BuildingId.HABITAT,

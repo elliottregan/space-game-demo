@@ -7,6 +7,7 @@ import type { EventManager } from "../systems/EventManager";
 import type { GridManager } from "../systems/GridManager";
 import type { IdeologyManager } from "../systems/IdeologyManager";
 import type { OperationsManager } from "../systems/OperationsManager";
+import type { RecurringEventScheduler } from "../systems/RecurringEventScheduler";
 import type { ResourceManager } from "../systems/ResourceManager";
 import type { TechnologyTree } from "../systems/TechnologyTree";
 import type { VictoryManager } from "../systems/VictoryManager";
@@ -61,6 +62,7 @@ export interface TickContext {
   airQualityManager: AirQualityManager;
   earthCrisis: EarthCrisisManager;
   grid: GridManager;
+  scheduler: RecurringEventScheduler;
 
   /** Derived values computed during tick */
   derived: DerivedValues;
@@ -89,6 +91,7 @@ export function createTickContext(
     airQualityManager: AirQualityManager;
     earthCrisis: EarthCrisisManager;
     grid: GridManager;
+    scheduler: RecurringEventScheduler;
   },
   settings: TickSettings,
 ): TickContext {

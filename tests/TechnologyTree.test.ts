@@ -21,7 +21,7 @@ describe("TechnologyTree", () => {
   it("should allow researching techs with no prerequisites", () => {
     expect(tree.canResearch(TechnologyId.HYDROPONICS)).toBe(true);
     expect(tree.canResearch(TechnologyId.WATER_RECYCLING)).toBe(true);
-    expect(tree.canResearch(TechnologyId.ADVANCED_MATERIALS)).toBe(true);
+    expect(tree.canResearch(TechnologyId.HABITAT_FABRICATION)).toBe(true);
   });
 
   it("should not allow researching techs with unmet prerequisites", () => {
@@ -69,9 +69,9 @@ describe("TechnologyTree", () => {
   });
 
   it("should allow researching dependent tech after prerequisite is complete", () => {
-    tree.startResearch(TechnologyId.ADVANCED_MATERIALS, resources);
+    tree.startResearch(TechnologyId.HABITAT_FABRICATION, resources);
 
-    const tech = tree.getTech(TechnologyId.ADVANCED_MATERIALS)!;
+    const tech = tree.getTech(TechnologyId.HABITAT_FABRICATION)!;
     for (let i = 0; i < tech.cost.sols; i++) {
       tree.tick();
     }
@@ -140,8 +140,8 @@ describe("TechnologyTree", () => {
 
     it("should return prerequisite chain in topological order", () => {
       // asteroid_mining_platform needs: asteroid_mining, robotics
-      // asteroid_mining needs: advanced_materials
-      // robotics needs: advanced_materials
+      // asteroid_mining needs: habitat_fabrication
+      // robotics needs: habitat_fabrication
 
       const chain = tree.getPrerequisiteChain(TechnologyId.ASTEROID_MINING_PLATFORM);
 
@@ -149,13 +149,13 @@ describe("TechnologyTree", () => {
       expect(chain).toContain(TechnologyId.ASTEROID_MINING_PLATFORM);
       expect(chain).toContain(TechnologyId.ASTEROID_MINING);
       expect(chain).toContain(TechnologyId.ROBOTICS);
-      expect(chain).toContain(TechnologyId.ADVANCED_MATERIALS);
+      expect(chain).toContain(TechnologyId.HABITAT_FABRICATION);
 
       // Prerequisites must come before dependents
-      expect(chain.indexOf(TechnologyId.ADVANCED_MATERIALS)).toBeLessThan(
+      expect(chain.indexOf(TechnologyId.HABITAT_FABRICATION)).toBeLessThan(
         chain.indexOf(TechnologyId.ASTEROID_MINING),
       );
-      expect(chain.indexOf(TechnologyId.ADVANCED_MATERIALS)).toBeLessThan(
+      expect(chain.indexOf(TechnologyId.HABITAT_FABRICATION)).toBeLessThan(
         chain.indexOf(TechnologyId.ROBOTICS),
       );
       expect(chain.indexOf(TechnologyId.ASTEROID_MINING)).toBeLessThan(
@@ -213,17 +213,17 @@ describe("TechnologyTree", () => {
     });
 
     it("should remove techs not in new chain when changing target", () => {
-      // Start with robotics (needs advanced_materials)
+      // Start with robotics (needs habitat_fabrication)
       tree.queueResearch(TechnologyId.ROBOTICS, resources);
       expect(tree.getResearchQueue()).toEqual([
-        TechnologyId.ADVANCED_MATERIALS,
+        TechnologyId.HABITAT_FABRICATION,
         TechnologyId.ROBOTICS,
       ]);
 
       // Change to genetics (needs hydroponics)
       tree.queueResearch(TechnologyId.GENETICS, resources);
 
-      // robotics and advanced_materials removed, new chain used
+      // robotics and habitat_fabrication removed, new chain used
       expect(tree.getResearchQueue()).toEqual([TechnologyId.HYDROPONICS, TechnologyId.GENETICS]);
     });
 
@@ -244,11 +244,11 @@ describe("TechnologyTree", () => {
 
     it("should pause queue if resources insufficient for next tech", () => {
       // asteroid_mining costs 200 materials
-      // Set up: research advanced_materials and robotics first
+      // Set up: research habitat_fabrication and robotics first
       tree.queueResearch(TechnologyId.ROBOTICS, resources);
 
-      // Complete advanced_materials
-      const amTech = tree.getTech(TechnologyId.ADVANCED_MATERIALS)!;
+      // Complete habitat_fabrication
+      const amTech = tree.getTech(TechnologyId.HABITAT_FABRICATION)!;
       for (let i = 0; i < amTech.cost.sols; i++) {
         tree.tick(resources);
       }
