@@ -50,8 +50,9 @@ export interface GridNodeData {
   deposit?: DepositType;
   powerState?: PowerState;
   batteryLevel?: number;
-  status?: "pending" | "active" | "disabled" | "idle" | "recycling";
+  status?: "pending" | "active" | "disabled" | "idle" | "recycling" | "upgrading";
   constructionProgress?: number; // 0-1 for pending buildings
+  upgradeProgress?: number; // 0-1 for upgrading buildings
   powerSourceId?: string; // ID of the power source this building is connected to
   clusterId?: string; // ID of the transit cluster this building belongs to
   depotRange?: number; // Range for depot buildings (transit connectivity extension)
@@ -388,10 +389,14 @@ export function renderBaseGrid(
       // Building node
       if (cell?.buildingId) {
         const isPending = cell.status === "pending";
+        const isUpgrading = cell.status === "upgrading";
+        const isInProgress = isPending || isUpgrading;
+        const progressColor = isUpgrading ? colors.warning : colors.info;
+
         const nodeG = buildingLayer
           .append("g")
           .attr("class", "building-node")
-          .attr("opacity", isPending ? 0.7 : 1)
+          .attr("opacity", isInProgress ? 0.7 : 1)
           .style("cursor", "pointer")
           .on("click", (event: MouseEvent) => {
             event.stopPropagation();
@@ -405,10 +410,13 @@ export function renderBaseGrid(
           .attr("cy", screen.y)
           .attr("r", 18)
           .attr("fill", colors.bgSurface)
-          .attr("stroke", isPending ? colors.info : getPowerStateColor(cell.powerState, colors))
+          .attr(
+            "stroke",
+            isInProgress ? progressColor : getPowerStateColor(cell.powerState, colors),
+          )
           .attr("stroke-width", 2);
 
-        if (isPending) {
+        if (isInProgress) {
           circle.attr("stroke-dasharray", "4,2");
         }
 
@@ -420,26 +428,31 @@ export function renderBaseGrid(
             screen.x,
             screen.y,
             18,
-            isPending ? colors.info : colors.text,
+            isInProgress ? progressColor : colors.text,
           );
         }
 
-        // Building label - show progress for pending, name for active
-        const labelText = isPending
-          ? `${Math.round((cell.constructionProgress ?? 0) * 100)}%`
-          : (cell.buildingName?.substring(0, 10) ?? "");
+        // Building label - show progress for pending/upgrading, name for active
+        let labelText: string;
+        if (isPending) {
+          labelText = `${Math.round((cell.constructionProgress ?? 0) * 100)}%`;
+        } else if (isUpgrading) {
+          labelText = `↑${Math.round((cell.upgradeProgress ?? 0) * 100)}%`;
+        } else {
+          labelText = cell.buildingName?.substring(0, 10) ?? "";
+        }
         nodeG
           .append("text")
           .attr("x", screen.x)
           .attr("y", screen.y + 32)
           .attr("text-anchor", "middle")
-          .attr("fill", isPending ? colors.info : colors.textMuted)
+          .attr("fill", isInProgress ? progressColor : colors.textMuted)
           .attr("font-size", "10px")
           .attr("font-family", "var(--g-font-mono)")
           .text(labelText);
 
-        // Power state indicator (small dot) - only for non-pending buildings
-        if (!isPending && cell.powerState && cell.powerState !== PowerState.POWERED) {
+        // Power state indicator (small dot) - only for non-pending/non-upgrading buildings
+        if (!isInProgress && cell.powerState && cell.powerState !== PowerState.POWERED) {
           nodeG
             .append("circle")
             .attr("cx", screen.x + 12)
@@ -448,8 +461,8 @@ export function renderBaseGrid(
             .attr("fill", getPowerStateColor(cell.powerState, colors));
         }
 
-        // Occupant dots - only for non-pending buildings with occupants
-        if (!isPending && cell.occupants && cell.occupants.length > 0) {
+        // Occupant dots - only for non-pending/non-upgrading buildings with occupants
+        if (!isInProgress && cell.occupants && cell.occupants.length > 0) {
           const dotSize = 6; // 0.75rem ≈ 12px, but 6px radius looks better on grid
           const dotSpacing = 14;
           const totalWidth = (cell.occupants.length - 1) * dotSpacing;

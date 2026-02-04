@@ -718,6 +718,21 @@ export class ColonyManager {
     return assignments;
   }
 
+  /**
+   * Get total housing capacity from active residential buildings.
+   */
+  getHousingCapacity(buildingManager: BuildingManager): number {
+    let totalCapacity = 0;
+    for (const building of buildingManager.getBuildings()) {
+      if (building.status !== "active") continue;
+      const def = buildingManager.getDefinition(building.definitionId);
+      if (def?.capacity && def.capacity > 0 && def.purpose === BuildingPurpose.Residential) {
+        totalCapacity += def.capacity;
+      }
+    }
+    return totalCapacity;
+  }
+
   static fromJSON(data: {
     colonists: Colonist[];
     nextId: number;

@@ -28,6 +28,15 @@ export const TECHNOLOGIES: Technology[] = [
     cost: { sols: 55 },
     unlocks: [BuildingId.RESEARCH_LAB, BuildingId.ADVANCED_HABITAT],
   },
+  {
+    id: TechnologyId.PREFAB_CONSTRUCTION,
+    name: "Prefab Construction",
+    description: "Modular prefabricated housing units enable automatic colony expansion",
+    prerequisites: [TechnologyId.ADVANCED_MATERIALS],
+    cost: { sols: 45 },
+    unlocks: [],
+    effects: [{ type: "auto_housing" }],
+  },
 
   // MID TIER (Sol 90-200)
   {

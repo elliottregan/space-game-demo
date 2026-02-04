@@ -23,6 +23,7 @@ export enum TechnologyId {
   FUSION_DRIVE = "fusion_drive",
   CLOSED_ECOSYSTEM = "closed_ecosystem",
   ASTEROID_MINING_PLATFORM = "asteroid_mining_platform",
+  PREFAB_CONSTRUCTION = "prefab_construction",
 }
 
 export interface Technology {
@@ -39,8 +40,13 @@ export interface Technology {
 }
 
 export interface TechEffect {
-  type: "research_speed" | "construction_speed" | "production_bonus" | "mining_efficiency";
-  value: number;
+  type:
+    | "research_speed"
+    | "construction_speed"
+    | "production_bonus"
+    | "mining_efficiency"
+    | "auto_housing";
+  value?: number;
 }
 
 export interface TechResearch {

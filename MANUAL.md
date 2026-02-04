@@ -105,6 +105,14 @@ Buildings are the backbone of your colony. Each building has:
 | **Medical Center** | 200 | Advanced Medicine | Healthcare services |
 | **Cryogenic Facility** | 220 | Cryosleep | Colonist preservation |
 
+#### Habitat Upgrades
+
+Basic Habitats can be upgraded to Advanced Habitats:
+- **Cost:** 70 materials
+- **Duration:** 8 sols
+- Colonists remain housed during the upgrade
+- Capacity increases from 6 to 8 upon completion
+
 #### Recreation Buildings (Boost Morale)
 
 | Building | Cost | Morale Boost |
@@ -448,10 +456,23 @@ Research unlocks advanced buildings and bonuses. Queue technologies and assign r
 | **Water Recycling** | 45 sols | Water Reclaimer, +50% water production |
 | **Advanced Materials** | 75 sols | Research Lab, Advanced Habitat |
 
+### Prefab Construction
+- **Cost:** 45 sols
+- **Prerequisites:** Advanced Materials
+- **Effect:** Enables automatic habitat construction when colony reaches 85% housing capacity
+
+When researched, the colony will automatically start building a Basic Habitat whenever:
+- Population reaches 85% of total housing capacity
+- No habitat is already under construction
+- At least 50 materials are available
+
+This automation helps maintain housing without constant micromanagement.
+
 #### Mid Tier (Sol 90-200)
 
 | Technology | Research Time | Requirements | Unlocks |
 |------------|---------------|--------------|---------|
+| **Prefab Construction** | 45 sols | Advanced Materials | Auto-build habitats at 85% capacity |
 | **Robotics** | 120 sols | Advanced Materials | Automated Factory, 1.2x construction speed |
 | **Asteroid Mining** | 150 sols | Advanced Materials, Robotics | Mining Station |
 | **Nuclear Fission** | 180 sols | Advanced Materials | Nuclear Reactor |

@@ -229,6 +229,60 @@ export class BuildingsFacade
   }
 
   /**
+   * Check if a building can be upgraded (e.g., Basic Habitat -> Advanced Habitat).
+   */
+  canUpgrade(buildingId: string): CanDoResult {
+    const building = this.gameState.buildings.getBuilding(buildingId);
+    if (!building) {
+      return { allowed: false, reason: "Building not found" };
+    }
+
+    const canDo = this.gameState.buildings.canUpgradeHabitat(buildingId, this.gameState.resources);
+
+    if (!canDo) {
+      // Check specific reasons
+      if (building.status !== "active") {
+        return { allowed: false, reason: "Building must be active" };
+      }
+      if (building.status === "upgrading") {
+        return { allowed: false, reason: "Building is already being upgraded" };
+      }
+
+      const upgradeCost = this.gameState.buildings.getUpgradeCost(building.definitionId);
+      if (!upgradeCost) {
+        return { allowed: false, reason: "This building cannot be upgraded" };
+      }
+
+      const affordability = this.checkAffordability(upgradeCost);
+      if (!affordability.allowed) {
+        return affordability;
+      }
+
+      return { allowed: false, reason: "Cannot upgrade building" };
+    }
+
+    return { allowed: true };
+  }
+
+  /**
+   * Get the upgrade cost for a building.
+   */
+  getUpgradeCost(buildingId: string): ResourceDelta | undefined {
+    const building = this.gameState.buildings.getBuilding(buildingId);
+    if (!building) return undefined;
+    return this.gameState.buildings.getUpgradeCost(building.definitionId);
+  }
+
+  /**
+   * Get the upgrade time in sols for a building.
+   */
+  getUpgradeTime(buildingId: string): number {
+    const building = this.gameState.buildings.getBuilding(buildingId);
+    if (!building) return 0;
+    return this.gameState.buildings.getUpgradeTime(building.definitionId);
+  }
+
+  /**
    * Get colonists who can be assigned to a building based on cluster connectivity.
    * Only returns unassigned colonists whose housing is in the same cluster as the workplace.
    */
@@ -592,6 +646,35 @@ export class BuildingsFacade
           type: "INVALID_TARGET",
           target: depositId,
           reason: "Failed to link building to deposit",
+        });
+      }
+
+      return ok(undefined);
+    });
+  }
+
+  /**
+   * Start upgrading a building (e.g., Basic Habitat -> Advanced Habitat).
+   */
+  upgrade(buildingId: string): Result<void> {
+    return this.executeCommand(() => {
+      const check = this.canUpgrade(buildingId);
+      if (!check.allowed) {
+        return err({
+          type: "INVALID_STATE",
+          current: this.getById(buildingId)?.status ?? "unknown",
+          expected: "active",
+          reason: check.reason ?? "Cannot upgrade",
+        });
+      }
+
+      const success = this.gameState.buildings.startUpgrade(buildingId, this.gameState.resources);
+
+      if (!success) {
+        return err({
+          type: "INVALID_TARGET",
+          target: buildingId,
+          reason: "Upgrade operation failed",
         });
       }
 

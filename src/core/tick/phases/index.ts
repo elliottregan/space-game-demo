@@ -13,6 +13,8 @@ import {
   processRepairs,
   processRecycling,
 } from "./buildings";
+// Auto-housing phase
+import { checkAutoHousing } from "./autoHousing";
 // Workforce phases
 import { processWorkforceTick } from "./workforce";
 // Colonist morale phases
@@ -48,6 +50,7 @@ export {
   processRepairs,
   processRecycling,
 } from "./buildings";
+export { checkAutoHousing } from "./autoHousing";
 export { processWorkforceTick } from "./workforce";
 export { visitSocialBuildings, propagateColonistMorale } from "./colonistMorale";
 export {
@@ -106,6 +109,9 @@ export function createStandardTickRunner(): TickRunner {
   runner.register(processColonyTick);
   runner.register(autoAssignWorkers);
   runner.register(assignHousing);
+
+  // 5b. Auto-housing (after colony phases, before technology)
+  runner.register(checkAutoHousing);
 
   // 6. Technology phases
   runner.register(processResearch);

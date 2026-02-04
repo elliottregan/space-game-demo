@@ -32,6 +32,18 @@ export class BuildingManager {
   private buildings: Map<string, Building> = new Map();
   private nextId: number = 1;
   private constructionSpeedBonus: number = 0;
+
+  /** Upgrade costs: cost difference between basic and advanced versions */
+  private static readonly UPGRADE_COSTS: Partial<
+    Record<BuildingId, { cost: ResourceDelta; time: number; target: BuildingId }>
+  > = {
+    [BuildingId.HABITAT]: {
+      cost: { materials: 70 }, // 120 (advanced) - 50 (basic)
+      time: 8,
+      target: BuildingId.ADVANCED_HABITAT,
+    },
+  };
+  private autoHousingBlockedShown: boolean = false;
   private colonyManager: ColonyManager | null = null;
   private technologyTree: TechnologyTree | null = null;
   private workforceManager: WorkforceManager | null = null;
@@ -116,6 +128,7 @@ export class BuildingManager {
       this.processConstruction(building, def, resources, events);
       this.processRepairs(building, def, resources, events);
       this.processRecycling(building, def, resources, events, buildingsToDelete);
+      this.processUpgrades(building, def, resources, events);
     }
 
     // Delete buildings that were recycled (outside of iteration loop)
@@ -401,6 +414,36 @@ export class BuildingManager {
       });
 
       buildingsToDelete.push(building.id);
+    }
+  }
+
+  private processUpgrades(
+    building: Building,
+    def: BuildingDefinition,
+    resources: ResourceManager,
+    events: GameEvent[],
+  ): void {
+    if (building.status !== "upgrading") return;
+    if (building.upgradeTargetDefId === undefined) return;
+
+    building.upgradeProgress = (building.upgradeProgress ?? 0) + 1;
+
+    const upgradeTime = this.getUpgradeTime(building.definitionId);
+    if (building.upgradeProgress >= upgradeTime) {
+      // Complete the upgrade
+      const targetDef = this.definitions.get(building.upgradeTargetDefId);
+      building.definitionId = building.upgradeTargetDefId;
+      building.status = "active";
+      building.upgradeProgress = undefined;
+      building.upgradeTargetDefId = undefined;
+
+      events.push({
+        type: "BUILDING_UPGRADE_COMPLETE",
+        buildingId: building.id,
+        buildingName: targetDef?.name ?? "Unknown",
+        severity: "info",
+        message: `Habitat upgraded to ${targetDef?.name ?? "Advanced Habitat"}!`,
+      });
     }
   }
 
@@ -1042,11 +1085,150 @@ export class BuildingManager {
     return calculateAverageWorkerEfficiency(colonists, def.workerRole);
   }
 
+  /**
+   * Check if auto-housing should trigger and start building a habitat if needed.
+   * Called during the game tick when Prefab Construction technology is researched.
+   *
+   * Auto-builds a habitat when:
+   * - Prefab Construction tech is researched
+   * - Population >= 85% of housing capacity
+   * - No habitat already under construction
+   * - Can afford 50 materials
+   */
+  checkAutoHousing(
+    resources: ResourceManager,
+    technology: TechnologyTree,
+    population: number,
+    housingCapacity: number,
+  ): GameEvent[] {
+    const events: GameEvent[] = [];
+
+    // Check if tech is researched
+    if (!technology.isResearched(TechnologyId.PREFAB_CONSTRUCTION)) {
+      return events;
+    }
+
+    // Check if below 85% threshold
+    if (housingCapacity === 0 || population < housingCapacity * 0.85) {
+      this.autoHousingBlockedShown = false; // Reset warning flag
+      return events;
+    }
+
+    // Check if habitat already under construction
+    if (this.hasHabitatUnderConstruction()) {
+      return events;
+    }
+
+    // Check if can afford
+    const habitatDef = this.definitions.get(BuildingId.HABITAT);
+    if (!habitatDef || !resources.canAfford(habitatDef.cost)) {
+      if (!this.autoHousingBlockedShown) {
+        this.autoHousingBlockedShown = true;
+        events.push({
+          type: "AUTO_HOUSING_BLOCKED",
+          severity: "warning",
+          message: "Housing needed but insufficient materials for auto-construction",
+        });
+      }
+      return events;
+    }
+
+    // Build the habitat
+    resources.deduct(habitatDef.cost);
+    const building: Building = {
+      id: `building_${this.nextId++}`,
+      definitionId: BuildingId.HABITAT,
+      status: "pending",
+      constructionProgress: 0,
+      assignedWorkers: [],
+      mode: "normal",
+      broken: false,
+      repairProgress: 0,
+    };
+    this.buildings.set(building.id, building);
+
+    this.autoHousingBlockedShown = false; // Reset warning flag on success
+    events.push({
+      type: "AUTO_HOUSING_STARTED",
+      severity: "info",
+      message: "Prefab habitat construction started automatically",
+      buildingId: building.id,
+    });
+
+    return events;
+  }
+
+  /**
+   * Check if there's already a habitat under construction.
+   */
+  private hasHabitatUnderConstruction(): boolean {
+    for (const building of this.buildings.values()) {
+      if (building.definitionId === BuildingId.HABITAT && building.status === "pending") {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Get the upgrade cost for a building definition.
+   * Returns undefined if the building cannot be upgraded.
+   */
+  getUpgradeCost(defId: BuildingId): ResourceDelta | undefined {
+    return BuildingManager.UPGRADE_COSTS[defId]?.cost;
+  }
+
+  /**
+   * Get the upgrade time in sols for a building definition.
+   * Returns 0 if the building cannot be upgraded.
+   */
+  getUpgradeTime(defId: BuildingId): number {
+    return BuildingManager.UPGRADE_COSTS[defId]?.time ?? 0;
+  }
+
+  /**
+   * Check if a habitat building can be upgraded.
+   * Requires: active status, not broken, and sufficient resources.
+   */
+  canUpgradeHabitat(buildingId: string, resources: ResourceManager): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+    if (building.status !== "active") return false;
+    if (building.broken) return false;
+
+    const upgradeInfo = BuildingManager.UPGRADE_COSTS[building.definitionId];
+    if (!upgradeInfo) return false;
+
+    return resources.canAfford(upgradeInfo.cost);
+  }
+
+  /**
+   * Start upgrading a building. Deducts materials and sets upgrading status.
+   * Returns true if upgrade started successfully.
+   */
+  startUpgrade(buildingId: string, resources: ResourceManager): boolean {
+    if (!this.canUpgradeHabitat(buildingId, resources)) return false;
+
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+
+    const upgradeInfo = BuildingManager.UPGRADE_COSTS[building.definitionId];
+    if (!upgradeInfo) return false;
+
+    resources.deduct(upgradeInfo.cost);
+    building.status = "upgrading";
+    building.upgradeProgress = 0;
+    building.upgradeTargetDefId = upgradeInfo.target;
+
+    return true;
+  }
+
   toJSON() {
     return {
       buildings: Array.from(this.buildings.values()),
       nextId: this.nextId,
       constructionSpeedBonus: this.constructionSpeedBonus,
+      autoHousingBlockedShown: this.autoHousingBlockedShown,
     };
   }
 
@@ -1055,6 +1237,7 @@ export class BuildingManager {
       buildings: Building[];
       nextId: number;
       constructionSpeedBonus: number;
+      autoHousingBlockedShown?: boolean;
     },
     defs: BuildingDefinition[],
   ): BuildingManager {
@@ -1068,11 +1251,14 @@ export class BuildingManager {
         repairProgress: b.repairProgress ?? 0,
         recyclingProgress: b.recyclingProgress,
         repurposeFromDefId: b.repurposeFromDefId,
+        upgradeProgress: b.upgradeProgress,
+        upgradeTargetDefId: b.upgradeTargetDefId,
       };
       manager.buildings.set(building.id, building);
     });
     manager.nextId = data.nextId;
     manager.constructionSpeedBonus = data.constructionSpeedBonus || 0;
+    manager.autoHousingBlockedShown = data.autoHousingBlockedShown ?? false;
     return manager;
   }
 }

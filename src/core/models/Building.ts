@@ -40,7 +40,7 @@ export enum BuildingPurpose {
   Social = "social",
 }
 
-export type BuildingStatus = "pending" | "active" | "disabled" | "idle" | "recycling";
+export type BuildingStatus = "pending" | "active" | "disabled" | "idle" | "recycling" | "upgrading";
 
 export interface BuildingDefinition {
   id: BuildingId;
@@ -84,6 +84,8 @@ export interface Building {
   depositId?: string; // linked deposit for mining buildings
   recyclingProgress?: number;
   repurposeFromDefId?: BuildingId; // Set when repurposing, cleared when complete
+  upgradeProgress?: number;
+  upgradeTargetDefId?: BuildingId;
 }
 
 /**
