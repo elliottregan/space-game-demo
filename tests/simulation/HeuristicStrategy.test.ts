@@ -85,6 +85,13 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
                 mode: "normal" as const,
                 progress: 100,
               },
+              {
+                id: "b_ss",
+                definitionId: BuildingId.SCIENCE_STATION,
+                status: "active" as const,
+                mode: "normal" as const,
+                progress: 100,
+              },
             ],
             pending: [],
             definitions: [],

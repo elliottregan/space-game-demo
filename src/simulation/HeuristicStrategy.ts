@@ -873,6 +873,13 @@ export class HeuristicStrategy {
     const techSnapshot = this.api.technology.snapshot();
     const resources = this.api.resources.snapshot();
 
+    // Build Science Station for research capability (needed for any research to progress)
+    if (!this.hasBuilding(BuildingId.SCIENCE_STATION)) {
+      if (this.tryBuild(BuildingId.SCIENCE_STATION, "infrastructure")) {
+        return { category: "infrastructure", action: "build_science_station" };
+      }
+    }
+
     // Start cheapest available research if none active
     if (!techSnapshot.currentResearch && techSnapshot.available.length > 0) {
       const affordableTechs = techSnapshot.available

@@ -14,14 +14,12 @@ describe("3D Fabricator", () => {
     api.newGame(StartingConditionId.ESTABLISHED_BASE);
   });
 
-  // Helper to research a technology to completion
+  // Helper to research a technology and all prerequisites (for testing)
   function researchTech(techId: TechnologyId): void {
-    api.technology.startResearch(techId);
-    const tech = api.technology.getById(techId);
-    if (tech) {
-      for (let i = 0; i < tech.cost.sols; i++) {
-        api.game.advanceSol();
-      }
+    // Get all prerequisites in order and complete them
+    const chain = api.technology.getPrerequisiteChain(techId);
+    for (const prereq of chain) {
+      api.technology.completeResearch(prereq);
     }
   }
 
