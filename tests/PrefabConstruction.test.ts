@@ -3,6 +3,10 @@ import { TechnologyId } from "../src/core/models/Technology";
 import { TECHNOLOGIES } from "../src/core/data/technologies";
 import { BuildingId } from "../src/core/models/Building";
 import type { Building, BuildingStatus } from "../src/core/models/Building";
+import { BuildingManager } from "../src/core/systems/BuildingManager";
+import { ResourceManager } from "../src/core/systems/ResourceManager";
+import { TechnologyTree } from "../src/core/systems/TechnologyTree";
+import { BUILDINGS } from "../src/core/data/buildings";
 
 describe("Prefab Construction", () => {
   test("TechnologyId includes PREFAB_CONSTRUCTION", () => {
@@ -40,5 +44,76 @@ describe("Building Upgrade Model", () => {
     };
     expect(building.upgradeProgress).toBe(5);
     expect(building.upgradeTargetDefId).toBe(BuildingId.ADVANCED_HABITAT);
+  });
+});
+
+describe("Auto-Housing", () => {
+  test("checkAutoHousing returns empty when tech not researched", () => {
+    const buildings = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 100, food: 0, water: 0 });
+    const technology = new TechnologyTree(TECHNOLOGIES);
+
+    const events = buildings.checkAutoHousing(resources, technology, 5, 6);
+    expect(events).toEqual([]);
+  });
+
+  test("checkAutoHousing returns empty when below 85% capacity", () => {
+    const buildings = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 100, food: 0, water: 0 });
+    const technology = new TechnologyTree(TECHNOLOGIES);
+    technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+    technology.completeResearch(TechnologyId.PREFAB_CONSTRUCTION);
+
+    // 4 population, 6 capacity = 67% (below 85%)
+    const events = buildings.checkAutoHousing(resources, technology, 4, 6);
+    expect(events).toEqual([]);
+  });
+
+  test("checkAutoHousing starts habitat when at 85% capacity", () => {
+    const buildings = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 100, food: 0, water: 0 });
+    const technology = new TechnologyTree(TECHNOLOGIES);
+    technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+    technology.completeResearch(TechnologyId.PREFAB_CONSTRUCTION);
+
+    // 6 population, 7 capacity = 86% (above 85%)
+    const events = buildings.checkAutoHousing(resources, technology, 6, 7);
+
+    expect(events.length).toBe(1);
+    expect(events[0].type).toBe("AUTO_HOUSING_STARTED");
+    expect(resources.getResources().materials).toBe(50); // 100 - 50 cost
+    expect(buildings.getPendingBuildings().length).toBe(1);
+    expect(buildings.getPendingBuildings()[0].definitionId).toBe(BuildingId.HABITAT);
+  });
+
+  test("checkAutoHousing does not build when habitat already pending", () => {
+    const buildings = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 200, food: 0, water: 0 });
+    const technology = new TechnologyTree(TECHNOLOGIES);
+    technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+    technology.completeResearch(TechnologyId.PREFAB_CONSTRUCTION);
+
+    // First auto-build
+    buildings.checkAutoHousing(resources, technology, 6, 7);
+    expect(buildings.getPendingBuildings().length).toBe(1);
+
+    // Second attempt should not build another
+    const events = buildings.checkAutoHousing(resources, technology, 6, 7);
+    expect(events).toEqual([]);
+    expect(buildings.getPendingBuildings().length).toBe(1);
+  });
+
+  test("checkAutoHousing emits blocked event when insufficient materials", () => {
+    const buildings = new BuildingManager(BUILDINGS);
+    const resources = new ResourceManager({ materials: 30, food: 0, water: 0 });
+    const technology = new TechnologyTree(TECHNOLOGIES);
+    technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+    technology.completeResearch(TechnologyId.PREFAB_CONSTRUCTION);
+
+    const events = buildings.checkAutoHousing(resources, technology, 6, 7);
+
+    expect(events.length).toBe(1);
+    expect(events[0].type).toBe("AUTO_HOUSING_BLOCKED");
+    expect(events[0].severity).toBe("warning");
   });
 });

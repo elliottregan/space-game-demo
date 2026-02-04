@@ -32,6 +32,7 @@ export class BuildingManager {
   private buildings: Map<string, Building> = new Map();
   private nextId: number = 1;
   private constructionSpeedBonus: number = 0;
+  private autoHousingBlockedShown: boolean = false;
   private colonyManager: ColonyManager | null = null;
   private technologyTree: TechnologyTree | null = null;
   private workforceManager: WorkforceManager | null = null;
@@ -1013,11 +1014,97 @@ export class BuildingManager {
     return calculateAverageWorkerEfficiency(colonists, def.workerRole);
   }
 
+  /**
+   * Check if auto-housing should trigger and start building a habitat if needed.
+   * Called during the game tick when Prefab Construction technology is researched.
+   *
+   * Auto-builds a habitat when:
+   * - Prefab Construction tech is researched
+   * - Population >= 85% of housing capacity
+   * - No habitat already under construction
+   * - Can afford 50 materials
+   */
+  checkAutoHousing(
+    resources: ResourceManager,
+    technology: TechnologyTree,
+    population: number,
+    housingCapacity: number,
+  ): GameEvent[] {
+    const events: GameEvent[] = [];
+
+    // Check if tech is researched
+    if (!technology.isResearched(TechnologyId.PREFAB_CONSTRUCTION)) {
+      return events;
+    }
+
+    // Check if below 85% threshold
+    if (housingCapacity === 0 || population < housingCapacity * 0.85) {
+      this.autoHousingBlockedShown = false; // Reset warning flag
+      return events;
+    }
+
+    // Check if habitat already under construction
+    if (this.hasHabitatUnderConstruction()) {
+      return events;
+    }
+
+    // Check if can afford
+    const habitatDef = this.definitions.get(BuildingId.HABITAT);
+    if (!habitatDef || !resources.canAfford(habitatDef.cost)) {
+      if (!this.autoHousingBlockedShown) {
+        this.autoHousingBlockedShown = true;
+        events.push({
+          type: "AUTO_HOUSING_BLOCKED",
+          severity: "warning",
+          message: "Housing needed but insufficient materials for auto-construction",
+        });
+      }
+      return events;
+    }
+
+    // Build the habitat
+    resources.deduct(habitatDef.cost);
+    const building: Building = {
+      id: `building_${this.nextId++}`,
+      definitionId: BuildingId.HABITAT,
+      status: "pending",
+      constructionProgress: 0,
+      assignedWorkers: [],
+      mode: "normal",
+      broken: false,
+      repairProgress: 0,
+    };
+    this.buildings.set(building.id, building);
+
+    this.autoHousingBlockedShown = false; // Reset warning flag on success
+    events.push({
+      type: "AUTO_HOUSING_STARTED",
+      severity: "info",
+      message: "Prefab habitat construction started automatically",
+      buildingId: building.id,
+    });
+
+    return events;
+  }
+
+  /**
+   * Check if there's already a habitat under construction.
+   */
+  private hasHabitatUnderConstruction(): boolean {
+    for (const building of this.buildings.values()) {
+      if (building.definitionId === BuildingId.HABITAT && building.status === "pending") {
+        return true;
+      }
+    }
+    return false;
+  }
+
   toJSON() {
     return {
       buildings: Array.from(this.buildings.values()),
       nextId: this.nextId,
       constructionSpeedBonus: this.constructionSpeedBonus,
+      autoHousingBlockedShown: this.autoHousingBlockedShown,
     };
   }
 
@@ -1026,6 +1113,7 @@ export class BuildingManager {
       buildings: Building[];
       nextId: number;
       constructionSpeedBonus: number;
+      autoHousingBlockedShown?: boolean;
     },
     defs: BuildingDefinition[],
   ): BuildingManager {
@@ -1044,6 +1132,7 @@ export class BuildingManager {
     });
     manager.nextId = data.nextId;
     manager.constructionSpeedBonus = data.constructionSpeedBonus || 0;
+    manager.autoHousingBlockedShown = data.autoHousingBlockedShown ?? false;
     return manager;
   }
 }
