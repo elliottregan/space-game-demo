@@ -55,7 +55,7 @@ describe("simulation/types", () => {
         victoryType: "deep_space_mining_charter",
         finalSol: 500,
         peakPopulation: 85,
-        techsResearched: ["advanced_materials", "robotics", "asteroid_mining_platform"],
+        techsResearched: ["habitat_fabrication", "robotics", "asteroid_mining_platform"],
         buildingsBuilt: { research_lab: 2, factory: 3 },
       };
 

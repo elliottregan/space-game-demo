@@ -179,7 +179,7 @@ describe("Job Assignment", () => {
   describe("getWorkerEfficiency", () => {
     it("returns 1 for building without worker slots", () => {
       // Automated Factory is truly automated with no worker slots
-      gameState.technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+      gameState.technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
       gameState.technology.completeResearch(TechnologyId.ROBOTICS);
 
       const factory = gameState.buildings.startBuilding(

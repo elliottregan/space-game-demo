@@ -15,7 +15,7 @@ describe("Distributed Oxygen System", () => {
       gameState.resources.add({ materials: 1000 });
 
       // Research needed techs
-      gameState.technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+      gameState.technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
       gameState.technology.completeResearch(TechnologyId.ROBOTICS);
 
       // Build factory
@@ -48,7 +48,7 @@ describe("Distributed Oxygen System", () => {
       gameState.resources.add({ materials: 1000 });
 
       // Research needed tech for automated factory
-      gameState.technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+      gameState.technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
       gameState.technology.completeResearch(TechnologyId.ROBOTICS);
 
       // Build automated factory (truly automated)
@@ -139,8 +139,8 @@ describe("Distributed Oxygen System", () => {
       // Starting contribution is 7
       gameState.resources.add({ materials: 500 });
 
-      // Research advanced_materials for research_lab
-      gameState.technology.completeResearch(TechnologyId.ADVANCED_MATERIALS);
+      // Research habitat_fabrication for research_lab
+      gameState.technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
 
       gameState.buildings.startBuilding(
         BuildingId.HABITAT,

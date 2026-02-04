@@ -662,7 +662,7 @@ export class HeuristicStrategy {
       return BuildingId.AUTOMATED_FACTORY;
     }
 
-    // 3D Fabricator: 7/sol, requires ADVANCED_MATERIALS
+    // 3D Fabricator: 7/sol, requires HABITAT_FABRICATION
     if (this.tryBuild(BuildingId.FABRICATOR_3D, "infrastructure", false)) {
       return BuildingId.FABRICATOR_3D;
     }

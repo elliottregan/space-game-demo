@@ -45,7 +45,7 @@ describe("3D Fabricator", () => {
     });
 
     it("can build after researching Advanced Materials", () => {
-      researchTech(TechnologyId.ADVANCED_MATERIALS);
+      researchTech(TechnologyId.HABITAT_FABRICATION);
 
       const result = api.buildings.canBuild(BuildingId.FABRICATOR_3D);
       expect(result.allowed).toBe(true);
@@ -100,7 +100,7 @@ describe("3D Fabricator", () => {
   describe("Production behavior", () => {
     it("produces materials when staffed", () => {
       // Research required tech
-      researchTech(TechnologyId.ADVANCED_MATERIALS);
+      researchTech(TechnologyId.HABITAT_FABRICATION);
 
       // Add extra resources to ensure we can build
       api.resources.snapshot(); // Just to verify API is working
@@ -120,7 +120,7 @@ describe("3D Fabricator", () => {
     });
 
     it("building adds to colony oxygen contribution", () => {
-      researchTech(TechnologyId.ADVANCED_MATERIALS);
+      researchTech(TechnologyId.HABITAT_FABRICATION);
 
       const productionBefore = api.airQuality.snapshot().production;
 
@@ -135,7 +135,7 @@ describe("3D Fabricator", () => {
 
   describe("Resource consumption", () => {
     it("deducts 90 materials when built", () => {
-      researchTech(TechnologyId.ADVANCED_MATERIALS);
+      researchTech(TechnologyId.HABITAT_FABRICATION);
 
       const materialsBefore = api.resources.snapshot().current.materials ?? 0;
       const def = api.buildings.getDefinition(BuildingId.FABRICATOR_3D);

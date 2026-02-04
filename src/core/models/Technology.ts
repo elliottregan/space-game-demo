@@ -12,7 +12,7 @@ export type UnlockId = BuildingId | SpecialUnlockId;
 export enum TechnologyId {
   HYDROPONICS = "hydroponics",
   WATER_RECYCLING = "water_recycling",
-  ADVANCED_MATERIALS = "advanced_materials",
+  HABITAT_FABRICATION = "habitat_fabrication",
   ROBOTICS = "robotics",
   ASTEROID_MINING = "asteroid_mining",
   NUCLEAR_FISSION = "nuclear_fission",

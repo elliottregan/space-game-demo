@@ -102,7 +102,7 @@ describe("GameAPI", () => {
     });
 
     it("should check research prerequisites", () => {
-      // robotics requires advanced_materials
+      // robotics requires habitat_fabrication
       const check = api.technology.canResearch(TechnologyId.ROBOTICS);
       expect(check.allowed).toBe(false);
       expect(check.reason).toContain("prerequisite");
