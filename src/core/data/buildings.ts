@@ -312,15 +312,15 @@ export const BUILDINGS: BuildingDefinition[] = [
 
   // Victory Megastructures (unlocked by capstone projects)
   {
-    id: BuildingId.GENERATION_SHIP,
-    name: "Generation Ship",
+    id: BuildingId.ASTEROID_MINING_PLATFORM,
+    name: "Asteroid Mining Platform",
     description:
-      "A massive interstellar vessel capable of carrying colonists to distant stars. Completing this proves Mars can seed the galaxy.",
+      "A massive orbital station that captures and processes asteroids. Infinite resources mean infinite profit and permanent corporate dominance.",
     cost: { materials: 600 },
     constructionTime: 50,
     airContribution: 10,
     purpose: BuildingPurpose.Industrial,
-    requiredProject: ProjectId.PLANETARY_ACQUISITION,
+    requiredProject: ProjectId.DEEP_SPACE_MINING_CHARTER,
     isVictoryBuilding: true,
   },
   {
@@ -339,12 +339,12 @@ export const BUILDINGS: BuildingDefinition[] = [
     id: BuildingId.SPACE_ELEVATOR,
     name: "Space Elevator",
     description:
-      "A tether to orbit enabling cheap access to space. The ultimate infrastructure for economic dominance.",
+      "A tether to orbit enabling cheap, mass transportation between Earth and Mars. The gateway for humanity's great migration.",
     cost: { materials: 500 },
     constructionTime: 40,
     airContribution: 5,
     purpose: BuildingPurpose.Industrial,
-    requiredProject: ProjectId.RETURN_MISSION,
+    requiredProject: ProjectId.EARTH_RELIEF_COMPACT,
     isVictoryBuilding: true,
   },
 ];

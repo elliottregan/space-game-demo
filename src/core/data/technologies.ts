@@ -1,5 +1,5 @@
 import { BuildingId } from "../models/Building";
-import { SpecialUnlockId, type Technology, TechnologyId } from "../models/Technology";
+import { type Technology, TechnologyId } from "../models/Technology";
 
 export const TECHNOLOGIES: Technology[] = [
   // EARLY TIER (Sol 30-90)
@@ -111,15 +111,12 @@ export const TECHNOLOGIES: Technology[] = [
     unlocks: [],
   },
   {
-    id: TechnologyId.GENERATION_SHIP,
-    name: "Generation Ship",
-    description: "Massive vessel for interstellar colonization - VICTORY!",
-    prerequisites: [
-      TechnologyId.FUSION_DRIVE,
-      TechnologyId.CRYOSLEEP,
-      TechnologyId.CLOSED_ECOSYSTEM,
-    ],
-    cost: { sols: 320, resources: { materials: 500 } },
-    unlocks: [SpecialUnlockId.ARC_SHIP],
+    id: TechnologyId.ASTEROID_MINING_PLATFORM,
+    name: "Asteroid Mining Platform",
+    description:
+      "Orbital station for capturing and processing asteroids - enables resource dominance",
+    prerequisites: [TechnologyId.ASTEROID_MINING, TechnologyId.ROBOTICS],
+    cost: { sols: 280, resources: { materials: 400 } },
+    unlocks: [],
   },
 ];

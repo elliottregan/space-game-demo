@@ -9,7 +9,7 @@ function createVictoryResult(overrides: Partial<RunResult> = {}): RunResult {
   return {
     seed: Math.floor(Math.random() * 100000),
     outcome: "victory",
-    victoryType: "return_mission",
+    victoryType: "earth_relief_compact",
     finalSol: 250,
     peakPopulation: 100,
     techsResearched: [TechnologyId.HYDROPONICS],
@@ -133,12 +133,12 @@ describe("MetricsCollector", () => {
       });
 
       it("tracks victory breakdown by type", () => {
-        collector.recordRun(createVictoryResult({ victoryType: "return_mission" }));
-        collector.recordRun(createVictoryResult({ victoryType: "return_mission" }));
+        collector.recordRun(createVictoryResult({ victoryType: "earth_relief_compact" }));
+        collector.recordRun(createVictoryResult({ victoryType: "earth_relief_compact" }));
         collector.recordRun(createVictoryResult({ victoryType: "declaration_of_sovereignty" }));
 
         const stats = collector.getStats();
-        expect(stats.victoryBreakdown.return_mission).toBe(2);
+        expect(stats.victoryBreakdown.earth_relief_compact).toBe(2);
         expect(stats.victoryBreakdown.declaration_of_sovereignty).toBe(1);
       });
     });
@@ -242,8 +242,12 @@ describe("MetricsCollector", () => {
     it("prints summary with victories and defeats", () => {
       const consoleSpy = spyOn(console, "log");
 
-      collector.recordRun(createVictoryResult({ finalSol: 200, victoryType: "return_mission" }));
-      collector.recordRun(createVictoryResult({ finalSol: 300, victoryType: "return_mission" }));
+      collector.recordRun(
+        createVictoryResult({ finalSol: 200, victoryType: "earth_relief_compact" }),
+      );
+      collector.recordRun(
+        createVictoryResult({ finalSol: 300, victoryType: "earth_relief_compact" }),
+      );
       collector.recordRun(createDefeatResult({ defeatReason: "starvation" }));
 
       collector.printSummary();
@@ -284,8 +288,8 @@ describe("MetricsCollector", () => {
     it("handles all victories (no defeat breakdown)", () => {
       const consoleSpy = spyOn(console, "log");
 
-      collector.recordRun(createVictoryResult({ victoryType: "return_mission" }));
-      collector.recordRun(createVictoryResult({ victoryType: "return_mission" }));
+      collector.recordRun(createVictoryResult({ victoryType: "earth_relief_compact" }));
+      collector.recordRun(createVictoryResult({ victoryType: "earth_relief_compact" }));
 
       collector.printSummary();
 

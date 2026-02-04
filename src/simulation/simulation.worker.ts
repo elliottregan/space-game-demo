@@ -179,21 +179,21 @@ function detectCohesionCrisis(
  * Victory is achieved by building megastructures after completing capstone projects.
  */
 function mapVictoryType(reason?: string): VictoryType {
-  if (!reason) return "return_mission"; // Default fallback
+  if (!reason) return "earth_relief_compact"; // Default fallback
 
   const lowerReason = reason.toLowerCase();
 
   // Capstone project victories (legacy - before megastructures were required)
-  if (lowerReason.includes("return mission")) return "return_mission";
+  if (lowerReason.includes("earth relief compact")) return "earth_relief_compact";
   if (lowerReason.includes("declaration of sovereignty")) return "declaration_of_sovereignty";
-  if (lowerReason.includes("planetary acquisition")) return "planetary_acquisition";
+  if (lowerReason.includes("deep space mining charter")) return "deep_space_mining_charter";
 
   // Megastructure victories (new victory condition)
-  if (lowerReason.includes("space elevator")) return "return_mission";
+  if (lowerReason.includes("space elevator")) return "earth_relief_compact";
   if (lowerReason.includes("united mars station")) return "declaration_of_sovereignty";
-  if (lowerReason.includes("generation ship")) return "planetary_acquisition";
+  if (lowerReason.includes("asteroid mining platform")) return "deep_space_mining_charter";
 
-  return "return_mission"; // Default fallback
+  return "earth_relief_compact"; // Default fallback
 }
 
 /**

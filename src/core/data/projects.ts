@@ -22,7 +22,8 @@ export const PROJECTS: Project[] = [
   {
     id: ProjectId.EARTH_MEMORIAL,
     name: "Earth Memorial",
-    description: "Build a memorial to honor our home planet.",
+    description:
+      "Build a memorial honoring the courage of those who left everything behind to start anew on Mars.",
     type: NPCFaction.EarthLoyalists,
     proposalCost: { materials: 80 },
     requiredSupport: 0.2,
@@ -35,7 +36,8 @@ export const PROJECTS: Project[] = [
   {
     id: ProjectId.HERITAGE_ARCHIVE,
     name: "Heritage Archive",
-    description: "Preserve Earth cultures and traditions.",
+    description:
+      "Preserve Earth's diverse cultures and traditions, helping immigrants feel at home on Mars.",
     type: NPCFaction.EarthLoyalists,
     proposalCost: { materials: 100 },
     requiredSupport: 0.35,
@@ -93,51 +95,49 @@ export const PROJECTS: Project[] = [
 
   // Corporate Interests projects
   {
-    id: ProjectId.AI_GOVERNANCE,
-    name: "AI-Assisted Governance",
-    description: "Implement AI systems to help with colony decision-making.",
+    id: ProjectId.VENTURE_CAPITAL_INITIATIVE,
+    name: "Venture Capital Initiative",
+    description: "Establish investment channels to attract Earth capital for Martian expansion.",
+    type: NPCFaction.CorporateInterests,
+    proposalCost: { materials: 80 },
+    requiredSupport: 0.2,
+    effects: {
+      materialsBonus: 2,
+      supporterConvictionBoost: 0.1,
+    },
+  },
+  {
+    id: ProjectId.ORBITAL_INFRASTRUCTURE,
+    name: "Orbital Infrastructure",
+    description: "Build launch facilities and orbital stations to enable space-based operations.",
     type: NPCFaction.CorporateInterests,
     proposalCost: { materials: 120 },
     requiredSupport: 0.35,
     effects: {
-      unlockTech: "advanced_ai",
+      unlockBuilding: "launch_facility",
       productionBonus: 0.1,
       supporterConvictionBoost: 0.08,
     },
   },
   {
-    id: ProjectId.MINING_CONCESSION,
-    name: "Mining Concession",
-    description: "Grant exclusive extraction rights to corporate partners.",
+    id: ProjectId.ASTEROID_SURVEY_PROGRAM,
+    name: "Asteroid Survey Program",
+    description: "Map and catalog near-Mars asteroids for their mineral wealth.",
     type: NPCFaction.CorporateInterests,
     proposalCost: { materials: 100 },
     requiredSupport: 0.35,
     effects: {
-      unlockBuilding: "efficient_mine",
-      materialsBonus: 2,
+      unlockTech: "asteroid_prospecting",
       supporterConvictionBoost: 0.05,
-    },
-  },
-  {
-    id: ProjectId.LABOR_EFFICIENCY,
-    name: "Labor Efficiency Program",
-    description: "Controversial productivity initiative that increases output.",
-    type: NPCFaction.CorporateInterests,
-    proposalCost: { materials: 80 },
-    requiredSupport: 0.2,
-    effects: {
-      productionBonus: 0.15,
-      supporterConvictionBoost: 0.1,
-      colonyMoraleBoost: -0.05, // Controversial - slight morale penalty
     },
   },
 
   // Capstone Victory Projects
   {
-    id: ProjectId.RETURN_MISSION,
-    name: "Return Mission",
+    id: ProjectId.EARTH_RELIEF_COMPACT,
+    name: "Earth Relief Compact",
     description:
-      "Launch a crewed mission back to Earth, proving Mars can sustain true interplanetary civilization.",
+      "Sign a formal treaty committing Mars to relieve Earth's overpopulation crisis through sustained mass immigration.",
     type: NPCFaction.EarthLoyalists,
     proposalCost: {},
     requiredSupport: 0,
@@ -178,20 +178,21 @@ export const PROJECTS: Project[] = [
     effects: { unlockBuilding: BuildingId.UNITED_MARS_STATION },
   },
   {
-    id: ProjectId.PLANETARY_ACQUISITION,
-    name: "Planetary Acquisition",
-    description: "Take the colony public. Shareholders on Earth now own Mars.",
+    id: ProjectId.DEEP_SPACE_MINING_CHARTER,
+    name: "Deep Space Mining Charter",
+    description:
+      "Secure an official charter granting corporations exclusive rights to deep space mining operations.",
     type: NPCFaction.CorporateInterests,
     proposalCost: {},
     requiredSupport: 0,
     isCapstone: true,
     prerequisites: [
-      ProjectId.LABOR_EFFICIENCY,
-      ProjectId.MINING_CONCESSION,
-      ProjectId.AI_GOVERNANCE,
+      ProjectId.VENTURE_CAPITAL_INITIATIVE,
+      ProjectId.ORBITAL_INFRASTRUCTURE,
+      ProjectId.ASTEROID_SURVEY_PROGRAM,
     ],
     requiredCouncilSupport: 0.65,
-    effects: { unlockBuilding: BuildingId.GENERATION_SHIP },
+    effects: { unlockBuilding: BuildingId.ASTEROID_MINING_PLATFORM },
   },
 ];
 

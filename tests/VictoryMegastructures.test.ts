@@ -10,9 +10,9 @@ describe("Victory Megastructures Integration", () => {
     // Give plenty of resources
     state.resources.add({ materials: 1000 });
 
-    // Try to build Generation Ship without completing project
+    // Try to build Asteroid Mining Platform without completing project
     const canBuild = state.buildings.canBuild(
-      BuildingId.GENERATION_SHIP,
+      BuildingId.ASTEROID_MINING_PLATFORM,
       state.resources,
       state.technology,
     );
@@ -27,12 +27,12 @@ describe("Victory Megastructures Integration", () => {
     state.resources.add({ materials: 1000 });
 
     // Complete the capstone project
-    // Generation Ship is unlocked by Corporate Interests' PLANETARY_ACQUISITION
-    state.ideology.completeProject(ProjectId.PLANETARY_ACQUISITION);
+    // Asteroid Mining Platform is unlocked by Corporate Interests' DEEP_SPACE_MINING_CHARTER
+    state.ideology.completeProject(ProjectId.DEEP_SPACE_MINING_CHARTER);
 
     // Now should be able to build
     const canBuild = state.buildings.canBuild(
-      BuildingId.GENERATION_SHIP,
+      BuildingId.ASTEROID_MINING_PLATFORM,
       state.resources,
       state.technology,
     );
@@ -44,21 +44,21 @@ describe("Victory Megastructures Integration", () => {
     const state = new GameState();
 
     // Setup: complete project and give resources
-    // Generation Ship is now unlocked by Corporate Interests' PLANETARY_ACQUISITION
-    state.ideology.completeProject(ProjectId.PLANETARY_ACQUISITION);
+    // Asteroid Mining Platform is unlocked by Corporate Interests' DEEP_SPACE_MINING_CHARTER
+    state.ideology.completeProject(ProjectId.DEEP_SPACE_MINING_CHARTER);
     state.resources.add({ materials: 1000 });
 
     // Start building
     const building = state.buildings.startBuilding(
-      BuildingId.GENERATION_SHIP,
+      BuildingId.ASTEROID_MINING_PLATFORM,
       state.resources,
       state.technology,
     );
     expect(building).not.toBeNull();
 
-    // Fast-forward construction (40 sols)
+    // Fast-forward construction (50 sols)
     let victoryEvent = null;
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 60; i++) {
       const events = state.tick();
       const victory = events.find((e) => e.type === "VICTORY");
       if (victory) {
@@ -69,22 +69,22 @@ describe("Victory Megastructures Integration", () => {
 
     expect(victoryEvent).not.toBeNull();
     expect(state.victory.getState().status).toBe("victory");
-    expect(state.victory.getState().reason).toContain("Generation Ship");
+    expect(state.victory.getState().reason).toContain("Asteroid Mining Platform");
   });
 
   it("should include building name in victory message", () => {
     const state = new GameState();
 
     // Setup for Space Elevator
-    // Space Elevator is now unlocked by Earth Loyalists' RETURN_MISSION
-    state.ideology.completeProject(ProjectId.RETURN_MISSION);
+    // Space Elevator is unlocked by Earth Loyalists' EARTH_RELIEF_COMPACT
+    state.ideology.completeProject(ProjectId.EARTH_RELIEF_COMPACT);
     state.resources.add({ materials: 500 });
 
     // Start building
     state.buildings.startBuilding(BuildingId.SPACE_ELEVATOR, state.resources, state.technology);
 
-    // Fast-forward construction (30 sols)
-    for (let i = 0; i < 35; i++) {
+    // Fast-forward construction (40 sols)
+    for (let i = 0; i < 45; i++) {
       state.tick();
     }
 

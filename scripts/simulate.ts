@@ -263,9 +263,9 @@ function runSingleGame(seed: number): RunResult {
   const outcome = victoryState.status === "victory" ? "victory" : "defeat";
 
   let victoryType:
-    | "return_mission"
+    | "earth_relief_compact"
     | "declaration_of_sovereignty"
-    | "planetary_acquisition"
+    | "deep_space_mining_charter"
     | undefined;
   let defeatReason:
     | "starvation"
@@ -277,15 +277,16 @@ function runSingleGame(seed: number): RunResult {
   if (outcome === "victory") {
     const reason = victoryState.reason?.toLowerCase() ?? "";
     // Megastructure victories
-    if (reason.includes("space elevator")) victoryType = "return_mission";
+    if (reason.includes("space elevator")) victoryType = "earth_relief_compact";
     else if (reason.includes("united mars station")) victoryType = "declaration_of_sovereignty";
-    else if (reason.includes("generation ship")) victoryType = "planetary_acquisition";
+    else if (reason.includes("asteroid mining platform")) victoryType = "deep_space_mining_charter";
     // Capstone project victories (legacy)
-    else if (reason.includes("return mission")) victoryType = "return_mission";
+    else if (reason.includes("earth relief compact")) victoryType = "earth_relief_compact";
     else if (reason.includes("declaration of sovereignty"))
       victoryType = "declaration_of_sovereignty";
-    else if (reason.includes("planetary acquisition")) victoryType = "planetary_acquisition";
-    else victoryType = "return_mission"; // Default fallback
+    else if (reason.includes("deep space mining charter"))
+      victoryType = "deep_space_mining_charter";
+    else victoryType = "earth_relief_compact"; // Default fallback
   } else {
     const reason = victoryState.reason?.toLowerCase() ?? "";
     if (reason.includes("food") || reason.includes("starv")) defeatReason = "starvation";
@@ -2040,7 +2041,9 @@ function drawStackedAsciiHistogram(
   if (data.length === 0) return;
 
   // Calculate max total for scaling
-  const maxTotal = Math.max(...data.map((d) => Object.values(d.categories).reduce((a, b) => a + b, 0)));
+  const maxTotal = Math.max(
+    ...data.map((d) => Object.values(d.categories).reduce((a, b) => a + b, 0)),
+  );
   const maxLabelWidth = Math.max(...data.map((d) => d.label.length));
 
   // Collect all categories in consistent order
@@ -2105,7 +2108,10 @@ function analyzeActionsPerSol(results: RunResult[]): void {
 
   // Track actions over time (by sol bucket)
   const SOL_BUCKET_SIZE = 10;
-  const actionsOverTime = new Map<number, { total: number; runsActive: number; byCategory: Record<string, number> }>();
+  const actionsOverTime = new Map<
+    number,
+    { total: number; runsActive: number; byCategory: Record<string, number> }
+  >();
 
   for (const result of results) {
     if (!result.actionsExecuted || result.actionsExecuted.length === 0) continue;
@@ -2128,7 +2134,10 @@ function analyzeActionsPerSol(results: RunResult[]): void {
     }
 
     // Count actions per sol bucket for this run (with category breakdown)
-    const actionsByBucket = new Map<number, { total: number; byCategory: Record<string, number> }>();
+    const actionsByBucket = new Map<
+      number,
+      { total: number; byCategory: Record<string, number> }
+    >();
     for (const action of result.actionsExecuted) {
       if (action.category === "idle") continue;
       const bucket = Math.floor(action.sol / SOL_BUCKET_SIZE) * SOL_BUCKET_SIZE;
@@ -2155,8 +2164,7 @@ function analyzeActionsPerSol(results: RunResult[]): void {
     return;
   }
 
-  const avgActionsPerSol =
-    actionsPerSolList.reduce((a, b) => a + b, 0) / actionsPerSolList.length;
+  const avgActionsPerSol = actionsPerSolList.reduce((a, b) => a + b, 0) / actionsPerSolList.length;
   const minActionsPerSol = Math.min(...actionsPerSolList);
   const maxActionsPerSol = Math.max(...actionsPerSolList);
 
@@ -2181,9 +2189,14 @@ function analyzeActionsPerSol(results: RunResult[]): void {
   // Actions Over Time histogram (avg actions per sol bucket, with category breakdown)
   // Show first 200 sols in detail, then summarize the rest
   const MAX_DISPLAY_SOL = 200;
-  output("\n  Actions Over Time (avg per " + SOL_BUCKET_SIZE + "-sol period, sols 0-" + (MAX_DISPLAY_SOL - 1) + "):");
-  const allTimelineData = Array.from(actionsOverTime.entries())
-    .sort((a, b) => a[0] - b[0]);
+  output(
+    "\n  Actions Over Time (avg per " +
+      SOL_BUCKET_SIZE +
+      "-sol period, sols 0-" +
+      (MAX_DISPLAY_SOL - 1) +
+      "):",
+  );
+  const allTimelineData = Array.from(actionsOverTime.entries()).sort((a, b) => a[0] - b[0]);
 
   const stackedTimelineData = allTimelineData
     .filter(([bucket]) => bucket < MAX_DISPLAY_SOL)
@@ -2206,7 +2219,9 @@ function analyzeActionsPerSol(results: RunResult[]): void {
     const totalLaterRuns = laterData.reduce((sum, [, d]) => sum + d.runsActive, 0);
     const avgLater = totalLaterRuns > 0 ? totalLaterActions / totalLaterRuns : 0;
     const maxSol = Math.max(...laterData.map(([bucket]) => bucket + SOL_BUCKET_SIZE - 1));
-    output(`\n  Sols ${MAX_DISPLAY_SOL}-${maxSol}: avg ${avgLater.toFixed(2)} actions per ${SOL_BUCKET_SIZE}-sol period`);
+    output(
+      `\n  Sols ${MAX_DISPLAY_SOL}-${maxSol}: avg ${avgLater.toFixed(2)} actions per ${SOL_BUCKET_SIZE}-sol period`,
+    );
   }
 
   // Distribution histogram

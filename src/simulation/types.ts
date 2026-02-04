@@ -17,11 +17,14 @@ export interface SimulationConfig {
  * Victory condition types.
  * Victory is achieved by completing a faction capstone project, then building
  * the corresponding megastructure.
- * - return_mission: Earth Loyalists capstone → Space Elevator
+ * - earth_relief_compact: Earth Loyalists capstone → Space Elevator
  * - declaration_of_sovereignty: Mars Independence capstone → United Mars Station
- * - planetary_acquisition: Corporate Interests capstone → Generation Ship
+ * - deep_space_mining_charter: Corporate Interests capstone → Asteroid Mining Platform
  */
-export type VictoryType = "return_mission" | "declaration_of_sovereignty" | "planetary_acquisition";
+export type VictoryType =
+  | "earth_relief_compact"
+  | "declaration_of_sovereignty"
+  | "deep_space_mining_charter";
 
 /**
  * Defeat condition types.

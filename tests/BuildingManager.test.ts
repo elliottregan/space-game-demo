@@ -12,29 +12,29 @@ import { ProjectId } from "../src/core/models/NPCInfluence";
 describe("Project-gated buildings", () => {
   test("should not allow building victory buildings without completed project", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ food: 0, water: 0, materials: 500, power: 200 });
+    const resources = new ResourceManager({ food: 0, water: 0, materials: 700, power: 200 });
     const technology = new TechnologyTree(TECHNOLOGIES);
     const ideology = new IdeologyManager();
 
     manager.setIdeologyManager(ideology);
 
-    // Generation Ship requires PLANETARY_ACQUISITION project (Corporate Interests)
-    const canBuild = manager.canBuild(BuildingId.GENERATION_SHIP, resources, technology);
+    // Asteroid Mining Platform requires DEEP_SPACE_MINING_CHARTER project (Corporate Interests)
+    const canBuild = manager.canBuild(BuildingId.ASTEROID_MINING_PLATFORM, resources, technology);
     expect(canBuild).toBe(false);
   });
 
   test("should allow building victory buildings after project is completed", () => {
     const manager = new BuildingManager(BUILDINGS);
-    const resources = new ResourceManager({ food: 0, water: 0, materials: 500, power: 200 });
+    const resources = new ResourceManager({ food: 0, water: 0, materials: 700, power: 200 });
     const technology = new TechnologyTree(TECHNOLOGIES);
     const ideology = new IdeologyManager();
 
     manager.setIdeologyManager(ideology);
 
     // Complete the required project
-    ideology.completeProject(ProjectId.PLANETARY_ACQUISITION);
+    ideology.completeProject(ProjectId.DEEP_SPACE_MINING_CHARTER);
 
-    const canBuild = manager.canBuild(BuildingId.GENERATION_SHIP, resources, technology);
+    const canBuild = manager.canBuild(BuildingId.ASTEROID_MINING_PLATFORM, resources, technology);
     expect(canBuild).toBe(true);
   });
 });

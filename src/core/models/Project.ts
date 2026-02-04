@@ -14,10 +14,11 @@ export enum ProjectId {
   // Mars Independence
   UNIVERSAL_HOUSING = "universal_housing",
   HEALTHCARE_EXPANSION = "healthcare_expansion",
+  DEMOCRATIC_ASSEMBLY = "democratic_assembly",
   // Corporate Interests
-  AI_GOVERNANCE = "ai_governance",
-  MINING_CONCESSION = "mining_concession",
-  LABOR_EFFICIENCY = "labor_efficiency",
+  VENTURE_CAPITAL_INITIATIVE = "venture_capital_initiative",
+  ORBITAL_INFRASTRUCTURE = "orbital_infrastructure",
+  ASTEROID_SURVEY_PROGRAM = "asteroid_survey_program",
 }
 
 /**

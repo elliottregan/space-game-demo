@@ -11,11 +11,11 @@ describe("VictoryManager", () => {
   });
 
   describe("checkCapstoneVictory", () => {
-    test("returns capstone_completed event for Return Mission capstone", () => {
-      const result = manager.checkCapstoneVictory(ProjectId.RETURN_MISSION);
+    test("returns capstone_completed event for Earth Relief Compact capstone", () => {
+      const result = manager.checkCapstoneVictory(ProjectId.EARTH_RELIEF_COMPACT);
       expect(result).not.toBeNull();
       expect(result?.type).toBe("capstone_completed");
-      expect(result?.message).toContain("Return Mission");
+      expect(result?.message).toContain("Earth Relief Compact");
       // Capstones no longer trigger victory - they unlock megastructures
       expect(manager.getState().status).toBe("playing");
     });
@@ -28,11 +28,11 @@ describe("VictoryManager", () => {
       expect(manager.getState().status).toBe("playing");
     });
 
-    test("returns capstone_completed event for Planetary Acquisition capstone", () => {
-      const result = manager.checkCapstoneVictory(ProjectId.PLANETARY_ACQUISITION);
+    test("returns capstone_completed event for Deep Space Mining Charter capstone", () => {
+      const result = manager.checkCapstoneVictory(ProjectId.DEEP_SPACE_MINING_CHARTER);
       expect(result).not.toBeNull();
       expect(result?.type).toBe("capstone_completed");
-      expect(result?.message).toContain("Planetary Acquisition");
+      expect(result?.message).toContain("Deep Space Mining Charter");
       expect(manager.getState().status).toBe("playing");
     });
 
@@ -44,7 +44,7 @@ describe("VictoryManager", () => {
 
   describe("checkBuildingVictory", () => {
     test("should trigger victory when victory building completes", () => {
-      const event = manager.checkBuildingVictory(BuildingId.GENERATION_SHIP);
+      const event = manager.checkBuildingVictory(BuildingId.ASTEROID_MINING_PLATFORM);
 
       expect(event).not.toBeNull();
       expect(event?.type).toBe("VICTORY");

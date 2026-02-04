@@ -30,16 +30,16 @@ const RESOURCE_EXTRACTORS: Record<BuildingId, DepositType> = {
 const FACTION_MEGASTRUCTURES: Record<NPCFaction, BuildingId> = {
   [NPCFaction.EarthLoyalists]: BuildingId.SPACE_ELEVATOR,
   [NPCFaction.MarsIndependence]: BuildingId.UNITED_MARS_STATION,
-  [NPCFaction.CorporateInterests]: BuildingId.GENERATION_SHIP,
+  [NPCFaction.CorporateInterests]: BuildingId.ASTEROID_MINING_PLATFORM,
 };
 
 /**
  * Mapping from faction to their capstone project.
  */
 const FACTION_CAPSTONES: Record<NPCFaction, ProjectId> = {
-  [NPCFaction.EarthLoyalists]: ProjectId.RETURN_MISSION,
+  [NPCFaction.EarthLoyalists]: ProjectId.EARTH_RELIEF_COMPACT,
   [NPCFaction.MarsIndependence]: ProjectId.DECLARATION_OF_SOVEREIGNTY,
-  [NPCFaction.CorporateInterests]: ProjectId.PLANETARY_ACQUISITION,
+  [NPCFaction.CorporateInterests]: ProjectId.DEEP_SPACE_MINING_CHARTER,
 };
 
 /**

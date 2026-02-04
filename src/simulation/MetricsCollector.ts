@@ -13,9 +13,9 @@ const DEFEAT_REASON_NAMES: Record<string, string> = {
 
 /** Display names for victory types. */
 const VICTORY_TYPE_NAMES: Record<string, string> = {
-  return_mission: "Return Mission (Earth Loyalists)",
+  earth_relief_compact: "Earth Relief Compact (Earth Loyalists)",
   declaration_of_sovereignty: "Declaration of Sovereignty (Mars Independence)",
-  planetary_acquisition: "Planetary Acquisition (Corporate Interests)",
+  deep_space_mining_charter: "Deep Space Mining Charter (Corporate Interests)",
 };
 
 /**
@@ -219,7 +219,7 @@ export class MetricsCollector {
   }
 
   /**
-   * Format victory type for display (e.g., "generation_ship" -> "Generation Ship").
+   * Format victory type for display (e.g., "earth_relief_compact" -> "Earth Relief Compact (Earth Loyalists)").
    */
   private formatVictoryType(type: string): string {
     return VICTORY_TYPE_NAMES[type] ?? type;

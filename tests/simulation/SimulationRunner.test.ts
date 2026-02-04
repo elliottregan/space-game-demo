@@ -161,9 +161,9 @@ describe("SimulationRunner", () => {
       // If there are victories, they should be categorized
       if (stats.winRate > 0) {
         const hasCategories =
-          stats.victoryBreakdown["return_mission"] !== undefined ||
+          stats.victoryBreakdown["earth_relief_compact"] !== undefined ||
           stats.victoryBreakdown["declaration_of_sovereignty"] !== undefined ||
-          stats.victoryBreakdown["planetary_acquisition"] !== undefined;
+          stats.victoryBreakdown["deep_space_mining_charter"] !== undefined;
         expect(hasCategories).toBe(true);
       }
     });

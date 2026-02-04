@@ -48,18 +48,18 @@ describe("simulation/types", () => {
       expect(result.defeatReason).toBeUndefined();
     });
 
-    it("represents a generation ship victory", () => {
+    it("represents a deep space mining charter victory", () => {
       const result: RunResult = {
         seed: 67890,
         outcome: "victory",
-        victoryType: "generation_ship",
+        victoryType: "deep_space_mining_charter",
         finalSol: 500,
         peakPopulation: 85,
-        techsResearched: ["advanced_materials", "robotics", "generation_ship"],
+        techsResearched: ["advanced_materials", "robotics", "asteroid_mining_platform"],
         buildingsBuilt: { research_lab: 2, factory: 3 },
       };
 
-      expect(result.victoryType).toBe("generation_ship");
+      expect(result.victoryType).toBe("deep_space_mining_charter");
     });
 
     it("represents a defeat result from starvation", () => {
@@ -120,8 +120,8 @@ describe("simulation/types", () => {
           population_collapse: 50,
         },
         victoryBreakdown: {
-          population: 650,
-          generation_ship: 70,
+          earth_relief_compact: 650,
+          deep_space_mining_charter: 70,
         },
         fastestWin: 180,
         slowestWin: 450,
@@ -130,7 +130,7 @@ describe("simulation/types", () => {
       expect(stats.totalRuns).toBe(1000);
       expect(stats.winRate).toBe(0.72);
       expect(stats.defeatBreakdown.starvation).toBe(150);
-      expect(stats.victoryBreakdown.population).toBe(650);
+      expect(stats.victoryBreakdown.earth_relief_compact).toBe(650);
     });
 
     it("handles zero wins correctly", () => {
@@ -163,7 +163,7 @@ describe("simulation/types", () => {
           starvation: 10,
         },
         victoryBreakdown: {
-          population: 40,
+          earth_relief_compact: 40,
         },
         fastestWin: 250,
         slowestWin: 400,
@@ -171,23 +171,23 @@ describe("simulation/types", () => {
 
       expect(stats.defeatBreakdown.starvation).toBe(10);
       expect(stats.defeatBreakdown.suffocation).toBeUndefined();
-      expect(stats.victoryBreakdown.population).toBe(40);
-      expect(stats.victoryBreakdown.generation_ship).toBeUndefined();
+      expect(stats.victoryBreakdown.earth_relief_compact).toBe(40);
+      expect(stats.victoryBreakdown.deep_space_mining_charter).toBeUndefined();
     });
   });
 
   describe("Type aliases", () => {
     it("VictoryType covers all victory conditions", () => {
-      const types: VictoryType[] = ["population", "generation_ship"];
-      expect(types).toHaveLength(2);
+      const types: VictoryType[] = [
+        "earth_relief_compact",
+        "declaration_of_sovereignty",
+        "deep_space_mining_charter",
+      ];
+      expect(types).toHaveLength(3);
     });
 
     it("DefeatReason covers all defeat conditions", () => {
-      const reasons: DefeatReason[] = [
-        "starvation",
-        "suffocation",
-        "population_collapse",
-      ];
+      const reasons: DefeatReason[] = ["starvation", "suffocation", "population_collapse"];
       expect(reasons).toHaveLength(3);
     });
 

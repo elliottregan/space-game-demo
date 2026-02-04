@@ -22,7 +22,7 @@ export enum TechnologyId {
   CRYOSLEEP = "cryosleep",
   FUSION_DRIVE = "fusion_drive",
   CLOSED_ECOSYSTEM = "closed_ecosystem",
-  GENERATION_SHIP = "generation_ship",
+  ASTEROID_MINING_PLATFORM = "asteroid_mining_platform",
 }
 
 export interface Technology {

@@ -26,7 +26,7 @@ describe("TechnologyTree", () => {
 
   it("should not allow researching techs with unmet prerequisites", () => {
     expect(tree.canResearch(TechnologyId.ROBOTICS)).toBe(false);
-    expect(tree.canResearch(TechnologyId.GENERATION_SHIP)).toBe(false);
+    expect(tree.canResearch(TechnologyId.ASTEROID_MINING_PLATFORM)).toBe(false);
   });
 
   it("should start research", () => {
@@ -139,33 +139,30 @@ describe("TechnologyTree", () => {
     });
 
     it("should return prerequisite chain in topological order", () => {
-      // generation_ship needs: fusion_drive, cryosleep, closed_ecosystem
-      // fusion_drive needs: nuclear_fission, advanced_materials
-      // cryosleep needs: advanced_medicine
-      // advanced_medicine needs: genetics
-      // genetics needs: hydroponics
-      // closed_ecosystem needs: hydroponics, water_recycling, genetics
-      // nuclear_fission needs: advanced_materials
+      // asteroid_mining_platform needs: asteroid_mining, robotics
+      // asteroid_mining needs: advanced_materials
+      // robotics needs: advanced_materials
 
-      const chain = tree.getPrerequisiteChain(TechnologyId.GENERATION_SHIP);
+      const chain = tree.getPrerequisiteChain(TechnologyId.ASTEROID_MINING_PLATFORM);
 
       // Should include all unresearched prerequisites + target
-      expect(chain).toContain(TechnologyId.GENERATION_SHIP);
-      expect(chain).toContain(TechnologyId.FUSION_DRIVE);
-      expect(chain).toContain(TechnologyId.HYDROPONICS);
+      expect(chain).toContain(TechnologyId.ASTEROID_MINING_PLATFORM);
+      expect(chain).toContain(TechnologyId.ASTEROID_MINING);
+      expect(chain).toContain(TechnologyId.ROBOTICS);
+      expect(chain).toContain(TechnologyId.ADVANCED_MATERIALS);
 
       // Prerequisites must come before dependents
-      expect(chain.indexOf(TechnologyId.HYDROPONICS)).toBeLessThan(
-        chain.indexOf(TechnologyId.GENETICS),
-      );
-      expect(chain.indexOf(TechnologyId.GENETICS)).toBeLessThan(
-        chain.indexOf(TechnologyId.ADVANCED_MEDICINE),
+      expect(chain.indexOf(TechnologyId.ADVANCED_MATERIALS)).toBeLessThan(
+        chain.indexOf(TechnologyId.ASTEROID_MINING),
       );
       expect(chain.indexOf(TechnologyId.ADVANCED_MATERIALS)).toBeLessThan(
-        chain.indexOf(TechnologyId.FUSION_DRIVE),
+        chain.indexOf(TechnologyId.ROBOTICS),
       );
-      expect(chain.indexOf(TechnologyId.FUSION_DRIVE)).toBeLessThan(
-        chain.indexOf(TechnologyId.GENERATION_SHIP),
+      expect(chain.indexOf(TechnologyId.ASTEROID_MINING)).toBeLessThan(
+        chain.indexOf(TechnologyId.ASTEROID_MINING_PLATFORM),
+      );
+      expect(chain.indexOf(TechnologyId.ROBOTICS)).toBeLessThan(
+        chain.indexOf(TechnologyId.ASTEROID_MINING_PLATFORM),
       );
     });
 

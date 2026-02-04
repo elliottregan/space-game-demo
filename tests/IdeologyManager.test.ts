@@ -541,9 +541,9 @@ describe("IdeologyManager", () => {
 
     describe("isCapstoneProject", () => {
       test("returns true for capstone projects", () => {
-        expect(manager.isCapstoneProject(ProjectId.RETURN_MISSION)).toBe(true);
+        expect(manager.isCapstoneProject(ProjectId.EARTH_RELIEF_COMPACT)).toBe(true);
         expect(manager.isCapstoneProject(ProjectId.DECLARATION_OF_SOVEREIGNTY)).toBe(true);
-        expect(manager.isCapstoneProject(ProjectId.PLANETARY_ACQUISITION)).toBe(true);
+        expect(manager.isCapstoneProject(ProjectId.DEEP_SPACE_MINING_CHARTER)).toBe(true);
       });
 
       test("returns false for regular projects", () => {

@@ -53,36 +53,42 @@ export const ALL_NPC_IDS: readonly NPCId[] = [
  * Using a string enum for type safety while maintaining string serialization.
  */
 export enum ProjectId {
+  // Earth Loyalists projects
   IMMIGRATION_PROGRAM = "immigration_program",
   EARTH_MEMORIAL = "earth_memorial",
   HERITAGE_ARCHIVE = "heritage_archive",
+  // Mars Independence projects
   UNIVERSAL_HOUSING = "universal_housing",
   HEALTHCARE_EXPANSION = "healthcare_expansion",
-  AI_GOVERNANCE = "ai_governance",
-  MINING_CONCESSION = "mining_concession",
-  LABOR_EFFICIENCY = "labor_efficiency",
-  // New projects
   DEMOCRATIC_ASSEMBLY = "democratic_assembly",
+  // Corporate Interests projects
+  VENTURE_CAPITAL_INITIATIVE = "venture_capital_initiative",
+  ORBITAL_INFRASTRUCTURE = "orbital_infrastructure",
+  ASTEROID_SURVEY_PROGRAM = "asteroid_survey_program",
   // Capstone projects
-  RETURN_MISSION = "return_mission",
+  EARTH_RELIEF_COMPACT = "earth_relief_compact",
   DECLARATION_OF_SOVEREIGNTY = "declaration_of_sovereignty",
-  PLANETARY_ACQUISITION = "planetary_acquisition",
+  DEEP_SPACE_MINING_CHARTER = "deep_space_mining_charter",
 }
 
 /** All project IDs as an array for iteration */
 export const ALL_PROJECT_IDS: readonly ProjectId[] = [
+  // Earth Loyalists
   ProjectId.IMMIGRATION_PROGRAM,
   ProjectId.EARTH_MEMORIAL,
   ProjectId.HERITAGE_ARCHIVE,
+  // Mars Independence
   ProjectId.UNIVERSAL_HOUSING,
   ProjectId.HEALTHCARE_EXPANSION,
-  ProjectId.AI_GOVERNANCE,
-  ProjectId.MINING_CONCESSION,
-  ProjectId.LABOR_EFFICIENCY,
   ProjectId.DEMOCRATIC_ASSEMBLY,
-  ProjectId.RETURN_MISSION,
+  // Corporate Interests
+  ProjectId.VENTURE_CAPITAL_INITIATIVE,
+  ProjectId.ORBITAL_INFRASTRUCTURE,
+  ProjectId.ASTEROID_SURVEY_PROGRAM,
+  // Capstones
+  ProjectId.EARTH_RELIEF_COMPACT,
   ProjectId.DECLARATION_OF_SOVEREIGNTY,
-  ProjectId.PLANETARY_ACQUISITION,
+  ProjectId.DEEP_SPACE_MINING_CHARTER,
 ] as const;
 
 export interface NPC {
