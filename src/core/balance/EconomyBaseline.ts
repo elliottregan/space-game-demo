@@ -8,7 +8,7 @@ export const COLONIST_NEEDS = {
 export const STARTING_RESOURCES: Resources = {
   food: 280,
   water: 200,
-  materials: 500,
+  materials: 400,
 };
 
 export const STARTING_POPULATION = 14;

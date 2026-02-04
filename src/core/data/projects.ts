@@ -10,7 +10,7 @@ export const PROJECTS: Project[] = [
     name: "Immigration Program",
     description: "Establish formal immigration pathways to bring more settlers from Earth.",
     type: NPCFaction.EarthLoyalists,
-    proposalCost: { materials: 80 },
+    proposalCost: { materials: 120 },
     requiredSupport: 0.35,
     effects: {
       unlockBuilding: "immigration_center",
@@ -24,7 +24,7 @@ export const PROJECTS: Project[] = [
     name: "Earth Memorial",
     description: "Build a memorial to honor our home planet.",
     type: NPCFaction.EarthLoyalists,
-    proposalCost: { materials: 40 },
+    proposalCost: { materials: 80 },
     requiredSupport: 0.2,
     effects: {
       colonyMoraleBoost: 0.05,
@@ -37,7 +37,7 @@ export const PROJECTS: Project[] = [
     name: "Heritage Archive",
     description: "Preserve Earth cultures and traditions.",
     type: NPCFaction.EarthLoyalists,
-    proposalCost: { materials: 50 },
+    proposalCost: { materials: 100 },
     requiredSupport: 0.35,
     effects: {
       unlockBuilding: "archive",
@@ -52,7 +52,7 @@ export const PROJECTS: Project[] = [
     name: "Universal Housing Initiative",
     description: "Guarantee housing for all colonists.",
     type: NPCFaction.MarsIndependence,
-    proposalCost: { materials: 80 },
+    proposalCost: { materials: 120 },
     requiredSupport: 0.35,
     effects: {
       unlockBuilding: "housing_complex",
@@ -66,7 +66,7 @@ export const PROJECTS: Project[] = [
     name: "Healthcare Expansion",
     description: "Expand medical facilities and access.",
     type: NPCFaction.MarsIndependence,
-    proposalCost: { materials: 60, water: 30 },
+    proposalCost: { materials: 100, water: 40 },
     requiredSupport: 0.35,
     effects: {
       unlockBuilding: "medical_center",
@@ -81,7 +81,7 @@ export const PROJECTS: Project[] = [
     description:
       "Establish a formal democratic assembly where all colonists have a voice in governance.",
     type: NPCFaction.MarsIndependence,
-    proposalCost: { materials: 70 },
+    proposalCost: { materials: 110 },
     requiredSupport: 0.35,
     effects: {
       unlockBuilding: "assembly_hall",
@@ -97,7 +97,7 @@ export const PROJECTS: Project[] = [
     name: "AI-Assisted Governance",
     description: "Implement AI systems to help with colony decision-making.",
     type: NPCFaction.CorporateInterests,
-    proposalCost: { materials: 80 },
+    proposalCost: { materials: 120 },
     requiredSupport: 0.35,
     effects: {
       unlockTech: "advanced_ai",
@@ -110,7 +110,7 @@ export const PROJECTS: Project[] = [
     name: "Mining Concession",
     description: "Grant exclusive extraction rights to corporate partners.",
     type: NPCFaction.CorporateInterests,
-    proposalCost: { materials: 60 },
+    proposalCost: { materials: 100 },
     requiredSupport: 0.35,
     effects: {
       unlockBuilding: "efficient_mine",
@@ -123,7 +123,7 @@ export const PROJECTS: Project[] = [
     name: "Labor Efficiency Program",
     description: "Controversial productivity initiative that increases output.",
     type: NPCFaction.CorporateInterests,
-    proposalCost: { materials: 40 },
+    proposalCost: { materials: 80 },
     requiredSupport: 0.2,
     effects: {
       productionBonus: 0.15,
