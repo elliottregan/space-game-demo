@@ -13,6 +13,7 @@
     "format": "oxfmt ./src ./scripts",
     "format:check": "oxfmt --check ./src ./scripts",
     "typecheck": "tsc -p tsconfig.core.json --noEmit && tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.test.json --noEmit && tsc -p tsconfig.scripts.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "typecheck:src": "tsc -p tsconfig.core.json --noEmit && tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.scripts.json --noEmit && tsc -p tsconfig.node.json --noEmit",
     "typecheck:core": "tsc -p tsconfig.core.json --noEmit",
     "typecheck:app": "tsc -p tsconfig.app.json --noEmit",
     "typecheck:test": "tsc -p tsconfig.test.json --noEmit",
