@@ -139,9 +139,9 @@ export class TechnologyFacade implements Queryable<TechnologySnapshot>, EntityLo
         });
       }
 
-      const success = this.gameState.technology.startResearch(techId, this.gameState.resources);
+      const events = this.gameState.technology.startResearch(techId, this.gameState.resources);
 
-      if (!success) {
+      if (events.length === 0) {
         return err({
           type: "INVALID_TARGET",
           target: techId,

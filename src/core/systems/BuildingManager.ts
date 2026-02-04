@@ -19,13 +19,16 @@ import {
   calculateAverageWorkerEfficiency,
   calculateStaffingEfficiency,
 } from "../utils/workerEfficiency";
-import type { ColonyManager } from "./ColonyManager";
 import type { GridManager } from "./GridManager";
-import type { IdeologyManager } from "./IdeologyManager";
 import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
 import type { VictoryManager } from "./VictoryManager";
-import type { WorkforceManager } from "./WorkforceManager";
+import type {
+  ColonistQueries,
+  GridQueries,
+  ProjectQueries,
+  WorkforceQueries,
+} from "../interfaces/Queries";
 
 export class BuildingManager {
   private definitions: Map<BuildingId, BuildingDefinition> = new Map();
@@ -53,32 +56,23 @@ export class BuildingManager {
     },
   };
   private autoHousingBlockedShown: boolean = false;
-  private colonyManager: ColonyManager | null = null;
   private technologyTree: TechnologyTree | null = null;
-  private workforceManager: WorkforceManager | null = null;
-  private ideologyManager: IdeologyManager | null = null;
   private victoryManager: VictoryManager | null = null;
   private gridManager: GridManager | null = null;
   private airQualityEfficiency: number = 1;
 
-  setColonyManager(colony: ColonyManager): void {
-    this.colonyManager = colony;
-  }
+  // Query interfaces for read-only access
+  private colonistQueries: ColonistQueries | null = null;
+  private workforceQueries: WorkforceQueries | null = null;
+  private projectQueries: ProjectQueries | null = null;
+  private gridQueries: GridQueries | null = null;
 
   setTechnologyTree(tech: TechnologyTree): void {
     this.technologyTree = tech;
   }
 
-  setWorkforceManager(workforce: WorkforceManager): void {
-    this.workforceManager = workforce;
-  }
-
   setAirQualityEfficiency(multiplier: number): void {
     this.airQualityEfficiency = Math.max(0, Math.min(1, multiplier));
-  }
-
-  setIdeologyManager(ideology: IdeologyManager): void {
-    this.ideologyManager = ideology;
   }
 
   setVictoryManager(victory: VictoryManager): void {
@@ -87,6 +81,23 @@ export class BuildingManager {
 
   setGridManager(gridManager: GridManager): void {
     this.gridManager = gridManager;
+  }
+
+  // Query interface setters
+  setColonistQueries(queries: ColonistQueries): void {
+    this.colonistQueries = queries;
+  }
+
+  setWorkforceQueries(queries: WorkforceQueries): void {
+    this.workforceQueries = queries;
+  }
+
+  setProjectQueries(queries: ProjectQueries): void {
+    this.projectQueries = queries;
+  }
+
+  setGridQueries(queries: GridQueries): void {
+    this.gridQueries = queries;
   }
 
   constructor(defs: BuildingDefinition[]) {
@@ -228,7 +239,7 @@ export class BuildingManager {
    * Respects transit connectivity - only assigns colonists whose housing is in the same cluster.
    */
   private autoAssignWorkers(building: Building, def: BuildingDefinition): void {
-    if (!def.workerSlots || !this.colonyManager) return;
+    if (!def.workerSlots || !this.colonistQueries) return;
 
     // Check if building is on the grid and get its cluster
     const isOnGrid = this.gridManager?.getPlacement(building.id) !== undefined;
@@ -245,7 +256,7 @@ export class BuildingManager {
       }
     }
 
-    const allColonists = this.colonyManager.getColonists();
+    const allColonists = this.colonistQueries?.getColonists() ?? [];
     const availableColonists = allColonists.filter((c) => {
       if (assignedColonistIds.has(c.id)) return false;
 
@@ -466,7 +477,7 @@ export class BuildingManager {
 
     // Check project requirements for victory buildings
     if (def.requiredProject) {
-      if (!this.ideologyManager || !this.ideologyManager.isProjectCompleted(def.requiredProject)) {
+      if (!this.projectQueries || !this.projectQueries.isProjectCompleted(def.requiredProject)) {
         return false;
       }
     }
@@ -546,16 +557,27 @@ export class BuildingManager {
     return true;
   }
 
-  breakBuilding(buildingId: string, resources: ResourceManager): boolean {
+  breakBuilding(buildingId: string, resources: ResourceManager): GameEvent[] {
     const building = this.buildings.get(buildingId);
-    if (!building || building.status !== "active") return false;
+    if (!building || building.status !== "active") return [];
+
+    const def = this.definitions.get(building.definitionId);
 
     // Remove production/consumption before breaking
     this.applyBuildingResourceFlow(buildingId, resources, false);
 
     building.broken = true;
     building.mode = "normal";
-    return true;
+
+    return [
+      {
+        type: "BUILDING_BROKEN",
+        buildingId,
+        buildingName: def?.name ?? building.definitionId,
+        severity: "warning",
+        message: `${def?.name ?? building.definitionId} has broken down!`,
+      },
+    ];
   }
 
   getRepairCost(buildingId: string): ResourceDelta | undefined {
@@ -564,16 +586,27 @@ export class BuildingManager {
     return calculateRepairCost(result.def);
   }
 
-  startRepair(buildingId: string, resources: ResourceManager): boolean {
+  startRepair(buildingId: string, resources: ResourceManager): GameEvent[] {
     const building = this.buildings.get(buildingId);
-    if (!building || !building.broken) return false;
+    if (!building || !building.broken) return [];
 
     const cost = this.getRepairCost(buildingId);
-    if (!cost || !resources.canAfford(cost)) return false;
+    if (!cost || !resources.canAfford(cost)) return [];
+
+    const def = this.definitions.get(building.definitionId);
 
     resources.deduct(cost);
     building.repairProgress = 0.01; // Mark as repairing
-    return true;
+
+    return [
+      {
+        type: "BUILDING_REPAIR_STARTED",
+        buildingId,
+        buildingName: def?.name ?? building.definitionId,
+        severity: "info",
+        message: `${def?.name ?? building.definitionId} repair started.`,
+      },
+    ];
   }
 
   isRepairing(buildingId: string): boolean {
@@ -592,10 +625,12 @@ export class BuildingManager {
     return result ? calculateRecycleTime(result.def) : 0;
   }
 
-  startRecycling(buildingId: string, resources: ResourceManager): boolean {
+  startRecycling(buildingId: string, resources: ResourceManager): GameEvent[] {
     const building = this.buildings.get(buildingId);
-    if (!building) return false;
-    if (building.status === "pending" || building.status === "recycling") return false;
+    if (!building) return [];
+    if (building.status === "pending" || building.status === "recycling") return [];
+
+    const def = this.definitions.get(building.definitionId);
 
     // Remove production/consumption if active
     const wasActive = building.status === "active";
@@ -610,7 +645,16 @@ export class BuildingManager {
     if (wasActive) {
       this.triggerClusterUpdate();
     }
-    return true;
+
+    return [
+      {
+        type: "BUILDING_RECYCLING_STARTED",
+        buildingId,
+        buildingName: def?.name ?? building.definitionId,
+        severity: "info",
+        message: `${def?.name ?? building.definitionId} recycling started.`,
+      },
+    ];
   }
 
   rushRecycling(buildingId: string, resources: ResourceManager): boolean {
@@ -763,14 +807,14 @@ export class BuildingManager {
    * Workers who have worked together longer are more efficient as a team.
    */
   private getTeamCohesionMultiplier(buildingId: string): number {
-    if (!this.workforceManager) return 1.0;
+    if (!this.workforceQueries) return 1.0;
 
     const building = this.buildings.get(buildingId);
     if (!building || building.assignedWorkers.length < 2) {
       return 1.0;
     }
 
-    return this.workforceManager.getTeamCohesionMultiplier(building.assignedWorkers);
+    return this.workforceQueries.getTeamCohesionMultiplier(building.assignedWorkers);
   }
 
   getEffectiveProduction(buildingId: string): ResourceDelta {
@@ -781,7 +825,7 @@ export class BuildingManager {
     // Gate on power state - unpowered buildings produce nothing
     // Only check if building is placed on grid (has a placement record)
     if (this.gridManager) {
-      const placement = this.gridManager.getPlacement(buildingId);
+      const placement = this.gridQueries?.getPlacement(buildingId);
       if (placement && placement.powerState === PowerState.UNPOWERED) {
         return {};
       }
@@ -800,7 +844,7 @@ export class BuildingManager {
     // Gate on power state - unpowered buildings consume nothing
     // Only check if building is placed on grid (has a placement record)
     if (this.gridManager) {
-      const placement = this.gridManager.getPlacement(buildingId);
+      const placement = this.gridQueries?.getPlacement(buildingId);
       if (placement && placement.powerState === PowerState.UNPOWERED) {
         return {};
       }
@@ -926,23 +970,23 @@ export class BuildingManager {
    * Returns transit disconnection events for the event log.
    */
   handleDisconnectedBuildings(): GameEvent[] {
-    if (!this.gridManager || !this.colonyManager) return [];
+    if (!this.gridManager || !this.colonistQueries) return [];
 
     const events: GameEvent[] = [];
 
     for (const [buildingId, building] of this.buildings) {
       if (building.assignedWorkers.length === 0) continue;
 
-      const workplaceCluster = this.gridManager.getBuildingClusterId(buildingId);
+      const workplaceCluster = this.gridQueries?.getBuildingClusterId(buildingId);
       const def = this.definitions.get(building.definitionId);
 
       // Check each worker's housing cluster
       const workersToRemove: string[] = [];
       for (const colonistId of building.assignedWorkers) {
-        const colonist = this.colonyManager.getColonist(colonistId);
+        const colonist = this.colonistQueries?.getColonist(colonistId);
         if (!colonist?.housingId) continue;
 
-        const housingCluster = this.gridManager.getBuildingClusterId(colonist.housingId);
+        const housingCluster = this.gridQueries?.getBuildingClusterId(colonist.housingId);
         if (housingCluster !== workplaceCluster) {
           workersToRemove.push(colonistId);
         }
@@ -1010,44 +1054,60 @@ export class BuildingManager {
     return this.constructionSpeedBonus;
   }
 
-  assignWorker(buildingId: string, colonistId: string): boolean {
+  assignWorker(buildingId: string, colonistId: string): GameEvent[] {
     const result = this.getBuildingWithDef(buildingId);
-    if (!result || result.building.status !== "active") return false;
+    if (!result || result.building.status !== "active") return [];
     const { building, def } = result;
 
-    if (!def.workerSlots || building.assignedWorkers.length >= def.workerSlots) return false;
-    if (building.assignedWorkers.includes(colonistId)) return false;
+    if (!def.workerSlots || building.assignedWorkers.length >= def.workerSlots) return [];
+    if (building.assignedWorkers.includes(colonistId)) return [];
 
     // Check if colonist is already assigned elsewhere
     for (const b of this.buildings.values()) {
-      if (b.assignedWorkers.includes(colonistId)) return false;
+      if (b.assignedWorkers.includes(colonistId)) return [];
     }
 
     // Validate transit connectivity - colonist's housing must be in same cluster as workplace
-    if (this.gridManager && this.colonyManager) {
-      const colonist = this.colonyManager.getColonist(colonistId);
+    if (this.gridManager && this.colonistQueries) {
+      const colonist = this.colonistQueries?.getColonist(colonistId);
       if (colonist?.housingId) {
-        const housingCluster = this.gridManager.getBuildingClusterId(colonist.housingId);
-        const workplaceCluster = this.gridManager.getBuildingClusterId(buildingId);
+        const housingCluster = this.gridQueries?.getBuildingClusterId(colonist.housingId);
+        const workplaceCluster = this.gridQueries?.getBuildingClusterId(buildingId);
         if (housingCluster !== workplaceCluster) {
-          return false;
+          return [];
         }
       }
     }
 
     building.assignedWorkers.push(colonistId);
-    return true;
+    return [
+      {
+        type: "WORKER_ASSIGNED",
+        severity: "info",
+        buildingId,
+        colonistId,
+        message: `Worker assigned to ${def.name}`,
+      },
+    ];
   }
 
-  removeWorker(buildingId: string, colonistId: string): boolean {
+  removeWorker(buildingId: string, colonistId: string): GameEvent[] {
     const building = this.buildings.get(buildingId);
-    if (!building) return false;
+    if (!building) return [];
 
     const index = building.assignedWorkers.indexOf(colonistId);
-    if (index === -1) return false;
+    if (index === -1) return [];
 
     building.assignedWorkers.splice(index, 1);
-    return true;
+    return [
+      {
+        type: "WORKER_UNASSIGNED",
+        severity: "info",
+        buildingId,
+        colonistId,
+        message: `Worker unassigned from building`,
+      },
+    ];
   }
 
   /**
@@ -1085,10 +1145,10 @@ export class BuildingManager {
     const { building, def } = result;
 
     if (!def.workerSlots || building.assignedWorkers.length === 0) return 1;
-    if (!this.colonyManager) return 1;
+    if (!this.colonistQueries) return 1;
 
     const colonists = building.assignedWorkers
-      .map((id) => this.colonyManager?.getColonist(id))
+      .map((id) => this.colonistQueries?.getColonist(id))
       .filter((c) => c !== undefined);
 
     return calculateAverageWorkerEfficiency(colonists, def.workerRole);

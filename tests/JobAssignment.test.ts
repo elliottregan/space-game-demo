@@ -9,8 +9,8 @@ describe("Job Assignment", () => {
 
   beforeEach(() => {
     gameState = new GameState();
-    // Wire up colonyManager for worker efficiency tests
-    gameState.buildings.setColonyManager(gameState.colony);
+    // Wire up colonistQueries for worker efficiency tests
+    gameState.buildings.setColonistQueries(gameState.colony);
   });
 
   describe("getColonistWorkplace", () => {
@@ -289,11 +289,11 @@ describe("Job Assignment", () => {
 
       // Assign to first farm
       const result1 = gameState.buildings.assignWorker(farm1!.id, colonist.id);
-      expect(result1).toBe(true);
+      expect(result1.length).toBeGreaterThan(0);
 
       // Try to assign to second farm - should fail
       const result2 = gameState.buildings.assignWorker(farm2!.id, colonist.id);
-      expect(result2).toBe(false);
+      expect(result2.length).toBe(0);
     });
   });
 

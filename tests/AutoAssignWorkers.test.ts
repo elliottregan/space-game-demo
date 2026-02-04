@@ -7,7 +7,7 @@ describe("Auto-Assign Workers", () => {
 
   beforeEach(() => {
     gameState = new GameState();
-    gameState.buildings.setColonyManager(gameState.colony);
+    // GameState constructor already wires up colonistQueries
   });
 
   describe("autoAssignNewColonists setting", () => {
