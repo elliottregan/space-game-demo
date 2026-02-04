@@ -138,6 +138,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 3,
     workerRole: ColonistRole.RESEARCH,
     requiredTech: TechnologyId.HABITAT_FABRICATION,
+    researchOutput: 3.0,
     airContribution: -1,
     purpose: BuildingPurpose.Industrial,
   },
