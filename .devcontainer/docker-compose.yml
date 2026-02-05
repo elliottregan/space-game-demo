@@ -4,8 +4,6 @@ services:
       context: .
       dockerfile: Dockerfile
 
-    container_name: space-game-devcontainer
-
     env_file:
       - ../.env
 
