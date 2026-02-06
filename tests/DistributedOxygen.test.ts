@@ -80,7 +80,7 @@ describe("Life Support System", () => {
   describe("BuildingDefinition.lifeSupportCapacity and lifeSupportLoad", () => {
     it("should have lifeSupportCapacity defined on habitat", () => {
       const habitat = gameState.buildings.getDefinition(BuildingId.HABITAT);
-      expect(habitat?.lifeSupportCapacity).toBe(8);
+      expect(habitat?.lifeSupportCapacity).toBe(10);
     });
 
     it("should have lifeSupportLoad defined on research_lab", () => {
@@ -96,29 +96,29 @@ describe("Life Support System", () => {
 
     it("should have lifeSupportLoad on basic_mine", () => {
       const mine = gameState.buildings.getDefinition(BuildingId.BASIC_MINE);
-      expect(mine?.lifeSupportLoad).toBe(2);
+      expect(mine?.lifeSupportLoad).toBe(1);
     });
   });
 
   describe("BuildingManager.getTotalLifeSupportCapacity and getTotalLifeSupportLoad", () => {
     it("should return starting buildings life support capacity", () => {
-      // Default starting condition has: 2 habitats (8 each) = 16
+      // Default starting condition has: 2 habitats (10 each) = 20
       const totalCapacity = gameState.buildings.getTotalLifeSupportCapacity();
-      expect(totalCapacity).toBe(16);
+      expect(totalCapacity).toBe(20);
     });
 
     it("should return starting buildings life support load", () => {
-      // Default starting condition has: 1 basic mine (2) = 2
+      // Default starting condition has: 1 basic mine (1) = 1
       const totalLoad = gameState.buildings.getTotalLifeSupportLoad();
-      expect(totalLoad).toBe(2);
+      expect(totalLoad).toBe(1);
     });
 
     it("should sum life support capacity from active buildings", () => {
-      // Starting capacity is 16 (2 habitats * 8)
+      // Starting capacity is 20 (2 habitats * 10)
       const startingCapacity = gameState.buildings.getTotalLifeSupportCapacity();
-      expect(startingCapacity).toBe(16);
+      expect(startingCapacity).toBe(20);
 
-      // Build another habitat (+8)
+      // Build another habitat (+10)
       gameState.resources.add({ materials: 500 });
 
       gameState.buildings.startBuilding(
@@ -133,11 +133,11 @@ describe("Life Support System", () => {
       }
 
       const totalCapacity = gameState.buildings.getTotalLifeSupportCapacity();
-      expect(totalCapacity).toBe(24); // 16 + 8
+      expect(totalCapacity).toBe(30); // 20 + 10
     });
 
     it("should sum life support load from active buildings", () => {
-      // Starting load is 2 (1 basic mine * 2)
+      // Starting load is 1 (1 basic mine * 1)
       gameState.resources.add({ materials: 500 });
 
       // Research habitat_fabrication for research_lab
@@ -155,13 +155,13 @@ describe("Life Support System", () => {
       }
 
       const totalLoad = gameState.buildings.getTotalLifeSupportLoad();
-      expect(totalLoad).toBe(3); // 2 + 1
+      expect(totalLoad).toBe(2); // 1 + 1
     });
 
     it("should not count broken buildings in capacity", () => {
-      // Starting capacity is 16 (2 habitats * 8)
+      // Starting capacity is 20 (2 habitats * 10)
       const startingCapacity = gameState.buildings.getTotalLifeSupportCapacity();
-      expect(startingCapacity).toBe(16);
+      expect(startingCapacity).toBe(20);
 
       // Get a starting habitat and break it
       const buildings = gameState.buildings.getActiveBuildings();
@@ -171,13 +171,13 @@ describe("Life Support System", () => {
       gameState.buildings.breakBuilding(habitat!.id, gameState.resources);
 
       const totalCapacity = gameState.buildings.getTotalLifeSupportCapacity();
-      expect(totalCapacity).toBe(8); // 16 - 8 = 8 (broken habitat doesn't contribute)
+      expect(totalCapacity).toBe(10); // 20 - 10 = 10 (broken habitat doesn't contribute)
     });
 
     it("should not count pending buildings in capacity", () => {
-      // Starting capacity is 16 (2 habitats * 8)
+      // Starting capacity is 20 (2 habitats * 10)
       const startingCapacity = gameState.buildings.getTotalLifeSupportCapacity();
-      expect(startingCapacity).toBe(16);
+      expect(startingCapacity).toBe(20);
 
       gameState.resources.add({ materials: 500 });
 
@@ -189,7 +189,7 @@ describe("Life Support System", () => {
 
       // Don't advance time - new building is still pending
       const totalCapacity = gameState.buildings.getTotalLifeSupportCapacity();
-      expect(totalCapacity).toBe(16); // Still 16, pending building doesn't count
+      expect(totalCapacity).toBe(20); // Still 20, pending building doesn't count
     });
   });
 });

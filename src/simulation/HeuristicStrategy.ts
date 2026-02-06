@@ -659,11 +659,12 @@ export class HeuristicStrategy {
       }
     }
 
-    // Life support capacity needs to exceed population + industrial load
+    // Life support: only build habitats when overcrowded or no capacity.
+    // Habitats also provide housing, so the growth handler already builds them
+    // when housing is needed. This only intervenes in life support emergencies.
     const colony = this.api.colony.snapshot({ lightweight: true });
     const totalDemand = colony.population + lifeSupportLoad;
-    if (lifeSupportCapacity < totalDemand * 1.2) {
-      // Build more habitats to increase life support capacity
+    if (lifeSupportCapacity === 0 || totalDemand > lifeSupportCapacity) {
       if (this.tryBuild(BuildingId.HABITAT, "survival")) {
         return { category: "survival", action: "build_habitat" };
       }
@@ -1040,6 +1041,18 @@ export class HeuristicStrategy {
 
     // Only grow if population < 100 and morale > 60
     if (colony.population >= 100 || colony.morale <= 60) return null;
+
+    // Don't grow if water is tight - each new colonist needs food, and farms consume water
+    const waterSurplus = (resources.production.water ?? 0) - (resources.consumption.water ?? 0);
+    if (waterSurplus < 2) return null;
+
+    // Don't grow if life support utilization is high - adding habitats for growth
+    // increases both capacity and housing, creating a feedback loop
+    const buildings = this.api.buildings.snapshot();
+    const lifeSupportCapacity = buildings.totalLifeSupportCapacity;
+    const lifeSupportLoad = buildings.totalLifeSupportLoad;
+    const totalDemand = colony.population + lifeSupportLoad;
+    if (lifeSupportCapacity > 0 && totalDemand / lifeSupportCapacity > 0.85) return null;
 
     // Calculate resource surpluses
     const foodSurplus = (resources.production.food ?? 0) - (resources.consumption.food ?? 0);

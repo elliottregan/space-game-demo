@@ -468,7 +468,7 @@ describe("HeuristicStrategy", () => {
           totalLifeSupportLoad: 5,
         },
         colonySnapshot: {
-          population: 14, // totalDemand = 14 + 5 = 19, need capacity >= 19 * 1.2 = 22.8
+          population: 14, // totalDemand = 14 + 5 = 19, capacity 0 triggers habitat build
           health: 80,
           morale: 70,
           colonists: [],

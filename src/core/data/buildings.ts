@@ -13,7 +13,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 10,
     powerConsumption: 4,
     capacity: 6, // Houses 6 colonists
-    lifeSupportCapacity: 8,
+    lifeSupportCapacity: 10,
     purpose: BuildingPurpose.Residential,
   },
   {
@@ -65,7 +65,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 4,
     workerRole: ColonistRole.ENGINEERING,
     requiresDeposit: true,
-    lifeSupportLoad: 2,
+    lifeSupportLoad: 1,
     purpose: BuildingPurpose.Industrial,
   },
   {
