@@ -10,7 +10,6 @@ import {
   Droplet,
   Sprout,
   Pickaxe,
-  Wind,
   Leaf,
   Recycle,
   FlaskConical,
@@ -40,7 +39,7 @@ const BUILDING_ICONS: Record<string, Component> = {
   [BuildingId.WATER_EXTRACTOR]: Droplet,
   [BuildingId.BASIC_FARM]: Sprout,
   [BuildingId.BASIC_MINE]: Pickaxe,
-  [BuildingId.OXYGEN_GENERATOR]: Wind,
+
   [BuildingId.GREENHOUSE]: Leaf,
   [BuildingId.WATER_RECLAIMER]: Recycle,
   [BuildingId.RESEARCH_LAB]: FlaskConical,

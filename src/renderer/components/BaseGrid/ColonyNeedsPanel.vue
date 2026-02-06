@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { AIR_QUALITY_COMFORTABLE } from "../../../core/balance/AirQualityBalance";
+import { LS_QUALITY_COMFORTABLE } from "../../../core/balance/LifeSupportBalance";
 import { BuildingId } from "../../../core/models/Building";
 import { gameService } from "../../services/GameService";
 
@@ -33,16 +33,16 @@ const needs = computed<ColonyNeed[]>(() => {
     });
   }
 
-  // Priority 2: Air - quality below comfortable threshold
-  const airQuality = state.value.airQuality;
-  if (airQuality < AIR_QUALITY_COMFORTABLE) {
+  // Priority 2: Life support - quality below comfortable threshold
+  const lifeSupportQuality = state.value.lifeSupportQuality;
+  if (lifeSupportQuality < LS_QUALITY_COMFORTABLE) {
     result.push({
-      id: "air",
+      id: "lifeSupport",
       icon: "🌬️",
-      label: "Air Quality",
-      reason: `${Math.round(airQuality * 100)}% (low)`,
-      building: "Oxygen Generator",
-      buildingId: BuildingId.OXYGEN_GENERATOR,
+      label: "Life Support",
+      reason: `${Math.round(lifeSupportQuality * 100)}% (low)`,
+      building: "Habitat",
+      buildingId: BuildingId.HABITAT,
       priority: 2,
     });
   }

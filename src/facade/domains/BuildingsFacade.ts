@@ -52,7 +52,8 @@ export class BuildingsFacade
       upgrading: Object.freeze([...this.gameState.buildings.getUpgradingBuildings()]),
       definitions: Object.freeze([...this.gameState.buildings.getAllDefinitions()]),
       moraleBoost: this.gameState.buildings.getTotalMoraleBoost(),
-      totalAirContribution: this.gameState.buildings.getTotalAirContribution(),
+      totalLifeSupportCapacity: this.gameState.buildings.getTotalLifeSupportCapacity(),
+      totalLifeSupportLoad: this.gameState.buildings.getTotalLifeSupportLoad(),
     };
   }
 

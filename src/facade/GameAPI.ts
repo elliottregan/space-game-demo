@@ -4,7 +4,7 @@
 import { GameState } from "../core/GameState";
 import { RESOURCE_KEYS } from "../core/models/Resources";
 import {
-  AirQualityFacade,
+  LifeSupportFacade,
   BuildingsFacade,
   ColonyFacade,
   EventsFacade,
@@ -58,7 +58,7 @@ export class GameAPI {
   private _operations: OperationsFacade | null = null;
   private _events: EventsFacade | null = null;
   private _game: GameFlowFacade | null = null;
-  private _airQuality: AirQualityFacade | null = null;
+  private _lifeSupport: LifeSupportFacade | null = null;
   private _powerGrid: PowerGridFacade | null = null;
   private _ideology: IdeologyFacade | null = null;
   private _grid: GridFacade | null = null;
@@ -78,7 +78,7 @@ export class GameAPI {
     this._operations = null;
     this._events = null;
     this._game = null;
-    this._airQuality = null;
+    this._lifeSupport = null;
     this._powerGrid = null;
     this._ideology = null;
     this._grid = null;
@@ -280,13 +280,13 @@ export class GameAPI {
   }
 
   /**
-   * Air quality queries (read-only).
+   * Life support queries (read-only).
    */
-  get airQuality(): AirQualityFacade {
-    if (!this._airQuality) {
-      this._airQuality = new AirQualityFacade(this.gameState);
+  get lifeSupport(): LifeSupportFacade {
+    if (!this._lifeSupport) {
+      this._lifeSupport = new LifeSupportFacade(this.gameState);
     }
-    return this._airQuality;
+    return this._lifeSupport;
   }
 
   /**

@@ -5,9 +5,9 @@ import { gameService } from "../../services/GameService";
 import { ResourceBadge } from "../../ui";
 import { getHealthVariant, getStatusVariant } from "../../utils/displayThresholds";
 import {
-  AIR_QUALITY_COMFORTABLE,
-  AIR_QUALITY_CRITICAL,
-} from "../../../core/balance/AirQualityBalance";
+  LS_QUALITY_COMFORTABLE,
+  LS_QUALITY_CRISIS,
+} from "../../../core/balance/LifeSupportBalance";
 import EarthCrisisIndicator from "./EarthCrisisIndicator.vue";
 
 // Reactive state for template bindings (auto-updates when API syncs)
@@ -21,8 +21,8 @@ const api = gameService.api;
 const healthVariant = computed(() => getHealthVariant(state.health));
 
 // biome-ignore lint/correctness/noUnusedVariables: used in template
-const airQualityVariant = computed(() =>
-  getStatusVariant(state.airQuality, AIR_QUALITY_COMFORTABLE, AIR_QUALITY_CRITICAL),
+const lifeSupportVariant = computed(() =>
+  getStatusVariant(state.lifeSupportQuality, LS_QUALITY_COMFORTABLE, LS_QUALITY_CRISIS),
 );
 
 // Stockpiled resources (power is shown in BaseTab, not here)
@@ -114,18 +114,18 @@ function getDelta(key: string): number {
       <span class="status-value" :class="healthVariant">{{ Math.round(state.health) }}%</span>
     </div>
 
-    <!-- Life Support (Air Quality) -->
+    <!-- Life Support -->
     <div class="status-item">
-      <span class="status-label">Air</span>
+      <span class="status-label">Life Support</span>
       <div class="status-bar">
         <div
           class="status-fill"
-          :class="`status-fill--${airQualityVariant}`"
-          :style="{ width: `${Math.round(state.airQuality * 100)}%` }"
+          :class="`status-fill--${lifeSupportVariant}`"
+          :style="{ width: `${Math.round(state.lifeSupportQuality * 100)}%` }"
         />
       </div>
-      <span class="status-value" :class="airQualityVariant"
-        >{{ Math.round(state.airQuality * 100) }}%</span
+      <span class="status-value" :class="lifeSupportVariant"
+        >{{ Math.round(state.lifeSupportQuality * 100) }}%</span
       >
     </div>
 

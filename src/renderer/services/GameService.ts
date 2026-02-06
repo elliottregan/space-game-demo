@@ -88,12 +88,13 @@ interface GameUIState {
   recentEvents: GameEvent[];
   activeExpeditions: ActiveExpedition[];
   prospectingSites: ProspectingSite[];
-  airQuality: number;
-  airQualityProduction: number;
-  airQualityConsumption: number;
-  airQualityHealthEffect: number;
-  airQualityMoraleEffect: number;
-  airQualityEfficiency: number;
+  lifeSupportQuality: number;
+  lifeSupportCapacity: number;
+  lifeSupportLoad: number;
+  lifeSupportPopulation: number;
+  lifeSupportHealthEffect: number;
+  lifeSupportMoraleEffect: number;
+  lifeSupportEfficiency: number;
   powerStats: {
     totalProduction: number;
     totalConsumption: number;
@@ -231,12 +232,13 @@ class GameService {
       recentEvents: [],
       activeExpeditions: [],
       prospectingSites: [],
-      airQuality: 1,
-      airQualityProduction: 0,
-      airQualityConsumption: 0,
-      airQualityHealthEffect: 0,
-      airQualityMoraleEffect: 0,
-      airQualityEfficiency: 1,
+      lifeSupportQuality: 1,
+      lifeSupportCapacity: 0,
+      lifeSupportLoad: 0,
+      lifeSupportPopulation: 0,
+      lifeSupportHealthEffect: 0,
+      lifeSupportMoraleEffect: 0,
+      lifeSupportEfficiency: 1,
       powerStats: {
         totalProduction: 0,
         totalConsumption: 0,
@@ -349,13 +351,14 @@ class GameService {
     this.state.prospectingSites = [...ops.sites];
 
     // Air Quality
-    const airQualityData = this.facade.airQuality.snapshot();
-    this.state.airQuality = airQualityData.airQuality;
-    this.state.airQualityProduction = airQualityData.production;
-    this.state.airQualityConsumption = airQualityData.consumption;
-    this.state.airQualityHealthEffect = airQualityData.healthEffect;
-    this.state.airQualityMoraleEffect = airQualityData.moraleEffect;
-    this.state.airQualityEfficiency = airQualityData.efficiencyMultiplier;
+    const lifeSupportData = this.facade.lifeSupport.snapshot();
+    this.state.lifeSupportQuality = lifeSupportData.quality;
+    this.state.lifeSupportCapacity = lifeSupportData.totalCapacity;
+    this.state.lifeSupportLoad = lifeSupportData.totalLoad;
+    this.state.lifeSupportPopulation = lifeSupportData.population;
+    this.state.lifeSupportHealthEffect = lifeSupportData.healthEffect;
+    this.state.lifeSupportMoraleEffect = lifeSupportData.moraleEffect;
+    this.state.lifeSupportEfficiency = lifeSupportData.efficiencyMultiplier;
 
     // Power Stats
     const powerData = this.facade.powerGrid.snapshot();

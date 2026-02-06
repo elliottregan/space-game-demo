@@ -80,18 +80,11 @@ function formatConsumption(def: BuildingDefinition): string {
       <div v-if="definition.moraleBoost" class="stat morale-boost">
         <span class="positive">+{{ definition.moraleBoost }} Morale</span>
       </div>
-      <div v-if="definition.airContribution !== undefined" class="stat oxygen-contrib">
-        <span
-          :class="
-            definition.airContribution > 0
-              ? 'positive'
-              : definition.airContribution < 0
-                ? 'negative'
-                : 'neutral'
-          "
-        >
-          {{ definition.airContribution > 0 ? "+" : "" }}{{ definition.airContribution }} O₂
-        </span>
+      <div v-if="definition.lifeSupportCapacity" class="stat ls-capacity">
+        <span class="positive">+{{ definition.lifeSupportCapacity }} LS Capacity</span>
+      </div>
+      <div v-if="definition.lifeSupportLoad" class="stat ls-load">
+        <span class="negative">-{{ definition.lifeSupportLoad }} LS Load</span>
       </div>
       <div class="stat time">Build time: {{ definition.constructionTime }} sols</div>
     </div>

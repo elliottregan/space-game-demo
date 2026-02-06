@@ -3,8 +3,8 @@
 
 import { BuildingId } from "./buildings";
 
-// Air quality types
-export type { AirQualitySnapshot } from "./airQuality";
+// Life support types
+export type { LifeSupportSnapshot } from "./lifeSupport";
 // Power grid types
 export type { PowerGridSnapshot } from "./powerGrid";
 export type {

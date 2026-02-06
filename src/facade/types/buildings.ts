@@ -19,7 +19,8 @@ export interface BuildingSnapshot {
   readonly upgrading: readonly Readonly<Building>[];
   readonly definitions: readonly Readonly<BuildingDefinition>[];
   readonly moraleBoost: number;
-  readonly totalAirContribution: number;
+  readonly totalLifeSupportCapacity: number;
+  readonly totalLifeSupportLoad: number;
 }
 
 // Re-export core types

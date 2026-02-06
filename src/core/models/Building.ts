@@ -9,7 +9,7 @@ export enum BuildingId {
   WATER_EXTRACTOR = "water_extractor",
   BASIC_FARM = "basic_farm",
   BASIC_MINE = "basic_mine",
-  OXYGEN_GENERATOR = "oxygen_generator",
+
   GREENHOUSE = "greenhouse",
   WATER_RECLAIMER = "water_reclaimer",
   RESEARCH_LAB = "research_lab",
@@ -61,7 +61,8 @@ export interface BuildingDefinition {
   repurposeTargets?: readonly BuildingId[];
   moraleBoost?: number; // Passive morale boost when active
   capacity?: number; // Housing capacity for habitats
-  airContribution?: number; // Air quality contribution per sol when active
+  lifeSupportCapacity?: number; // Life support capacity provided (residential buildings)
+  lifeSupportLoad?: number; // Life support load imposed (industrial buildings)
   purpose?: BuildingPurpose;
   bondingStrength?: number; // Multiplier for relationship growth rate (default 1.0)
   requiredProject?: ProjectId; // Project that must be passed to unlock

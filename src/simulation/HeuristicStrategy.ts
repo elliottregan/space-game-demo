@@ -506,29 +506,29 @@ export class HeuristicStrategy {
 
     // Count active and pending survival buildings
     let farmCount = 0;
-    let oxygenGenCount = 0;
+    let habitatCount = 0;
 
     for (const b of buildings.active) {
       if (b.definitionId === BuildingId.BASIC_FARM) farmCount++;
-      if (b.definitionId === BuildingId.OXYGEN_GENERATOR) oxygenGenCount++;
+      if (b.definitionId === BuildingId.HABITAT) habitatCount++;
     }
 
     for (const b of buildings.pending) {
       if (b.definitionId === BuildingId.BASIC_FARM) farmCount++;
-      if (b.definitionId === BuildingId.OXYGEN_GENERATOR) oxygenGenCount++;
+      if (b.definitionId === BuildingId.HABITAT) habitatCount++;
     }
 
-    // Critical: must have at least 1 farm and 1 oxygen generator
-    // If missing either, try to build it immediately
+    // Critical: must have at least 1 farm
     if (farmCount === 0) {
       if (this.tryBuild(BuildingId.BASIC_FARM, "survival", false)) {
         return { category: "survival", action: "build_basic_farm" };
       }
     }
 
-    if (oxygenGenCount === 0) {
-      if (this.tryBuild(BuildingId.OXYGEN_GENERATOR, "survival", false)) {
-        return { category: "survival", action: "build_oxygen_generator" };
+    // Critical: must have at least 1 habitat for life support
+    if (habitatCount === 0) {
+      if (this.tryBuild(BuildingId.HABITAT, "survival", false)) {
+        return { category: "survival", action: "build_habitat" };
       }
     }
 
@@ -628,8 +628,9 @@ export class HeuristicStrategy {
     const waterProduction = resources.production.water ?? 0;
     const waterConsumption = resources.consumption.water ?? 0;
 
-    // Calculate air contribution from buildings
-    const airContribution = buildings.totalAirContribution;
+    // Calculate life support capacity vs demand
+    const lifeSupportCapacity = buildings.totalLifeSupportCapacity;
+    const lifeSupportLoad = buildings.totalLifeSupportLoad;
 
     // Handle water production early - needed for morale recovery
     const waterBuilding = this.handleWaterProduction(
@@ -658,19 +659,13 @@ export class HeuristicStrategy {
       }
     }
 
-    // Air contribution needs to be maintained for air quality
-    if (airContribution < 6) {
-      // Oxygen generator provides the most air contribution
-      if (this.tryBuild(BuildingId.OXYGEN_GENERATOR, "survival")) {
-        return { category: "survival", action: "build_oxygen_generator" };
-      }
-      // Hydroponic garden provides air contribution without workers
-      if (this.tryBuild(BuildingId.HYDROPONIC_GARDEN, "survival")) {
-        return { category: "survival", action: "build_hydroponic_garden" };
-      }
-      // Farm provides food AND air contribution (if workers are assigned)
-      if (this.tryBuild(BuildingId.BASIC_FARM, "survival")) {
-        return { category: "survival", action: "build_basic_farm" };
+    // Life support capacity needs to exceed population + industrial load
+    const colony = this.api.colony.snapshot({ lightweight: true });
+    const totalDemand = colony.population + lifeSupportLoad;
+    if (lifeSupportCapacity < totalDemand * 1.2) {
+      // Build more habitats to increase life support capacity
+      if (this.tryBuild(BuildingId.HABITAT, "survival")) {
+        return { category: "survival", action: "build_habitat" };
       }
     }
 

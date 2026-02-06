@@ -18,8 +18,8 @@ export const STARTING_CONDITIONS: StartingCondition[] = [
       BuildingId.SOLAR_PANEL,
       BuildingId.SOLAR_PANEL,
       BuildingId.HABITAT,
+      BuildingId.HABITAT,
       BuildingId.BASIC_FARM,
-      BuildingId.OXYGEN_GENERATOR,
       BuildingId.WATER_EXTRACTOR,
       BuildingId.BASIC_MINE,
     ],
@@ -33,11 +33,10 @@ export const STARTING_CONDITIONS: StartingCondition[] = [
     preBuiltBuildings: [
       BuildingId.HABITAT,
       BuildingId.HABITAT,
+      BuildingId.HABITAT,
       BuildingId.SOLAR_PANEL,
       BuildingId.BASIC_FARM,
       BuildingId.BASIC_FARM,
-      BuildingId.OXYGEN_GENERATOR,
-      BuildingId.OXYGEN_GENERATOR,
     ],
   },
 ];

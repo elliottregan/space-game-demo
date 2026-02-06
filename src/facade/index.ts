@@ -3,7 +3,7 @@
 
 // Domain facades (for advanced usage or testing)
 export {
-  AirQualityFacade,
+  LifeSupportFacade,
   BuildingsFacade,
   ColonyFacade,
   EventsFacade,

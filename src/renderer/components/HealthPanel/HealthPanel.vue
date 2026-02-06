@@ -43,12 +43,12 @@ const breakdownItems = computed<BreakdownItem[]>(() => {
     });
   }
 
-  // Air quality effect
-  if (state.airQualityHealthEffect !== 0) {
+  // Life support effect
+  if (state.lifeSupportHealthEffect !== 0) {
     items.push({
-      key: "air-quality",
-      name: "Air Quality",
-      value: `${state.airQualityHealthEffect.toFixed(1)}/sol`,
+      key: "life-support",
+      name: "Life Support",
+      value: `${state.lifeSupportHealthEffect.toFixed(1)}/sol`,
       variant: "negative",
     });
   }
@@ -85,7 +85,7 @@ const netHealthChange = computed(() => {
     change += COLONY_MORALE.HEALTH_RECOVERY;
   }
 
-  change += state.airQualityHealthEffect;
+  change += state.lifeSupportHealthEffect;
 
   if (hasFoodShortage.value) {
     change -= SHORTAGE_THRESHOLDS.FOOD_HEALTH_PENALTY;
@@ -98,7 +98,7 @@ const netHealthChange = computed(() => {
 // oxlint-disable-next-line no-unused-vars
 const hasEffects = computed(() => {
   return (
-    state.airQualityHealthEffect !== 0 ||
+    state.lifeSupportHealthEffect !== 0 ||
     hasFoodShortage.value ||
     state.health < COLONY_HEALTH.LOW_WARNING_THRESHOLD
   );
