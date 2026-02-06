@@ -939,6 +939,10 @@ export class BuildingManager {
     return Array.from(this.buildings.values()).filter((b) => b.status === "pending");
   }
 
+  getUpgradingBuildings(): Building[] {
+    return Array.from(this.buildings.values()).filter((b) => b.status === "upgrading");
+  }
+
   /** Get depot ranges for all active depot buildings */
   getDepotRanges(): Map<string, number> {
     const ranges = new Map<string, number>();

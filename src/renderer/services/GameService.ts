@@ -392,7 +392,11 @@ class GameService {
     // Grid state - include both active and pending (under construction) buildings
     const gridPlacements: GameUIState["gridBuildings"] = [];
     const buildingSnapshot = this.facade.buildings.snapshot();
-    const allGridBuildings = [...buildingSnapshot.active, ...buildingSnapshot.pending];
+    const allGridBuildings = [
+      ...buildingSnapshot.active,
+      ...buildingSnapshot.pending,
+      ...buildingSnapshot.upgrading,
+    ];
     for (const building of allGridBuildings) {
       const pos = this.facade.game.getGridBuildingPosition(building.id);
       const placement = this.facade.game.getGridPlacement(building.id);
