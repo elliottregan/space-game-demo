@@ -22,7 +22,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     description: "Generates power from sunlight",
     cost: { materials: 30 },
     constructionTime: 5,
-    powerProduction: 10,
+    powerProduction: 20,
     workerSlots: 1,
     workerRole: ColonistRole.ENGINEERING,
     airContribution: 0,
