@@ -81,7 +81,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     powerConsumption: 5,
     workerSlots: 2,
     workerRole: ColonistRole.ENGINEERING,
-    airContribution: 5,
+    airContribution: 10,
     purpose: BuildingPurpose.Industrial,
   },
   {
