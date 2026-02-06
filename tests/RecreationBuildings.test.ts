@@ -112,11 +112,10 @@ describe("Recreation Buildings", () => {
     // Add sustainable production to offset starting building consumption
     gameState.resources.addProduction({ food: 100, water: 100 });
 
-    // Build extra oxygen generator to push air quality above comfortable threshold
-    // Starting: 9 oxygen / 14 colonists = 64%. Need 11.2+ for 80%.
-    // Extra oxygen generator adds +5 -> 14/14 = 100%
+    // Build extra habitat to push life support capacity above comfortable threshold
+    gameState.resources.add({ materials: 200 });
     gameState.buildings.startBuilding(
-      BuildingId.OXYGEN_GENERATOR,
+      BuildingId.HABITAT,
       gameState.resources,
       gameState.technology,
     );
@@ -131,7 +130,7 @@ describe("Recreation Buildings", () => {
       gameState.technology,
     );
 
-    // Fast-forward construction (12 sols for oxygen generator)
+    // Fast-forward construction (10 sols for habitat)
     for (let i = 0; i < 12; i++) {
       gameState.tick();
     }

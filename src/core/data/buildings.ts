@@ -13,7 +13,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 10,
     powerConsumption: 4,
     capacity: 6, // Houses 6 colonists
-    airContribution: 2,
+    lifeSupportCapacity: 10,
     purpose: BuildingPurpose.Residential,
   },
   {
@@ -23,9 +23,8 @@ export const BUILDINGS: BuildingDefinition[] = [
     cost: { materials: 30 },
     constructionTime: 5,
     powerProduction: 20,
-    workerSlots: 1,
+    workerSlots: 2,
     workerRole: ColonistRole.ENGINEERING,
-    airContribution: 0,
     purpose: BuildingPurpose.Industrial,
   },
   {
@@ -40,7 +39,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerRole: ColonistRole.ENGINEERING,
     requiresDeposit: true,
     repurposeTargets: [BuildingId.MINING_STATION],
-    airContribution: 0,
     purpose: BuildingPurpose.Industrial,
   },
   {
@@ -54,7 +52,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     powerConsumption: 4,
     workerSlots: 2,
     workerRole: ColonistRole.FARMING,
-    airContribution: 2,
     purpose: BuildingPurpose.Industrial,
   },
   {
@@ -68,20 +65,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 4,
     workerRole: ColonistRole.ENGINEERING,
     requiresDeposit: true,
-    airContribution: -2,
-    purpose: BuildingPurpose.Industrial,
-  },
-  {
-    id: BuildingId.OXYGEN_GENERATOR,
-    name: "Oxygen Generator",
-    description: "Electrolyzes water to produce breathable oxygen",
-    cost: { materials: 55 },
-    constructionTime: 12,
-    consumption: { water: 2 },
-    powerConsumption: 5,
-    workerSlots: 2,
-    workerRole: ColonistRole.ENGINEERING,
-    airContribution: 5,
+    lifeSupportLoad: 1,
     purpose: BuildingPurpose.Industrial,
   },
   {
@@ -94,7 +78,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 2,
     workerRole: ColonistRole.RESEARCH,
     researchOutput: 1.0,
-    airContribution: 0,
     purpose: BuildingPurpose.Industrial,
   },
 
@@ -111,7 +94,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 4,
     workerRole: ColonistRole.FARMING,
     requiredTech: TechnologyId.HYDROPONICS,
-    airContribution: 2,
     purpose: BuildingPurpose.Industrial,
   },
   {
@@ -125,7 +107,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 2,
     workerRole: ColonistRole.ENGINEERING,
     requiredTech: TechnologyId.WATER_RECYCLING,
-    airContribution: 0,
     purpose: BuildingPurpose.Industrial,
   },
   {
@@ -139,7 +120,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerRole: ColonistRole.RESEARCH,
     requiredTech: TechnologyId.HABITAT_FABRICATION,
     researchOutput: 3.0,
-    airContribution: -1,
+    lifeSupportLoad: 1,
     purpose: BuildingPurpose.Industrial,
   },
   {
@@ -150,7 +131,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 18,
     powerConsumption: 5,
     capacity: 8, // Houses 8 colonists
-    airContribution: 2,
+    lifeSupportCapacity: 12,
     purpose: BuildingPurpose.Residential,
   },
   {
@@ -164,7 +145,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 2,
     workerRole: ColonistRole.ENGINEERING,
     requiredTech: TechnologyId.HABITAT_FABRICATION,
-    airContribution: -1,
+    lifeSupportLoad: 1,
     purpose: BuildingPurpose.Industrial,
   },
   {
@@ -176,7 +157,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     production: { materials: 12 },
     powerConsumption: 15,
     requiredTech: TechnologyId.ROBOTICS,
-    airContribution: -1,
+    lifeSupportLoad: 1,
     purpose: BuildingPurpose.Industrial,
   },
   {
@@ -192,7 +173,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     requiredTech: TechnologyId.ASTEROID_MINING,
     requiresDeposit: true,
     repurposeTargets: [BuildingId.WATER_EXTRACTOR],
-    airContribution: -1,
+    lifeSupportLoad: 1,
     purpose: BuildingPurpose.Industrial,
   },
   {
@@ -205,7 +186,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 2,
     workerRole: ColonistRole.ENGINEERING,
     requiredTech: TechnologyId.NUCLEAR_FISSION,
-    airContribution: 0,
     purpose: BuildingPurpose.Industrial,
   },
   {
@@ -218,7 +198,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 4,
     workerRole: ColonistRole.RESEARCH,
     requiredTech: TechnologyId.GENETICS,
-    airContribution: -1,
+    lifeSupportLoad: 1,
     purpose: BuildingPurpose.Industrial,
   },
   {
@@ -231,7 +211,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     workerSlots: 3,
     workerRole: ColonistRole.CIVIL_SCIENCE,
     requiredTech: TechnologyId.ADVANCED_MEDICINE,
-    airContribution: 0,
     purpose: BuildingPurpose.Industrial,
   },
   {
@@ -242,7 +221,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 30,
     powerConsumption: 15,
     requiredTech: TechnologyId.CRYOSLEEP,
-    airContribution: 0,
     purpose: BuildingPurpose.Industrial,
   },
 
@@ -255,7 +233,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 10,
     powerConsumption: 3,
     moraleBoost: 5,
-    airContribution: 0,
     purpose: BuildingPurpose.Social,
     capacity: 8,
     bondingStrength: 1.0,
@@ -268,7 +245,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 12,
     powerConsumption: 4,
     moraleBoost: 6,
-    airContribution: 0,
     purpose: BuildingPurpose.Social,
     capacity: 6,
     bondingStrength: 1.2,
@@ -282,7 +258,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     consumption: { water: 1 },
     powerConsumption: 2,
     moraleBoost: 4,
-    airContribution: 2,
     purpose: BuildingPurpose.Industrial,
   },
   {
@@ -294,7 +269,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     powerConsumption: 5,
     moraleBoost: 8,
     requiredTech: TechnologyId.HABITAT_FABRICATION,
-    airContribution: 0,
     purpose: BuildingPurpose.Industrial,
   },
   {
@@ -306,7 +280,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 15,
     powerConsumption: 3,
     moraleBoost: 3,
-    airContribution: 0,
     purpose: BuildingPurpose.Social,
     bondingStrength: 1.2,
   },
@@ -332,7 +305,6 @@ export const BUILDINGS: BuildingDefinition[] = [
       "A massive orbital station that captures and processes asteroids. Infinite resources mean infinite profit and permanent corporate dominance.",
     cost: { materials: 1000 },
     constructionTime: 115,
-    airContribution: 10,
     purpose: BuildingPurpose.Industrial,
     requiredProject: ProjectId.DEEP_SPACE_MINING_CHARTER,
     isVictoryBuilding: true,
@@ -344,7 +316,6 @@ export const BUILDINGS: BuildingDefinition[] = [
       "An orbital station symbolizing Martian unity and independence. A beacon of sovereignty visible from Earth.",
     cost: { materials: 950 },
     constructionTime: 110,
-    airContribution: 8,
     purpose: BuildingPurpose.Industrial,
     requiredProject: ProjectId.DECLARATION_OF_SOVEREIGNTY,
     isVictoryBuilding: true,
@@ -356,7 +327,6 @@ export const BUILDINGS: BuildingDefinition[] = [
       "A tether to orbit enabling cheap, mass transportation between Earth and Mars. The gateway for humanity's great migration.",
     cost: { materials: 900 },
     constructionTime: 105,
-    airContribution: 5,
     purpose: BuildingPurpose.Industrial,
     requiredProject: ProjectId.EARTH_RELIEF_COMPACT,
     isVictoryBuilding: true,

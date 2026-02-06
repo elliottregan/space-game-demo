@@ -179,7 +179,7 @@ describe("Building Recycling", () => {
     tech.completeResearch(TechnologyId.HABITAT_FABRICATION);
     tech.completeResearch(TechnologyId.ROBOTICS);
 
-    // Build habitat first for positive oxygen (factory has -1 oxygen contribution)
+    // Build habitat first for life support capacity (factory has lifeSupportLoad: 1)
     manager.startBuilding(BuildingId.HABITAT, resources, tech);
     const building = manager.startBuilding(BuildingId.AUTOMATED_FACTORY, resources, tech);
 
@@ -188,8 +188,10 @@ describe("Building Recycling", () => {
       manager.tick(resources);
     }
 
-    // Verify oxygen is positive to avoid efficiency penalty
-    expect(manager.getTotalAirContribution()).toBeGreaterThan(0);
+    // Verify life support capacity exceeds load to avoid efficiency penalty
+    expect(manager.getTotalLifeSupportCapacity()).toBeGreaterThan(
+      manager.getTotalLifeSupportLoad(),
+    );
 
     // Automated Factory produces 12 materials
     const prodBefore = resources.getProduction();

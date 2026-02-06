@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AirQualityPanel } from "./AirQualityPanel";
+import { LifeSupportPanel } from "./LifeSupportPanel";
 import { BuildingsTablePanel } from "./BuildingsTablePanel";
 import { ColonistsPanel } from "./ColonistsPanel";
 import { ColonyPanel } from "./ColonyPanel";
@@ -11,7 +11,7 @@ import { HealthPanel } from "./HealthPanel";
     <div class="left-column">
       <ColonyPanel />
       <HealthPanel />
-      <AirQualityPanel />
+      <LifeSupportPanel />
     </div>
     <div class="right-column">
       <ColonistsPanel />

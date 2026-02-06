@@ -11,7 +11,6 @@ import {
   Droplet,
   Sprout,
   Pickaxe,
-  Wind,
   Leaf,
   Recycle,
   FlaskConical,
@@ -40,7 +39,7 @@ const icons = [
   { id: BuildingId.WATER_EXTRACTOR, component: Droplet },
   { id: BuildingId.BASIC_FARM, component: Sprout },
   { id: BuildingId.BASIC_MINE, component: Pickaxe },
-  { id: BuildingId.OXYGEN_GENERATOR, component: Wind },
+
   { id: BuildingId.GREENHOUSE, component: Leaf },
   { id: BuildingId.WATER_RECLAIMER, component: Recycle },
   { id: BuildingId.RESEARCH_LAB, component: FlaskConical },

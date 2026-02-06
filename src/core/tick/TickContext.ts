@@ -1,4 +1,4 @@
-import type { AirQualityManager } from "../systems/AirQualityManager";
+import type { LifeSupportManager } from "../systems/LifeSupportManager";
 import type { BuildingManager } from "../systems/BuildingManager";
 import type { ColonistMoraleManager } from "../systems/ColonistMoraleManager";
 import type { ColonyManager } from "../systems/ColonyManager";
@@ -29,8 +29,8 @@ export interface SocialCohesionData {
 export interface DerivedValues {
   socialCohesion: SocialCohesionData | null;
   laborPoolBonus: number;
-  airQuality: number;
-  airQualityEffects: { health: number; morale: number; efficiency: number } | null;
+  lifeSupportQuality: number;
+  lifeSupportEffects: { health: number; morale: number; efficiency: number } | null;
 }
 
 /**
@@ -59,7 +59,7 @@ export interface TickContext {
   events: EventManager;
   victory: VictoryManager;
   ideology: IdeologyManager;
-  airQualityManager: AirQualityManager;
+  lifeSupport: LifeSupportManager;
   earthCrisis: EarthCrisisManager;
   grid: GridManager;
   scheduler: RecurringEventScheduler;
@@ -88,7 +88,7 @@ export function createTickContext(
     events: EventManager;
     victory: VictoryManager;
     ideology: IdeologyManager;
-    airQualityManager: AirQualityManager;
+    lifeSupport: LifeSupportManager;
     earthCrisis: EarthCrisisManager;
     grid: GridManager;
     scheduler: RecurringEventScheduler;
@@ -101,8 +101,8 @@ export function createTickContext(
     derived: {
       socialCohesion: null,
       laborPoolBonus: 0,
-      airQuality: 1,
-      airQualityEffects: null,
+      lifeSupportQuality: 1,
+      lifeSupportEffects: null,
     },
     settings,
   };

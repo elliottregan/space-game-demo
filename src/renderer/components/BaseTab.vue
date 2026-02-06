@@ -241,13 +241,24 @@ function closeStatsCard() {
   selectedBuildingId.value = null;
 }
 
-// Placement hints for context menu (mock for now - will connect in Task 18)
-const placementHints = computed(() => ({
-  hasPower: false,
-  powerCapacityAvailable: 0,
-  deposit: undefined as DepositType | undefined,
-  isOccupied: false,
-}));
+// Placement hints for context menu
+const placementHints = computed(() => {
+  if (!contextMenuPosition.value) {
+    return {
+      hasPower: false,
+      powerCapacityAvailable: 0,
+      deposit: undefined as DepositType | undefined,
+      isOccupied: false,
+    };
+  }
+  const hints = gameService.api.grid.getPlacementHints(contextMenuPosition.value);
+  return {
+    hasPower: hints.hasPower,
+    powerCapacityAvailable: hints.powerCapacityAvailable,
+    deposit: hints.deposit,
+    isOccupied: hints.isOccupied,
+  };
+});
 </script>
 
 <template>

@@ -13,7 +13,7 @@ import {
   type Project,
   type RecurringEventParams,
 } from "./models/NPCInfluence";
-import { AirQualityManager } from "./systems/AirQualityManager";
+import { LifeSupportManager } from "./systems/LifeSupportManager";
 import { BuildingManager } from "./systems/BuildingManager";
 import { ColonistMoraleManager } from "./systems/ColonistMoraleManager";
 import { ColonyManager } from "./systems/ColonyManager";
@@ -42,7 +42,7 @@ export class GameState {
   events: EventManager;
   victory: VictoryManager;
   operations: OperationsManager;
-  airQuality: AirQualityManager;
+  lifeSupport: LifeSupportManager;
   ideology: IdeologyManager;
   earthCrisis: EarthCrisisManager;
   grid: GridManager;
@@ -85,7 +85,7 @@ export class GameState {
     this.events = new EventManager(RANDOM_EVENTS);
     this.victory = new VictoryManager();
     this.operations = new OperationsManager();
-    this.airQuality = new AirQualityManager();
+    this.lifeSupport = new LifeSupportManager();
     this.ideology = new IdeologyManager();
     this.earthCrisis = new EarthCrisisManager();
     this.grid = new GridManager();
@@ -291,11 +291,18 @@ export class GameState {
       }
     }
 
-    // Place habitat adjacent (5,6)
-    const habitat = activeBuildings.find((b) => b.definitionId === BuildingId.HABITAT);
-    if (habitat) {
-      this.grid.placeBuilding(habitat.id, { x: 5, y: 6 });
-      usedPositions.add(posKey(5, 6));
+    // Place habitats adjacent (5,6) and (6,6)
+    const habitats = activeBuildings.filter((b) => b.definitionId === BuildingId.HABITAT);
+    const habitatPositions = [
+      { x: 5, y: 6 },
+      { x: 6, y: 6 },
+    ];
+    for (let i = 0; i < habitats.length; i++) {
+      const habitat = habitats[i];
+      if (!habitat) continue;
+      const pos = habitatPositions[i] ?? { x: 5 + i, y: 6 };
+      this.grid.placeBuilding(habitat.id, pos);
+      usedPositions.add(posKey(pos.x, pos.y));
       const def = this.buildings.getDefinition(habitat.definitionId);
       if (def?.powerConsumption) {
         this.grid.setBuildingPowerConsumption(habitat.id, def.powerConsumption);
@@ -310,17 +317,6 @@ export class GameState {
       const def = this.buildings.getDefinition(farm.definitionId);
       if (def?.powerConsumption) {
         this.grid.setBuildingPowerConsumption(farm.id, def.powerConsumption);
-      }
-    }
-
-    // Place oxygen generator (6,6)
-    const oxygenGen = activeBuildings.find((b) => b.definitionId === BuildingId.OXYGEN_GENERATOR);
-    if (oxygenGen) {
-      this.grid.placeBuilding(oxygenGen.id, { x: 6, y: 6 });
-      usedPositions.add(posKey(6, 6));
-      const def = this.buildings.getDefinition(oxygenGen.definitionId);
-      if (def?.powerConsumption) {
-        this.grid.setBuildingPowerConsumption(oxygenGen.id, def.powerConsumption);
       }
     }
 
@@ -366,7 +362,7 @@ export class GameState {
         events: this.events,
         victory: this.victory,
         ideology: this.ideology,
-        airQualityManager: this.airQuality,
+        lifeSupport: this.lifeSupport,
         earthCrisis: this.earthCrisis,
         grid: this.grid,
         scheduler: this.scheduler,
@@ -434,7 +430,7 @@ export class GameState {
       events: this.events.toJSON(),
       victory: this.victory.toJSON(),
       operations: this.operations.toJSON(),
-      airQuality: this.airQuality.toJSON(),
+      lifeSupport: this.lifeSupport.toJSON(),
       ideology: this.ideology.toJSON(),
       earthCrisis: this.earthCrisis.toJSON(),
       grid: this.grid.toJSON(),
@@ -464,8 +460,8 @@ export class GameState {
       state.operations = OperationsManager.fromJSON(data.operations);
     }
 
-    if (data.airQuality) {
-      state.airQuality = AirQualityManager.fromJSON(data.airQuality);
+    if (data.lifeSupport) {
+      state.lifeSupport = LifeSupportManager.fromJSON(data.lifeSupport);
     }
 
     if (data.ideology) {

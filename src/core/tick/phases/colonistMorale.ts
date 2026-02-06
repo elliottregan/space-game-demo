@@ -68,7 +68,7 @@ export const propagateColonistMorale = definePhase({
       relationships,
       ctx.colony,
       ctx.currentSol,
-      ctx.derived.airQuality,
+      ctx.derived.lifeSupportQuality,
     );
 
     // Sync colony-wide morale from individual morales

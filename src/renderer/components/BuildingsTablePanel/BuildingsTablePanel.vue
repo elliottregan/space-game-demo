@@ -52,7 +52,8 @@ const buildingData = computed(() => {
         flows: flows.join(", ") || "-",
         mode: b.mode,
         broken: b.broken,
-        airContribution: def.airContribution ?? 0,
+        lifeSupportCapacity: def.lifeSupportCapacity ?? 0,
+        lifeSupportLoad: def.lifeSupportLoad ?? 0,
         moraleBoost: def.moraleBoost ?? 0,
         constructionProgress:
           b.status === "pending"

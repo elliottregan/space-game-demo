@@ -59,7 +59,7 @@ export class BuildingManager {
   private technologyTree: TechnologyTree | null = null;
   private victoryManager: VictoryManager | null = null;
   private gridManager: GridManager | null = null;
-  private airQualityEfficiency: number = 1;
+  private lifeSupportEfficiency: number = 1;
 
   // Query interfaces for read-only access
   private colonistQueries: ColonistQueries | null = null;
@@ -71,8 +71,8 @@ export class BuildingManager {
     this.technologyTree = tech;
   }
 
-  setAirQualityEfficiency(multiplier: number): void {
-    this.airQualityEfficiency = Math.max(0, Math.min(1, multiplier));
+  setLifeSupportEfficiency(multiplier: number): void {
+    this.lifeSupportEfficiency = Math.max(0, Math.min(1, multiplier));
   }
 
   setVictoryManager(victory: VictoryManager): void {
@@ -793,14 +793,14 @@ export class BuildingManager {
 
   /**
    * Calculate the combined efficiency multiplier for a building.
-   * Factors: air quality, staffing, worker efficiency, team cohesion.
+   * Factors: life support, staffing, worker efficiency, team cohesion.
    */
   private getBuildingEfficiencyMultiplier(buildingId: string): number {
     const building = this.buildings.get(buildingId);
     if (!building) return 0;
 
     return combineMultipliers(
-      this.airQualityEfficiency,
+      this.lifeSupportEfficiency,
       this.getStaffingEfficiency(buildingId),
       this.getWorkerEfficiency(buildingId),
       this.getTeamCohesionMultiplier(buildingId),
@@ -862,7 +862,7 @@ export class BuildingManager {
 
   /**
    * Calculate total research output from all active research buildings.
-   * Accounts for staffing efficiency, worker efficiency, air quality, and team cohesion.
+   * Accounts for staffing efficiency, worker efficiency, life support, and team cohesion.
    * @returns Total research output per sol
    */
   getTotalResearchOutput(): number {
@@ -937,6 +937,10 @@ export class BuildingManager {
 
   getPendingBuildings(): Building[] {
     return Array.from(this.buildings.values()).filter((b) => b.status === "pending");
+  }
+
+  getUpgradingBuildings(): Building[] {
+    return Array.from(this.buildings.values()).filter((b) => b.status === "upgrading");
   }
 
   /** Get depot ranges for all active depot buildings */
@@ -1031,8 +1035,12 @@ export class BuildingManager {
     return this.sumActiveBuildings((def) => def.moraleBoost);
   }
 
-  getTotalAirContribution(): number {
-    return this.sumActiveBuildings((def) => def.airContribution);
+  getTotalLifeSupportCapacity(): number {
+    return this.sumActiveBuildings((def) => def.lifeSupportCapacity);
+  }
+
+  getTotalLifeSupportLoad(): number {
+    return this.sumActiveBuildings((def) => def.lifeSupportLoad);
   }
 
   /**

@@ -76,10 +76,10 @@ describe("3D Fabricator", () => {
       expect(def?.requiresDeposit).toBeFalsy();
     });
 
-    it("has -1 air contribution", () => {
+    it("has life support load of 1", () => {
       const def = api.buildings.getDefinition(BuildingId.FABRICATOR_3D);
       expect(def).toBeDefined();
-      expect(def?.airContribution).toBe(-1);
+      expect(def?.lifeSupportLoad).toBe(1);
     });
 
     it("consumes 8 power per sol", () => {
@@ -117,17 +117,17 @@ describe("3D Fabricator", () => {
       expect(def?.production?.materials).toBeGreaterThan(0);
     });
 
-    it("building adds to colony oxygen contribution", () => {
+    it("building adds to colony life support load", () => {
       researchTech(TechnologyId.HABITAT_FABRICATION);
 
-      const productionBefore = api.airQuality.snapshot().production;
+      const loadBefore = api.buildings.snapshot().totalLifeSupportLoad;
 
       buildAndComplete(BuildingId.FABRICATOR_3D);
 
-      const productionAfter = api.airQuality.snapshot().production;
+      const loadAfter = api.buildings.snapshot().totalLifeSupportLoad;
 
-      // Should decrease by 1 (negative contribution)
-      expect(productionAfter).toBe(productionBefore - 1);
+      // Fabricator adds 1 to life support load
+      expect(loadAfter).toBe(loadBefore + 1);
     });
   });
 
