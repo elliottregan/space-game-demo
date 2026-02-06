@@ -100,16 +100,19 @@ watch(selectedDefId, (defId) => {
 });
 
 const filteredBuildings = computed(() => {
-  return props.availableBuildings.filter((def) => {
-    // Filter by deposit requirement
-    if (def.requiresDeposit && !props.hints.deposit) {
-      return false;
-    }
-    return true;
-  });
+  return props.availableBuildings;
 });
 
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+function isDisabled(def: BuildingDefinition): boolean {
+  return !!(def.requiresDeposit && !props.hints.deposit);
+}
+
 function getBuildingHint(def: BuildingDefinition): string {
+  if (def.requiresDeposit && !props.hints.deposit) {
+    return "Requires deposit";
+  }
+
   const hints: string[] = [];
 
   if (!props.hints.hasPower && def.powerConsumption) {
@@ -193,8 +196,8 @@ function getIcon(defId: string): Component | null {
         v-for="def in filteredBuildings"
         :key="def.id"
         class="building-option"
-        :class="{ recommended: isRecommended(def) }"
-        @click="selectBuilding(def.id)"
+        :class="{ recommended: isRecommended(def), disabled: isDisabled(def) }"
+        @click="!isDisabled(def) && selectBuilding(def.id)"
       >
         <div class="building-icon">
           <component :is="getIcon(def.id)" :size="20" />
@@ -362,6 +365,15 @@ function getIcon(defId: string): Component | null {
 
 .building-option.recommended {
   background: rgba(33, 150, 243, 0.1);
+}
+
+.building-option.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.building-option.disabled:hover {
+  background: inherit;
 }
 
 .building-icon {

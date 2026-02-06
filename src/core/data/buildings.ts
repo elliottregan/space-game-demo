@@ -23,7 +23,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     cost: { materials: 30 },
     constructionTime: 5,
     powerProduction: 20,
-    workerSlots: 1,
+    workerSlots: 2,
     workerRole: ColonistRole.ENGINEERING,
     airContribution: 0,
     purpose: BuildingPurpose.Industrial,
