@@ -3,6 +3,11 @@ import { computed } from "vue";
 import { highlightState } from "../../directives/ResourceHighlight";
 import { gameService } from "../../services/GameService";
 import { ResourceBadge } from "../../ui";
+import { getHealthVariant, getStatusVariant } from "../../utils/displayThresholds";
+import {
+  AIR_QUALITY_COMFORTABLE,
+  AIR_QUALITY_CRITICAL,
+} from "../../../core/balance/AirQualityBalance";
 import EarthCrisisIndicator from "./EarthCrisisIndicator.vue";
 
 // Reactive state for template bindings (auto-updates when API syncs)
@@ -11,6 +16,14 @@ const state = gameService.getState();
 // Domain API for commands and one-off queries (for future extensibility)
 // biome-ignore lint/correctness/noUnusedVariables: reserved for future API usage
 const api = gameService.api;
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+const healthVariant = computed(() => getHealthVariant(state.health));
+
+// biome-ignore lint/correctness/noUnusedVariables: used in template
+const airQualityVariant = computed(() =>
+  getStatusVariant(state.airQuality, AIR_QUALITY_COMFORTABLE, AIR_QUALITY_CRITICAL),
+);
 
 // Stockpiled resources (power is shown in BaseTab, not here)
 // biome-ignore lint/correctness/noUnusedVariables: used in template
@@ -86,6 +99,36 @@ function getDelta(key: string): number {
       </span>
     </div>
 
+    <div class="separator" />
+
+    <!-- Colony Health -->
+    <div class="status-item">
+      <span class="status-label">Health</span>
+      <div class="status-bar">
+        <div
+          class="status-fill"
+          :class="`status-fill--${healthVariant}`"
+          :style="{ width: `${state.health}%` }"
+        />
+      </div>
+      <span class="status-value" :class="healthVariant">{{ Math.round(state.health) }}%</span>
+    </div>
+
+    <!-- Life Support (Air Quality) -->
+    <div class="status-item">
+      <span class="status-label">Air</span>
+      <div class="status-bar">
+        <div
+          class="status-fill"
+          :class="`status-fill--${airQualityVariant}`"
+          :style="{ width: `${Math.round(state.airQuality * 100)}%` }"
+        />
+      </div>
+      <span class="status-value" :class="airQualityVariant"
+        >{{ Math.round(state.airQuality * 100) }}%</span
+      >
+    </div>
+
     <!-- Earth Crisis Indicator -->
     <EarthCrisisIndicator
       :severity="state.earthCrisis.severity"
@@ -132,5 +175,67 @@ function getDelta(key: string): number {
   font-weight: bold;
   background: rgba(198, 40, 40, 0.1);
   padding: 0 var(--g-space-xs);
+}
+
+.separator {
+  width: 1px;
+  align-self: stretch;
+  background: var(--g-color-border);
+  margin: 0 var(--g-space-xs);
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-xs);
+}
+
+.status-label {
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-bar {
+  width: 48px;
+  height: 6px;
+  background: var(--g-color-bg-surface);
+  border: 1px solid var(--g-color-border);
+  overflow: hidden;
+}
+
+.status-fill {
+  height: 100%;
+  transition: width var(--g-transition-normal);
+}
+
+.status-fill--positive {
+  background: var(--g-color-positive);
+}
+
+.status-fill--warning {
+  background: var(--g-color-warning);
+}
+
+.status-fill--negative {
+  background: var(--g-color-negative);
+}
+
+.status-value {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+}
+
+.status-value.positive {
+  color: var(--g-color-positive);
+}
+
+.status-value.warning {
+  color: var(--g-color-warning);
+}
+
+.status-value.negative {
+  color: var(--g-color-negative);
 }
 </style>
