@@ -32,7 +32,7 @@ describe("GameState - Grid Integration", () => {
     // Place building at grid edge, far from starting buildings (grid is 10x10, so 0-9 valid)
     state.grid.placeBuilding("test-building", { x: 9, y: 9 });
     state.grid.setBuildingPowerConsumption("test-building", 4);
-    state.grid.updatePowerConnections(false);
+    state.grid.updatePowerConnections();
 
     const initialBattery = state.grid.getPlacement("test-building")?.batteryLevel;
     expect(initialBattery).toBeDefined();

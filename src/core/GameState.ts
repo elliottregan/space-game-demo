@@ -342,7 +342,7 @@ export class GameState {
 
     // Update power connections (only active buildings can provide power)
     const activeBuildingIds = new Set(this.buildings.getActiveBuildings().map((b) => b.id));
-    this.grid.updatePowerConnections(false, activeBuildingIds);
+    this.grid.updatePowerConnections(activeBuildingIds);
   }
 
   tick(): GameEvent[] {

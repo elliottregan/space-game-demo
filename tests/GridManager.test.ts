@@ -118,11 +118,11 @@ describe("GridManager - Building Placement", () => {
   });
 });
 
-describe("GridManager - Power Connections", () => {
+describe("GridManager - Power Connections (Adjacency)", () => {
   it("registerPowerSource tracks power buildings", () => {
     const manager = new GridManager();
     manager.placeBuilding("solar-1", { x: 5, y: 5 });
-    manager.registerPowerSource("solar-1", 10); // 10 power output
+    manager.registerPowerSource("solar-1", 10);
 
     const sources = manager.getPowerSources();
     expect(sources.length).toBe(1);
@@ -132,63 +132,164 @@ describe("GridManager - Power Connections", () => {
   it("calculateDistance returns Manhattan distance", () => {
     const manager = new GridManager();
     const distance = manager.calculateDistance({ x: 0, y: 0 }, { x: 3, y: 4 });
-    expect(distance).toBe(7); // |3-0| + |4-0| = 7
+    expect(distance).toBe(7);
   });
 
-  it("building within range connects to power", () => {
+  it("adjacent building connects to power", () => {
     const manager = new GridManager();
 
-    // Place solar panel at center
-    manager.placeBuilding("solar-1", { x: 5, y: 5 });
-    manager.registerPowerSource("solar-1", 10); // range = 2
-
-    // Place habitat within range (distance 2)
-    manager.placeBuilding("habitat-1", { x: 5, y: 7 });
-
-    manager.updatePowerConnections(false); // no tech bonus
-
-    const state = manager.getPowerState("habitat-1");
-    expect(state).toBe(PowerState.POWERED);
-  });
-
-  it("building outside range is unpowered", () => {
-    const manager = new GridManager();
-
-    // Place solar panel at center
-    manager.placeBuilding("solar-1", { x: 5, y: 5 });
-    manager.registerPowerSource("solar-1", 10); // range = 2
-
-    // Place habitat outside range (distance 5)
-    manager.placeBuilding("habitat-1", { x: 0, y: 5 });
-
-    manager.updatePowerConnections(false);
-
-    const state = manager.getPowerState("habitat-1");
-    expect(state).toBe(PowerState.ON_BATTERY); // Starts on battery
-  });
-
-  it("closer buildings get priority when capacity exceeded", () => {
-    const manager = new GridManager();
-
-    // Solar panel with 10 power (enough for ~2 buildings at 4 power each)
+    // Place solar panel
     manager.placeBuilding("solar-1", { x: 5, y: 5 });
     manager.registerPowerSource("solar-1", 10);
 
-    // Three habitats at different distances, each consuming 4 power
-    manager.placeBuilding("habitat-close", { x: 5, y: 6 }); // distance 1
-    manager.placeBuilding("habitat-mid", { x: 5, y: 7 }); // distance 2
-    manager.placeBuilding("habitat-far", { x: 4, y: 7 }); // distance 3
+    // Place habitat adjacent (distance 1)
+    manager.placeBuilding("habitat-1", { x: 5, y: 6 });
+    manager.setBuildingPowerConsumption("habitat-1", 4);
 
-    manager.setBuildingPowerConsumption("habitat-close", 4);
-    manager.setBuildingPowerConsumption("habitat-mid", 4);
-    manager.setBuildingPowerConsumption("habitat-far", 4);
+    manager.updatePowerConnections();
 
-    manager.updatePowerConnections(false);
+    expect(manager.getPowerState("habitat-1")).toBe(PowerState.POWERED);
+  });
 
-    // Close and mid should be powered (8 power), far should not (would need 12)
-    expect(manager.getPowerState("habitat-close")).toBe(PowerState.POWERED);
-    expect(manager.getPowerState("habitat-mid")).toBe(PowerState.POWERED);
-    expect(manager.getPowerState("habitat-far")).toBe(PowerState.ON_BATTERY);
+  it("non-adjacent building without chain is unpowered", () => {
+    const manager = new GridManager();
+
+    // Place solar panel
+    manager.placeBuilding("solar-1", { x: 5, y: 5 });
+    manager.registerPowerSource("solar-1", 10);
+
+    // Place habitat non-adjacent (distance 2, no chain)
+    manager.placeBuilding("habitat-1", { x: 5, y: 7 });
+    manager.setBuildingPowerConsumption("habitat-1", 4);
+
+    manager.updatePowerConnections();
+
+    // Not adjacent and no relay chain => unpowered
+    expect(manager.getPowerState("habitat-1")).toBe(PowerState.ON_BATTERY);
+  });
+
+  it("power propagates through chain of adjacent buildings", () => {
+    const manager = new GridManager();
+
+    // Solar at (5,5)
+    manager.placeBuilding("solar-1", { x: 5, y: 5 });
+    manager.registerPowerSource("solar-1", 50);
+
+    // Chain: (5,6) -> (5,7) -> (5,8)
+    manager.placeBuilding("relay-1", { x: 5, y: 6 });
+    manager.setBuildingPowerConsumption("relay-1", 4);
+    manager.placeBuilding("relay-2", { x: 5, y: 7 });
+    manager.setBuildingPowerConsumption("relay-2", 4);
+    manager.placeBuilding("target", { x: 5, y: 8 });
+    manager.setBuildingPowerConsumption("target", 4);
+
+    manager.updatePowerConnections();
+
+    expect(manager.getPowerState("relay-1")).toBe(PowerState.POWERED);
+    expect(manager.getPowerState("relay-2")).toBe(PowerState.POWERED);
+    expect(manager.getPowerState("target")).toBe(PowerState.POWERED);
+  });
+
+  it("empty cell breaks power chain", () => {
+    const manager = new GridManager();
+
+    // Solar at (5,5)
+    manager.placeBuilding("solar-1", { x: 5, y: 5 });
+    manager.registerPowerSource("solar-1", 50);
+
+    // Building at (5,6) - adjacent to solar
+    manager.placeBuilding("connected", { x: 5, y: 6 });
+    manager.setBuildingPowerConsumption("connected", 4);
+
+    // Gap at (5,7) - empty cell
+
+    // Building at (5,8) - not connected through chain
+    manager.placeBuilding("disconnected", { x: 5, y: 8 });
+    manager.setBuildingPowerConsumption("disconnected", 4);
+
+    manager.updatePowerConnections();
+
+    expect(manager.getPowerState("connected")).toBe(PowerState.POWERED);
+    expect(manager.getPowerState("disconnected")).toBe(PowerState.ON_BATTERY);
+  });
+
+  it("capacity limits in chains - closer buildings get priority", () => {
+    const manager = new GridManager();
+
+    // Solar with limited power (10 = enough for 2 buildings at 4 each)
+    manager.placeBuilding("solar-1", { x: 5, y: 5 });
+    manager.registerPowerSource("solar-1", 10);
+
+    // Chain of 3 buildings each needing 4 power
+    manager.placeBuilding("b1", { x: 5, y: 6 }); // 1 hop
+    manager.setBuildingPowerConsumption("b1", 4);
+    manager.placeBuilding("b2", { x: 5, y: 7 }); // 2 hops
+    manager.setBuildingPowerConsumption("b2", 4);
+    manager.placeBuilding("b3", { x: 5, y: 8 }); // 3 hops
+    manager.setBuildingPowerConsumption("b3", 4);
+
+    manager.updatePowerConnections();
+
+    // First two should be powered (8 power), third should not (would need 12)
+    expect(manager.getPowerState("b1")).toBe(PowerState.POWERED);
+    expect(manager.getPowerState("b2")).toBe(PowerState.POWERED);
+    expect(manager.getPowerState("b3")).toBe(PowerState.ON_BATTERY);
+  });
+
+  it("buildings relay power even when powered by another source", () => {
+    const manager = new GridManager();
+
+    // Two power sources
+    manager.placeBuilding("solar-1", { x: 3, y: 5 });
+    manager.registerPowerSource("solar-1", 50);
+    manager.placeBuilding("solar-2", { x: 7, y: 5 });
+    manager.registerPowerSource("solar-2", 4); // just enough for 1 building
+
+    // Chain connecting both: (4,5) -> (5,5) -> (6,5)
+    manager.placeBuilding("b1", { x: 4, y: 5 });
+    manager.setBuildingPowerConsumption("b1", 4);
+    manager.placeBuilding("b2", { x: 5, y: 5 });
+    manager.setBuildingPowerConsumption("b2", 4);
+    manager.placeBuilding("b3", { x: 6, y: 5 });
+    manager.setBuildingPowerConsumption("b3", 4);
+
+    manager.updatePowerConnections();
+
+    // All should be powered - solar-1 can reach through chain, solar-2 can reach b3
+    expect(manager.getPowerState("b1")).toBe(PowerState.POWERED);
+    expect(manager.getPowerState("b2")).toBe(PowerState.POWERED);
+    expect(manager.getPowerState("b3")).toBe(PowerState.POWERED);
+  });
+
+  it("distanceToPower represents BFS hop count", () => {
+    const manager = new GridManager();
+
+    manager.placeBuilding("solar-1", { x: 5, y: 5 });
+    manager.registerPowerSource("solar-1", 50);
+
+    manager.placeBuilding("b1", { x: 5, y: 6 });
+    manager.setBuildingPowerConsumption("b1", 4);
+    manager.placeBuilding("b2", { x: 5, y: 7 });
+    manager.setBuildingPowerConsumption("b2", 4);
+
+    manager.updatePowerConnections();
+
+    expect(manager.getPlacement("b1")?.distanceToPower).toBe(1);
+    expect(manager.getPlacement("b2")?.distanceToPower).toBe(2);
+  });
+
+  it("activeBuildingIds filters inactive power sources", () => {
+    const manager = new GridManager();
+
+    manager.placeBuilding("solar-1", { x: 5, y: 5 });
+    manager.registerPowerSource("solar-1", 10);
+    manager.placeBuilding("habitat-1", { x: 5, y: 6 });
+    manager.setBuildingPowerConsumption("habitat-1", 4);
+
+    // Solar is not in active set
+    manager.updatePowerConnections(new Set(["habitat-1"]));
+
+    expect(manager.getPowerState("habitat-1")).toBe(PowerState.ON_BATTERY);
   });
 });
 
@@ -196,15 +297,13 @@ describe("GridManager - Battery System", () => {
   it("tick drains battery for unpowered buildings", () => {
     const manager = new GridManager();
 
-    // Place building with no power source
     manager.placeBuilding("habitat-1", { x: 0, y: 0 });
     manager.setBuildingPowerConsumption("habitat-1", 4);
-    manager.updatePowerConnections(false);
+    manager.updatePowerConnections();
 
     const initialBattery = manager.getPlacement("habitat-1")?.batteryLevel ?? 0;
     expect(initialBattery).toBe(1.0);
 
-    // Tick once (1 sol)
     manager.tick();
 
     const afterOneSol = manager.getPlacement("habitat-1")?.batteryLevel ?? 0;
@@ -216,9 +315,8 @@ describe("GridManager - Battery System", () => {
 
     manager.placeBuilding("habitat-1", { x: 0, y: 0 });
     manager.setBuildingPowerConsumption("habitat-1", 4);
-    manager.updatePowerConnections(false);
+    manager.updatePowerConnections();
 
-    // Drain to low battery (tick enough times)
     const ticksToLowBattery = Math.ceil(BATTERY_BACKUP_SOLS * (1 - LOW_BATTERY_THRESHOLD));
     for (let i = 0; i < ticksToLowBattery; i++) {
       manager.tick();
@@ -232,9 +330,8 @@ describe("GridManager - Battery System", () => {
 
     manager.placeBuilding("habitat-1", { x: 0, y: 0 });
     manager.setBuildingPowerConsumption("habitat-1", 4);
-    manager.updatePowerConnections(false);
+    manager.updatePowerConnections();
 
-    // Drain completely (tick BATTERY_BACKUP_SOLS + 1 times)
     for (let i = 0; i <= BATTERY_BACKUP_SOLS; i++) {
       manager.tick();
     }
@@ -245,45 +342,55 @@ describe("GridManager - Battery System", () => {
   it("reconnecting to power recharges battery", () => {
     const manager = new GridManager();
 
-    // Start without power
     manager.placeBuilding("habitat-1", { x: 5, y: 5 });
     manager.setBuildingPowerConsumption("habitat-1", 4);
-    manager.updatePowerConnections(false);
+    manager.updatePowerConnections();
 
-    // Drain some battery
     manager.tick();
     manager.tick();
 
     const drainedBattery = manager.getPlacement("habitat-1")?.batteryLevel ?? 0;
     expect(drainedBattery).toBeLessThan(1.0);
 
-    // Add power source and reconnect
+    // Add power source adjacent and reconnect
     manager.placeBuilding("solar-1", { x: 5, y: 6 });
     manager.registerPowerSource("solar-1", 10);
-    manager.updatePowerConnections(false);
+    manager.updatePowerConnections();
 
-    // Battery should be recharged
     expect(manager.getPlacement("habitat-1")?.batteryLevel).toBe(1.0);
     expect(manager.getPowerState("habitat-1")).toBe(PowerState.POWERED);
   });
 });
 
-describe("GridManager - Placement Hints", () => {
-  it("getPlacementHints shows power availability", () => {
+describe("GridManager - Placement Hints (Adjacency)", () => {
+  it("getPlacementHints shows power available when adjacent to powered building", () => {
     const manager = new GridManager();
 
     manager.placeBuilding("solar-1", { x: 5, y: 5 });
     manager.registerPowerSource("solar-1", 10);
-    manager.updatePowerConnections(false);
+    manager.updatePowerConnections();
 
-    // Cell in power range
-    const hintsInRange = manager.getPlacementHints({ x: 5, y: 6 }, false);
-    expect(hintsInRange.hasPower).toBe(true);
-    expect(hintsInRange.powerCapacityAvailable).toBe(10);
+    // Cell adjacent to solar panel
+    const hintsAdjacent = manager.getPlacementHints({ x: 5, y: 6 });
+    expect(hintsAdjacent.hasPower).toBe(true);
 
-    // Cell outside power range
-    const hintsOutOfRange = manager.getPlacementHints({ x: 0, y: 0 }, false);
-    expect(hintsOutOfRange.hasPower).toBe(false);
+    // Cell not adjacent to any powered building
+    const hintsNotAdjacent = manager.getPlacementHints({ x: 0, y: 0 });
+    expect(hintsNotAdjacent.hasPower).toBe(false);
+  });
+
+  it("getPlacementHints shows power when adjacent to powered relay", () => {
+    const manager = new GridManager();
+
+    manager.placeBuilding("solar-1", { x: 5, y: 5 });
+    manager.registerPowerSource("solar-1", 50);
+    manager.placeBuilding("relay", { x: 5, y: 6 });
+    manager.setBuildingPowerConsumption("relay", 4);
+    manager.updatePowerConnections();
+
+    // Cell adjacent to powered relay (not directly adjacent to solar)
+    const hints = manager.getPlacementHints({ x: 5, y: 7 });
+    expect(hints.hasPower).toBe(true);
   });
 
   it("getPlacementHints shows deposit info", () => {
@@ -294,7 +401,7 @@ describe("GridManager - Placement Hints", () => {
     const waterDeposit = deposits.find((d) => d.type === DepositType.WATER);
 
     if (waterDeposit) {
-      const hints = manager.getPlacementHints(waterDeposit.position, false);
+      const hints = manager.getPlacementHints(waterDeposit.position);
       expect(hints.deposit).toBe(DepositType.WATER);
     }
   });
@@ -303,7 +410,7 @@ describe("GridManager - Placement Hints", () => {
     const manager = new GridManager();
     manager.placeBuilding("solar-1", { x: 5, y: 5 });
 
-    const hints = manager.getPlacementHints({ x: 5, y: 5 }, false);
+    const hints = manager.getPlacementHints({ x: 5, y: 5 });
     expect(hints.isOccupied).toBe(true);
   });
 });
@@ -316,7 +423,7 @@ describe("GridManager - Serialization", () => {
     manager.registerPowerSource("solar-1", 10);
     manager.placeBuilding("habitat-1", { x: 5, y: 6 });
     manager.setBuildingPowerConsumption("habitat-1", 4);
-    manager.updatePowerConnections(false);
+    manager.updatePowerConnections();
 
     const json = manager.toJSON();
 
@@ -332,7 +439,7 @@ describe("GridManager - Serialization", () => {
     manager.registerPowerSource("solar-1", 10);
     manager.placeBuilding("habitat-1", { x: 5, y: 6 });
     manager.setBuildingPowerConsumption("habitat-1", 4);
-    manager.updatePowerConnections(false);
+    manager.updatePowerConnections();
 
     const json = manager.toJSON();
 

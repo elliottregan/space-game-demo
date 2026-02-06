@@ -3,8 +3,7 @@
 
 import type { GameState } from "../../core/GameState";
 import type { DepositType, GridPosition } from "../../core/models/Grid";
-import { TechnologyId } from "../../core/models/Technology";
-import { calculatePowerRange } from "../../core/balance/GridBalance";
+import { PowerState } from "../../core/models/Grid";
 import type { Queryable } from "../types/interfaces";
 import type { DepositInfo, GridSnapshot, PlacementHints } from "../types/grid";
 
@@ -22,7 +21,6 @@ export class GridFacade implements Queryable<GridSnapshot> {
    */
   snapshot(): GridSnapshot {
     const gridSize = this.gameState.grid.getGridSize();
-    const hasTechBonus = this.gameState.technology.isResearched(TechnologyId.NUCLEAR_FISSION);
 
     // Get all deposits with occupancy info
     const deposits = this.gameState.grid.getAllDeposits().map((d) => {
@@ -34,7 +32,7 @@ export class GridFacade implements Queryable<GridSnapshot> {
       };
     });
 
-    // Get power sources with position and range
+    // Get power sources with position
     const powerSources = this.gameState.grid
       .getPowerSources()
       .map((s) => {
@@ -43,7 +41,6 @@ export class GridFacade implements Queryable<GridSnapshot> {
           buildingId: s.buildingId,
           position: position ?? { x: 0, y: 0 },
           output: s.output,
-          range: calculatePowerRange(s.output, hasTechBonus),
         };
       })
       .filter((s) => s.position.x !== 0 || s.position.y !== 0);
@@ -108,35 +105,33 @@ export class GridFacade implements Queryable<GridSnapshot> {
   }
 
   /**
-   * Get all cells that are within power range of active power sources.
+   * Get all cells adjacent to any powered building.
+   * These are positions where a new building would have power access.
    */
   getCellsInPowerRange(): GridPosition[] {
     const gridSize = this.gameState.grid.getGridSize();
-    const hasTechBonus = this.gameState.technology.isResearched(TechnologyId.NUCLEAR_FISSION);
-    const activeBuildingIds = new Set(
-      this.gameState.buildings.getActiveBuildings().map((b) => b.id),
-    );
-
-    // Get active power sources only
-    const powerSources = this.gameState.grid
-      .getPowerSources()
-      .filter((s) => activeBuildingIds.has(s.buildingId));
-
     const poweredCells = new Set<string>();
 
-    for (const source of powerSources) {
-      const sourcePos = this.gameState.grid.getBuildingPosition(source.buildingId);
-      if (!sourcePos) continue;
+    // Find all cells adjacent to any powered building
+    for (let y = 0; y < gridSize; y++) {
+      for (let x = 0; x < gridSize; x++) {
+        const cell = this.gameState.grid.getCell(x, y);
+        if (!cell?.buildingId) continue;
 
-      const range = calculatePowerRange(source.output, hasTechBonus);
+        const placement = this.gameState.grid.getPlacement(cell.buildingId);
+        if (!placement) continue;
 
-      // Check all cells within Manhattan distance
-      for (let y = 0; y < gridSize; y++) {
-        for (let x = 0; x < gridSize; x++) {
-          const distance = Math.abs(x - sourcePos.x) + Math.abs(y - sourcePos.y);
-          if (distance <= range) {
-            poweredCells.add(`${x},${y}`);
+        // Check if this building is powered (either a power source or has power)
+        const isPowered = placement.powerState === PowerState.POWERED;
+
+        if (isPowered) {
+          // Add all adjacent empty cells
+          const adjacent = this.gameState.grid.getAdjacentPositions({ x, y });
+          for (const adj of adjacent) {
+            poweredCells.add(`${adj.x},${adj.y}`);
           }
+          // Also include the powered cell itself
+          poweredCells.add(`${x},${y}`);
         }
       }
     }
@@ -151,8 +146,7 @@ export class GridFacade implements Queryable<GridSnapshot> {
    * Get placement hints for a specific position.
    */
   getPlacementHints(position: GridPosition): PlacementHints {
-    const hasTechBonus = this.gameState.technology.isResearched(TechnologyId.NUCLEAR_FISSION);
-    return this.gameState.grid.getPlacementHints(position, hasTechBonus);
+    return this.gameState.grid.getPlacementHints(position);
   }
 
   /**

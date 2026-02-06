@@ -13,7 +13,6 @@ export interface PowerSourceInfo {
   readonly buildingId: string;
   readonly position: GridPosition;
   readonly output: number;
-  readonly range: number;
 }
 
 export interface PlacementHints {

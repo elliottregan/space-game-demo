@@ -3,7 +3,6 @@
 
 import type { GameState } from "../../core/GameState";
 import { BuildingId } from "../../core/models/Building";
-import { TechnologyId } from "../../core/models/Technology";
 import type { GridPosition } from "../../core/models/Grid";
 import type {
   ActionChecker,
@@ -420,11 +419,10 @@ export class BuildingsFacade
       }
 
       // Update power connections (only active buildings can provide power)
-      const hasTechBonus = this.gameState.technology.isResearched(TechnologyId.NUCLEAR_FISSION);
       const activeBuildingIds = new Set(
         this.gameState.buildings.getActiveBuildings().map((b) => b.id),
       );
-      this.gameState.grid.updatePowerConnections(hasTechBonus, activeBuildingIds);
+      this.gameState.grid.updatePowerConnections(activeBuildingIds);
 
       return ok(building);
     });
@@ -493,11 +491,10 @@ export class BuildingsFacade
       if (pos) {
         this.gameState.grid.removeBuilding(pos);
         // Update power connections after removal
-        const hasTechBonus = this.gameState.technology.isResearched(TechnologyId.NUCLEAR_FISSION);
         const activeBuildingIds = new Set(
           this.gameState.buildings.getActiveBuildings().map((b) => b.id),
         );
-        this.gameState.grid.updatePowerConnections(hasTechBonus, activeBuildingIds);
+        this.gameState.grid.updatePowerConnections(activeBuildingIds);
       }
 
       return ok(undefined);

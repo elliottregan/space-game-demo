@@ -2,11 +2,7 @@
 import type { GridCell, GridPosition, BuildingPlacement, Cluster } from "../models/Grid";
 import { DepositType, GRID_SIZE, PowerState } from "../models/Grid";
 import { BuildingId } from "../models/Building";
-import {
-  BATTERY_BACKUP_SOLS,
-  LOW_BATTERY_THRESHOLD,
-  calculatePowerRange,
-} from "../balance/GridBalance";
+import { BATTERY_BACKUP_SOLS, LOW_BATTERY_THRESHOLD } from "../balance/GridBalance";
 import type { GridQueries } from "../interfaces/Queries";
 
 interface DepositInfo {
@@ -208,69 +204,85 @@ export class GridManager implements GridQueries {
     return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
   }
 
-  updatePowerConnections(hasTechBonus: boolean, activeBuildingIds?: Set<string>): void {
+  updatePowerConnections(activeBuildingIds?: Set<string>): void {
     // Reset all placements to calculate fresh
     for (const placement of this.placements.values()) {
       placement.powerSourceId = undefined;
       placement.distanceToPower = Infinity;
     }
 
-    // For each power source, find buildings in range
     // Only include power sources that are active (if activeBuildingIds provided)
     const powerSourceList = Array.from(this.powerSources.values()).filter(
       (source) => !activeBuildingIds || activeBuildingIds.has(source.buildingId),
     );
 
-    // Build list of buildings that need power (not power sources themselves)
-    const buildingsNeedingPower: { placement: BuildingPlacement; consumption: number }[] = [];
-
+    // Mark active power sources as powered
     for (const placement of this.placements.values()) {
       if (this.powerSources.has(placement.buildingId)) {
-        // Power sources are always powered
-        placement.powerState = PowerState.POWERED;
-        placement.distanceToPower = 0;
-        continue;
+        const source = this.powerSources.get(placement.buildingId)!;
+        // Only mark as powered if active
+        if (!activeBuildingIds || activeBuildingIds.has(source.buildingId)) {
+          placement.powerState = PowerState.POWERED;
+          placement.distanceToPower = 0;
+        }
       }
-
-      const consumption = this.buildingPowerConsumption.get(placement.buildingId) ?? 0;
-      buildingsNeedingPower.push({ placement, consumption });
     }
 
-    // For each power source, allocate power by distance
+    // Sort sources by output descending for deterministic priority
+    powerSourceList.sort((a, b) => b.output - a.output);
+
+    // Track remaining capacity per source
+    const remainingCapacity = new Map<string, number>();
+    for (const source of powerSourceList) {
+      remainingCapacity.set(source.buildingId, source.output);
+    }
+
+    // BFS flood-fill from each power source through adjacent buildings
     for (const source of powerSourceList) {
       const sourcePosition = this.getBuildingPosition(source.buildingId);
       if (!sourcePosition) continue;
 
-      const range = calculatePowerRange(source.output, hasTechBonus);
-      let availablePower = source.output;
+      const visited = new Set<string>();
+      const queue: { buildingId: string; hops: number }[] = [
+        { buildingId: source.buildingId, hops: 0 },
+      ];
+      visited.add(source.buildingId);
 
-      // Find all buildings in range and sort by distance
-      const inRange = buildingsNeedingPower
-        .map((b) => ({
-          ...b,
-          distance: this.calculateDistance(sourcePosition, b.placement.position),
-        }))
-        .filter((b) => b.distance <= range)
-        .sort((a, b) => a.distance - b.distance);
+      while (queue.length > 0) {
+        const current = queue.shift()!;
+        const currentPlacement = this.placements.get(current.buildingId);
+        if (!currentPlacement) continue;
 
-      // Allocate power by distance priority
-      for (const building of inRange) {
-        if (building.placement.powerSourceId) continue; // Already connected
+        // Try to power this building if it needs power and isn't already powered
+        if (!this.powerSources.has(current.buildingId) && !currentPlacement.powerSourceId) {
+          const consumption = this.buildingPowerConsumption.get(current.buildingId) ?? 0;
+          const available = remainingCapacity.get(source.buildingId) ?? 0;
 
-        if (availablePower >= building.consumption) {
-          building.placement.powerSourceId = source.buildingId;
-          building.placement.distanceToPower = building.distance;
-          building.placement.powerState = PowerState.POWERED;
-          building.placement.batteryLevel = 1.0; // Recharge battery
-          availablePower -= building.consumption;
+          if (available >= consumption) {
+            currentPlacement.powerSourceId = source.buildingId;
+            currentPlacement.distanceToPower = current.hops;
+            currentPlacement.powerState = PowerState.POWERED;
+            currentPlacement.batteryLevel = 1.0;
+            remainingCapacity.set(source.buildingId, available - consumption);
+          }
+        }
+
+        // Traverse through adjacent buildings (all buildings relay, even if powered by another source)
+        const adjacentPositions = this.getAdjacentPositions(currentPlacement.position);
+        for (const adjPos of adjacentPositions) {
+          const cell = this.grid[adjPos.y]![adjPos.x]!;
+          if (cell.buildingId && !visited.has(cell.buildingId)) {
+            visited.add(cell.buildingId);
+            queue.push({ buildingId: cell.buildingId, hops: current.hops + 1 });
+          }
         }
       }
     }
 
     // Buildings not connected use battery or become unpowered
-    for (const { placement } of buildingsNeedingPower) {
+    for (const placement of this.placements.values()) {
+      if (this.powerSources.has(placement.buildingId)) continue;
       if (!placement.powerSourceId) {
-        // Not connected to power - check battery
         if (placement.batteryLevel > 0) {
           placement.powerState = PowerState.ON_BATTERY;
         } else {
@@ -289,7 +301,7 @@ export class GridManager implements GridQueries {
     return this.placements.get(buildingId);
   }
 
-  getPlacementHints(position: GridPosition, hasTechBonus: boolean): PlacementHints {
+  getPlacementHints(position: GridPosition): PlacementHints {
     const cell = this.getCell(position.x, position.y);
 
     const hints: PlacementHints = {
@@ -301,21 +313,28 @@ export class GridManager implements GridQueries {
       distanceToNearestPower: Infinity,
     };
 
-    // Check power availability from all sources
-    for (const source of this.powerSources.values()) {
-      const sourcePos = this.getBuildingPosition(source.buildingId);
-      if (!sourcePos) continue;
+    // Check if any adjacent cell contains a POWERED building
+    const adjacentPositions = this.getAdjacentPositions(position);
+    for (const adjPos of adjacentPositions) {
+      const adjCell = this.grid[adjPos.y]![adjPos.x]!;
+      if (!adjCell.buildingId) continue;
 
-      const distance = this.calculateDistance(position, sourcePos);
-      const range = calculatePowerRange(source.output, hasTechBonus);
+      const adjPlacement = this.placements.get(adjCell.buildingId);
+      if (!adjPlacement) continue;
 
-      if (distance <= range) {
+      // Distance to any power source
+      if (this.powerSources.has(adjCell.buildingId)) {
+        const source = this.powerSources.get(adjCell.buildingId)!;
+        hints.distanceToNearestPower = Math.min(hints.distanceToNearestPower, 1);
         hints.hasPower = true;
-        // Calculate remaining capacity (simplified - full capacity for now)
         hints.powerCapacityAvailable = Math.max(hints.powerCapacityAvailable, source.output);
+      } else if (adjPlacement.powerState === PowerState.POWERED) {
+        hints.hasPower = true;
+        hints.distanceToNearestPower = Math.min(
+          hints.distanceToNearestPower,
+          adjPlacement.distanceToPower + 1,
+        );
       }
-
-      hints.distanceToNearestPower = Math.min(hints.distanceToNearestPower, distance);
     }
 
     return hints;
@@ -521,6 +540,6 @@ export class GridManager implements GridQueries {
     }
 
     // Recalculate power connections
-    this.updatePowerConnections(false); // TODO: pass tech bonus from GameState
+    this.updatePowerConnections();
   }
 }
