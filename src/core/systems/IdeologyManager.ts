@@ -455,6 +455,8 @@ export class IdeologyManager implements ProjectQueries {
    * Evolve conviction based on ideology pressure from neighbors.
    * Conviction grows when neighbors reinforce the colonist's primary faction
    * and decays proportionally to how strongly neighbors oppose it.
+   * Neutral colonists experience conviction decay and stronger ideology drift
+   * toward the dominant neighborhood faction, preventing ideological stagnation.
    */
   private evolveConviction(colonists: Colonist[], relationshipManager: RelationshipManager): void {
     const colonistMap = new Map(colonists.map((c) => [c.id, c]));
@@ -462,9 +464,20 @@ export class IdeologyManager implements ProjectQueries {
     for (const colonist of colonists) {
       if (!colonist.ideology) continue;
 
+      // Natural decay applies to all colonists (represents doubt/questioning)
+      colonist.ideology.conviction = Math.max(
+        IdeologyBalance.CONVICTION_MIN,
+        colonist.ideology.conviction - IdeologyBalance.CONVICTION_NATURAL_DECAY,
+      );
+
       const primaryFaction = IdeologyManager.getPrimaryFaction(colonist.ideology);
       if (!primaryFaction) {
-        // Neutral colonists don't evolve conviction
+        // Neutral colonists: decay conviction further and drift toward neighborhood ideology
+        this.evolveNeutralColonist(
+          colonist as Colonist & { ideology: ColonistIdeology },
+          colonistMap,
+          relationshipManager,
+        );
         continue;
       }
 
@@ -550,6 +563,77 @@ export class IdeologyManager implements ProjectQueries {
         );
       }
     }
+  }
+
+  /**
+   * Neutral colonists (no primary faction) experience:
+   * 1. Conviction decay - they become more open to influence over time
+   * 2. Stronger ideology drift toward the dominant neighborhood faction
+   * This prevents colonists from getting stuck in an indecisive middle ground.
+   */
+  private evolveNeutralColonist(
+    colonist: Colonist & { ideology: ColonistIdeology },
+    colonistMap: Map<string, Colonist>,
+    relationshipManager: RelationshipManager,
+  ): void {
+    // Neutral colonists lose conviction faster (they lack reinforcement)
+    colonist.ideology.conviction = Math.max(
+      IdeologyBalance.CONVICTION_MIN,
+      colonist.ideology.conviction - IdeologyBalance.CONVICTION_DECAY_RATE,
+    );
+
+    const neighbors = relationshipManager.getNeighbors(colonist.id);
+    if (neighbors.size === 0) return;
+
+    // Calculate weighted average neighbor ideology across all factions
+    let totalWeight = 0;
+    const avgNeighborIdeology = { earthLoyalist: 0, marsIndependence: 0, corporateInterests: 0 };
+
+    for (const neighborId of neighbors) {
+      const relationshipStrength = relationshipManager.getRelationshipStrength(
+        colonist.id,
+        neighborId,
+      );
+      if (relationshipStrength < IdeologyBalance.IDEOLOGY_SPREAD_CONNECTION_THRESHOLD) continue;
+
+      const neighbor = colonistMap.get(neighborId);
+      if (!neighbor?.ideology) continue;
+
+      const neighborConviction = neighbor.ideology.conviction;
+      const weight = relationshipStrength ** 2 * neighborConviction;
+      totalWeight += weight;
+
+      avgNeighborIdeology.earthLoyalist += weight * neighbor.ideology.earthLoyalist;
+      avgNeighborIdeology.marsIndependence += weight * neighbor.ideology.marsIndependence;
+      avgNeighborIdeology.corporateInterests += weight * neighbor.ideology.corporateInterests;
+    }
+
+    if (totalWeight === 0) return;
+
+    avgNeighborIdeology.earthLoyalist /= totalWeight;
+    avgNeighborIdeology.marsIndependence /= totalWeight;
+    avgNeighborIdeology.corporateInterests /= totalWeight;
+
+    // Neutral colonists are more susceptible - use higher drift rate and ignore conviction resistance
+    const driftRate = IdeologyBalance.NEUTRAL_IDEOLOGY_DRIFT_RATE;
+
+    colonist.ideology.earthLoyalist +=
+      driftRate * (avgNeighborIdeology.earthLoyalist - colonist.ideology.earthLoyalist);
+    colonist.ideology.marsIndependence +=
+      driftRate * (avgNeighborIdeology.marsIndependence - colonist.ideology.marsIndependence);
+    colonist.ideology.corporateInterests +=
+      driftRate * (avgNeighborIdeology.corporateInterests - colonist.ideology.corporateInterests);
+
+    // Clamp
+    colonist.ideology.earthLoyalist = Math.max(0, Math.min(1, colonist.ideology.earthLoyalist));
+    colonist.ideology.marsIndependence = Math.max(
+      0,
+      Math.min(1, colonist.ideology.marsIndependence),
+    );
+    colonist.ideology.corporateInterests = Math.max(
+      0,
+      Math.min(1, colonist.ideology.corporateInterests),
+    );
   }
 
   // ============ Ideological Pressure ============

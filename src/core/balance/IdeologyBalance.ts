@@ -113,16 +113,22 @@ export const IDEOLOGY_IMPRINTING_THRESHOLD = 0.3;
 // ============ Conviction Evolution ============
 
 /** Rate at which conviction grows when surrounded by like-minded colonists (per propagation tick) */
-export const CONVICTION_GROWTH_RATE = 0.02;
+export const CONVICTION_GROWTH_RATE = 0.012;
 
 /** Rate at which conviction decays when isolated from faction (per propagation tick) */
-export const CONVICTION_DECAY_RATE = 0.005;
+export const CONVICTION_DECAY_RATE = 0.01;
+
+/** Natural conviction decay applied to all colonists each tick (represents doubt/questioning) */
+export const CONVICTION_NATURAL_DECAY = 0.003;
 
 /** Minimum conviction floor - some baseline conviction always remains */
 export const CONVICTION_MIN = 0.1;
 
 /** Maximum conviction ceiling - never fully certain */
-export const CONVICTION_MAX = 0.95;
+export const CONVICTION_MAX = 0.85;
+
+/** Rate at which neutral colonists drift toward neighborhood ideology */
+export const NEUTRAL_IDEOLOGY_DRIFT_RATE = 0.06;
 
 // ============ Lobbying ============
 
