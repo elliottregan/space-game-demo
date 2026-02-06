@@ -349,20 +349,34 @@ export function renderBaseGrid(
     }
   }
 
-  // Third pass: Render power connections
-  for (const cell of data.cells) {
-    if (cell.buildingId && cell.powerSourceId && cell.powerSourceId !== cell.buildingId) {
-      const fromPos = buildingPositions.get(cell.buildingId);
-      const toPos = buildingPositions.get(cell.powerSourceId);
+  // Third pass: Render adjacency edges between neighboring buildings
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const cell = cellMap.get(`${x},${y}`);
+      if (!cell?.buildingId) continue;
 
-      if (fromPos && toPos) {
+      const fromScreen = gridToScreen(x, y, width, height);
+
+      // Check right and down neighbors only to avoid duplicate edges
+      for (const [nx, ny] of [
+        [x + 1, y],
+        [x, y + 1],
+      ] as const) {
+        if (nx >= GRID_SIZE || ny >= GRID_SIZE) continue;
+        const neighbor = cellMap.get(`${nx},${ny}`);
+        if (!neighbor?.buildingId) continue;
+
+        const toScreen = gridToScreen(nx, ny, width, height);
+        const bothPowered =
+          cell.powerState === PowerState.POWERED && neighbor.powerState === PowerState.POWERED;
+
         connectionLayer
           .append("line")
-          .attr("x1", fromPos.x)
-          .attr("y1", fromPos.y)
-          .attr("x2", toPos.x)
-          .attr("y2", toPos.y)
-          .attr("stroke", colors.positive)
+          .attr("x1", fromScreen.x)
+          .attr("y1", fromScreen.y)
+          .attr("x2", toScreen.x)
+          .attr("y2", toScreen.y)
+          .attr("stroke", bothPowered ? colors.positive : colors.text)
           .attr("stroke-width", 2)
           .attr("stroke-opacity", 0.4)
           .style("pointer-events", "none");
