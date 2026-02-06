@@ -98,8 +98,11 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
               },
             ],
             pending: [],
+            upgrading: [],
             definitions: [],
             moraleBoost: 0,
+            totalLifeSupportCapacity: 200,
+            totalLifeSupportLoad: 0,
           },
       ),
       getById: mock(() => undefined),
@@ -392,7 +395,7 @@ describe("HeuristicStrategy", () => {
       expect(buildCalls).toContain(BuildingId.BASIC_FARM);
     });
 
-    it("builds oxygen generator when oxygen contribution < 6", () => {
+    it("builds habitat when life support capacity is low", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         resourceSnapshot: {
@@ -404,9 +407,20 @@ describe("HeuristicStrategy", () => {
         buildingsSnapshot: {
           active: [],
           pending: [],
+          upgrading: [],
           definitions: [],
           moraleBoost: 0,
-          totalAirContribution: 2, // Low oxygen contribution
+          totalLifeSupportCapacity: 10, // Low capacity
+          totalLifeSupportLoad: 2,
+        },
+        colonySnapshot: {
+          population: 14, // totalDemand = 14 + 2 = 16, need capacity >= 16 * 1.2 = 19.2
+          health: 80,
+          morale: 70,
+          colonists: [],
+          skillDefinitions: [],
+          housingAssignments: {},
+          unhoused: [],
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -414,7 +428,7 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).toContain(BuildingId.OXYGEN_GENERATOR);
+      expect(buildCalls).toContain(BuildingId.HABITAT);
     });
 
     it("builds farm when food production <= consumption", () => {
@@ -435,7 +449,7 @@ describe("HeuristicStrategy", () => {
       expect(buildCalls).toContain(BuildingId.BASIC_FARM);
     });
 
-    it("builds oxygen generator when oxygen contribution is negative", () => {
+    it("builds habitat when life support capacity is zero", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         resourceSnapshot: {
@@ -447,9 +461,20 @@ describe("HeuristicStrategy", () => {
         buildingsSnapshot: {
           active: [],
           pending: [],
+          upgrading: [],
           definitions: [],
           moraleBoost: 0,
-          totalAirContribution: -2, // Negative oxygen contribution
+          totalLifeSupportCapacity: 0, // No capacity at all
+          totalLifeSupportLoad: 5,
+        },
+        colonySnapshot: {
+          population: 14, // totalDemand = 14 + 5 = 19, need capacity >= 19 * 1.2 = 22.8
+          health: 80,
+          morale: 70,
+          colonists: [],
+          skillDefinitions: [],
+          housingAssignments: {},
+          unhoused: [],
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -457,7 +482,7 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).toContain(BuildingId.OXYGEN_GENERATOR);
+      expect(buildCalls).toContain(BuildingId.HABITAT);
     });
 
     it("does not build if cannot afford", () => {

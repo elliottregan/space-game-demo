@@ -8,11 +8,10 @@ describe("StartingConditions", () => {
   it("should have a default condition with minimal life support buildings", () => {
     const defaultCondition = STARTING_CONDITIONS.find((c) => c.id === StartingConditionId.DEFAULT);
     expect(defaultCondition).toBeDefined();
-    // Default has minimal life support: 2 solar panels, 1 habitat, 1 farm, 1 oxygen generator, 1 water extractor, 1 basic mine
+    // Default: 2 solar panels, 2 habitats, 1 farm, 1 water extractor, 1 basic mine
     expect(defaultCondition!.preBuiltBuildings).toContain(BuildingId.SOLAR_PANEL);
     expect(defaultCondition!.preBuiltBuildings).toContain(BuildingId.HABITAT);
     expect(defaultCondition!.preBuiltBuildings).toContain(BuildingId.BASIC_FARM);
-    expect(defaultCondition!.preBuiltBuildings).toContain(BuildingId.OXYGEN_GENERATOR);
     expect(defaultCondition!.preBuiltBuildings).toContain(BuildingId.WATER_EXTRACTOR);
     expect(defaultCondition!.preBuiltBuildings).toContain(BuildingId.BASIC_MINE);
     expect(defaultCondition!.preBuiltBuildings.length).toBe(7);
@@ -27,7 +26,6 @@ describe("StartingConditions", () => {
     expect(established!.preBuiltBuildings).toContain(BuildingId.HABITAT);
     expect(established!.preBuiltBuildings).toContain(BuildingId.SOLAR_PANEL);
     expect(established!.preBuiltBuildings).toContain(BuildingId.BASIC_FARM);
-    expect(established!.preBuiltBuildings).toContain(BuildingId.OXYGEN_GENERATOR);
   });
 
   it("should have unique IDs for all conditions", () => {
@@ -48,9 +46,9 @@ describe("GameState with StartingConditions", () => {
   it("should create state with pre-built buildings for established base", () => {
     const state = new GameState(StartingConditionId.ESTABLISHED_BASE);
     expect(state.colony.getPopulation()).toBe(14);
-    // 2 habitats + 1 solar + 2 farms + 2 oxygen generators = 7 buildings
-    expect(state.buildings.getBuildingCount()).toBe(7);
-    expect(state.buildings.getActiveBuildings().length).toBe(7);
+    // 3 habitats + 1 solar + 2 farms = 6 buildings
+    expect(state.buildings.getBuildingCount()).toBe(6);
+    expect(state.buildings.getActiveBuildings().length).toBe(6);
   });
 
   it("should register production/consumption for pre-built buildings", () => {
@@ -60,7 +58,7 @@ describe("GameState with StartingConditions", () => {
 
     // Farms produce food
     expect(production.food).toBeGreaterThan(0);
-    // Farms and oxygen generators consume water
+    // Farms consume water
     expect(consumption.water).toBeGreaterThan(0);
     // Power is now a grid metric, not a stockpiled resource
   });
@@ -79,7 +77,7 @@ describe("GameAPI with StartingConditions", () => {
     const api = new GameAPI();
     api.newGame(StartingConditionId.ESTABLISHED_BASE);
     expect(api.colony.snapshot().population).toBe(14);
-    expect(api.buildings.snapshot().active.length).toBe(7);
+    expect(api.buildings.snapshot().active.length).toBe(6);
   });
 });
 

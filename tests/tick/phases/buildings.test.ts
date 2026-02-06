@@ -24,7 +24,7 @@ describe("buildings phases", () => {
         events: state.events,
         victory: state.victory,
         ideology: state.ideology,
-        airQualityManager: state.airQuality,
+        lifeSupport: state.lifeSupport,
         earthCrisis: state.earthCrisis,
         grid: state.grid,
         scheduler: state.scheduler,
