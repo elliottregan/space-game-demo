@@ -1,6 +1,5 @@
 // src/facade/types/ideology.ts
 
-import type { NPCFaction } from "../../core/models/NPCInfluence";
 import type { ColonistIdeology } from "../../core/models/Colonist";
 
 /**
@@ -12,16 +11,18 @@ export interface CouncilMemberSnapshot {
   centrality: number;
   conviction: number;
   influence: number;
-  faction: NPCFaction | null;
+  factionId: string | null;
 }
 
 /**
- * Faction support levels across the colony.
+ * Snapshot of a faction's current state for UI display.
  */
-export interface FactionSupportSnapshot {
-  earthLoyalists: number;
-  marsIndependence: number;
-  corporateInterests: number;
+export interface FactionSnapshot {
+  id: string;
+  name: string;
+  baseId: string;
+  position: { solidarity: number; sovereignty: number; transformation: number };
+  pressure: { solidarity: number; sovereignty: number; transformation: number };
 }
 
 /**
@@ -30,10 +31,12 @@ export interface FactionSupportSnapshot {
 export interface IdeologySnapshot {
   /** Current council members (high-influence colonists) */
   council: CouncilMemberSnapshot[];
-  /** Council seat counts by faction */
-  councilFactionCounts: Record<NPCFaction | "neutral", number>;
-  /** Colony-wide faction support levels (0-1) */
-  factionSupport: FactionSupportSnapshot;
+  /** Council seat counts by faction id (includes "neutral" key) */
+  councilFactionCounts: Record<string, number>;
+  /** Colony-wide faction support levels keyed by faction id (0-1, sums to 1) */
+  factionSupport: Record<string, number>;
+  /** Current faction states */
+  factions: FactionSnapshot[];
 }
 
 /**
@@ -47,15 +50,6 @@ export interface ProjectEligibility {
   isCompleted?: boolean;
   isPending?: boolean;
   isFailed?: boolean;
-}
-
-/**
- * Lobby action eligibility check result.
- */
-export interface LobbyEligibility {
-  canLobby: boolean;
-  cost: number;
-  reason?: string;
 }
 
 // Re-export ColonistIdeology for convenience

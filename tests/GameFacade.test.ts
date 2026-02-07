@@ -167,7 +167,12 @@ describe("GameAPI", () => {
       const politics = api.politics.snapshot();
       expect(politics.factions).toBeDefined();
       expect(politics.factions.length).toBeGreaterThan(0);
-      expect(politics.demands).toBeDefined();
+      // Each faction should have factionId, name, support, and position
+      const faction = politics.factions[0];
+      expect(faction.factionId).toBeDefined();
+      expect(faction.name).toBeDefined();
+      expect(typeof faction.support).toBe("number");
+      expect(faction.position).toBeDefined();
     });
   });
 
