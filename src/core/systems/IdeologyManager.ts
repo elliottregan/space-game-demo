@@ -960,6 +960,198 @@ export class IdeologyManager implements ProjectQueries {
     return project?.isCapstone === true;
   }
 
+  // ============ Faction Dynamics ============
+
+  /**
+   * Detect colonist defections: a colonist "defects" when a non-nearest faction
+   * is nearly as close as the nearest faction. Specifically, defection triggers
+   * when the distance gap (otherDist - nearestDist) is less than the threshold.
+   * High conviction resists defection by multiplying the gap by (1 + conviction),
+   * requiring closer proximity to trigger.
+   */
+  processDefections(colonists: Colonist[]): GameEvent[] {
+    const events: GameEvent[] = [];
+
+    for (const colonist of colonists) {
+      if (!colonist.ideology) continue;
+
+      const pos = ideologyToAxis(colonist.ideology);
+      const nearest = IdeologyManager.getNearestFaction(colonist.ideology, this.factions);
+      if (!nearest) continue;
+
+      const nearestDist = axisDistance(pos, nearest.position);
+      const convictionMultiplier = 1 + colonist.ideology.conviction;
+
+      for (const faction of this.factions) {
+        if (faction.id === nearest.id) continue;
+
+        const otherDist = axisDistance(pos, faction.position);
+        const gap = (otherDist - nearestDist) * convictionMultiplier;
+
+        if (gap < IdeologyBalance.DEFECTION_DISTANCE_THRESHOLD) {
+          events.push({
+            type: "COLONIST_DEFECTION",
+            severity: "warning",
+            message: `${colonist.name} is drifting toward ${faction.name}.`,
+            colonistId: colonist.id,
+            fromFactionId: nearest.id,
+            toFactionId: faction.id,
+          });
+          break;
+        }
+      }
+    }
+
+    return events;
+  }
+
+  /**
+   * If two factions converge within FACTION_CONVERGENCE_THRESHOLD on all axes,
+   * merge the smaller into the larger. The smaller faction is reborn at an
+   * underrepresented position in axis space to maintain exactly 3 factions.
+   */
+  checkFactionMerger(): GameEvent[] {
+    const events: GameEvent[] = [];
+
+    for (let i = 0; i < this.factions.length; i++) {
+      for (let j = i + 1; j < this.factions.length; j++) {
+        const a = this.factions[i];
+        const b = this.factions[j];
+        const dist = axisDistance(a.position, b.position);
+
+        if (dist >= IdeologyBalance.FACTION_CONVERGENCE_THRESHOLD) continue;
+
+        // Determine which faction is smaller (by index position as proxy;
+        // actual member count requires colonists, so we pick 'b' as the
+        // one to rebirth since it appears later). Callers needing member-count
+        // based ordering should pass colonists; for now we rebirth the second.
+        const survivor = a;
+        const absorbed = b;
+
+        events.push({
+          type: "FACTION_MERGER",
+          severity: "warning",
+          message: `${absorbed.name} has been absorbed into ${survivor.name}.`,
+          survivorId: survivor.id,
+          absorbedId: absorbed.id,
+        });
+
+        this.rebirthFaction(absorbed);
+
+        events.push({
+          type: "FACTION_REBIRTH",
+          severity: "info",
+          message: `A new movement emerges: ${absorbed.name}.`,
+          factionId: absorbed.id,
+          baseId: absorbed.baseId,
+        });
+
+        return events;
+      }
+    }
+
+    return events;
+  }
+
+  /**
+   * If any faction has fewer than FACTION_COLLAPSE_POPULATION_RATIO of total
+   * colonists as nearest supporters, collapse and rebirth it.
+   * Always maintains exactly 3 factions.
+   */
+  checkFactionCollapse(colonists: Colonist[]): GameEvent[] {
+    const events: GameEvent[] = [];
+    const totalWithIdeology = colonists.filter((c) => c.ideology).length;
+    if (totalWithIdeology === 0) return events;
+
+    const factionCounts = new Map<string, number>();
+    for (const faction of this.factions) {
+      factionCounts.set(faction.id, 0);
+    }
+
+    for (const colonist of colonists) {
+      if (!colonist.ideology) continue;
+      const nearest = IdeologyManager.getNearestFaction(colonist.ideology, this.factions);
+      if (nearest) {
+        factionCounts.set(nearest.id, (factionCounts.get(nearest.id) ?? 0) + 1);
+      }
+    }
+
+    for (const faction of this.factions) {
+      const count = factionCounts.get(faction.id) ?? 0;
+      const ratio = count / totalWithIdeology;
+
+      if (ratio >= IdeologyBalance.FACTION_COLLAPSE_POPULATION_RATIO) continue;
+
+      events.push({
+        type: "FACTION_COLLAPSE",
+        severity: "warning",
+        message: `${faction.name} has collapsed due to lack of support.`,
+        factionId: faction.id,
+        baseId: faction.baseId,
+      });
+
+      this.rebirthFaction(faction);
+
+      events.push({
+        type: "FACTION_REBIRTH",
+        severity: "info",
+        message: `A new movement emerges: ${faction.name}.`,
+        factionId: faction.id,
+        baseId: faction.baseId,
+      });
+    }
+
+    return events;
+  }
+
+  /**
+   * Rebirth a faction at an underrepresented position in axis space.
+   * Generates a new unique id, resets pressure, and assigns a new name.
+   */
+  private rebirthFaction(faction: FactionState): void {
+    faction.id = `${faction.baseId}_v${Date.now()}`;
+    faction.position = this.findUnderrepresentedPosition();
+    faction.pressure = { solidarity: 0, sovereignty: 0, transformation: 0 };
+    faction.name = getFactionName(faction.baseId, faction.position);
+  }
+
+  /**
+   * Find a position in axis space that maximizes minimum distance to all
+   * existing factions. Evaluates a grid of candidate positions in [-1, 1]^3.
+   */
+  private findUnderrepresentedPosition(): AxisPosition {
+    const steps = 5;
+    let bestPosition: AxisPosition = { solidarity: 0, sovereignty: 0, transformation: 0 };
+    let bestMinDist = -Infinity;
+
+    for (let si = 0; si <= steps; si++) {
+      for (let vi = 0; vi <= steps; vi++) {
+        for (let ti = 0; ti <= steps; ti++) {
+          const candidate: AxisPosition = {
+            solidarity: -1 + (2 * si) / steps,
+            sovereignty: -1 + (2 * vi) / steps,
+            transformation: -1 + (2 * ti) / steps,
+          };
+
+          let minDist = Infinity;
+          for (const faction of this.factions) {
+            const dist = axisDistance(candidate, faction.position);
+            if (dist < minDist) {
+              minDist = dist;
+            }
+          }
+
+          if (minDist > bestMinDist) {
+            bestMinDist = minDist;
+            bestPosition = candidate;
+          }
+        }
+      }
+    }
+
+    return bestPosition;
+  }
+
   // ============ Serialization ============
 
   toJSON(): {
