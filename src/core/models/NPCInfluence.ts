@@ -20,6 +20,43 @@ export const ALL_FACTIONS: readonly NPCFaction[] = [
 ] as const;
 
 /**
+ * Position on the three ideology axes.
+ * Each value ranges from -1.0 to +1.0.
+ */
+export interface AxisPosition {
+  /** Individualist (-1) ↔ Collectivist (+1) */
+  solidarity: number;
+  /** Earth-tied (-1) ↔ Mars-sovereign (+1) */
+  sovereignty: number;
+  /** Preservationist (-1) ↔ Revolutionary (+1) */
+  transformation: number;
+}
+
+/**
+ * Runtime state of a political faction.
+ * Factions drift along axes based on colony conditions.
+ */
+export interface FactionState {
+  /** Current unique identifier (changes on faction rebirth) */
+  id: string;
+  /** Starting faction identity (earth_loyalists, mars_independence, corporate_interests) */
+  baseId: NPCFaction;
+  /** Current display name (changes when crossing axis thresholds) */
+  name: string;
+  /** Current axis positions (-1 to +1 per axis) */
+  position: AxisPosition;
+  /** Accumulated pressure from colony conditions (-1 to +1 per axis) */
+  pressure: AxisPosition;
+}
+
+/** The three axis keys for iteration */
+export const AXIS_KEYS: readonly (keyof AxisPosition)[] = [
+  "solidarity",
+  "sovereignty",
+  "transformation",
+] as const;
+
+/**
  * NPC identifiers for the 10 council members.
  * Using a string enum for type safety while maintaining string serialization.
  */
