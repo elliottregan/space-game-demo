@@ -3,40 +3,43 @@ pre-commit:
   skip:
     - merge
     - rebase
+  # Make ** match zero or more directories (standard glob behavior)
+  glob_matcher: doublestar
   commands:
     # Priority 1: lint and format run first (in parallel with each other)
     lint:
       priority: 1
-      glob: "*.{ts,tsx,vue}"
+      glob: "**/*.{ts,tsx,vue}"
       run: bunx oxlint --fix {staged_files}
       stage_fixed: true
     format:
       priority: 1
-      glob: "*.{ts,tsx,vue,css}"
+      glob: "**/*.{ts,tsx,vue,css}"
       run: bunx oxfmt --write --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
     # Priority 2: typecheck runs after lint/format complete (in parallel with each other)
+    # Note: glob filters which staged files trigger the command; tsc still checks the full project
     typecheck-core:
       priority: 2
       glob: "src/core/**/*.ts"
-      run: tsc -p tsconfig.core.json --noEmit
+      run: tsc -p tsconfig.core.json --noEmit --incremental
     typecheck-app:
       priority: 2
-      glob: "src/{renderer,visualization}/**/*.{ts,tsx,vue},src/main.ts"
-      run: tsc -p tsconfig.app.json --noEmit
+      glob: "src/{renderer,visualization}/**/*.{ts,tsx,vue}"
+      run: tsc -p tsconfig.app.json --noEmit --incremental
     typecheck-facade:
       priority: 2
       glob: "src/facade/**/*.ts"
-      run: tsc -p tsconfig.app.json --noEmit
+      run: tsc -p tsconfig.app.json --noEmit --incremental
     typecheck-scripts:
       priority: 2
-      glob: "scripts/**/*.ts,src/simulation/**/*.ts,index.ts"
-      run: tsc -p tsconfig.scripts.json --noEmit
+      glob: "{scripts,src/simulation}/**/*.ts"
+      run: tsc -p tsconfig.scripts.json --noEmit --incremental
     typecheck-node:
       priority: 2
       glob: "vite*.ts"
-      run: tsc -p tsconfig.node.json --noEmit
+      run: tsc -p tsconfig.node.json --noEmit --incremental
     typecheck-tests:
       priority: 2
       glob: "tests/**/*.ts"
-      run: tsc -p tsconfig.test.json --noEmit
+      run: tsc -p tsconfig.test.json --noEmit --incremental
