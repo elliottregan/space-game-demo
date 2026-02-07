@@ -16,6 +16,7 @@ import type { ResourceManager } from "./ResourceManager";
 import type { RelationshipManager } from "./RelationshipManager";
 import * as IdeologyBalance from "../balance/IdeologyBalance";
 import { DRIFT_TRIGGERS, type DriftContext } from "../data/factionDrift";
+import { getFactionName } from "../data/factionNames";
 import { getProject } from "../data/projects";
 import type { ProjectQueries } from "../interfaces/Queries";
 import type { GameEvent } from "../models/GameEvent";
@@ -288,6 +289,29 @@ export class IdeologyManager implements ProjectQueries {
 
     if (count === 0) return 0;
     return totalConviction / count;
+  }
+
+  // ============ Faction Naming ============
+
+  /**
+   * Update faction names based on current axis positions.
+   * Returns events for any name changes.
+   */
+  updateFactionNames(): GameEvent[] {
+    const events: GameEvent[] = [];
+    for (const faction of this.factions) {
+      const newName = getFactionName(faction.baseId, faction.position);
+      if (newName !== faction.name) {
+        const oldName = faction.name;
+        faction.name = newName;
+        events.push({
+          type: "FACTION_RENAMED",
+          severity: "info",
+          message: `${oldName} have reorganized as the ${newName}.`,
+        });
+      }
+    }
+    return events;
   }
 
   // ============ Council Selection ============
