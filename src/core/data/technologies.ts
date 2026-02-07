@@ -102,6 +102,15 @@ export const TECHNOLOGIES: Technology[] = [
     unlocks: [BuildingId.CRYO_FACILITY],
   },
 
+  {
+    id: TechnologyId.ADVANCED_MATERIALS,
+    name: "Advanced Materials",
+    description: "Composite alloys and meta-materials for next-generation construction",
+    prerequisites: [TechnologyId.HABITAT_FABRICATION],
+    cost: { sols: 95 },
+    unlocks: [BuildingId.ACADEMY],
+  },
+
   // ENDGAME TIER (Sol 400+)
   {
     id: TechnologyId.FUSION_DRIVE,

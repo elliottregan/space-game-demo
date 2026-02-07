@@ -1,10 +1,13 @@
 // src/core/data/factionDrift.ts
 
+import type { BuildingDefinition } from "../models/Building.js";
+import { BuildingId } from "../models/Building.js";
 import type { AxisPosition } from "../models/NPCInfluence.js";
 import type { ResourceManager } from "../systems/ResourceManager.js";
 import type { ColonyManager } from "../systems/ColonyManager.js";
 import type { BuildingManager } from "../systems/BuildingManager.js";
 import type { TechnologyTree } from "../systems/TechnologyTree.js";
+import { BUILDINGS } from "./buildings.js";
 
 export type AxisKey = keyof AxisPosition;
 
@@ -183,6 +186,56 @@ const longStability: DriftTrigger = {
   },
 };
 
+// ============ Institutional Building Triggers ============
+
+function getBuildingDef(defId: BuildingId): BuildingDefinition | undefined {
+  return BUILDINGS.find((b) => b.id === defId);
+}
+
+function sumAxisPressure(ctx: DriftContext, axis: AxisKey): number {
+  let total = 0;
+  for (const building of ctx.buildings.getActiveBuildings()) {
+    const def = getBuildingDef(building.definitionId);
+    if (def?.axisPressure?.[axis]) {
+      total += def.axisPressure[axis];
+    }
+  }
+  return total;
+}
+
+/**
+ * Active buildings with axisPressure.solidarity shift the solidarity axis.
+ */
+const institutionalSolidarity: DriftTrigger = {
+  id: "institutional_solidarity",
+  axis: "solidarity",
+  evaluate(ctx: DriftContext): number {
+    return sumAxisPressure(ctx, "solidarity");
+  },
+};
+
+/**
+ * Active buildings with axisPressure.sovereignty shift the sovereignty axis.
+ */
+const institutionalSovereignty: DriftTrigger = {
+  id: "institutional_sovereignty",
+  axis: "sovereignty",
+  evaluate(ctx: DriftContext): number {
+    return sumAxisPressure(ctx, "sovereignty");
+  },
+};
+
+/**
+ * Active buildings with axisPressure.transformation shift the transformation axis.
+ */
+const institutionalTransformation: DriftTrigger = {
+  id: "institutional_transformation",
+  axis: "transformation",
+  evaluate(ctx: DriftContext): number {
+    return sumAxisPressure(ctx, "transformation");
+  },
+};
+
 /**
  * All drift triggers evaluated each sol.
  */
@@ -195,4 +248,7 @@ export const DRIFT_TRIGGERS: readonly DriftTrigger[] = [
   earthDependence,
   techBreakthroughs,
   longStability,
+  institutionalSolidarity,
+  institutionalSovereignty,
+  institutionalTransformation,
 ];

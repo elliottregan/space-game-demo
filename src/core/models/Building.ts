@@ -28,6 +28,9 @@ export enum BuildingId {
   ASSEMBLY_HALL = "assembly_hall",
   ROVER_DEPOT = "rover_depot",
   SCIENCE_STATION = "science_station",
+  BROADCASTING_STATION = "broadcasting_station",
+  ACADEMY = "academy",
+  HERITAGE_MUSEUM = "heritage_museum",
   // Victory megastructures
   ASTEROID_MINING_PLATFORM = "asteroid_mining_platform",
   UNITED_MARS_STATION = "united_mars_station",
@@ -71,6 +74,8 @@ export interface BuildingDefinition {
   depotRange?: number;
   /** Research output per sol when active (for research buildings) */
   researchOutput?: number;
+  /** Passive pressure on ideology axes when building is active */
+  axisPressure?: Partial<Record<'solidarity' | 'sovereignty' | 'transformation', number>>;
 }
 
 export interface Building {

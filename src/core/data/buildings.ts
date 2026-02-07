@@ -297,6 +297,45 @@ export const BUILDINGS: BuildingDefinition[] = [
     purpose: BuildingPurpose.Industrial,
   },
 
+  // Institutional buildings (ideology axis pressure)
+  {
+    id: BuildingId.BROADCASTING_STATION,
+    name: "Broadcasting Station",
+    description: "A media hub that amplifies Martian voices, fostering a sense of planetary identity",
+    cost: { materials: 100 },
+    constructionTime: 15,
+    powerConsumption: 3,
+    workerSlots: 2,
+    workerRole: ColonistRole.RESEARCH,
+    purpose: BuildingPurpose.Social,
+    axisPressure: { sovereignty: 0.01 },
+  },
+  {
+    id: BuildingId.ACADEMY,
+    name: "Academy",
+    description: "A training center for radical new ideas and experimental governance models",
+    cost: { materials: 140 },
+    constructionTime: 20,
+    powerConsumption: 4,
+    workerSlots: 2,
+    workerRole: ColonistRole.RESEARCH,
+    requiredTech: TechnologyId.ADVANCED_MATERIALS,
+    purpose: BuildingPurpose.Social,
+    axisPressure: { transformation: 0.015 },
+  },
+  {
+    id: BuildingId.HERITAGE_MUSEUM,
+    name: "Heritage Museum",
+    description: "Preserves Earth traditions and colony history, grounding colonists in shared heritage",
+    cost: { materials: 60 },
+    constructionTime: 10,
+    powerConsumption: 2,
+    workerSlots: 1,
+    moraleBoost: 2,
+    purpose: BuildingPurpose.Social,
+    axisPressure: { transformation: -0.01 },
+  },
+
   // Victory Megastructures (unlocked by capstone projects)
   {
     id: BuildingId.ASTEROID_MINING_PLATFORM,
