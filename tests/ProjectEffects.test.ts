@@ -233,7 +233,7 @@ describe("Project requirements", () => {
     const project = getProject(ProjectId.IMMIGRATION_PROGRAM);
     expect(project).toBeDefined();
 
-    const result = ideologyManager.canProposeProject(project!, { technology });
+    const result = ideologyManager.canProposeProject(project!, NPCFaction.EarthLoyalists, { technology });
 
     expect(result.canPropose).toBe(false);
     expect(result.reason).toBe(`Technology not researched: ${TechnologyId.HABITAT_FABRICATION}`);
@@ -246,7 +246,7 @@ describe("Project requirements", () => {
     // Research the required technology
     technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
 
-    const result = ideologyManager.canProposeProject(project!, { technology });
+    const result = ideologyManager.canProposeProject(project!, NPCFaction.EarthLoyalists, { technology });
 
     expect(result.canPropose).toBe(true);
     expect(result.reason).toBeUndefined();
@@ -259,7 +259,7 @@ describe("Project requirements", () => {
     technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
     ideologyManager.completeProject(ProjectId.IMMIGRATION_PROGRAM);
 
-    const result = ideologyManager.canProposeProject(project!, { technology });
+    const result = ideologyManager.canProposeProject(project!, NPCFaction.EarthLoyalists, { technology });
 
     expect(result.canPropose).toBe(false);
     expect(result.reason).toBe("Project already completed");
@@ -272,7 +272,7 @@ describe("Project requirements", () => {
     technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
     ideologyManager.submitProposal(ProjectId.IMMIGRATION_PROGRAM, NPCFaction.EarthLoyalists, 100);
 
-    const result = ideologyManager.canProposeProject(project!, { technology });
+    const result = ideologyManager.canProposeProject(project!, NPCFaction.EarthLoyalists, { technology });
 
     expect(result.canPropose).toBe(false);
     expect(result.reason).toBe("Project already pending vote");
@@ -288,7 +288,7 @@ describe("Project requirements", () => {
     ideologyManager.submitProposal(ProjectId.IMMIGRATION_PROGRAM, NPCFaction.EarthLoyalists, 100);
     ideologyManager.processVotes(200); // Vote happens and fails
 
-    const result = ideologyManager.canProposeProject(project!, { technology });
+    const result = ideologyManager.canProposeProject(project!, NPCFaction.EarthLoyalists, { technology });
 
     expect(result.canPropose).toBe(false);
     expect(result.reason).toBe("Project previously failed (must clear first)");
@@ -304,7 +304,7 @@ describe("Project requirements", () => {
     ideologyManager.processVotes(200);
     ideologyManager.clearFailedProposal(ProjectId.IMMIGRATION_PROGRAM);
 
-    const result = ideologyManager.canProposeProject(project!, { technology });
+    const result = ideologyManager.canProposeProject(project!, NPCFaction.EarthLoyalists, { technology });
 
     expect(result.canPropose).toBe(true);
   });

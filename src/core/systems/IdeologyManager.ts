@@ -2,7 +2,6 @@
 
 import type { Colonist, ColonistIdeology } from "../models/Colonist";
 import {
-  NPCFaction,
   ProjectRequirementType,
   type AxisPosition,
   type FactionState,
@@ -40,7 +39,7 @@ export interface CouncilMember {
  */
 export interface PendingProposal {
   projectId: ProjectId;
-  faction: NPCFaction;
+  factionId: string;
   proposedSol: number;
   voteSol: number;
 }
@@ -704,7 +703,7 @@ export class IdeologyManager implements ProjectQueries {
   /**
    * Submit a project proposal for council vote.
    */
-  submitProposal(projectId: ProjectId, faction: NPCFaction, currentSol: number): boolean {
+  submitProposal(projectId: ProjectId, factionId: string, currentSol: number): boolean {
     if (
       this.pendingProposals.has(projectId) ||
       this.completedProjects.has(projectId) ||
@@ -715,7 +714,7 @@ export class IdeologyManager implements ProjectQueries {
 
     this.pendingProposals.set(projectId, {
       projectId,
-      faction,
+      factionId,
       proposedSol: currentSol,
       voteSol: currentSol + IdeologyBalance.PROJECT_VOTING_PERIOD,
     });
@@ -777,7 +776,7 @@ export class IdeologyManager implements ProjectQueries {
 
     for (const [projectId, proposal] of this.pendingProposals) {
       if (currentSol >= proposal.voteSol) {
-        const projection = this.getVoteProjection(proposal.faction);
+        const projection = this.getVoteProjection(proposal.factionId);
 
         const result: VoteResult = {
           projectId,
@@ -816,10 +815,11 @@ export class IdeologyManager implements ProjectQueries {
   }
 
   /**
-   * Check if a project can be proposed based on its requirements.
+   * Check if a project can be proposed based on its requirements and axis gating.
    */
   canProposeProject(
     project: Project,
+    factionId: string,
     context: {
       technology?: TechnologyTree;
       buildings?: BuildingManager;
@@ -835,6 +835,30 @@ export class IdeologyManager implements ProjectQueries {
     }
     if (this.failedProposals.has(project.id)) {
       return { canPropose: false, reason: "Project previously failed (must clear first)" };
+    }
+
+    // Check axis requirements against proposing faction's position
+    if (project.axisRequirements) {
+      const faction = this.getFaction(factionId);
+      if (!faction) {
+        return { canPropose: false, reason: "Faction not found" };
+      }
+
+      for (const [axis, req] of Object.entries(project.axisRequirements)) {
+        const value = faction.position[axis as keyof AxisPosition];
+        if (req.min !== undefined && value < req.min) {
+          return {
+            canPropose: false,
+            reason: `${axis} position too low (${value.toFixed(2)} < ${req.min})`,
+          };
+        }
+        if (req.max !== undefined && value > req.max) {
+          return {
+            canPropose: false,
+            reason: `${axis} position too high (${value.toFixed(2)} > ${req.max})`,
+          };
+        }
+      }
     }
 
     const prerequisites = project.prerequisites ?? [];

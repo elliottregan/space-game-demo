@@ -1,7 +1,7 @@
 // src/facade/domains/IdeologyFacade.ts
 
 import type { GameState } from "../../core/GameState";
-import { getProject } from "../../core/data/projects";
+import { getProject, meetsAxisRequirements } from "../../core/data/projects";
 import type { NPCFaction, ProjectId } from "../../core/models/NPCInfluence";
 import type { Result } from "../types/common";
 import type { Queryable } from "../types/interfaces";
@@ -72,7 +72,26 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
   }
 
   /**
-   * Check if a project can be proposed based on faction support.
+   * Find the faction best suited to champion a project based on axis requirements.
+   * Returns the first faction whose position meets all axis requirements, or undefined.
+   */
+  private findChampionFaction(projectId: ProjectId): { factionId: string } | undefined {
+    const project = getProject(projectId);
+    if (!project) return undefined;
+
+    const factions = this.gameState.ideology.getFactions();
+    for (const faction of factions) {
+      if (meetsAxisRequirements(faction.position, project)) {
+        return { factionId: faction.id };
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Check if a project can be proposed.
+   * Finds a faction that meets axis requirements and delegates to IdeologyManager.
    */
   canProposeProject(projectId: ProjectId): ProjectEligibility {
     const project = getProject(projectId);
@@ -87,11 +106,10 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
 
     // Check if already completed
     if (this.gameState.ideology.isProjectCompleted(projectId)) {
-      const currentSupport = this.getFactionSupportFor(project.type);
       return {
         canPropose: false,
-        currentSupport,
-        requiredSupport: project.requiredSupport,
+        currentSupport: 0,
+        requiredSupport: 0,
         reason: "Project already completed",
         isCompleted: true,
       };
@@ -99,11 +117,10 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
 
     // Check if pending vote
     if (this.gameState.ideology.isPendingProposal(projectId)) {
-      const currentSupport = this.getFactionSupportFor(project.type);
       return {
         canPropose: false,
-        currentSupport,
-        requiredSupport: project.requiredSupport,
+        currentSupport: 0,
+        requiredSupport: 0,
         reason: "Project awaiting council vote",
         isPending: true,
       };
@@ -111,54 +128,61 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
 
     // Check if failed vote (can be retried later)
     if (this.gameState.ideology.isFailedProposal(projectId)) {
-      const currentSupport = this.getFactionSupportFor(project.type);
       return {
         canPropose: false,
-        currentSupport,
-        requiredSupport: project.requiredSupport,
+        currentSupport: 0,
+        requiredSupport: 0,
         reason: "Project failed council vote",
         isFailed: true,
       };
     }
 
-    const currentSupport = this.getFactionSupportFor(project.type);
-    const canAfford = this.gameState.resources.canAfford(project.proposalCost);
+    // Find a faction that can champion this project
+    const champion = this.findChampionFaction(projectId);
+    if (!champion) {
+      return {
+        canPropose: false,
+        currentSupport: 0,
+        requiredSupport: 0,
+        reason: "No faction meets axis requirements for this project",
+      };
+    }
 
+    const canAfford = this.gameState.resources.canAfford(project.proposalCost);
     if (!canAfford) {
       return {
         canPropose: false,
-        currentSupport,
-        requiredSupport: project.requiredSupport,
+        currentSupport: 0,
+        requiredSupport: 0,
         reason: "Cannot afford proposal cost",
       };
     }
 
-    if (currentSupport < project.requiredSupport) {
+    // Delegate to core IdeologyManager for prerequisite/requirement checks
+    const coreCheck = this.gameState.ideology.canProposeProject(
+      project,
+      champion.factionId,
+      {
+        technology: this.gameState.technology,
+        buildings: this.gameState.buildings,
+        colony: this.gameState.colony,
+        resources: this.gameState.resources,
+      },
+    );
+
+    if (!coreCheck.canPropose) {
       return {
         canPropose: false,
-        currentSupport,
-        requiredSupport: project.requiredSupport,
-        reason: `Insufficient faction support (need ${Math.round(project.requiredSupport * 100)}%)`,
+        currentSupport: 0,
+        requiredSupport: 0,
+        reason: coreCheck.reason,
       };
-    }
-
-    // Check capstone-specific requirements
-    if (project.isCapstone) {
-      const capstoneCheck = this.gameState.ideology.canProposeCapstone(project.type);
-      if (!capstoneCheck.canPropose) {
-        return {
-          canPropose: false,
-          currentSupport,
-          requiredSupport: project.requiredCouncilSupport ?? 0.65,
-          reason: capstoneCheck.reason,
-        };
-      }
     }
 
     return {
       canPropose: true,
-      currentSupport,
-      requiredSupport: project.requiredSupport,
+      currentSupport: 0,
+      requiredSupport: 0,
     };
   }
 
@@ -197,9 +221,13 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
     // Deduct cost
     this.gameState.resources.deduct(project.proposalCost);
 
+    // Find the champion faction to submit on behalf of
+    const champion = this.findChampionFaction(projectId);
+    const factionId = champion?.factionId ?? "";
+
     // Submit for vote
     const currentSol = this.gameState.currentSol;
-    this.gameState.ideology.submitProposal(projectId, project.type, currentSol);
+    this.gameState.ideology.submitProposal(projectId, factionId, currentSol);
 
     const proposal = this.gameState.ideology.getPendingProposal(projectId);
     return { success: true, data: { projectId, voteSol: proposal?.voteSol ?? currentSol + 10 } };

@@ -92,42 +92,50 @@ export const ALL_NPC_IDS: readonly NPCId[] = [
  * Using a string enum for type safety while maintaining string serialization.
  */
 export enum ProjectId {
-  // Earth Loyalists projects
+  // Existing projects (kept for backwards compatibility)
   IMMIGRATION_PROGRAM = "immigration_program",
   EARTH_MEMORIAL = "earth_memorial",
   HERITAGE_ARCHIVE = "heritage_archive",
-  // Mars Independence projects
   UNIVERSAL_HOUSING = "universal_housing",
   HEALTHCARE_EXPANSION = "healthcare_expansion",
   DEMOCRATIC_ASSEMBLY = "democratic_assembly",
-  // Corporate Interests projects
   VENTURE_CAPITAL_INITIATIVE = "venture_capital_initiative",
   ORBITAL_INFRASTRUCTURE = "orbital_infrastructure",
   ASTEROID_SURVEY_PROGRAM = "asteroid_survey_program",
-  // Capstone projects
+  // New axis-gated projects
+  PRIVATE_MINING_CONTRACTS = "private_mining_contracts",
+  GENETIC_ADAPTATION_PROGRAM = "genetic_adaptation_program",
+  MARS_NATIONALISM_CHARTER = "mars_nationalism_charter",
+  TRANSHUMAN_RESEARCH_INITIATIVE = "transhuman_research_initiative",
+  // Capstone projects (axis-gated megastructures)
   EARTH_RELIEF_COMPACT = "earth_relief_compact",
   DECLARATION_OF_SOVEREIGNTY = "declaration_of_sovereignty",
   DEEP_SPACE_MINING_CHARTER = "deep_space_mining_charter",
+  GENESIS_VAULT = "genesis_vault",
 }
 
 /** All project IDs as an array for iteration */
 export const ALL_PROJECT_IDS: readonly ProjectId[] = [
-  // Earth Loyalists
+  // Existing projects
   ProjectId.IMMIGRATION_PROGRAM,
   ProjectId.EARTH_MEMORIAL,
   ProjectId.HERITAGE_ARCHIVE,
-  // Mars Independence
   ProjectId.UNIVERSAL_HOUSING,
   ProjectId.HEALTHCARE_EXPANSION,
   ProjectId.DEMOCRATIC_ASSEMBLY,
-  // Corporate Interests
   ProjectId.VENTURE_CAPITAL_INITIATIVE,
   ProjectId.ORBITAL_INFRASTRUCTURE,
   ProjectId.ASTEROID_SURVEY_PROGRAM,
+  // New axis-gated projects
+  ProjectId.PRIVATE_MINING_CONTRACTS,
+  ProjectId.GENETIC_ADAPTATION_PROGRAM,
+  ProjectId.MARS_NATIONALISM_CHARTER,
+  ProjectId.TRANSHUMAN_RESEARCH_INITIATIVE,
   // Capstones
   ProjectId.EARTH_RELIEF_COMPACT,
   ProjectId.DECLARATION_OF_SOVEREIGNTY,
   ProjectId.DEEP_SPACE_MINING_CHARTER,
+  ProjectId.GENESIS_VAULT,
 ] as const;
 
 /**
@@ -158,18 +166,22 @@ export interface NPC {
   influence: number;
 }
 
-/** Project types align with factions */
-export type ProjectType = NPCFaction;
+/**
+ * Axis requirement for a project: faction must meet min/max thresholds on specific axes.
+ */
+export interface AxisRequirement {
+  min?: number;
+  max?: number;
+}
 
 export interface Project {
   id: ProjectId;
   name: string;
   description: string;
-  type: ProjectType;
+  /** Axis position requirements for a faction to champion this project */
+  axisRequirements?: Partial<Record<keyof AxisPosition, AxisRequirement>>;
   /** Resource cost to propose this project */
   proposalCost: ResourceDelta;
-  /** Required faction support level to propose (0-1) */
-  requiredSupport: number;
   /** Requirements that must be met before this project can be proposed */
   requirements?: ProjectRequirement[];
   /** Effects applied if project passes */
@@ -198,7 +210,7 @@ export interface Project {
   isCapstone?: boolean;
   /** Projects that must be completed before this can be proposed */
   prerequisites?: ProjectId[];
-  /** Required council support from this faction to propose capstone (0-1) */
+  /** Required council support to propose capstone (0-1) */
   requiredCouncilSupport?: number;
 }
 

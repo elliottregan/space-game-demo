@@ -5,7 +5,7 @@ import { BuildingId } from "../core/models/Building";
 import type { EventChoice } from "../core/models/GameEvent";
 import { DepositType, type GridPosition } from "../core/models/Grid";
 import { NPCFaction, ProjectId } from "../core/models/NPCInfluence";
-import { getProjectsByFaction } from "../core/data/projects";
+import { getAvailableProjects, PROJECTS } from "../core/data/projects";
 import { rng } from "../core/utils/random";
 import type { GameAPI } from "../facade/GameAPI";
 import type { IdeologySnapshot } from "../facade/types/ideology";
@@ -353,8 +353,7 @@ export class HeuristicStrategy {
     const pendingProposals = this.api.ideology.getPendingProposals();
     const failedProposals = this.api.ideology.getFailedProposals();
 
-    const factionProjects = getProjectsByFaction(this.committedFaction);
-    const prerequisites = factionProjects.filter((p) => !p.isCapstone);
+    const prerequisites = PROJECTS.filter((p) => !p.isCapstone);
 
     let minCost = 0;
     for (const project of prerequisites) {
@@ -472,11 +471,13 @@ export class HeuristicStrategy {
     if (!this.committedFaction) return false;
 
     const completedProjects = this.api.ideology.getCompletedProjects();
-    const factionProjects = getProjectsByFaction(this.committedFaction);
-    const prerequisites = factionProjects.filter((p) => !p.isCapstone);
+    const capstone = PROJECTS.find(
+      (p) => p.isCapstone && p.id === FACTION_CAPSTONES[this.committedFaction!],
+    );
+    const prereqIds = capstone?.prerequisites ?? [];
 
     // Count completed prerequisites
-    const completedPrereqs = prerequisites.filter((p) => completedProjects.includes(p.id)).length;
+    const completedPrereqs = prereqIds.filter((id) => completedProjects.includes(id)).length;
 
     // Reserve materials once we're close to victory (2+ prerequisites done)
     if (completedPrereqs >= 2) {
@@ -1245,10 +1246,11 @@ export class HeuristicStrategy {
     const failedProposals = this.api.ideology.getFailedProposals();
     const pendingProposals = this.api.ideology.getPendingProposals();
 
-    // Get faction's projects (non-capstone prerequisites first)
-    const factionProjects = getProjectsByFaction(faction);
-    const prerequisites = factionProjects.filter((p) => !p.isCapstone);
+    // Get capstone and its prerequisites for this faction
     const capstoneId = FACTION_CAPSTONES[faction];
+    const capstone = PROJECTS.find((p) => p.id === capstoneId);
+    const prereqIds = capstone?.prerequisites ?? [];
+    const prerequisites = PROJECTS.filter((p) => prereqIds.includes(p.id));
     const megastructureId = FACTION_MEGASTRUCTURES[faction];
 
     // Step 0: If capstone is completed, build megastructure to win!
