@@ -16,6 +16,7 @@ import type { ColonyManager } from "./ColonyManager";
 import type { ResourceManager } from "./ResourceManager";
 import type { RelationshipManager } from "./RelationshipManager";
 import * as IdeologyBalance from "../balance/IdeologyBalance";
+import { DRIFT_TRIGGERS, type DriftContext } from "../data/factionDrift";
 import { getProject } from "../data/projects";
 import type { ProjectQueries } from "../interfaces/Queries";
 import type { GameEvent } from "../models/GameEvent";
@@ -206,6 +207,88 @@ export class IdeologyManager implements ProjectQueries {
    */
   getFaction(id: string): FactionState | undefined {
     return this.factions.find((f) => f.id === id);
+  }
+
+  // ============ Faction Drift ============
+
+  /**
+   * Update faction pressure based on colony conditions.
+   * Evaluates all drift triggers and applies to each faction's pressure.
+   */
+  updateFactionPressure(ctx: DriftContext): void {
+    for (const trigger of DRIFT_TRIGGERS) {
+      const delta = trigger.evaluate(ctx);
+      if (delta === 0) continue;
+
+      for (const faction of this.factions) {
+        faction.pressure[trigger.axis] = Math.max(
+          -1,
+          Math.min(1, faction.pressure[trigger.axis] + delta),
+        );
+      }
+    }
+  }
+
+  /**
+   * Drift faction positions toward their accumulated pressure.
+   * High average conviction among faction members dampens drift,
+   * representing ideological inertia from committed supporters.
+   */
+  driftFactionPositions(colonists: Colonist[]): void {
+    for (const faction of this.factions) {
+      const avgConviction = this.getAverageFactionConviction(faction, colonists);
+      const dampening = 1 - avgConviction * IdeologyBalance.FACTION_CONVICTION_DAMPENING;
+
+      for (const axis of AXIS_KEYS) {
+        const drift =
+          (faction.pressure[axis] - faction.position[axis]) *
+          IdeologyBalance.FACTION_DRIFT_RATE *
+          dampening;
+
+        faction.position[axis] = Math.max(-1, Math.min(1, faction.position[axis] + drift));
+      }
+    }
+  }
+
+  /**
+   * Decay faction pressure toward zero.
+   * Without reinforcement from colony conditions, pressure fades.
+   */
+  decayFactionPressure(): void {
+    for (const faction of this.factions) {
+      for (const axis of AXIS_KEYS) {
+        const pressure = faction.pressure[axis];
+        if (pressure > 0) {
+          faction.pressure[axis] = Math.max(0, pressure - IdeologyBalance.FACTION_PRESSURE_DECAY);
+        } else if (pressure < 0) {
+          faction.pressure[axis] = Math.min(0, pressure + IdeologyBalance.FACTION_PRESSURE_DECAY);
+        }
+      }
+    }
+  }
+
+  /**
+   * Calculate average conviction of colonists nearest to a faction.
+   */
+  private getAverageFactionConviction(
+    faction: FactionState,
+    colonists: Colonist[],
+  ): number {
+    let totalConviction = 0;
+    let count = 0;
+
+    for (const colonist of colonists) {
+      if (!colonist.ideology) continue;
+
+      const nearest = IdeologyManager.getNearestFaction(colonist.ideology, this.factions);
+      if (nearest?.id === faction.id) {
+        totalConviction += colonist.ideology.conviction;
+        count++;
+      }
+    }
+
+    if (count === 0) return 0;
+    return totalConviction / count;
   }
 
   // ============ Council Selection ============
