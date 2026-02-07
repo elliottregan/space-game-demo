@@ -1,51 +1,67 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { NPCFaction } from "../../../core/models/NPCInfluence";
 import { gameService } from "../../services/GameService";
-import { GPanel, GButton, GSelect } from "../../ui";
-import type { SelectOption } from "../../ui/primitives/GSelect.vue";
+import { GPanel } from "../../ui";
 
 const state = gameService.getState();
 
-// Lobbying UI state
+// Faction colors by base faction id
+const FACTION_COLORS: Record<string, string> = {
+  earth_loyalists: "var(--color-info)",
+  mars_independence: "var(--color-positive)",
+  corporate_interests: "var(--color-warning)",
+};
+
+// Map faction data from ideology state
+// oxlint-disable-next-line no-unused-vars
+const factionData = computed(() =>
+  state.ideology.factions.map((faction) => ({
+    id: faction.id,
+    name: faction.name,
+    baseId: faction.baseId,
+    support: state.ideology.factionSupport[faction.id] ?? 0,
+    councilSeats: state.ideology.councilFactionCounts[faction.baseId] ?? 0,
+    position: faction.position,
+  })),
+);
+
+// Colonists with ideology data, sorted by highest conviction
+// oxlint-disable-next-line no-unused-vars
+const colonistsWithIdeology = computed(() => {
+  return state.colonists
+    .filter((c): c is typeof c & { ideology: NonNullable<typeof c.ideology> } => !!c.ideology)
+    .map((c) => {
+      const ideology = c.ideology;
+      // Find nearest faction for this colonist
+      let nearestFactionBaseId: string | null = null;
+      if (state.ideology.factions.length > 0) {
+        let bestDist = Infinity;
+        for (const faction of state.ideology.factions) {
+          const ds = ideology.solidarity - faction.position.solidarity;
+          const dv = ideology.sovereignty - faction.position.sovereignty;
+          const dt = ideology.transformation - faction.position.transformation;
+          const dist = Math.sqrt(ds * ds + dv * dv + dt * dt);
+          if (dist < bestDist) {
+            bestDist = dist;
+            nearestFactionBaseId = faction.baseId;
+          }
+        }
+      }
+      return {
+        id: c.id,
+        name: c.name,
+        solidarity: ideology.solidarity,
+        sovereignty: ideology.sovereignty,
+        transformation: ideology.transformation,
+        conviction: ideology.conviction,
+        nearestFactionBaseId,
+      };
+    })
+    .sort((a, b) => b.conviction - a.conviction);
+});
+
+// Selected council member for details
 const selectedMemberId = ref<string | null>(null);
-const selectedFaction = ref<NPCFaction>(NPCFaction.EarthLoyalists);
-const lobbyBoost = ref(0.1);
-
-// Lobby options
-const lobbyOptions: SelectOption<number>[] = [
-  { label: "Small (+5%)", value: 0.05 },
-  { label: "Medium (+10%)", value: 0.1 },
-  { label: "Large (+15%)", value: 0.15 },
-  { label: "Major (+20%)", value: 0.2 },
-];
-
-const factionOptions: SelectOption<string>[] = [
-  { label: "Earth Loyalists", value: NPCFaction.EarthLoyalists },
-  { label: "Mars Independence", value: NPCFaction.MarsIndependence },
-  { label: "Corporate Interests", value: NPCFaction.CorporateInterests },
-];
-
-// Computed values for lobbying
-// oxlint-disable-next-line no-unused-vars
-const lobbyCost = computed(() => {
-  if (!selectedMemberId.value) return 0;
-  return gameService.getCouncilLobbyCost(
-    selectedMemberId.value,
-    selectedFaction.value,
-    lobbyBoost.value,
-  );
-});
-
-// oxlint-disable-next-line no-unused-vars
-const canLobby = computed(() => {
-  if (!selectedMemberId.value) return false;
-  return gameService.canLobbyCouncilMember(
-    selectedMemberId.value,
-    selectedFaction.value,
-    lobbyBoost.value,
-  );
-});
 
 // oxlint-disable-next-line no-unused-vars
 function selectMember(colonistId: string): void {
@@ -55,70 +71,6 @@ function selectMember(colonistId: string): void {
     selectedMemberId.value = colonistId;
   }
 }
-
-// oxlint-disable-next-line no-unused-vars
-function handleLobby(): void {
-  if (!selectedMemberId.value) return;
-  gameService.lobbyCouncilMember(selectedMemberId.value, selectedFaction.value, lobbyBoost.value);
-}
-
-// Colonists with ideology data, sorted by highest affinity
-// oxlint-disable-next-line no-unused-vars
-const colonistsWithIdeology = computed(() => {
-  return state.colonists
-    .filter((c): c is typeof c & { ideology: NonNullable<typeof c.ideology> } => !!c.ideology)
-    .map((c) => {
-      const ideology = c.ideology;
-      const maxAffinity = Math.max(
-        ideology.earthLoyalist,
-        ideology.marsIndependence,
-        ideology.corporateInterests,
-      );
-      let primaryFaction: NPCFaction | null = null;
-      if (maxAffinity >= 0.3) {
-        if (ideology.earthLoyalist === maxAffinity) primaryFaction = NPCFaction.EarthLoyalists;
-        else if (ideology.marsIndependence === maxAffinity)
-          primaryFaction = NPCFaction.MarsIndependence;
-        else primaryFaction = NPCFaction.CorporateInterests;
-      }
-      return {
-        id: c.id,
-        name: c.name,
-        earthLoyalist: ideology.earthLoyalist,
-        marsIndependence: ideology.marsIndependence,
-        corporateInterests: ideology.corporateInterests,
-        conviction: ideology.conviction,
-        primaryFaction,
-      };
-    })
-    .sort((a, b) => {
-      // Sort by conviction (most politically active first)
-      return b.conviction - a.conviction;
-    });
-});
-
-// Map ideology support to display format
-// oxlint-disable-next-line no-unused-vars
-const factionData = computed(() => [
-  {
-    id: NPCFaction.EarthLoyalists,
-    name: "Earth Loyalists",
-    support: state.ideology.factionSupport.earthLoyalists,
-    councilSeats: state.ideology.councilFactionCounts[NPCFaction.EarthLoyalists] ?? 0,
-  },
-  {
-    id: NPCFaction.MarsIndependence,
-    name: "Mars Independence",
-    support: state.ideology.factionSupport.marsIndependence,
-    councilSeats: state.ideology.councilFactionCounts[NPCFaction.MarsIndependence] ?? 0,
-  },
-  {
-    id: NPCFaction.CorporateInterests,
-    name: "Corporate Interests",
-    support: state.ideology.factionSupport.corporateInterests,
-    councilSeats: state.ideology.councilFactionCounts[NPCFaction.CorporateInterests] ?? 0,
-  },
-]);
 
 // oxlint-disable-next-line no-unused-vars
 function formatSupport(support: number): string {
@@ -134,17 +86,14 @@ function getSupportColor(support: number): string {
 }
 
 // oxlint-disable-next-line no-unused-vars
-function getFactionColor(factionId: string): string {
-  switch (factionId) {
-    case NPCFaction.EarthLoyalists:
-      return "var(--color-info)";
-    case NPCFaction.MarsIndependence:
-      return "var(--color-positive)";
-    case NPCFaction.CorporateInterests:
-      return "var(--color-warning)";
-    default:
-      return "var(--color-muted)";
-  }
+function getFactionColor(baseId: string): string {
+  return FACTION_COLORS[baseId] ?? "var(--color-muted)";
+}
+
+// oxlint-disable-next-line no-unused-vars
+function formatAxis(value: number): string {
+  const sign = value >= 0 ? "+" : "";
+  return `${sign}${(value * 100).toFixed(0)}`;
 }
 </script>
 
@@ -153,7 +102,7 @@ function getFactionColor(factionId: string): string {
     <div class="factions">
       <div v-for="faction in factionData" :key="faction.id" class="faction-card">
         <div class="faction-header">
-          <span class="faction-name" :style="{ color: getFactionColor(faction.id) }">
+          <span class="faction-name" :style="{ color: getFactionColor(faction.baseId) }">
             {{ faction.name }}
           </span>
           <span class="faction-support" :style="{ color: getSupportColor(faction.support) }">
@@ -166,13 +115,9 @@ function getFactionColor(factionId: string): string {
             class="support-fill"
             :style="{
               width: `${faction.support * 100}%`,
-              backgroundColor: getFactionColor(faction.id),
+              backgroundColor: getFactionColor(faction.baseId),
             }"
           />
-          <!-- Threshold markers -->
-          <div class="threshold-marker" style="left: 20%" title="Minor projects (20%)" />
-          <div class="threshold-marker" style="left: 35%" title="Major projects (35%)" />
-          <div class="threshold-marker" style="left: 50%" title="Victory projects (50%)" />
         </div>
 
         <div class="faction-details">
@@ -181,6 +126,11 @@ function getFactionColor(factionId: string): string {
               faction.councilSeats !== 1 ? "s" : ""
             }}</span
           >
+          <span class="axis-values">
+            Sol {{ formatAxis(faction.position.solidarity) }} | Sov
+            {{ formatAxis(faction.position.sovereignty) }} | Trf
+            {{ formatAxis(faction.position.transformation) }}
+          </span>
         </div>
       </div>
     </div>
@@ -195,45 +145,17 @@ function getFactionColor(factionId: string): string {
           class="council-member"
           :class="{ selected: selectedMemberId === member.colonistId }"
           :style="{
-            borderLeftColor: member.faction
-              ? getFactionColor(member.faction)
+            borderLeftColor: member.factionId
+              ? getFactionColor(member.factionId)
               : 'var(--color-muted)',
           }"
           @click="selectMember(member.colonistId)"
         >
           <span class="member-name">{{ member.name }}</span>
-          <span class="member-influence" title="Influence = centrality × conviction"
+          <span class="member-influence" title="Influence = centrality x conviction"
             >influence: {{ (member.influence * 100).toFixed(0) }}</span
           >
         </div>
-      </div>
-
-      <!-- Lobbying Controls -->
-      <div v-if="selectedMemberId" class="lobby-section">
-        <h4 class="lobby-title">Lobby Council Member</h4>
-
-        <div class="lobby-controls">
-          <div class="lobby-row">
-            <label class="lobby-label">Faction:</label>
-            <GSelect v-model="selectedFaction" :options="factionOptions" size="sm" />
-          </div>
-
-          <div class="lobby-row">
-            <label class="lobby-label">Boost:</label>
-            <GSelect v-model="lobbyBoost" :options="lobbyOptions" size="sm" />
-          </div>
-
-          <div class="lobby-row">
-            <span class="lobby-label">Cost:</span>
-            <span class="lobby-cost">{{ lobbyCost }} materials</span>
-          </div>
-
-          <GButton size="sm" :disabled="!canLobby" @click="handleLobby"> Lobby </GButton>
-        </div>
-
-        <p class="lobby-hint">
-          Lobbying increases a council member's affinity for a faction, influencing their votes.
-        </p>
       </div>
     </div>
 
@@ -243,17 +165,9 @@ function getFactionColor(factionId: string): string {
       <div class="colonists-table">
         <div class="table-header">
           <span class="col-name">Name</span>
-          <span class="col-faction" :style="{ color: getFactionColor(NPCFaction.EarthLoyalists) }"
-            >EL</span
-          >
-          <span class="col-faction" :style="{ color: getFactionColor(NPCFaction.MarsIndependence) }"
-            >MI</span
-          >
-          <span
-            class="col-faction"
-            :style="{ color: getFactionColor(NPCFaction.CorporateInterests) }"
-            >CI</span
-          >
+          <span class="col-axis">Sol</span>
+          <span class="col-axis">Sov</span>
+          <span class="col-axis">Trf</span>
           <span class="col-conviction">Conv</span>
         </div>
         <div
@@ -261,15 +175,15 @@ function getFactionColor(factionId: string): string {
           :key="colonist.id"
           class="colonist-row"
           :style="{
-            borderLeftColor: colonist.primaryFaction
-              ? getFactionColor(colonist.primaryFaction)
+            borderLeftColor: colonist.nearestFactionBaseId
+              ? getFactionColor(colonist.nearestFactionBaseId)
               : 'var(--color-muted)',
           }"
         >
           <span class="col-name">{{ colonist.name }}</span>
-          <span class="col-faction">{{ (colonist.earthLoyalist * 100).toFixed(0) }}</span>
-          <span class="col-faction">{{ (colonist.marsIndependence * 100).toFixed(0) }}</span>
-          <span class="col-faction">{{ (colonist.corporateInterests * 100).toFixed(0) }}</span>
+          <span class="col-axis">{{ formatAxis(colonist.solidarity) }}</span>
+          <span class="col-axis">{{ formatAxis(colonist.sovereignty) }}</span>
+          <span class="col-axis">{{ formatAxis(colonist.transformation) }}</span>
           <span class="col-conviction">{{ (colonist.conviction * 100).toFixed(0) }}</span>
         </div>
       </div>
@@ -277,7 +191,7 @@ function getFactionColor(factionId: string): string {
 
     <p class="hint">
       Colonist ideology spreads through social networks. High-influence colonists form the council.
-      Click a council member to lobby them.
+      Factions drift along ideology axes based on colony conditions.
     </p>
   </GPanel>
 </template>
@@ -326,16 +240,9 @@ function getFactionColor(factionId: string): string {
   transition: width 0.3s;
 }
 
-.threshold-marker {
-  position: absolute;
-  top: -2px;
-  width: 2px;
-  height: 12px;
-  background: var(--g-color-bg-base);
-  opacity: 0.5;
-}
-
 .faction-details {
+  display: flex;
+  justify-content: space-between;
   margin-top: var(--g-space-xs);
   font-family: var(--g-font-mono);
   font-size: var(--g-font-size-xs);
@@ -345,6 +252,10 @@ function getFactionColor(factionId: string): string {
 .council-seats {
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.axis-values {
+  letter-spacing: 0.02em;
 }
 
 .council-section {
@@ -404,56 +315,6 @@ function getFactionColor(factionId: string): string {
   font-size: var(--g-font-size-sm);
 }
 
-/* Lobbying Section */
-.lobby-section {
-  margin-top: var(--g-space-md);
-  padding: var(--g-space-md);
-  background: var(--g-color-bg-base);
-  border: 1px solid var(--g-color-border);
-}
-
-.lobby-title {
-  margin: 0 0 var(--g-space-sm);
-  font-family: var(--g-font-mono);
-  font-size: var(--g-font-size-sm);
-  color: var(--g-color-text);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.lobby-controls {
-  display: flex;
-  flex-direction: column;
-  gap: var(--g-space-sm);
-}
-
-.lobby-row {
-  display: flex;
-  align-items: center;
-  gap: var(--g-space-sm);
-}
-
-.lobby-label {
-  font-family: var(--g-font-mono);
-  font-size: var(--g-font-size-xs);
-  color: var(--g-color-text-muted);
-  text-transform: uppercase;
-  min-width: 60px;
-}
-
-.lobby-cost {
-  font-family: var(--g-font-mono);
-  font-size: var(--g-font-size-sm);
-  color: var(--color-warning);
-}
-
-.lobby-hint {
-  margin: var(--g-space-sm) 0 0;
-  font-family: var(--g-font-mono);
-  font-size: var(--g-font-size-xs);
-  color: var(--g-color-text-muted);
-}
-
 /* Colonists Ideology Section */
 .colonists-section {
   margin-top: var(--g-space-lg);
@@ -504,8 +365,8 @@ function getFactionColor(factionId: string): string {
   white-space: nowrap;
 }
 
-.col-faction {
-  width: 32px;
+.col-axis {
+  width: 36px;
   text-align: right;
   color: var(--g-color-text-muted);
 }
