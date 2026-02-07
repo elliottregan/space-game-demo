@@ -8,7 +8,6 @@ import { BuildingId } from "./models/Building";
 import type { GameEvent } from "./models/GameEvent";
 import {
   ProjectEffectType,
-  type ConvictionBoostParams,
   type ProductionModifierParams,
   type Project,
   type RecurringEventParams,
@@ -224,12 +223,7 @@ export class GameState {
           break;
         }
         case ProjectEffectType.CONVICTION_BOOST: {
-          const params = effect.params as ConvictionBoostParams;
-          this.ideology.boostFactionConviction(
-            params.faction,
-            params.amount,
-            this.colony.getColonists(),
-          );
+          // No longer handled here - conviction is managed by the axis-based ideology system
           break;
         }
         case ProjectEffectType.IMMIGRATION_IDEOLOGY_BIAS: {

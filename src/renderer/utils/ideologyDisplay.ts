@@ -10,7 +10,7 @@
 
 import type { ColonistIdeology } from "../../core/models/Colonist";
 import { NPCFaction } from "../../core/models/NPCInfluence";
-import { IDEOLOGY_NEUTRAL_THRESHOLD } from "../../core/balance/IdeologyBalance";
+import { NEUTRAL_AXIS_THRESHOLD } from "../../core/balance/IdeologyBalance";
 
 // ============ Faction Types ============
 
@@ -72,7 +72,7 @@ export const FACTION_FULL_NAMES: Record<FactionId, string> = {
  * Threshold for determining dominant faction.
  * Uses the core balance constant for consistency with game logic.
  */
-export const DOMINANT_FACTION_THRESHOLD = IDEOLOGY_NEUTRAL_THRESHOLD;
+export const DOMINANT_FACTION_THRESHOLD = NEUTRAL_AXIS_THRESHOLD;
 
 /**
  * Get the dominant faction for a colonist based on their ideology.

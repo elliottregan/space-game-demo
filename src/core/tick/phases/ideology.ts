@@ -1,10 +1,9 @@
-import type { Colonist } from "../../models/Colonist";
+import type { Colonist, ColonistIdeology } from "../../models/Colonist";
 import { getProject } from "../../data/projects";
 import type { GameEvent } from "../../models/GameEvent";
 import {
-  NPCFaction,
   ProjectEffectType,
-  type ConvictionBoostParams,
+  AXIS_KEYS,
   type ProductionModifierParams,
   type Project,
   type ProjectId,
@@ -16,33 +15,22 @@ import * as IdeologyBalance from "../../balance/IdeologyBalance";
 
 /**
  * Check if a colonist has neutral/unimprinted ideology.
- * Returns true if all three affinities are close to 0.33 (neutral).
+ * Returns true if all axis values are near 0 (within NEUTRAL_AXIS_THRESHOLD)
+ * AND conviction is low (<= NEW_COLONIST_IDEOLOGY.conviction).
  */
-function isNeutralIdeology(colonist: {
-  ideology?: {
-    earthLoyalist: number;
-    marsIndependence: number;
-    corporateInterests: number;
-    conviction: number;
-  };
-}): boolean {
+function isNeutralIdeology(colonist: { ideology?: ColonistIdeology }): boolean {
   if (!colonist.ideology) return false;
-  const { earthLoyalist, marsIndependence, corporateInterests, conviction } = colonist.ideology;
 
-  // Check if ideology is still near neutral (within 0.05 of 0.33)
-  const neutralThreshold = 0.05;
-  const isNeutral =
-    Math.abs(earthLoyalist - 0.33) < neutralThreshold &&
-    Math.abs(marsIndependence - 0.33) < neutralThreshold &&
-    Math.abs(corporateInterests - 0.33) < neutralThreshold;
+  const allAxesNearZero = AXIS_KEYS.every(
+    (axis) => Math.abs(colonist.ideology![axis]) <= IdeologyBalance.NEUTRAL_AXIS_THRESHOLD,
+  );
 
-  // Only imprint if conviction is low (new colonist)
-  return isNeutral && conviction <= IdeologyBalance.NEW_COLONIST_IDEOLOGY.conviction;
+  return allAxesNearZero && colonist.ideology.conviction <= IdeologyBalance.NEW_COLONIST_IDEOLOGY.conviction;
 }
 
 /**
  * Process onCompletionEffects for a project.
- * This handles recurring events, production modifiers, and conviction boosts.
+ * This handles recurring events and production modifiers.
  */
 function processProjectOnCompletionEffects(
   project: Project,
@@ -57,10 +45,6 @@ function processProjectOnCompletionEffects(
         amount: number,
       ) => void;
     };
-    ideology: {
-      boostFactionConviction: (faction: NPCFaction, amount: number, colonists: Colonist[]) => void;
-    };
-    colony: { getColonists: () => Colonist[] };
     currentSol: number;
   },
 ): void {
@@ -82,12 +66,7 @@ function processProjectOnCompletionEffects(
         break;
       }
       case ProjectEffectType.CONVICTION_BOOST: {
-        const params = effect.params as ConvictionBoostParams;
-        ctx.ideology.boostFactionConviction(
-          params.faction,
-          params.amount,
-          ctx.colony.getColonists(),
-        );
+        // No longer handled here - conviction is managed by the axis-based ideology system
         break;
       }
       case ProjectEffectType.IMMIGRATION_IDEOLOGY_BIAS: {
@@ -103,18 +82,23 @@ function processProjectOnCompletionEffects(
  *
  * Spreads ideology through the colonist social network.
  * Colonists' ideologies drift toward their neighbors' weighted average.
- * Also updates the council based on centrality × conviction.
+ * Also updates the council based on centrality x conviction.
  *
  * Additionally, new colonists with neutral ideology get "imprinted"
  * with the ideology of their strongest connection, creating ideological
  * clustering in the social network.
+ *
+ * After propagation, runs the faction dynamics pipeline:
+ * pressure update, position drift, pressure decay, naming,
+ * policy processing, defections, mergers, and collapses.
  */
 export const propagateIdeology = definePhase({
   id: "ideology:propagateIdeology",
   name: "Propagate Ideology",
-  reads: ["ideology", "colony", "workforce", "currentSol"],
+  reads: ["ideology", "colony", "workforce", "currentSol", "resources", "buildings", "technology"],
   writes: ["ideology"],
   execute(ctx) {
+    const events: GameEvent[] = [];
     const colonists = ctx.colony.getColonists();
     const relationshipManager = ctx.workforce.getRelationshipManager();
 
@@ -132,7 +116,36 @@ export const propagateIdeology = definePhase({
     // Update council if stale
     ctx.ideology.updateCouncilIfStale(colonists, relationshipManager, ctx.currentSol);
 
-    return [];
+    // Update faction pressure from colony conditions
+    ctx.ideology.updateFactionPressure({
+      resources: ctx.resources,
+      colony: ctx.colony,
+      buildings: ctx.buildings,
+      technology: ctx.technology,
+    });
+
+    // Drift faction positions toward accumulated pressure
+    ctx.ideology.driftFactionPositions(colonists);
+
+    // Decay faction pressure toward zero
+    ctx.ideology.decayFactionPressure();
+
+    // Update faction names based on axis positions
+    events.push(...ctx.ideology.updateFactionNames());
+
+    // Process active policy effects
+    events.push(...ctx.ideology.processActivePolicy(ctx.currentSol));
+
+    // Process colonist defections between factions
+    events.push(...ctx.ideology.processDefections(colonists));
+
+    // Check for faction mergers (convergent factions)
+    events.push(...ctx.ideology.checkFactionMerger());
+
+    // Check for faction collapses (insufficient support)
+    events.push(...ctx.ideology.checkFactionCollapse(colonists));
+
+    return events;
   },
 });
 
@@ -150,7 +163,6 @@ export const processProjectVotes = definePhase({
   writes: ["ideology", "victory", "resources", "scheduler"],
   execute(ctx) {
     const events: GameEvent[] = [];
-    const colonists = ctx.colony.getColonists();
 
     // Process any votes that are due
     const voteResults = ctx.ideology.processVotes(ctx.currentSol);
@@ -166,9 +178,6 @@ export const processProjectVotes = definePhase({
           events.push(capstoneEvent);
           // Don't return - capstones unlock megastructures but don't win the game
         }
-
-        // Apply morale and conviction effects for passed projects
-        ctx.ideology.applyProjectMoraleEffects(project, colonists, ctx.colonistMorale);
 
         // Apply colony-wide morale boost if specified
         if (project.effects?.colonyMoraleBoost) {

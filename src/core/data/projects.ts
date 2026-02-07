@@ -10,6 +10,7 @@ import {
   ProjectId,
 } from "../models/NPCInfluence.ts";
 import { TechnologyId } from "../models/Technology.ts";
+import { STARTING_FACTION_POSITIONS } from "../balance/IdeologyBalance.ts";
 
 export const PROJECTS: Project[] = [
   // ============ Collectivist-leaning projects (solidarity >= +0.3) ============
@@ -314,4 +315,14 @@ export function meetsAxisRequirements(
  */
 export function getAvailableProjects(factionPosition: AxisPosition): Project[] {
   return PROJECTS.filter((p) => meetsAxisRequirements(factionPosition, p));
+}
+
+/**
+ * Get projects associated with a faction by checking the faction's starting position
+ * against each project's axis requirements.
+ */
+export function getProjectsByFaction(faction: NPCFaction): Project[] {
+  const factionData = STARTING_FACTION_POSITIONS.find((f) => f.baseId === faction);
+  if (!factionData) return [];
+  return getAvailableProjects(factionData.position);
 }
