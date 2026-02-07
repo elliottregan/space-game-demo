@@ -21,11 +21,12 @@ import * as IdeologyBalance from "../../balance/IdeologyBalance";
 function isNeutralIdeology(colonist: { ideology?: ColonistIdeology }): boolean {
   if (!colonist.ideology) return false;
 
+  const ideology = colonist.ideology;
   const allAxesNearZero = AXIS_KEYS.every(
-    (axis) => Math.abs(colonist.ideology![axis]) <= IdeologyBalance.NEUTRAL_AXIS_THRESHOLD,
+    (axis) => Math.abs(ideology[axis]) <= IdeologyBalance.NEUTRAL_AXIS_THRESHOLD,
   );
 
-  return allAxesNearZero && colonist.ideology.conviction <= IdeologyBalance.NEW_COLONIST_IDEOLOGY.conviction;
+  return allAxesNearZero && ideology.conviction <= IdeologyBalance.NEW_COLONIST_IDEOLOGY.conviction;
 }
 
 /**
