@@ -1,123 +1,167 @@
 <!-- src/renderer/components/VictoryProgressPanel/FactionTrack.vue -->
 <script setup lang="ts">
 import { computed } from "vue";
-import { NPCFaction, ProjectId } from "../../../core/models/NPCInfluence";
-import { BuildingId } from "../../../core/models/Building";
-import { PROJECTS, getProjectsByFaction } from "../../../core/data/projects";
+import type { AxisPosition, AxisRequirement, Project } from "../../../core/models/NPCInfluence";
+import { AXIS_KEYS, ProjectId } from "../../../core/models/NPCInfluence";
+import { PROJECTS, meetsAxisRequirements } from "../../../core/data/projects";
 import { BUILDINGS } from "../../../core/data/buildings";
 import { gameService } from "../../services/GameService";
+import type { FactionSnapshot } from "../../../facade/types/ideology";
 import { GBadge } from "../../ui";
-import {
-  FACTION_CSS_VARS,
-  FACTION_FULL_NAMES,
-  npcFactionToFactionId,
-} from "../../utils/ideologyDisplay";
+
+const FACTION_COLORS: Record<string, string> = {
+  earth_loyalists: "var(--g-color-info)",
+  mars_independence: "var(--g-color-positive)",
+  corporate_interests: "var(--g-color-warning)",
+};
 
 const props = defineProps<{
-  faction: NPCFaction;
+  faction: FactionSnapshot;
 }>();
 
 const state = gameService.getState();
 
-// Faction display config with megastructure using unified display model
-const factionConfig = computed(() => {
-  const factionId = npcFactionToFactionId(props.faction);
-  const megastructureMap: Record<NPCFaction, BuildingId> = {
-    [NPCFaction.EarthLoyalists]: BuildingId.SPACE_ELEVATOR,
-    [NPCFaction.MarsIndependence]: BuildingId.UNITED_MARS_STATION,
-    [NPCFaction.CorporateInterests]: BuildingId.GENERATION_SHIP,
-  };
-
-  return {
-    name: FACTION_FULL_NAMES[factionId],
-    color: FACTION_CSS_VARS[factionId],
-    megastructureId: megastructureMap[props.faction],
-  };
+const factionColor = computed((): string => {
+  return FACTION_COLORS[props.faction.baseId] ?? "var(--color-muted)";
 });
 
-// Get projects for this faction (non-capstone prerequisites)
-const prerequisiteProjects = computed(() => {
-  return getProjectsByFaction(props.faction).filter((p) => !p.isCapstone);
+// All capstone projects
+const capstoneProjects = computed((): Project[] => {
+  return PROJECTS.filter((p) => p.isCapstone);
 });
 
-// Get capstone project for this faction
-const capstoneProject = computed(() => {
-  return getProjectsByFaction(props.faction).find((p) => p.isCapstone);
-});
-
-// Project status helper
-type ProjectStatus = "passed" | "pending" | "available" | "locked";
-
-function getProjectStatus(projectId: ProjectId): ProjectStatus {
-  if (state.ideology.completedProjects.includes(projectId)) {
-    return "passed";
-  }
-  const pending = state.ideology.pendingProposals.find((p) => p.projectId === projectId);
-  if (pending) {
-    return "pending";
-  }
-  // Check if can propose (has sufficient support)
-  const project = PROJECTS.find((p) => p.id === projectId);
-  if (!project) return "locked";
-
-  const support = getFactionSupport();
-  if (support >= project.requiredSupport) {
-    return "available";
-  }
-  return "locked";
+// For each capstone, compute how close this faction is to meeting its axis requirements
+interface CapstoneProgress {
+  project: Project;
+  meetsRequirements: boolean;
+  isCompleted: boolean;
+  isPending: boolean;
+  megastructureBuildingId: string | undefined;
+  axisProgress: Array<{
+    axis: keyof AxisPosition;
+    current: number;
+    required: number;
+    direction: "min" | "max";
+    met: boolean;
+    percent: number;
+  }>;
+  prerequisitesPassed: number;
+  prerequisitesTotal: number;
 }
 
-function getFactionSupport(): number {
-  switch (props.faction) {
-    case NPCFaction.EarthLoyalists:
-      return state.ideology.factionSupport.earthLoyalists;
-    case NPCFaction.MarsIndependence:
-      return state.ideology.factionSupport.marsIndependence;
-    case NPCFaction.CorporateInterests:
-      return state.ideology.factionSupport.corporateInterests;
+function computeAxisProgress(
+  position: AxisPosition,
+  axis: keyof AxisPosition,
+  req: AxisRequirement,
+): { current: number; required: number; direction: "min" | "max"; met: boolean; percent: number } {
+  const value = position[axis];
+
+  if (req.min !== undefined) {
+    const met = value >= req.min;
+    // Progress from 0 toward the required minimum
+    // If the value is negative and min is positive, start from 0%
+    const percent = req.min === 0 ? (met ? 100 : 0) : Math.max(0, Math.min(100, (value / req.min) * 100));
+    return { current: value, required: req.min, direction: "min", met, percent };
   }
+
+  if (req.max !== undefined) {
+    const met = value <= req.max;
+    // Progress toward the required maximum (lower/more negative)
+    // e.g., if max is -0.6 and value is -0.3, progress is -0.3/-0.6 = 50%
+    const percent = req.max === 0 ? (met ? 100 : 0) : Math.max(0, Math.min(100, (value / req.max) * 100));
+    return { current: value, required: req.max, direction: "max", met, percent };
+  }
+
+  return { current: value, required: 0, direction: "min", met: true, percent: 100 };
 }
 
-// Count passed prerequisites
-const passedCount = computed(() => {
-  return prerequisiteProjects.value.filter((p) => state.ideology.completedProjects.includes(p.id))
-    .length;
+const capstoneProgressList = computed((): CapstoneProgress[] => {
+  const position = props.faction.position;
+  const completed = state.ideology.completedProjects;
+  const pending = state.ideology.pendingProposals;
+
+  return capstoneProjects.value.map((project) => {
+    const axisProgress: CapstoneProgress["axisProgress"] = [];
+
+    if (project.axisRequirements) {
+      for (const [axis, req] of Object.entries(project.axisRequirements)) {
+        const progress = computeAxisProgress(position, axis as keyof AxisPosition, req);
+        axisProgress.push({ axis: axis as keyof AxisPosition, ...progress });
+      }
+    }
+
+    const prerequisiteIds = project.prerequisites ?? [];
+    const prerequisitesPassed = prerequisiteIds.filter((id) => completed.includes(id)).length;
+
+    // Find the building this capstone unlocks
+    const megastructureBuildingId =
+      typeof project.effects?.unlockBuilding === "string"
+        ? project.effects.unlockBuilding
+        : undefined;
+
+    return {
+      project,
+      meetsRequirements: meetsAxisRequirements(position, project),
+      isCompleted: completed.includes(project.id),
+      isPending: pending.some((p) => p.projectId === project.id),
+      megastructureBuildingId,
+      axisProgress,
+      prerequisitesPassed,
+      prerequisitesTotal: prerequisiteIds.length,
+    };
+  });
 });
 
-// Council seats
-const councilSeats = computed(() => {
-  return state.ideology.councilFactionCounts[props.faction] ?? 0;
+// Find the capstone this faction is closest to (highest average axis progress)
+const bestCapstone = computed((): CapstoneProgress | null => {
+  if (capstoneProgressList.value.length === 0) return null;
+
+  let best: CapstoneProgress | null = null;
+  let bestScore = -Infinity;
+
+  for (const cp of capstoneProgressList.value) {
+    if (cp.axisProgress.length === 0) continue;
+    const avgPercent =
+      cp.axisProgress.reduce((sum, a) => sum + a.percent, 0) / cp.axisProgress.length;
+    if (avgPercent > bestScore) {
+      bestScore = avgPercent;
+      best = cp;
+    }
+  }
+
+  return best;
 });
 
-const totalSeats = computed(() => {
+// Council seats for this faction
+const councilSeats = computed((): number => {
+  return state.ideology.councilFactionCounts[props.faction.id] ?? 0;
+});
+
+const totalSeats = computed((): number => {
   return state.ideology.council.length;
 });
 
-const seatsNeeded = computed(() => {
+const seatsNeeded = computed((): number => {
   const threshold = Math.ceil(totalSeats.value * 0.65);
   return Math.max(0, threshold - councilSeats.value);
 });
 
-const hasCouncilMajority = computed(() => {
+const hasCouncilMajority = computed((): boolean => {
   return seatsNeeded.value === 0 && totalSeats.value > 0;
 });
 
-// Megastructure state
+// Megastructure state for best capstone
 const megastructureDef = computed(() => {
-  return BUILDINGS.find((b) => b.id === factionConfig.value.megastructureId);
-});
-
-const isCapstoneCompleted = computed(() => {
-  const capstone = capstoneProject.value;
-  return capstone ? state.ideology.completedProjects.includes(capstone.id) : false;
+  const buildingId = bestCapstone.value?.megastructureBuildingId;
+  if (!buildingId) return null;
+  return BUILDINGS.find((b) => b.id === buildingId) ?? null;
 });
 
 const megastructureBuilding = computed(() => {
-  const megaId = factionConfig.value.megastructureId;
-  // Check pending (under construction)
+  const megaId = bestCapstone.value?.megastructureBuildingId;
+  if (!megaId) return null;
   const pending = state.pendingBuildings.find((b) => b.definitionId === megaId);
   if (pending) return { building: pending, status: "building" as const };
-  // Check active (completed)
   const active = state.buildings.find((b) => b.definitionId === megaId);
   if (active) return { building: active, status: "complete" as const };
   return null;
@@ -136,20 +180,35 @@ const megastructureProgress = computed(() => {
   };
 });
 
-// Get pending vote info
+// Project status helper
+type ProjectStatus = "passed" | "pending" | "locked";
+
+// oxlint-disable-next-line no-unused-vars
+function getProjectStatus(projectId: ProjectId): ProjectStatus {
+  if (state.ideology.completedProjects.includes(projectId)) return "passed";
+  if (state.ideology.pendingProposals.some((p) => p.projectId === projectId)) return "pending";
+  return "locked";
+}
+
+// oxlint-disable-next-line no-unused-vars
 function getPendingVoteSols(projectId: ProjectId): number | null {
   const pending = state.ideology.pendingProposals.find((p) => p.projectId === projectId);
   if (!pending) return null;
   return pending.voteSol - state.currentSol;
 }
 
+// oxlint-disable-next-line no-unused-vars
+function formatAxisValue(value: number): string {
+  const sign = value >= 0 ? "+" : "";
+  return `${sign}${(value * 100).toFixed(0)}`;
+}
+
 // Next step logic
 const nextStep = computed(() => {
-  const support = getFactionSupport();
-  const capstone = capstoneProject.value;
+  const capstone = bestCapstone.value;
   const megaDef = megastructureDef.value;
 
-  // Check if megastructure is being built
+  // Megastructure being built
   if (megastructureBuilding.value?.status === "building" && megastructureProgress.value) {
     return {
       action: `Building ${megaDef?.name}`,
@@ -158,62 +217,67 @@ const nextStep = computed(() => {
     };
   }
 
-  // Check if capstone completed - ready to build megastructure
-  if (isCapstoneCompleted.value && megaDef && !megastructureBuilding.value) {
+  // Megastructure complete
+  if (megastructureBuilding.value?.status === "complete") {
+    return { action: "Victory achieved!", type: "ready" as const };
+  }
+
+  if (!capstone) {
+    return { action: "No capstone path available", type: "locked" as const };
+  }
+
+  // Capstone completed - ready to build megastructure
+  if (capstone.isCompleted && megaDef && !megastructureBuilding.value) {
     return { action: `Build ${megaDef.name} to win!`, type: "ready" as const };
   }
 
-  // Check if capstone is pending
-  if (capstone) {
-    const capstonePending = state.ideology.pendingProposals.find(
-      (p) => p.projectId === capstone.id,
+  // Capstone pending vote
+  if (capstone.isPending) {
+    const pending = state.ideology.pendingProposals.find(
+      (p) => p.projectId === capstone.project.id,
     );
-    if (capstonePending) {
-      const sols = capstonePending.voteSol - state.currentSol;
-      return { action: `${capstone.name} vote in ${sols} sols`, type: "pending" as const };
+    if (pending) {
+      const sols = pending.voteSol - state.currentSol;
+      return {
+        action: `${capstone.project.name} vote in ${sols} sols`,
+        type: "pending" as const,
+      };
     }
   }
 
-  // Check if capstone is ready to propose
-  if (
-    passedCount.value >= 3 &&
-    hasCouncilMajority.value &&
-    capstone &&
-    !isCapstoneCompleted.value
-  ) {
-    return { action: `Propose ${capstone.name}`, type: "ready" as const };
-  }
-
-  // Check if projects incomplete
-  if (passedCount.value < 3) {
-    // Find next project to work on
-    for (const project of prerequisiteProjects.value) {
-      const status = getProjectStatus(project.id);
-      if (status === "pending") {
-        const sols = getPendingVoteSols(project.id);
-        return { action: `${project.name} vote in ${sols} sols`, type: "pending" as const };
-      }
-      if (status === "available") {
-        return { action: `Propose ${project.name}`, type: "available" as const };
-      }
-      if (status === "locked") {
-        const requiredPct = Math.round(project.requiredSupport * 100);
-        const currentPct = Math.round(support * 100);
-        return {
-          action: `Raise support to ${requiredPct}% to propose ${project.name}`,
-          detail: `(current: ${currentPct}%)`,
-          type: "locked" as const,
-        };
-      }
+  // Check axis alignment
+  if (!capstone.meetsRequirements) {
+    const unmetAxes = capstone.axisProgress.filter((a) => !a.met);
+    if (unmetAxes.length > 0) {
+      const first = unmetAxes[0];
+      const dirLabel = first.direction === "min" ? "Increase" : "Decrease";
+      return {
+        action: `${dirLabel} ${first.axis} to reach ${capstone.project.name}`,
+        detail: `(${formatAxisValue(first.current)} / need ${formatAxisValue(first.required)})`,
+        type: "locked" as const,
+      };
     }
   }
 
-  // Projects done but need seats
-  if (passedCount.value >= 3 && !hasCouncilMajority.value) {
+  // Check prerequisites
+  if (capstone.prerequisitesTotal > 0 && capstone.prerequisitesPassed < capstone.prerequisitesTotal) {
+    return {
+      action: `Pass ${capstone.prerequisitesTotal - capstone.prerequisitesPassed} more prerequisite(s)`,
+      type: "locked" as const,
+    };
+  }
+
+  // Check council majority
+  if (!hasCouncilMajority.value) {
     return {
       action: `Gain ${seatsNeeded.value} more council seat${seatsNeeded.value !== 1 ? "s" : ""}`,
       type: "seats" as const,
     };
+  }
+
+  // Ready to propose capstone
+  if (capstone.meetsRequirements && !capstone.isCompleted) {
+    return { action: `Propose ${capstone.project.name}`, type: "ready" as const };
   }
 
   return { action: "Victory path complete", type: "ready" as const };
@@ -221,50 +285,89 @@ const nextStep = computed(() => {
 </script>
 
 <template>
-  <div class="faction-track" :style="{ '--faction-color': factionConfig.color }">
+  <div class="faction-track" :style="{ '--faction-color': factionColor }">
     <div class="track-header">
-      <span class="faction-name">{{ factionConfig.name }}</span>
+      <span class="faction-name">{{ faction.name }}</span>
     </div>
 
-    <!-- Projects Section -->
-    <div class="projects-section">
-      <div class="section-label">Projects ({{ passedCount }}/3)</div>
-      <div class="project-list">
-        <div
-          v-for="project in prerequisiteProjects"
-          :key="project.id"
-          class="project-row"
-          :class="getProjectStatus(project.id)"
-        >
-          <span class="project-icon">
-            <template v-if="getProjectStatus(project.id) === 'passed'">✓</template>
-            <template v-else-if="getProjectStatus(project.id) === 'pending'">◐</template>
-            <template v-else>○</template>
+    <!-- Axis Positions -->
+    <div class="axis-section">
+      <div class="section-label">Axis Positions</div>
+      <div v-for="axis in AXIS_KEYS" :key="axis" class="axis-row">
+        <span class="axis-label">{{ axis }}</span>
+        <div class="axis-bar-container">
+          <div class="axis-bar">
+            <div class="axis-center" />
+            <div
+              class="axis-fill"
+              :class="{
+                positive: faction.position[axis] > 0,
+                negative: faction.position[axis] < 0,
+              }"
+              :style="{
+                left: faction.position[axis] >= 0 ? '50%' : `${50 + faction.position[axis] * 50}%`,
+                width: `${Math.abs(faction.position[axis]) * 50}%`,
+              }"
+            />
+          </div>
+        </div>
+        <span class="axis-value">{{ formatAxisValue(faction.position[axis]) }}</span>
+      </div>
+    </div>
+
+    <!-- Best Capstone Path -->
+    <div v-if="bestCapstone" class="capstone-section">
+      <div class="section-label">Nearest Capstone</div>
+      <div
+        class="capstone-row"
+        :class="{ met: bestCapstone.meetsRequirements, passed: bestCapstone.isCompleted }"
+      >
+        <span class="project-icon">
+          <template v-if="bestCapstone.isCompleted">&#x2713;</template>
+          <template v-else-if="bestCapstone.meetsRequirements">&#x25CF;</template>
+          <template v-else>&#x25CB;</template>
+        </span>
+        <span class="capstone-name">{{ bestCapstone.project.name }}</span>
+      </div>
+
+      <!-- Axis requirement progress bars -->
+      <div class="axis-reqs">
+        <div v-for="ap in bestCapstone.axisProgress" :key="ap.axis" class="axis-req-row">
+          <span class="axis-req-label">{{ ap.axis }}</span>
+          <div class="progress-bar">
+            <div
+              class="progress-fill"
+              :class="{ met: ap.met }"
+              :style="{ width: `${Math.min(100, ap.percent)}%` }"
+            />
+          </div>
+          <span class="axis-req-value" :class="{ met: ap.met }">
+            {{ formatAxisValue(ap.current) }}/{{ formatAxisValue(ap.required) }}
           </span>
-          <span class="project-name">{{ project.name }}</span>
-          <GBadge v-if="getProjectStatus(project.id) === 'pending'" variant="info" size="sm">
-            {{ getPendingVoteSols(project.id) }} sols
-          </GBadge>
         </div>
       </div>
 
-      <!-- Capstone -->
-      <div v-if="capstoneProject" class="capstone-section">
-        <div class="capstone-label">CAPSTONE</div>
+      <!-- Prerequisites -->
+      <div v-if="bestCapstone.prerequisitesTotal > 0" class="prereqs-section">
+        <div class="prereqs-label">
+          Prerequisites ({{ bestCapstone.prerequisitesPassed }}/{{ bestCapstone.prerequisitesTotal }})
+        </div>
         <div
-          class="project-row capstone"
-          :class="{
-            ready: passedCount >= 3 && hasCouncilMajority && !isCapstoneCompleted,
-            passed: isCapstoneCompleted,
-          }"
+          v-for="prereqId in bestCapstone.project.prerequisites"
+          :key="prereqId"
+          class="project-row"
+          :class="getProjectStatus(prereqId)"
         >
           <span class="project-icon">
-            <template v-if="isCapstoneCompleted">✓</template>
-            <template v-else>○</template>
+            <template v-if="getProjectStatus(prereqId) === 'passed'">&#x2713;</template>
+            <template v-else-if="getProjectStatus(prereqId) === 'pending'">&#x25D0;</template>
+            <template v-else>&#x25CB;</template>
           </span>
-          <span class="project-name">{{ capstoneProject.name }}</span>
+          <span class="project-name">{{ PROJECTS.find((p) => p.id === prereqId)?.name ?? prereqId }}</span>
+          <GBadge v-if="getProjectStatus(prereqId) === 'pending'" variant="info" size="sm">
+            {{ getPendingVoteSols(prereqId) }} sols
+          </GBadge>
         </div>
-        <div class="capstone-reqs">Requires: {{ passedCount }}/3 projects, 65% council</div>
       </div>
 
       <!-- Megastructure -->
@@ -273,17 +376,17 @@ const nextStep = computed(() => {
         <div
           class="megastructure-row"
           :class="{
-            locked: !isCapstoneCompleted,
-            ready: isCapstoneCompleted && !megastructureBuilding,
+            locked: !bestCapstone.isCompleted,
+            ready: bestCapstone.isCompleted && !megastructureBuilding,
             building: megastructureBuilding?.status === 'building',
             complete: megastructureBuilding?.status === 'complete',
           }"
         >
           <span class="project-icon">
-            <template v-if="megastructureBuilding?.status === 'complete'">★</template>
-            <template v-else-if="megastructureBuilding?.status === 'building'">◐</template>
-            <template v-else-if="isCapstoneCompleted">○</template>
-            <template v-else>🔒</template>
+            <template v-if="megastructureBuilding?.status === 'complete'">&#x2605;</template>
+            <template v-else-if="megastructureBuilding?.status === 'building'">&#x25D0;</template>
+            <template v-else-if="bestCapstone.isCompleted">&#x25CB;</template>
+            <template v-else>&#x1F512;</template>
           </span>
           <span class="megastructure-name">{{ megastructureDef.name }}</span>
         </div>
@@ -316,14 +419,14 @@ const nextStep = computed(() => {
       </div>
       <div class="council-stats">
         <span class="council-count">{{ councilSeats }}/{{ totalSeats }}</span>
-        <span v-if="hasCouncilMajority" class="council-status majority"> Majority secured ✓ </span>
+        <span v-if="hasCouncilMajority" class="council-status majority"> Majority secured &#x2713; </span>
         <span v-else class="council-status needed"> Need {{ seatsNeeded }} more </span>
       </div>
     </div>
 
     <!-- Next Step -->
     <div class="next-step" :class="nextStep.type">
-      <span class="step-arrow">→</span>
+      <span class="step-arrow">&rarr;</span>
       <span class="step-action">{{ nextStep.action }}</span>
       <span v-if="nextStep.detail" class="step-detail">{{ nextStep.detail }}</span>
     </div>
@@ -362,11 +465,142 @@ const nextStep = computed(() => {
   margin-bottom: var(--g-space-xs);
 }
 
-/* Projects */
-.project-list {
+/* Axis Positions */
+.axis-section {
+  margin-bottom: var(--g-space-xs);
+}
+
+.axis-row {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-xs);
+  padding: 2px 0;
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+}
+
+.axis-label {
+  width: 90px;
+  color: var(--g-color-text-muted);
+  text-transform: capitalize;
+}
+
+.axis-bar-container {
+  flex: 1;
+}
+
+.axis-bar {
+  position: relative;
+  height: 6px;
+  background: var(--g-color-bg-base);
+  border: 1px solid var(--g-color-border);
+}
+
+.axis-center {
+  position: absolute;
+  left: 50%;
+  top: -1px;
+  width: 1px;
+  height: 8px;
+  background: var(--g-color-text-muted);
+}
+
+.axis-fill {
+  position: absolute;
+  height: 100%;
+  transition: width 0.3s, left 0.3s;
+}
+
+.axis-fill.positive {
+  background: var(--faction-color);
+}
+
+.axis-fill.negative {
+  background: var(--faction-color);
+  opacity: 0.7;
+}
+
+.axis-value {
+  width: 40px;
+  text-align: right;
+  color: var(--g-color-text);
+}
+
+/* Capstone */
+.capstone-section {
+  margin-top: var(--g-space-xs);
+  padding-top: var(--g-space-sm);
+  border-top: 1px dashed var(--g-color-border);
+}
+
+.capstone-row {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-xs);
+  padding: var(--g-space-xs) 0;
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  font-weight: bold;
+  color: var(--g-color-text-muted);
+}
+
+.capstone-row.met {
+  color: var(--faction-color);
+}
+
+.capstone-row.passed {
+  color: var(--color-positive);
+}
+
+.capstone-name {
+  flex: 1;
+}
+
+/* Axis requirement progress */
+.axis-reqs {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  margin-top: var(--g-space-xs);
+}
+
+.axis-req-row {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-xs);
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+}
+
+.axis-req-label {
+  width: 90px;
+  color: var(--g-color-text-muted);
+  text-transform: capitalize;
+}
+
+.axis-req-value {
+  width: 70px;
+  text-align: right;
+  color: var(--g-color-text-muted);
+  white-space: nowrap;
+}
+
+.axis-req-value.met {
+  color: var(--color-positive);
+}
+
+/* Projects */
+.prereqs-section {
+  margin-top: var(--g-space-sm);
+}
+
+.prereqs-label {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--g-space-xs);
 }
 
 .project-row {
@@ -395,10 +629,6 @@ const nextStep = computed(() => {
   color: var(--g-color-text-muted);
 }
 
-.project-row.available {
-  color: var(--g-color-text);
-}
-
 .project-icon {
   width: 16px;
   text-align: center;
@@ -406,36 +636,6 @@ const nextStep = computed(() => {
 
 .project-name {
   flex: 1;
-}
-
-/* Capstone */
-.capstone-section {
-  margin-top: var(--g-space-sm);
-  padding-top: var(--g-space-sm);
-  border-top: 1px dashed var(--g-color-border);
-}
-
-.capstone-label {
-  font-family: var(--g-font-mono);
-  font-size: var(--g-font-size-xs);
-  color: var(--g-color-text-muted);
-  letter-spacing: 0.1em;
-}
-
-.project-row.capstone {
-  color: var(--g-color-text-muted);
-  font-weight: bold;
-}
-
-.project-row.capstone.ready {
-  color: var(--faction-color);
-}
-
-.capstone-reqs {
-  font-family: var(--g-font-mono);
-  font-size: var(--g-font-size-xs);
-  color: var(--g-color-text-muted);
-  margin-top: 2px;
 }
 
 /* Megastructure */
@@ -501,6 +701,10 @@ const nextStep = computed(() => {
   height: 100%;
   background: var(--faction-color);
   transition: width 0.3s;
+}
+
+.progress-fill.met {
+  background: var(--color-positive);
 }
 
 .progress-text {

@@ -1,24 +1,24 @@
 <!-- src/renderer/components/VictoryProgressPanel/VictoryProgressPanel.vue -->
 <script setup lang="ts">
-import { NPCFaction } from "../../../core/models/NPCInfluence";
+import { gameService } from "../../services/GameService";
 import { GPanel } from "../../ui";
 import FactionTrack from "./FactionTrack.vue";
 
-const factions = [
-  NPCFaction.EarthLoyalists,
-  NPCFaction.MarsIndependence,
-  NPCFaction.CorporateInterests,
-];
+const state = gameService.getState();
 </script>
 
 <template>
   <GPanel title="Victory Progress" accent="slate">
     <div class="victory-grid">
-      <FactionTrack v-for="faction in factions" :key="faction" :faction="faction" />
+      <FactionTrack
+        v-for="faction in state.ideology.factions"
+        :key="faction.id"
+        :faction="faction"
+      />
     </div>
     <p class="hint">
-      Pass 3 faction projects → Secure 65% council seats → Pass capstone project → Build
-      megastructure to win!
+      Shift faction axes toward capstone requirements &rarr; Pass prerequisites &rarr; Secure 65%
+      council seats &rarr; Pass capstone &rarr; Build megastructure to win!
     </p>
   </GPanel>
 </template>
