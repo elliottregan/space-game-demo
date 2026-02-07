@@ -17,6 +17,7 @@ import type { RelationshipManager } from "./RelationshipManager";
 import * as IdeologyBalance from "../balance/IdeologyBalance";
 import { DRIFT_TRIGGERS, type DriftContext } from "../data/factionDrift";
 import { getFactionName } from "../data/factionNames";
+import { type Policy, getPolicy } from "../data/policies";
 import { getProject } from "../data/projects";
 import type { ProjectQueries } from "../interfaces/Queries";
 import type { GameEvent } from "../models/GameEvent";
@@ -98,6 +99,7 @@ export class IdeologyManager implements ProjectQueries {
   private pendingProposals: Map<ProjectId, PendingProposal> = new Map();
   private failedProposals: Set<ProjectId> = new Set();
   private factions: FactionState[] = [];
+  private activePolicy: { policy: Policy; startSol: number } | null = null;
 
   constructor() {
     this.factions = IdeologyBalance.STARTING_FACTION_POSITIONS.map((f) => ({
@@ -690,6 +692,67 @@ export class IdeologyManager implements ProjectQueries {
     }
   }
 
+  // ============ Policy Declarations ============
+
+  /**
+   * Declare a policy, replacing any existing one.
+   * Returns false if policy not found.
+   */
+  declarePolicy(policyId: string, currentSol: number): boolean {
+    const policy = getPolicy(policyId);
+    if (!policy) return false;
+    this.activePolicy = { policy, startSol: currentSol };
+    return true;
+  }
+
+  /**
+   * Get the currently active policy, or null.
+   */
+  getActivePolicy(): { policy: Policy; startSol: number } | null {
+    return this.activePolicy;
+  }
+
+  /**
+   * Process active policy effects: apply pressure and check expiry.
+   * Returns events for policy expiry.
+   */
+  processActivePolicy(currentSol: number): GameEvent[] {
+    if (!this.activePolicy) return [];
+
+    const { policy, startSol } = this.activePolicy;
+    const elapsed = currentSol - startSol;
+
+    // Check expiry
+    if (elapsed >= policy.duration) {
+      this.activePolicy = null;
+      return [
+        {
+          type: "POLICY_EXPIRED",
+          severity: "info",
+          message: `Policy "${policy.name}" has expired after ${policy.duration} sols.`,
+        },
+      ];
+    }
+
+    // Apply pressure: the policy pushes the specified axis in the specified direction
+    const pressureDelta = policy.strength * policy.direction;
+    for (const faction of this.factions) {
+      faction.pressure[policy.axis] = Math.max(
+        -1,
+        Math.min(1, faction.pressure[policy.axis] + pressureDelta),
+      );
+    }
+
+    return [];
+  }
+
+  /**
+   * Cancel the active policy.
+   */
+  cancelPolicy(): void {
+    this.activePolicy = null;
+  }
+
   // ============ Projects ============
 
   /**
@@ -1162,6 +1225,7 @@ export class IdeologyManager implements ProjectQueries {
     pendingProposals: PendingProposal[];
     failedProposals: ProjectId[];
     factions: FactionState[];
+    activePolicy: { policy: Policy; startSol: number } | null;
   } {
     return {
       council: this.council,
@@ -1171,6 +1235,7 @@ export class IdeologyManager implements ProjectQueries {
       pendingProposals: [...this.pendingProposals.values()],
       failedProposals: [...this.failedProposals],
       factions: this.factions,
+      activePolicy: this.activePolicy,
     };
   }
 
@@ -1191,6 +1256,9 @@ export class IdeologyManager implements ProjectQueries {
     }
     if (data.factions) {
       manager.factions = data.factions;
+    }
+    if (data.activePolicy) {
+      manager.activePolicy = data.activePolicy;
     }
     return manager;
   }
