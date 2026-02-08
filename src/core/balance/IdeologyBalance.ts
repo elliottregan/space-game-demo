@@ -40,12 +40,12 @@ export const COUNCIL_SIZE_MAX = 15;
 export const COUNCIL_SIZE_PER_POPULATION = 10;
 
 /** Sols between council recalculation */
-export const COUNCIL_UPDATE_INTERVAL = 30;
+export const COUNCIL_UPDATE_INTERVAL = 10;
 
 // ============ Project Voting ============
 
 /** Sols between proposal and council vote */
-export const PROJECT_VOTING_PERIOD = 10;
+export const PROJECT_VOTING_PERIOD = 5;
 
 // ============ New Colonist Defaults ============
 
@@ -75,7 +75,7 @@ export const IDEOLOGY_IMPRINTING_THRESHOLD = 0.3;
 // ============ Conviction Evolution ============
 
 /** Rate at which conviction grows when surrounded by like-minded colonists (per propagation tick) */
-export const CONVICTION_GROWTH_RATE = 0.012;
+export const CONVICTION_GROWTH_RATE = 0.02;
 
 /** Rate at which conviction decays when isolated from faction (per propagation tick) */
 export const CONVICTION_DECAY_RATE = 0.01;

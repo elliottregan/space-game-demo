@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, mock } from "bun:test";
+import { describe, it, expect, mock } from "bun:test";
 import { HeuristicStrategy } from "../../src/simulation/HeuristicStrategy";
 import type { GameAPI } from "../../src/facade/GameAPI";
 import type { ResourceSnapshot } from "../../src/facade/types/resources";
@@ -255,18 +255,54 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
             },
             factionSupport: {},
             factions: [
-              { id: "f_earth", name: "Earth Loyalists", baseId: "earth_loyalists", position: { solidarity: 0, sovereignty: -0.7, transformation: -0.3 }, pressure: { solidarity: 0, sovereignty: 0, transformation: 0 } },
-              { id: "f_mars", name: "Mars Independence", baseId: "mars_independence", position: { solidarity: 0.3, sovereignty: 0.7, transformation: 0.3 }, pressure: { solidarity: 0, sovereignty: 0, transformation: 0 } },
-              { id: "f_corp", name: "Corporate Interests", baseId: "corporate_interests", position: { solidarity: -0.6, sovereignty: 0, transformation: 0.5 }, pressure: { solidarity: 0, sovereignty: 0, transformation: 0 } },
+              {
+                id: "f_earth",
+                name: "Earth Loyalists",
+                baseId: "earth_loyalists",
+                position: { solidarity: 0, sovereignty: -0.7, transformation: -0.3 },
+                pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+              },
+              {
+                id: "f_mars",
+                name: "Mars Independence",
+                baseId: "mars_independence",
+                position: { solidarity: 0.3, sovereignty: 0.7, transformation: 0.3 },
+                pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+              },
+              {
+                id: "f_corp",
+                name: "Corporate Interests",
+                baseId: "corporate_interests",
+                position: { solidarity: -0.6, sovereignty: 0, transformation: 0.5 },
+                pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+              },
             ],
           },
       ),
       getFactions: mock(
         () =>
           overrides.factions ?? [
-            { id: "f_earth", name: "Earth Loyalists", baseId: "earth_loyalists", position: { solidarity: 0, sovereignty: -0.7, transformation: -0.3 }, pressure: { solidarity: 0, sovereignty: 0, transformation: 0 } },
-            { id: "f_mars", name: "Mars Independence", baseId: "mars_independence", position: { solidarity: 0.3, sovereignty: 0.7, transformation: 0.3 }, pressure: { solidarity: 0, sovereignty: 0, transformation: 0 } },
-            { id: "f_corp", name: "Corporate Interests", baseId: "corporate_interests", position: { solidarity: -0.6, sovereignty: 0, transformation: 0.5 }, pressure: { solidarity: 0, sovereignty: 0, transformation: 0 } },
+            {
+              id: "f_earth",
+              name: "Earth Loyalists",
+              baseId: "earth_loyalists",
+              position: { solidarity: 0, sovereignty: -0.7, transformation: -0.3 },
+              pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+            },
+            {
+              id: "f_mars",
+              name: "Mars Independence",
+              baseId: "mars_independence",
+              position: { solidarity: 0.3, sovereignty: 0.7, transformation: 0.3 },
+              pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+            },
+            {
+              id: "f_corp",
+              name: "Corporate Interests",
+              baseId: "corporate_interests",
+              position: { solidarity: -0.6, sovereignty: 0, transformation: 0.5 },
+              pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+            },
           ],
       ),
       getActivePolicy: mock(() => overrides.activePolicy ?? null),
@@ -296,6 +332,8 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
       clearFailedProposal: mock((projectId: string) => {
         if (overrides.clearFailedProposalCalled) overrides.clearFailedProposalCalled(projectId);
       }),
+      canRally: mock(() => false),
+      rallyFaction: mock(() => 0),
     },
     game: {
       currentSol: mock(() => overrides.currentSol ?? 100), // Default to 100 to bypass bootstrap
@@ -309,6 +347,8 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
         reason: undefined,
       })),
       isGameOver: mock(() => false),
+      earthCrisisSeverity: mock(() => overrides.earthCrisisSeverity ?? 0),
+      earthCrisisPointOfNoReturn: mock(() => false),
       save: mock(() => "{}"),
     },
     onStateChange: mock(() => () => {}),
@@ -361,7 +401,17 @@ interface MockedAPI {
     position: { solidarity: number; sovereignty: number; transformation: number };
     pressure: { solidarity: number; sovereignty: number; transformation: number };
   }>;
-  activePolicy?: { policy: { id: string; name: string; axis: string; direction: number; strength: number; duration: number }; startSol: number } | null;
+  activePolicy?: {
+    policy: {
+      id: string;
+      name: string;
+      axis: string;
+      direction: number;
+      strength: number;
+      duration: number;
+    };
+    startSol: number;
+  } | null;
   declarePolicyCalled?: (policyId: string) => void;
   completedProjects?: string[];
   failedProposals?: string[];
@@ -375,6 +425,7 @@ interface MockedAPI {
   proposeProjectCalled?: (projectId: string) => void;
   voteProjection?: { votesFor: number; votesAgainst: number; wouldPass: boolean };
   clearFailedProposalCalled?: (projectId: string) => void;
+  earthCrisisSeverity?: number;
   // Grid mocking
   gridAvailableDeposits?: Array<{
     position: { x: number; y: number };
@@ -400,7 +451,11 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).toContain(BuildingId.BASIC_FARM);
+      // Prefers greenhouse (25 food/cell) over basic farm (10 food/cell)
+      const builtFood = buildCalls.some(
+        (id) => id === BuildingId.GREENHOUSE || id === BuildingId.BASIC_FARM,
+      );
+      expect(builtFood).toBe(true);
     });
 
     it("builds habitat when life support capacity is low", () => {
@@ -454,7 +509,11 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).toContain(BuildingId.BASIC_FARM);
+      // Prefers greenhouse over basic farm for food production
+      const builtFood = buildCalls.some(
+        (id) => id === BuildingId.GREENHOUSE || id === BuildingId.BASIC_FARM,
+      );
+      expect(builtFood).toBe(true);
     });
 
     it("builds habitat when life support capacity is zero", () => {
@@ -890,9 +949,27 @@ describe("HeuristicStrategy", () => {
           },
           factionSupport: {},
           factions: [
-            { id: "f_earth", name: "Earth Loyalists", baseId: "earth_loyalists", position: { solidarity: 0, sovereignty: -0.7, transformation: -0.3 }, pressure: { solidarity: 0, sovereignty: 0, transformation: 0 } },
-            { id: "f_mars", name: "Mars Independence", baseId: "mars_independence", position: { solidarity: 0.3, sovereignty: 0.7, transformation: 0.3 }, pressure: { solidarity: 0, sovereignty: 0, transformation: 0 } },
-            { id: "f_corp", name: "Corporate Interests", baseId: "corporate_interests", position: { solidarity: -0.6, sovereignty: 0, transformation: 0.5 }, pressure: { solidarity: 0, sovereignty: 0, transformation: 0 } },
+            {
+              id: "f_earth",
+              name: "Earth Loyalists",
+              baseId: "earth_loyalists",
+              position: { solidarity: 0, sovereignty: -0.7, transformation: -0.3 },
+              pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+            },
+            {
+              id: "f_mars",
+              name: "Mars Independence",
+              baseId: "mars_independence",
+              position: { solidarity: 0.3, sovereignty: 0.7, transformation: 0.3 },
+              pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+            },
+            {
+              id: "f_corp",
+              name: "Corporate Interests",
+              baseId: "corporate_interests",
+              position: { solidarity: -0.6, sovereignty: 0, transformation: 0.5 },
+              pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+            },
           ],
         },
         proposeProjectCalled: (projectId) => proposedProjects.push(projectId),
@@ -907,8 +984,10 @@ describe("HeuristicStrategy", () => {
     it("commits to faction and takes action when it reaches 40%+ council seats", () => {
       const proposedProjects: string[] = [];
       const declaredPolicies: string[] = [];
-      // Mars Independence position meets Declaration of Sovereignty capstone requirements
-      // (sovereignty >= 0.5, solidarity >= 0.3)
+      const builtBuildings: string[] = [];
+      // Corporate Interests already meets all axis requirements for Deep Space Mining Charter
+      // (solidarity <= -0.5, transformation >= 0.5) so no policy is needed.
+      // The strategy should build institutional buildings or propose prerequisite projects.
       const marsFaction = {
         id: "f_mars",
         name: "Mars Independence",
@@ -934,40 +1013,68 @@ describe("HeuristicStrategy", () => {
         },
         ideologySnapshot: {
           council: [
-            { colonistId: "c1", name: "Test1", factionId: "f_mars" },
-            { colonistId: "c2", name: "Test2", factionId: "f_mars" },
+            { colonistId: "c1", name: "Test1", factionId: "f_corp" },
+            { colonistId: "c2", name: "Test2", factionId: "f_corp" },
             { colonistId: "c3", name: "Test3", factionId: "f_earth" },
           ],
           councilFactionCounts: {
-            f_mars: 2,
-            f_earth: 1,
+            corporate_interests: 2,
+            earth_loyalists: 1,
             neutral: 0,
           },
-          factionSupport: { f_mars: 0.6, f_earth: 0.3, f_corp: 0.1 },
+          factionSupport: {
+            corporate_interests: 0.6,
+            earth_loyalists: 0.3,
+            mars_independence: 0.1,
+          },
           factions: [
-            { id: "f_earth", name: "Earth Loyalists", baseId: "earth_loyalists", position: { solidarity: 0, sovereignty: -0.7, transformation: -0.3 }, pressure: { solidarity: 0, sovereignty: 0, transformation: 0 } },
+            {
+              id: "f_earth",
+              name: "Earth Loyalists",
+              baseId: "earth_loyalists",
+              position: { solidarity: 0, sovereignty: -0.7, transformation: -0.3 },
+              pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+            },
             marsFaction,
-            { id: "f_corp", name: "Corporate Interests", baseId: "corporate_interests", position: { solidarity: -0.6, sovereignty: 0, transformation: 0.5 }, pressure: { solidarity: 0, sovereignty: 0, transformation: 0 } },
+            {
+              id: "f_corp",
+              name: "Corporate Interests",
+              baseId: "corporate_interests",
+              position: { solidarity: -0.6, sovereignty: 0, transformation: 0.5 },
+              pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+            },
           ],
         },
         factions: [
-          { id: "f_earth", name: "Earth Loyalists", baseId: "earth_loyalists", position: { solidarity: 0, sovereignty: -0.7, transformation: -0.3 }, pressure: { solidarity: 0, sovereignty: 0, transformation: 0 } },
+          {
+            id: "f_earth",
+            name: "Earth Loyalists",
+            baseId: "earth_loyalists",
+            position: { solidarity: 0, sovereignty: -0.7, transformation: -0.3 },
+            pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+          },
           marsFaction,
-          { id: "f_corp", name: "Corporate Interests", baseId: "corporate_interests", position: { solidarity: -0.6, sovereignty: 0, transformation: 0.5 }, pressure: { solidarity: 0, sovereignty: 0, transformation: 0 } },
+          {
+            id: "f_corp",
+            name: "Corporate Interests",
+            baseId: "corporate_interests",
+            position: { solidarity: -0.6, sovereignty: 0, transformation: 0.5 },
+            pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+          },
         ],
         voteProjection: { votesFor: 2, votesAgainst: 1, wouldPass: true },
         canProposeProject: () => ({ canPropose: true, currentSupport: 0.6, requiredSupport: 0.35 }),
         proposeProjectCalled: (projectId) => proposedProjects.push(projectId),
         declarePolicyCalled: (policyId) => declaredPolicies.push(policyId),
+        buildCalled: (buildingId) => builtBuildings.push(buildingId),
       });
 
       const strategy = new HeuristicStrategy(api);
-      strategy.executeTick();
+      const result = strategy.executeTick();
 
-      // Strategy should commit to Mars Independence (66% seats) and take an action
-      // Either propose a project or declare a policy
-      const totalActions = proposedProjects.length + declaredPolicies.length;
-      expect(totalActions).toBeGreaterThan(0);
+      // Strategy should commit to Corporate Interests (easiest victory path, 66% seats)
+      // and take a victory action: build institutional building, propose project, or declare policy
+      expect(result.category).toBe("victory");
     });
 
     it("does not propose when below commitment threshold", () => {
@@ -1007,9 +1114,27 @@ describe("HeuristicStrategy", () => {
             f_corp: 0.33,
           },
           factions: [
-            { id: "f_earth", name: "Earth Loyalists", baseId: "earth_loyalists", position: { solidarity: 0, sovereignty: -0.7, transformation: -0.3 }, pressure: { solidarity: 0, sovereignty: 0, transformation: 0 } },
-            { id: "f_mars", name: "Mars Independence", baseId: "mars_independence", position: { solidarity: 0.3, sovereignty: 0.7, transformation: 0.3 }, pressure: { solidarity: 0, sovereignty: 0, transformation: 0 } },
-            { id: "f_corp", name: "Corporate Interests", baseId: "corporate_interests", position: { solidarity: -0.6, sovereignty: 0, transformation: 0.5 }, pressure: { solidarity: 0, sovereignty: 0, transformation: 0 } },
+            {
+              id: "f_earth",
+              name: "Earth Loyalists",
+              baseId: "earth_loyalists",
+              position: { solidarity: 0, sovereignty: -0.7, transformation: -0.3 },
+              pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+            },
+            {
+              id: "f_mars",
+              name: "Mars Independence",
+              baseId: "mars_independence",
+              position: { solidarity: 0.3, sovereignty: 0.7, transformation: 0.3 },
+              pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+            },
+            {
+              id: "f_corp",
+              name: "Corporate Interests",
+              baseId: "corporate_interests",
+              position: { solidarity: -0.6, sovereignty: 0, transformation: 0.5 },
+              pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+            },
           ],
         },
         canProposeProject: () => ({
@@ -1062,8 +1187,11 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      // Survival takes precedence, so farm should be built, not event resolved
-      expect(buildCalls).toContain(BuildingId.BASIC_FARM);
+      // Survival takes precedence - food building built, not event resolved
+      const builtFood = buildCalls.some(
+        (id) => id === BuildingId.GREENHOUSE || id === BuildingId.BASIC_FARM,
+      );
+      expect(builtFood).toBe(true);
       expect(resolvedChoices).toHaveLength(0);
     });
 

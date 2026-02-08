@@ -35,6 +35,7 @@ export enum BuildingId {
   ASTEROID_MINING_PLATFORM = "asteroid_mining_platform",
   UNITED_MARS_STATION = "united_mars_station",
   SPACE_ELEVATOR = "space_elevator",
+  GENESIS_ARK = "genesis_ark",
 }
 
 export enum BuildingPurpose {
@@ -75,7 +76,7 @@ export interface BuildingDefinition {
   /** Research output per sol when active (for research buildings) */
   researchOutput?: number;
   /** Passive pressure on ideology axes when building is active */
-  axisPressure?: Partial<Record<'solidarity' | 'sovereignty' | 'transformation', number>>;
+  axisPressure?: Partial<Record<"solidarity" | "sovereignty" | "transformation", number>>;
 }
 
 export interface Building {

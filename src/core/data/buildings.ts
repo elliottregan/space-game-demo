@@ -301,7 +301,8 @@ export const BUILDINGS: BuildingDefinition[] = [
   {
     id: BuildingId.BROADCASTING_STATION,
     name: "Broadcasting Station",
-    description: "A media hub that amplifies Martian voices, fostering a sense of planetary identity",
+    description:
+      "A media hub that amplifies Martian voices, fostering a sense of planetary identity",
     cost: { materials: 100 },
     constructionTime: 15,
     powerConsumption: 3,
@@ -326,7 +327,8 @@ export const BUILDINGS: BuildingDefinition[] = [
   {
     id: BuildingId.HERITAGE_MUSEUM,
     name: "Heritage Museum",
-    description: "Preserves Earth traditions and colony history, grounding colonists in shared heritage",
+    description:
+      "Preserves Earth traditions and colony history, grounding colonists in shared heritage",
     cost: { materials: 60 },
     constructionTime: 10,
     powerConsumption: 2,
@@ -368,6 +370,17 @@ export const BUILDINGS: BuildingDefinition[] = [
     constructionTime: 105,
     purpose: BuildingPurpose.Industrial,
     requiredProject: ProjectId.EARTH_RELIEF_COMPACT,
+    isVictoryBuilding: true,
+  },
+  {
+    id: BuildingId.GENESIS_ARK,
+    name: "Genesis Ark",
+    description:
+      "A vast biological archive preserving Earth's biodiversity. A living monument to humanity's heritage and a safeguard against extinction.",
+    cost: { materials: 950 },
+    constructionTime: 110,
+    purpose: BuildingPurpose.Industrial,
+    requiredProject: ProjectId.GENESIS_VAULT,
     isVictoryBuilding: true,
   },
 ];

@@ -71,7 +71,17 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
   /**
    * Get the currently active policy, or null.
    */
-  getActivePolicy(): { policy: { id: string; name: string; axis: string; direction: number; strength: number; duration: number }; startSol: number } | null {
+  getActivePolicy(): {
+    policy: {
+      id: string;
+      name: string;
+      axis: string;
+      direction: number;
+      strength: number;
+      duration: number;
+    };
+    startSol: number;
+  } | null {
     return this.gameState.ideology.getActivePolicy();
   }
 
@@ -87,14 +97,16 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
    * Find the faction best suited to champion a project based on axis requirements.
    * Returns the first faction whose position meets all axis requirements, or undefined.
    */
-  private findChampionFaction(projectId: ProjectId): { factionId: string } | undefined {
+  private findChampionFaction(
+    projectId: ProjectId,
+  ): { factionId: string; baseId: string } | undefined {
     const project = getProject(projectId);
     if (!project) return undefined;
 
     const factions = this.gameState.ideology.getFactions();
     for (const faction of factions) {
       if (meetsAxisRequirements(faction.position, project)) {
-        return { factionId: faction.id };
+        return { factionId: faction.id, baseId: faction.baseId };
       }
     }
 
@@ -171,16 +183,12 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
     }
 
     // Delegate to core IdeologyManager for prerequisite/requirement checks
-    const coreCheck = this.gameState.ideology.canProposeProject(
-      project,
-      champion.factionId,
-      {
-        technology: this.gameState.technology,
-        buildings: this.gameState.buildings,
-        colony: this.gameState.colony,
-        resources: this.gameState.resources,
-      },
-    );
+    const coreCheck = this.gameState.ideology.canProposeProject(project, champion.factionId, {
+      technology: this.gameState.technology,
+      buildings: this.gameState.buildings,
+      colony: this.gameState.colony,
+      resources: this.gameState.resources,
+    });
 
     if (!coreCheck.canPropose) {
       return {
@@ -233,13 +241,15 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
     // Deduct cost
     this.gameState.resources.deduct(project.proposalCost);
 
-    // Find the champion faction to submit on behalf of
+    // Find the champion faction to submit on behalf of.
+    // Use baseId for the proposal because vote resolution (getVoteProjection,
+    // processVotes) looks up council counts keyed by baseId, not dynamic id.
     const champion = this.findChampionFaction(projectId);
-    const factionId = champion?.factionId ?? "";
+    const proposalFactionId = champion?.baseId ?? "";
 
     // Submit for vote
     const currentSol = this.gameState.currentSol;
-    this.gameState.ideology.submitProposal(projectId, factionId, currentSol);
+    this.gameState.ideology.submitProposal(projectId, proposalFactionId, currentSol);
 
     const proposal = this.gameState.ideology.getPendingProposal(projectId);
     return { success: true, data: { projectId, voteSol: proposal?.voteSol ?? currentSol + 10 } };
@@ -282,5 +292,22 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
    */
   getCompletedProjects(): readonly ProjectId[] {
     return this.gameState.ideology.getCompletedProjects();
+  }
+
+  /**
+   * Rally a faction to boost conviction of aligned colonists.
+   * This improves council representation (council = centrality × conviction).
+   * Returns the number of colonists affected, or 0 if on cooldown.
+   */
+  rallyFaction(factionId: string): number {
+    const colonists = this.gameState.colony.getColonists();
+    return this.gameState.ideology.rallyFaction(factionId, colonists, this.gameState.currentSol);
+  }
+
+  /**
+   * Check if rally is available (not on cooldown).
+   */
+  canRally(): boolean {
+    return this.gameState.ideology.canRally(this.gameState.currentSol);
   }
 }

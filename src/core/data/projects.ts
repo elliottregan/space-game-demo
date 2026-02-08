@@ -136,7 +136,8 @@ export const PROJECTS: Project[] = [
   {
     id: ProjectId.PRIVATE_MINING_CONTRACTS,
     name: "Private Mining Contracts",
-    description: "Grant exclusive mining rights to private enterprises for faster resource extraction.",
+    description:
+      "Grant exclusive mining rights to private enterprises for faster resource extraction.",
     axisRequirements: { solidarity: { max: -0.3 } },
     proposalCost: { materials: 90 },
     effects: {
@@ -280,8 +281,13 @@ export const PROJECTS: Project[] = [
     axisRequirements: { transformation: { max: -0.6 }, solidarity: { min: 0.5 } },
     proposalCost: {},
     isCapstone: true,
+    prerequisites: [
+      ProjectId.HERITAGE_ARCHIVE,
+      ProjectId.EARTH_MEMORIAL,
+      ProjectId.HEALTHCARE_EXPANSION,
+    ],
     requiredCouncilSupport: 0.65,
-    effects: { colonyMoraleBoost: 0.15 },
+    effects: { unlockBuilding: BuildingId.GENESIS_ARK, colonyMoraleBoost: 0.15 },
   },
 ];
 
@@ -295,10 +301,7 @@ export function getProject(id: ProjectId): Project | undefined {
 /**
  * Check whether a faction's axis position meets a project's axis requirements.
  */
-export function meetsAxisRequirements(
-  position: AxisPosition,
-  project: Project,
-): boolean {
+export function meetsAxisRequirements(position: AxisPosition, project: Project): boolean {
   if (!project.axisRequirements) return true;
 
   for (const [axis, req] of Object.entries(project.axisRequirements)) {

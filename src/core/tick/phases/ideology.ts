@@ -134,8 +134,8 @@ export const propagateIdeology = definePhase({
     // Update faction names based on axis positions
     events.push(...ctx.ideology.updateFactionNames());
 
-    // Process active policy effects
-    events.push(...ctx.ideology.processActivePolicy(ctx.currentSol));
+    // Process active policy effects (policies also rally conviction of aligned colonists)
+    events.push(...ctx.ideology.processActivePolicy(ctx.currentSol, colonists));
 
     // Process colonist defections between factions
     events.push(...ctx.ideology.processDefections(colonists));
