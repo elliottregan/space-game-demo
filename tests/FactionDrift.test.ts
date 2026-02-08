@@ -12,11 +12,7 @@ import type { BuildingDefinition } from "../src/core/models/Building";
 import * as IdeologyBalance from "../src/core/balance/IdeologyBalance";
 import { AXIS_KEYS } from "../src/core/models/NPCInfluence";
 
-function createTestColonist(
-  id: string,
-  name: string,
-  ideology: ColonistIdeology,
-): Colonist {
+function createTestColonist(id: string, name: string, ideology: ColonistIdeology): Colonist {
   return {
     id,
     name,
@@ -259,7 +255,7 @@ describe("Faction Drift", () => {
       const factions = ideologyManager.getFactions();
 
       // Manually set pressure on a faction
-      const faction = factions[0];
+      const faction = factions[0]!;
       faction.pressure.solidarity = 0.5;
 
       const initialPosition = faction.position.solidarity;
@@ -284,7 +280,7 @@ describe("Faction Drift", () => {
 
     test("high average conviction dampens drift", () => {
       const factions = ideologyManager.getFactions();
-      const faction = factions[0];
+      const faction = factions[0]!;
 
       // Set same pressure for two runs
       const pressureValue = 0.8;
@@ -324,7 +320,7 @@ describe("Faction Drift", () => {
 
     test("position is clamped to [-1, 1]", () => {
       const factions = ideologyManager.getFactions();
-      const faction = factions[0];
+      const faction = factions[0]!;
 
       // Push position to extreme
       faction.position.solidarity = 0.99;
@@ -350,7 +346,7 @@ describe("Faction Drift", () => {
 
     test("faction with no members still drifts (0 conviction = no dampening)", () => {
       const factions = ideologyManager.getFactions();
-      const faction = factions[0];
+      const faction = factions[0]!;
 
       faction.pressure.solidarity = 0.8;
       const initialPosition = faction.position.solidarity;
@@ -367,7 +363,7 @@ describe("Faction Drift", () => {
   describe("pressure decay", () => {
     test("pressure decays toward zero without reinforcement", () => {
       const factions = ideologyManager.getFactions();
-      const faction = factions[0];
+      const faction = factions[0]!;
 
       faction.pressure.solidarity = 0.5;
       faction.pressure.sovereignty = -0.3;
@@ -383,7 +379,7 @@ describe("Faction Drift", () => {
 
     test("pressure doesn't overshoot zero", () => {
       const factions = ideologyManager.getFactions();
-      const faction = factions[0];
+      const faction = factions[0]!;
 
       // Set pressure smaller than decay rate
       const smallPressure = IdeologyBalance.FACTION_PRESSURE_DECAY / 2;
@@ -398,7 +394,7 @@ describe("Faction Drift", () => {
 
     test("pressure at zero stays at zero", () => {
       const factions = ideologyManager.getFactions();
-      const faction = factions[0];
+      const faction = factions[0]!;
 
       faction.pressure.solidarity = 0;
       faction.pressure.sovereignty = 0;
@@ -413,7 +409,7 @@ describe("Faction Drift", () => {
 
     test("large pressure decays gradually", () => {
       const factions = ideologyManager.getFactions();
-      const faction = factions[0];
+      const faction = factions[0]!;
 
       faction.pressure.solidarity = 1.0;
 
@@ -457,16 +453,14 @@ describe("Faction Drift", () => {
       // Verify pressure decayed
       for (const faction of factions) {
         // Pressure should be less than what was accumulated (decayed)
-        const hasSomePressure = AXIS_KEYS.some(
-          (axis) => Math.abs(faction.pressure[axis]) > 0,
-        );
+        const hasSomePressure = AXIS_KEYS.some((axis) => Math.abs(faction.pressure[axis]) > 0);
         expect(hasSomePressure).toBe(true);
       }
 
       // Verify positions changed
       for (let i = 0; i < factions.length; i++) {
         const positionsChanged = AXIS_KEYS.some(
-          (axis) => factions[i].position[axis] !== initialPositions[i][axis],
+          (axis) => factions[i]!.position[axis] !== initialPositions[i]![axis],
         );
         expect(positionsChanged).toBe(true);
       }

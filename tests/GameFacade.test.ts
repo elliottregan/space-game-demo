@@ -168,7 +168,7 @@ describe("GameAPI", () => {
       expect(politics.factions).toBeDefined();
       expect(politics.factions.length).toBeGreaterThan(0);
       // Each faction should have factionId, name, support, and position
-      const faction = politics.factions[0];
+      const faction = politics.factions[0]!;
       expect(faction.factionId).toBeDefined();
       expect(faction.name).toBeDefined();
       expect(typeof faction.support).toBe("number");

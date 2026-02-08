@@ -297,10 +297,10 @@ describe("IdeologyManager", () => {
 
       // Mars should get most support since colonist is at that exact position
       expect(support[NPCFaction.MarsIndependence]).toBeGreaterThan(
-        support[NPCFaction.EarthLoyalists],
+        support[NPCFaction.EarthLoyalists]!,
       );
       expect(support[NPCFaction.MarsIndependence]).toBeGreaterThan(
-        support[NPCFaction.CorporateInterests],
+        support[NPCFaction.CorporateInterests]!,
       );
     });
   });
@@ -727,15 +727,15 @@ describe("IdeologyManager", () => {
       expect(manager.isFailedProposal(ProjectId.EARTH_MEMORIAL)).toBe(true);
 
       // Cannot re-submit while failed
-      expect(
-        manager.submitProposal(ProjectId.EARTH_MEMORIAL, NPCFaction.EarthLoyalists, 100),
-      ).toBe(false);
+      expect(manager.submitProposal(ProjectId.EARTH_MEMORIAL, NPCFaction.EarthLoyalists, 100)).toBe(
+        false,
+      );
 
       // Clear and re-submit
       manager.clearFailedProposal(ProjectId.EARTH_MEMORIAL);
-      expect(
-        manager.submitProposal(ProjectId.EARTH_MEMORIAL, NPCFaction.EarthLoyalists, 100),
-      ).toBe(true);
+      expect(manager.submitProposal(ProjectId.EARTH_MEMORIAL, NPCFaction.EarthLoyalists, 100)).toBe(
+        true,
+      );
     });
   });
 

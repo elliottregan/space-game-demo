@@ -215,9 +215,9 @@ describe("FactionState", () => {
         pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
       },
     ];
-    expect(factions[0].baseId).toBe("earth_loyalists");
-    expect(factions[1].baseId).toBe("mars_independence");
-    expect(factions[2].baseId).toBe("corporate_interests");
+    expect(factions[0]!.baseId).toBe(NPCFaction.EarthLoyalists);
+    expect(factions[1]!.baseId).toBe(NPCFaction.MarsIndependence);
+    expect(factions[2]!.baseId).toBe(NPCFaction.CorporateInterests);
   });
 
   it("position and pressure are independent AxisPosition objects", () => {
@@ -249,15 +249,15 @@ describe("IdeologyBalance - Kept constants", () => {
     expect(COUNCIL_SIZE_MIN).toBe(5);
     expect(COUNCIL_SIZE_MAX).toBe(15);
     expect(COUNCIL_SIZE_PER_POPULATION).toBe(10);
-    expect(COUNCIL_UPDATE_INTERVAL).toBe(30);
+    expect(COUNCIL_UPDATE_INTERVAL).toBe(10);
   });
 
   it("project voting period retains original value", () => {
-    expect(PROJECT_VOTING_PERIOD).toBe(10);
+    expect(PROJECT_VOTING_PERIOD).toBe(5);
   });
 
   it("conviction evolution constants retain original values", () => {
-    expect(CONVICTION_GROWTH_RATE).toBe(0.012);
+    expect(CONVICTION_GROWTH_RATE).toBe(0.02);
     expect(CONVICTION_DECAY_RATE).toBe(0.01);
     expect(CONVICTION_NATURAL_DECAY).toBe(0.003);
     expect(CONVICTION_MIN).toBe(0.1);

@@ -43,7 +43,7 @@ describe("Faction Dynamics", () => {
 
       const events = manager.processDefections([colonist]);
       expect(events.length).toBeGreaterThan(0);
-      expect(events[0].type).toBe("COLONIST_DEFECTION");
+      expect(events[0]!.type).toBe("COLONIST_DEFECTION");
     });
 
     it("does not detect defection for colonist firmly in one faction", () => {

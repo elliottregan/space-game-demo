@@ -60,7 +60,7 @@ const allIdeologyPressures = computed(() => {
   const pressures = new Map<
     string,
     {
-      pressure: { earthLoyalist: number; marsIndependence: number; corporateInterests: number };
+      pressure: { solidarity: number; sovereignty: number; transformation: number };
       totalWeight: number;
       neighborCount: number;
     }

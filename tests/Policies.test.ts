@@ -69,7 +69,7 @@ describe("IdeologyManager policy declarations", () => {
 
     // All factions should have increased solidarity pressure
     for (let i = 0; i < factions.length; i++) {
-      expect(factions[i].pressure.solidarity).toBeGreaterThan(initialPressures[i]);
+      expect(factions[i]!.pressure.solidarity).toBeGreaterThan(initialPressures[i]!);
     }
   });
 
@@ -91,7 +91,7 @@ describe("IdeologyManager policy declarations", () => {
     // Policy duration is 30 sols
     const events = manager.processActivePolicy(130);
     expect(events).toHaveLength(1);
-    expect(events[0].type).toBe("POLICY_EXPIRED");
+    expect(events[0]!.type).toBe("POLICY_EXPIRED");
     expect(manager.getActivePolicy()).toBeNull();
   });
 

@@ -272,10 +272,7 @@ export class IdeologyManager implements ProjectQueries {
   /**
    * Calculate average conviction of colonists nearest to a faction.
    */
-  private getAverageFactionConviction(
-    faction: FactionState,
-    colonists: Colonist[],
-  ): number {
+  private getAverageFactionConviction(faction: FactionState, colonists: Colonist[]): number {
     let totalConviction = 0;
     let count = 0;
 
@@ -399,7 +396,7 @@ export class IdeologyManager implements ProjectQueries {
       if (member.factionId) {
         counts[member.factionId] = (counts[member.factionId] ?? 0) + 1;
       } else {
-        counts.neutral++;
+        counts["neutral"] = (counts["neutral"] ?? 0) + 1;
       }
     }
 
@@ -436,7 +433,7 @@ export class IdeologyManager implements ProjectQueries {
       for (const faction of this.factions) {
         const dist = axisDistance(pos, faction.position);
         const closeness = weight / (1 + dist);
-        factionCloseness[faction.id] += closeness;
+        factionCloseness[faction.id] = (factionCloseness[faction.id] ?? 0) + closeness;
         totalCloseness += closeness;
       }
     }
@@ -451,7 +448,7 @@ export class IdeologyManager implements ProjectQueries {
 
     const result: Record<string, number> = {};
     for (const faction of this.factions) {
-      result[faction.id] = factionCloseness[faction.id] / totalCloseness;
+      result[faction.id] = (factionCloseness[faction.id] ?? 0) / totalCloseness;
     }
     return result;
   }
@@ -686,10 +683,77 @@ export class IdeologyManager implements ProjectQueries {
     const driftRate = IdeologyBalance.NEUTRAL_IDEOLOGY_DRIFT_RATE;
 
     for (const axis of AXIS_KEYS) {
-      colonist.ideology[axis] +=
-        driftRate * (avgNeighborIdeology[axis] - colonist.ideology[axis]);
+      colonist.ideology[axis] += driftRate * (avgNeighborIdeology[axis] - colonist.ideology[axis]);
       colonist.ideology[axis] = Math.max(-1, Math.min(1, colonist.ideology[axis]));
     }
+  }
+
+  // ============ Faction Rally ============
+
+  /** Sol of last rally action */
+  private lastRallySol = -Infinity;
+
+  /**
+   * Rally a faction: two effects that mirror old lobbying behavior.
+   *
+   * 1. Conviction boost: aligned colonists (nearest faction matches) get
+   *    conviction boosted, making them more likely to become council members.
+   * 2. Ideology nudge: ALL colonists get their ideology nudged slightly
+   *    toward the target faction's position. Low-conviction colonists are
+   *    more susceptible (inversely proportional to conviction).
+   *    This converts uncommitted colonists over time, like political campaigning.
+   *
+   * Cooldown: RALLY_COOLDOWN_SOLS between rallies.
+   * Returns the number of colonists affected.
+   */
+  rallyFaction(
+    factionId: string,
+    colonists: readonly { ideology?: ColonistIdeology }[],
+    currentSol: number,
+  ): number {
+    const RALLY_COOLDOWN_SOLS = 2;
+    const RALLY_CONVICTION_BOOST = 0.05;
+    const RALLY_IDEOLOGY_NUDGE = 0.08; // per-axis nudge toward faction position
+
+    if (currentSol - this.lastRallySol < RALLY_COOLDOWN_SOLS) return 0;
+    this.lastRallySol = currentSol;
+
+    const faction = this.factions.find((f) => f.id === factionId || f.baseId === factionId);
+    if (!faction) return 0;
+
+    let affected = 0;
+    for (const colonist of colonists) {
+      if (!colonist.ideology) continue;
+
+      // Effect 1: Conviction boost for already-aligned colonists
+      const nearest = IdeologyManager.getNearestFaction(colonist.ideology, this.factions);
+      if (nearest?.id === factionId || nearest?.baseId === factionId) {
+        colonist.ideology.conviction = Math.min(
+          IdeologyBalance.CONVICTION_MAX,
+          colonist.ideology.conviction + RALLY_CONVICTION_BOOST,
+        );
+      }
+
+      // Effect 2: Nudge ALL colonists' ideology toward faction position.
+      // Low-conviction colonists are more susceptible (1 - conviction * 0.5).
+      const susceptibility = 1 - colonist.ideology.conviction * 0.5;
+      const nudge = RALLY_IDEOLOGY_NUDGE * susceptibility;
+      for (const axis of AXIS_KEYS) {
+        const diff = faction.position[axis] - colonist.ideology[axis];
+        colonist.ideology[axis] = Math.max(-1, Math.min(1, colonist.ideology[axis] + diff * nudge));
+      }
+
+      affected++;
+    }
+    return affected;
+  }
+
+  /**
+   * Check if a rally action is available (not on cooldown).
+   */
+  canRally(currentSol: number): boolean {
+    const RALLY_COOLDOWN_SOLS = 2;
+    return currentSol - this.lastRallySol >= RALLY_COOLDOWN_SOLS;
   }
 
   // ============ Policy Declarations ============
@@ -716,7 +780,10 @@ export class IdeologyManager implements ProjectQueries {
    * Process active policy effects: apply pressure and check expiry.
    * Returns events for policy expiry.
    */
-  processActivePolicy(currentSol: number): GameEvent[] {
+  processActivePolicy(
+    currentSol: number,
+    colonists?: readonly { ideology?: ColonistIdeology }[],
+  ): GameEvent[] {
     if (!this.activePolicy) return [];
 
     const { policy, startSol } = this.activePolicy;
@@ -741,6 +808,25 @@ export class IdeologyManager implements ProjectQueries {
         -1,
         Math.min(1, faction.pressure[policy.axis] + pressureDelta),
       );
+    }
+
+    // Active policies also rally conviction: colonists aligned with the policy's
+    // direction get a small conviction boost. This simulates the policy creating
+    // political engagement and strengthening aligned colonists' council presence.
+    if (colonists) {
+      const POLICY_CONVICTION_BOOST = 0.005;
+      for (const colonist of colonists) {
+        if (!colonist.ideology) continue;
+        // Check if colonist's axis value aligns with the policy direction
+        const colonistValue = colonist.ideology[policy.axis];
+        const aligns = policy.direction > 0 ? colonistValue > 0 : colonistValue < 0;
+        if (aligns) {
+          colonist.ideology.conviction = Math.min(
+            IdeologyBalance.CONVICTION_MAX,
+            colonist.ideology.conviction + POLICY_CONVICTION_BOOST,
+          );
+        }
+      }
     }
 
     return [];
@@ -1078,8 +1164,8 @@ export class IdeologyManager implements ProjectQueries {
 
     for (let i = 0; i < this.factions.length; i++) {
       for (let j = i + 1; j < this.factions.length; j++) {
-        const a = this.factions[i];
-        const b = this.factions[j];
+        const a = this.factions[i]!;
+        const b = this.factions[j]!;
         const dist = axisDistance(a.position, b.position);
 
         if (dist >= IdeologyBalance.FACTION_CONVERGENCE_THRESHOLD) continue;
