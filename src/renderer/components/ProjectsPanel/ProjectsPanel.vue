@@ -1,50 +1,80 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { PROJECTS } from "../../../core/data/projects";
-import { NPCFaction, ProjectId } from "../../../core/models/NPCInfluence";
+import type { AxisPosition, AxisRequirement } from "../../../core/models/NPCInfluence";
+import { ProjectId } from "../../../core/models/NPCInfluence";
 import { gameService } from "../../services/GameService";
 import { GPanel, GBadge, GButton } from "../../ui";
 
 const state = gameService.getState();
 
+const AXIS_LABELS: Record<keyof AxisPosition, { label: string; cssClass: string }> = {
+  solidarity: { label: "Solidarity", cssClass: "earth" },
+  sovereignty: { label: "Sovereignty", cssClass: "mars" },
+  transformation: { label: "Transform", cssClass: "corporate" },
+};
+
 // oxlint-disable-next-line no-unused-vars
-function getFactionBadgeVariant(faction: NPCFaction): "info" | "positive" | "warning" | "muted" {
-  switch (faction) {
-    case NPCFaction.EarthLoyalists:
-      return "info";
-    case NPCFaction.MarsIndependence:
-      return "positive";
-    case NPCFaction.CorporateInterests:
-      return "warning";
+function formatAxisReq(axis: keyof AxisPosition, req: AxisRequirement): string {
+  const info = AXIS_LABELS[axis];
+  if (req.min !== undefined && req.max !== undefined) {
+    return `${info.label}: ${req.min.toFixed(1)} to ${req.max.toFixed(1)}`;
   }
+  if (req.min !== undefined) {
+    return `${info.label} >= ${req.min.toFixed(1)}`;
+  }
+  if (req.max !== undefined) {
+    return `${info.label} <= ${req.max.toFixed(1)}`;
+  }
+  return info.label;
 }
 
-// oxlint-disable-next-line no-unused-vars
-function formatSupport(support: number): string {
-  return `${(support * 100).toFixed(0)}%`;
-}
-
-// Projects with eligibility and status
+// Projects with eligibility from facade
 // oxlint-disable-next-line no-unused-vars
 const projectsWithStatus = computed(() => {
-  // Use reactive state directly to ensure Vue tracks dependencies
-  const completedSet = new Set(state.ideology.completedProjects);
-  const failedSet = new Set(state.ideology.failedProposals);
-  const pendingMap = new Map(state.ideology.pendingProposals.map((p) => [p.projectId, p]));
-  const factionSupport = state.ideology.factionSupport;
+  // Touch reactive state to ensure Vue tracks dependencies
+  const _sol = state.currentSol;
+  const _factions = state.ideology.factions;
+  const _council = state.ideology.council;
+  const _resources = state.resources;
+  const _completed = state.ideology.completedProjects;
+  const _pending = state.ideology.pendingProposals;
+  const _failed = state.ideology.failedProposals;
+
+  const completedSet = new Set(_completed);
+  const pendingMap = new Map(_pending.map((p) => [p.projectId, p]));
   const councilFactionCounts = state.ideology.councilFactionCounts;
   const councilSize = state.ideology.council.length;
-  const resources = state.resources;
-  const currentSol = state.currentSol;
 
   return PROJECTS.map((project) => {
     const isCompleted = completedSet.has(project.id);
-    const isFailed = failedSet.has(project.id);
     const pending = pendingMap.get(project.id);
     const isPending = !!pending;
 
-    // Get faction vote counts
-    const votesFor = councilFactionCounts[project.type] ?? 0;
+    // Get eligibility from facade (handles all checks)
+    const eligibility = gameService.api.ideology.canProposeProject(project.id);
+
+    // Find which faction can champion this (for vote projection)
+    const factions = state.ideology.factions;
+    let championBaseId: string | null = null;
+    for (const faction of factions) {
+      const pos = faction.position;
+      let meetsReqs = true;
+      if (project.axisRequirements) {
+        for (const [axis, req] of Object.entries(project.axisRequirements)) {
+          const value = pos[axis as keyof AxisPosition];
+          if (req.min !== undefined && value < req.min) meetsReqs = false;
+          if (req.max !== undefined && value > req.max) meetsReqs = false;
+        }
+      }
+      if (meetsReqs) {
+        championBaseId = faction.baseId;
+        break;
+      }
+    }
+
+    // Vote projection
+    const votesFor = championBaseId ? (councilFactionCounts[championBaseId] ?? 0) : 0;
     const votesAgainst = councilSize - votesFor;
     const wouldPass = votesFor > votesAgainst;
 
@@ -53,82 +83,39 @@ const projectsWithStatus = computed(() => {
         ...project,
         status: "completed" as const,
         canPropose: false,
-        currentSupport: 0,
-        requiredSupport: project.requiredSupport,
+        reason: undefined as string | undefined,
         votesFor,
         votesAgainst,
         wouldPass,
+        championBaseId,
       };
     }
 
     if (isPending) {
-      const solsUntilVote = pending.voteSol - currentSol;
+      const solsUntilVote = pending.voteSol - _sol;
       return {
         ...project,
         status: "pending" as const,
         canPropose: false,
-        currentSupport: 0,
-        requiredSupport: project.requiredSupport,
+        reason: undefined as string | undefined,
         solsUntilVote,
         voteSol: pending.voteSol,
         votesFor,
         votesAgainst,
         wouldPass,
+        championBaseId,
       };
-    }
-
-    if (isFailed) {
-      return {
-        ...project,
-        status: "failed" as const,
-        canPropose: false,
-        currentSupport: 0,
-        requiredSupport: project.requiredSupport,
-        votesFor,
-        votesAgainst,
-        wouldPass,
-      };
-    }
-
-    // Get support for this project's faction from reactive state
-    let currentSupport = 0;
-    switch (project.type) {
-      case NPCFaction.EarthLoyalists:
-        currentSupport = factionSupport.earthLoyalists;
-        break;
-      case NPCFaction.MarsIndependence:
-        currentSupport = factionSupport.marsIndependence;
-        break;
-      case NPCFaction.CorporateInterests:
-        currentSupport = factionSupport.corporateInterests;
-        break;
-    }
-
-    // Check affordability from reactive resources
-    const canAfford = Object.entries(project.proposalCost).every(
-      ([resource, amount]) => (resources[resource as keyof typeof resources] ?? 0) >= amount,
-    );
-
-    const hasSufficientSupport = currentSupport >= project.requiredSupport;
-    const canPropose = canAfford && hasSufficientSupport;
-
-    let reason: string | undefined;
-    if (!canAfford) {
-      reason = "Cannot afford proposal cost";
-    } else if (!hasSufficientSupport) {
-      reason = `Insufficient faction support (need ${Math.round(project.requiredSupport * 100)}%)`;
     }
 
     return {
       ...project,
-      status: "available" as const,
-      canPropose,
-      currentSupport,
-      requiredSupport: project.requiredSupport,
-      reason,
+      status: (eligibility.isFailed ? "failed" : "available") as "failed" | "available",
+      canPropose: eligibility.canPropose,
+      reason: eligibility.reason,
       votesFor,
       votesAgainst,
       wouldPass,
+      championBaseId,
     };
   });
 });
@@ -172,25 +159,24 @@ function handlePropose(projectId: ProjectId): void {
             <GBadge v-else-if="project.status === 'failed'" variant="muted" size="sm">
               Failed
             </GBadge>
-            <GBadge :variant="getFactionBadgeVariant(project.type)" size="sm">
-              {{ project.type.replace("_", " ") }}
-            </GBadge>
+            <GBadge v-if="project.isCapstone" variant="warning" size="sm"> Capstone </GBadge>
           </div>
         </div>
         <p class="project-description">{{ project.description }}</p>
+
+        <!-- Axis requirements -->
+        <div v-if="project.axisRequirements" class="axis-requirements">
+          <span
+            v-for="(req, axis) in project.axisRequirements"
+            :key="axis"
+            :class="['axis-tag', AXIS_LABELS[axis as keyof AxisPosition]?.cssClass]"
+          >
+            {{ formatAxisReq(axis as keyof AxisPosition, req) }}
+          </span>
+        </div>
+
         <div class="project-footer">
           <span class="project-cost">Cost: {{ formatCost(project.proposalCost) }}</span>
-          <span
-            v-if="project.status === 'available'"
-            class="project-support"
-            :class="{
-              'support-sufficient': project.currentSupport >= project.requiredSupport,
-              'support-insufficient': project.currentSupport < project.requiredSupport,
-            }"
-          >
-            {{ formatSupport(project.currentSupport) }} /
-            {{ formatSupport(project.requiredSupport) }}
-          </span>
         </div>
 
         <!-- Vote projection for pending projects -->
@@ -231,7 +217,8 @@ function handlePropose(projectId: ProjectId): void {
     </div>
 
     <p class="hint">
-      Projects require faction support to propose, then pass by council vote after 10 sols.
+      Projects require a faction with matching axis positions to champion them. The council votes
+      after {{ 5 }} sols.
     </p>
   </GPanel>
 </template>
@@ -294,6 +281,39 @@ function handlePropose(projectId: ProjectId): void {
   color: var(--g-color-text-muted);
 }
 
+.axis-requirements {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--g-space-xs);
+  margin-bottom: var(--g-space-xs);
+}
+
+.axis-tag {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid;
+}
+
+.axis-tag.earth {
+  color: var(--g-color-info);
+  border-color: var(--g-color-info);
+  background: rgba(0, 131, 143, 0.1);
+}
+
+.axis-tag.mars {
+  color: var(--g-color-positive);
+  border-color: var(--g-color-positive);
+  background: rgba(46, 125, 50, 0.1);
+}
+
+.axis-tag.corporate {
+  color: var(--g-color-warning);
+  border-color: var(--g-color-warning);
+  background: rgba(239, 108, 0, 0.1);
+}
+
 .project-footer {
   display: flex;
   justify-content: space-between;
@@ -303,18 +323,6 @@ function handlePropose(projectId: ProjectId): void {
 
 .project-cost {
   color: var(--g-color-text-muted);
-}
-
-.project-support {
-  font-weight: bold;
-}
-
-.support-sufficient {
-  color: var(--color-positive);
-}
-
-.support-insufficient {
-  color: var(--color-warning);
 }
 
 .vote-projection {
