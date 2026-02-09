@@ -350,15 +350,15 @@ watch(dimensions, render);
         <span class="legend-title">Ideology:</span>
         <div class="legend-item">
           <span class="legend-dot earth-loyalist" />
-          <span>Earth</span>
+          <span>Solidarity</span>
         </div>
         <div class="legend-item">
           <span class="legend-dot mars-independence" />
-          <span>Mars</span>
+          <span>Sovereignty</span>
         </div>
         <div class="legend-item">
           <span class="legend-dot corporate" />
-          <span>Corporate</span>
+          <span>Transform</span>
         </div>
         <div class="legend-item">
           <span class="legend-dot neutral" />

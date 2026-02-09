@@ -310,4 +310,28 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
   canRally(): boolean {
     return this.gameState.ideology.canRally(this.gameState.currentSol);
   }
+
+  /**
+   * Get the ideological pressure a colonist experiences from their neighbors.
+   * Returns the weighted average ideology neighbors are pushing toward,
+   * along with pressure strength and conviction growth/decay rate.
+   */
+  getIdeologicalPressure(colonistId: string): {
+    pressure: { solidarity: number; sovereignty: number; transformation: number };
+    totalWeight: number;
+    neighborCount: number;
+    convictionPressure: { growth: boolean; rate: number };
+  } | null {
+    const colonist = this.gameState.colony.getColonists().find((c) => c.id === colonistId);
+    if (!colonist) return null;
+
+    const colonists = this.gameState.colony.getColonists();
+    const relationshipManager = this.gameState.workforce.getRelationshipManager();
+
+    return this.gameState.ideology.calculateIdeologicalPressure(
+      colonist,
+      colonists,
+      relationshipManager,
+    );
+  }
 }

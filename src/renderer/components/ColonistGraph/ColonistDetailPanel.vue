@@ -17,7 +17,7 @@ interface BuildingInfo {
 }
 
 interface IdeologicalPressure {
-  pressure: { earthLoyalist: number; marsIndependence: number; corporateInterests: number };
+  pressure: { solidarity: number; sovereignty: number; transformation: number };
   totalWeight: number;
   neighborCount: number;
   convictionPressure: { growth: boolean; rate: number };
@@ -134,10 +134,9 @@ const colonistRelationships = computed(() => {
         let ideologyDelta: { earth: number; mars: number; corporate: number } | null = null;
         if (props.colonist.ideology && other.ideology) {
           ideologyDelta = {
-            earth: other.ideology.earthLoyalist - props.colonist.ideology.earthLoyalist,
-            mars: other.ideology.marsIndependence - props.colonist.ideology.marsIndependence,
-            corporate:
-              other.ideology.corporateInterests - props.colonist.ideology.corporateInterests,
+            earth: other.ideology.solidarity - props.colonist.ideology.solidarity,
+            mars: other.ideology.sovereignty - props.colonist.ideology.sovereignty,
+            corporate: other.ideology.transformation - props.colonist.ideology.transformation,
           };
         }
 
@@ -186,6 +185,11 @@ function formatStrength(strength: number): string {
   return (strength * 100).toFixed(0) + "%";
 }
 
+function formatAxis(value: number): string {
+  const sign = value >= 0 ? "+" : "";
+  return sign + value.toFixed(2);
+}
+
 // Ideology display data
 interface IdeologyDisplay {
   label: string;
@@ -198,9 +202,9 @@ const ideologyData = computed<IdeologyDisplay[]>(() => {
   if (!ideology) return [];
 
   return [
-    { label: "Earth", value: ideology.earthLoyalist, cssClass: "earth" },
-    { label: "Mars", value: ideology.marsIndependence, cssClass: "mars" },
-    { label: "Corporate", value: ideology.corporateInterests, cssClass: "corporate" },
+    { label: "Solidarity", value: ideology.solidarity, cssClass: "earth" },
+    { label: "Sovereignty", value: ideology.sovereignty, cssClass: "mars" },
+    { label: "Transform", value: ideology.transformation, cssClass: "corporate" },
   ];
 });
 
@@ -224,24 +228,24 @@ const pressureData = computed<PressureDisplay[]>(() => {
 
   return [
     {
-      label: "Earth",
-      currentValue: ideology.earthLoyalist,
-      pressureValue: pressure.pressure.earthLoyalist,
-      delta: pressure.pressure.earthLoyalist - ideology.earthLoyalist,
+      label: "Solidarity",
+      currentValue: ideology.solidarity,
+      pressureValue: pressure.pressure.solidarity,
+      delta: pressure.pressure.solidarity - ideology.solidarity,
       cssClass: "earth",
     },
     {
-      label: "Mars",
-      currentValue: ideology.marsIndependence,
-      pressureValue: pressure.pressure.marsIndependence,
-      delta: pressure.pressure.marsIndependence - ideology.marsIndependence,
+      label: "Sovereignty",
+      currentValue: ideology.sovereignty,
+      pressureValue: pressure.pressure.sovereignty,
+      delta: pressure.pressure.sovereignty - ideology.sovereignty,
       cssClass: "mars",
     },
     {
-      label: "Corporate",
-      currentValue: ideology.corporateInterests,
-      pressureValue: pressure.pressure.corporateInterests,
-      delta: pressure.pressure.corporateInterests - ideology.corporateInterests,
+      label: "Transform",
+      currentValue: ideology.transformation,
+      pressureValue: pressure.pressure.transformation,
+      delta: pressure.pressure.transformation - ideology.transformation,
       cssClass: "corporate",
     },
   ];
@@ -294,10 +298,10 @@ function formatDelta(delta: number): string {
             <div class="ideology-bar-bg">
               <div
                 :class="['ideology-bar', ideo.cssClass]"
-                :style="{ width: ideo.value * 100 + '%' }"
+                :style="{ width: ((ideo.value + 1) / 2) * 100 + '%' }"
               />
             </div>
-            <span class="ideology-value">{{ formatStrength(ideo.value) }}</span>
+            <span class="ideology-value">{{ formatAxis(ideo.value) }}</span>
           </div>
         </div>
         <div class="ideology-row conviction-row">

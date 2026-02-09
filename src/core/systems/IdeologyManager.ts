@@ -538,6 +538,101 @@ export class IdeologyManager implements ProjectQueries {
   }
 
   /**
+   * Calculate the ideological pressure a colonist experiences from their neighbors.
+   * Returns the weighted average ideology neighbors are pushing toward,
+   * along with pressure strength and conviction growth/decay info.
+   */
+  calculateIdeologicalPressure(
+    colonist: Colonist,
+    colonists: Colonist[],
+    relationshipManager: RelationshipManager,
+  ): {
+    pressure: { solidarity: number; sovereignty: number; transformation: number };
+    totalWeight: number;
+    neighborCount: number;
+    convictionPressure: { growth: boolean; rate: number };
+  } | null {
+    if (!colonist.ideology) return null;
+
+    const neighbors = relationshipManager.getNeighbors(colonist.id);
+    if (neighbors.size === 0) {
+      return {
+        pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+        totalWeight: 0,
+        neighborCount: 0,
+        convictionPressure: { growth: false, rate: IdeologyBalance.CONVICTION_DECAY_RATE },
+      };
+    }
+
+    const colonistMap = new Map(colonists.map((c) => [c.id, c]));
+    let totalWeight = 0;
+    let neighborCount = 0;
+    const avgInfluence: AxisPosition = { solidarity: 0, sovereignty: 0, transformation: 0 };
+
+    // Also track conviction support
+    let supportWeight = 0;
+    const colonistPos = ideologyToAxis(colonist.ideology);
+
+    for (const neighborId of neighbors) {
+      const neighbor = colonistMap.get(neighborId);
+      if (!neighbor?.ideology) continue;
+
+      const relationshipStrength = relationshipManager.getRelationshipStrength(
+        colonist.id,
+        neighborId,
+      );
+      if (relationshipStrength < IdeologyBalance.IDEOLOGY_SPREAD_CONNECTION_THRESHOLD) continue;
+
+      const neighborCentrality = relationshipManager.getCentrality(neighborId);
+      const neighborConviction = neighbor.ideology.conviction;
+      const weight = relationshipStrength ** 2 * (neighborCentrality + 0.1) * neighborConviction;
+      totalWeight += weight;
+      neighborCount++;
+
+      for (const axis of AXIS_KEYS) {
+        avgInfluence[axis] += weight * neighbor.ideology[axis];
+      }
+
+      // Check proximity in axis space for conviction
+      const neighborPos = ideologyToAxis(neighbor.ideology);
+      const dist = axisDistance(colonistPos, neighborPos);
+      if (dist <= IdeologyBalance.CONVICTION_SUPPORT_DISTANCE) {
+        supportWeight += weight;
+      }
+    }
+
+    if (totalWeight > 0) {
+      for (const axis of AXIS_KEYS) {
+        avgInfluence[axis] /= totalWeight;
+      }
+    }
+
+    // Determine conviction pressure direction
+    const supportRatio = totalWeight > 0 ? supportWeight / totalWeight : 0;
+    const supportThreshold = 0.35;
+    const convictionGrowth = supportRatio >= supportThreshold;
+    let convictionRate: number;
+    if (convictionGrowth) {
+      const supportStrength = supportRatio - supportThreshold;
+      convictionRate = IdeologyBalance.CONVICTION_GROWTH_RATE * (supportStrength * 2 + 0.2);
+    } else {
+      const oppositionStrength = supportThreshold - supportRatio;
+      convictionRate = IdeologyBalance.CONVICTION_DECAY_RATE + oppositionStrength * 0.1;
+    }
+
+    return {
+      pressure: {
+        solidarity: avgInfluence.solidarity,
+        sovereignty: avgInfluence.sovereignty,
+        transformation: avgInfluence.transformation,
+      },
+      totalWeight,
+      neighborCount,
+      convictionPressure: { growth: convictionGrowth, rate: convictionRate },
+    };
+  }
+
+  /**
    * Evolve conviction based on ideology pressure from neighbors.
    * Conviction grows when neighbors are close in axis space (within CONVICTION_SUPPORT_DISTANCE)
    * and decays when neighbors are distant.
@@ -1164,8 +1259,9 @@ export class IdeologyManager implements ProjectQueries {
 
     for (let i = 0; i < this.factions.length; i++) {
       for (let j = i + 1; j < this.factions.length; j++) {
-        const a = this.factions[i]!;
-        const b = this.factions[j]!;
+        const a = this.factions[i];
+        const b = this.factions[j];
+        if (!a || !b) continue;
         const dist = axisDistance(a.position, b.position);
 
         if (dist >= IdeologyBalance.FACTION_CONVERGENCE_THRESHOLD) continue;
