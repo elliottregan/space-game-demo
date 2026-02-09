@@ -17,7 +17,7 @@ export const IDEOLOGY_SPREAD_RATE = 0.04;
 export const IDEOLOGY_SPREAD_INTERVAL = 1;
 
 /** How much conviction reduces influence susceptibility (0-1) */
-export const CONVICTION_RESISTANCE_FACTOR = 0.8;
+export const CONVICTION_RESISTANCE_FACTOR = 0.6;
 
 /**
  * Minimum relationship strength for ideology to spread.
@@ -78,16 +78,16 @@ export const IDEOLOGY_IMPRINTING_THRESHOLD = 0.3;
 export const CONVICTION_GROWTH_RATE = 0.02;
 
 /** Rate at which conviction decays when isolated from faction (per propagation tick) */
-export const CONVICTION_DECAY_RATE = 0.01;
+export const CONVICTION_DECAY_RATE = 0.03;
 
 /** Natural conviction decay applied to all colonists each tick (represents doubt/questioning) */
-export const CONVICTION_NATURAL_DECAY = 0.003;
+export const CONVICTION_NATURAL_DECAY = 0.008;
 
 /** Minimum conviction floor - some baseline conviction always remains */
 export const CONVICTION_MIN = 0.1;
 
 /** Maximum conviction ceiling - never fully certain */
-export const CONVICTION_MAX = 0.85;
+export const CONVICTION_MAX = 0.9;
 
 /** Rate at which neutral colonists drift toward neighborhood ideology */
 export const NEUTRAL_IDEOLOGY_DRIFT_RATE = 0.06;

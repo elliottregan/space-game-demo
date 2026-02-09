@@ -241,7 +241,7 @@ describe("IdeologyBalance - Kept constants", () => {
   it("ideology spread constants retain original values", () => {
     expect(IDEOLOGY_SPREAD_RATE).toBe(0.04);
     expect(IDEOLOGY_SPREAD_INTERVAL).toBe(1);
-    expect(CONVICTION_RESISTANCE_FACTOR).toBe(0.8);
+    expect(CONVICTION_RESISTANCE_FACTOR).toBe(0.6);
     expect(IDEOLOGY_SPREAD_CONNECTION_THRESHOLD).toBe(0.2);
   });
 
@@ -258,10 +258,10 @@ describe("IdeologyBalance - Kept constants", () => {
 
   it("conviction evolution constants retain original values", () => {
     expect(CONVICTION_GROWTH_RATE).toBe(0.02);
-    expect(CONVICTION_DECAY_RATE).toBe(0.01);
-    expect(CONVICTION_NATURAL_DECAY).toBe(0.003);
+    expect(CONVICTION_DECAY_RATE).toBe(0.03);
+    expect(CONVICTION_NATURAL_DECAY).toBe(0.008);
     expect(CONVICTION_MIN).toBe(0.1);
-    expect(CONVICTION_MAX).toBe(0.85);
+    expect(CONVICTION_MAX).toBe(0.9);
   });
 
   it("neutral ideology drift rate retains original value", () => {
