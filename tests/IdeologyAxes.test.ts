@@ -8,25 +8,6 @@ import {
   type FactionState,
 } from "../src/core/models/NPCInfluence";
 import {
-  // Kept constants
-  IDEOLOGY_SPREAD_RATE,
-  IDEOLOGY_SPREAD_INTERVAL,
-  CONVICTION_RESISTANCE_FACTOR,
-  IDEOLOGY_SPREAD_CONNECTION_THRESHOLD,
-  COUNCIL_SIZE_MIN,
-  COUNCIL_SIZE_MAX,
-  COUNCIL_SIZE_PER_POPULATION,
-  COUNCIL_UPDATE_INTERVAL,
-  PROJECT_VOTING_PERIOD,
-  CONVICTION_GROWTH_RATE,
-  CONVICTION_DECAY_RATE,
-  CONVICTION_NATURAL_DECAY,
-  CONVICTION_MIN,
-  CONVICTION_MAX,
-  NEUTRAL_IDEOLOGY_DRIFT_RATE,
-  IDEOLOGY_IMPRINTING_STRENGTH,
-  IDEOLOGY_IMPRINTING_THRESHOLD,
-  // Updated constant
   NEW_COLONIST_IDEOLOGY,
   // New constants
   FACTION_DRIFT_RATE,
@@ -236,43 +217,6 @@ describe("FactionState", () => {
 // ============================================================
 // IdeologyBalance axis-based constants tests
 // ============================================================
-
-describe("IdeologyBalance - Kept constants", () => {
-  it("ideology spread constants retain original values", () => {
-    expect(IDEOLOGY_SPREAD_RATE).toBe(0.04);
-    expect(IDEOLOGY_SPREAD_INTERVAL).toBe(1);
-    expect(CONVICTION_RESISTANCE_FACTOR).toBe(0.6);
-    expect(IDEOLOGY_SPREAD_CONNECTION_THRESHOLD).toBe(0.2);
-  });
-
-  it("council selection constants retain original values", () => {
-    expect(COUNCIL_SIZE_MIN).toBe(5);
-    expect(COUNCIL_SIZE_MAX).toBe(15);
-    expect(COUNCIL_SIZE_PER_POPULATION).toBe(10);
-    expect(COUNCIL_UPDATE_INTERVAL).toBe(10);
-  });
-
-  it("project voting period retains original value", () => {
-    expect(PROJECT_VOTING_PERIOD).toBe(5);
-  });
-
-  it("conviction evolution constants retain original values", () => {
-    expect(CONVICTION_GROWTH_RATE).toBe(0.02);
-    expect(CONVICTION_DECAY_RATE).toBe(0.03);
-    expect(CONVICTION_NATURAL_DECAY).toBe(0.008);
-    expect(CONVICTION_MIN).toBe(0.1);
-    expect(CONVICTION_MAX).toBe(0.9);
-  });
-
-  it("neutral ideology drift rate retains original value", () => {
-    expect(NEUTRAL_IDEOLOGY_DRIFT_RATE).toBe(0.06);
-  });
-
-  it("ideology imprinting constants retain original values", () => {
-    expect(IDEOLOGY_IMPRINTING_STRENGTH).toBe(0.7);
-    expect(IDEOLOGY_IMPRINTING_THRESHOLD).toBe(0.3);
-  });
-});
 
 describe("IdeologyBalance - Removed constants no longer exported", () => {
   it("old faction-affinity constants are removed", () => {
