@@ -3,7 +3,6 @@ import type { GridCell, GridPosition, BuildingPlacement, Cluster } from "../mode
 import { DepositType, GRID_SIZE, PowerState } from "../models/Grid";
 import { BuildingId } from "../models/Building";
 import { BATTERY_BACKUP_SOLS, LOW_BATTERY_THRESHOLD } from "../balance/GridBalance";
-import type { GridQueries } from "../interfaces/Queries";
 
 interface DepositInfo {
   position: GridPosition;
@@ -42,7 +41,7 @@ export interface GridManagerJSON {
   powerConsumption: Array<{ buildingId: string; consumption: number }>;
 }
 
-export class GridManager implements GridQueries {
+export class GridManager {
   private grid: GridCell[][] = [];
   private placements: Map<string, BuildingPlacement> = new Map();
   private powerSources: Map<string, PowerSource> = new Map();
