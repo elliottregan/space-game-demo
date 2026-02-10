@@ -18,7 +18,7 @@ import { ColonistMoraleManager } from "./systems/ColonistMoraleManager";
 import { ColonyManager } from "./systems/ColonyManager";
 import { EarthCrisisManager } from "./systems/EarthCrisisManager";
 import { GrantManager } from "./systems/GrantManager";
-import { GridManager } from "./systems/GridManager";
+import { DistrictManager } from "./systems/DistrictManager";
 import { EventManager } from "./systems/EventManager";
 import { IdeologyManager } from "./systems/IdeologyManager";
 import { OperationsManager } from "./systems/OperationsManager";
@@ -46,7 +46,7 @@ export class GameState {
   ideology: IdeologyManager;
   earthCrisis: EarthCrisisManager;
   grants: GrantManager;
-  grid: GridManager;
+  districts: DistrictManager;
   scheduler: RecurringEventScheduler;
 
   private tickRunner: TickRunner;
@@ -90,11 +90,8 @@ export class GameState {
     this.ideology = new IdeologyManager();
     this.earthCrisis = new EarthCrisisManager();
     this.grants = new GrantManager();
-    this.grid = new GridManager();
-    this.grid.generateDeposits(Date.now()); // Use timestamp as seed for variety
+    this.districts = new DistrictManager();
     this.scheduler = new RecurringEventScheduler();
-    this.buildings.setGridManager(this.grid);
-    this.buildings.setGridQueries(this.grid);
     this.buildings.setProjectQueries(this.ideology);
     this.buildings.setVictoryManager(this.victory);
 
@@ -110,11 +107,8 @@ export class GameState {
     // Create pre-built buildings
     this.createPreBuiltBuildings(condition.preBuiltBuildings);
 
-    // Place starting buildings on the grid
-    this.placeStartingBuildingsOnGrid();
-
-    // Initialize transit clusters for starting buildings
-    this.buildings.triggerClusterUpdate();
+    // Initialize starting district with pre-built buildings and colonists
+    this.initializeStartingDistrict();
 
     // Initialize colonist consumption (without triggering population growth)
     this.colony.updateConsumption(this.resources);
@@ -263,79 +257,28 @@ export class GameState {
     }
   }
 
-  private placeStartingBuildingsOnGrid(): void {
+  private initializeStartingDistrict(): void {
+    // Found the initial "Landing Site" district
+    const landingSite = this.districts.foundDistrict("Landing Site", 0);
+
+    // Assign all starting buildings to the landing site district
     const activeBuildings = this.buildings.getActiveBuildings();
-
-    // Track positions we've used
-    const usedPositions = new Set<string>();
-    const posKey = (x: number, y: number) => `${x},${y}`;
-
-    // Place solar panels at center
-    const solarPanels = activeBuildings.filter((b) => b.definitionId === BuildingId.SOLAR_PANEL);
-    const solarPositions = [
-      { x: 5, y: 5 },
-      { x: 6, y: 5 },
-    ];
-    for (let i = 0; i < solarPanels.length; i++) {
-      const panel = solarPanels[i];
-      if (!panel) continue;
-      const pos = solarPositions[i] ?? { x: 5 + i, y: 5 };
-      this.grid.placeBuilding(panel.id, pos);
-      usedPositions.add(posKey(pos.x, pos.y));
-      const def = this.buildings.getDefinition(panel.definitionId);
+    for (const building of activeBuildings) {
+      this.districts.assignBuilding(landingSite.id, building.id);
+      const def = this.buildings.getDefinition(building.definitionId);
       if (def?.powerProduction) {
-        this.grid.registerPowerSource(panel.id, def.powerProduction);
+        this.districts.registerPowerSource(building.id, def.powerProduction);
       }
-    }
-
-    // Place habitats adjacent (5,6) and (6,6)
-    const habitats = activeBuildings.filter((b) => b.definitionId === BuildingId.HABITAT);
-    const habitatPositions = [
-      { x: 5, y: 6 },
-      { x: 6, y: 6 },
-    ];
-    for (let i = 0; i < habitats.length; i++) {
-      const habitat = habitats[i];
-      if (!habitat) continue;
-      const pos = habitatPositions[i] ?? { x: 5 + i, y: 6 };
-      this.grid.placeBuilding(habitat.id, pos);
-      usedPositions.add(posKey(pos.x, pos.y));
-      const def = this.buildings.getDefinition(habitat.definitionId);
       if (def?.powerConsumption) {
-        this.grid.setBuildingPowerConsumption(habitat.id, def.powerConsumption);
+        this.districts.registerPowerConsumer(building.id, def.powerConsumption);
       }
     }
 
-    // Place farm (4,5)
-    const farm = activeBuildings.find((b) => b.definitionId === BuildingId.BASIC_FARM);
-    if (farm) {
-      this.grid.placeBuilding(farm.id, { x: 4, y: 5 });
-      usedPositions.add(posKey(4, 5));
-      const def = this.buildings.getDefinition(farm.definitionId);
-      if (def?.powerConsumption) {
-        this.grid.setBuildingPowerConsumption(farm.id, def.powerConsumption);
-      }
+    // Assign starting colonists to the landing site district
+    const colonists = this.colony.getColonists();
+    for (const colonist of colonists) {
+      this.districts.assignColonist(landingSite.id, colonist.id);
     }
-
-    // Place water extractor on nearest water deposit
-    const waterExtractor = activeBuildings.find(
-      (b) => b.definitionId === BuildingId.WATER_EXTRACTOR,
-    );
-    if (waterExtractor) {
-      const deposits = this.grid.getAllDeposits();
-      const waterDeposit = deposits.find((d) => d.type === "water");
-      if (waterDeposit) {
-        this.grid.placeBuilding(waterExtractor.id, waterDeposit.position);
-        const def = this.buildings.getDefinition(waterExtractor.definitionId);
-        if (def?.powerConsumption) {
-          this.grid.setBuildingPowerConsumption(waterExtractor.id, def.powerConsumption);
-        }
-      }
-    }
-
-    // Update power connections (only active buildings can provide power)
-    const activeBuildingIds = new Set(this.buildings.getActiveBuildings().map((b) => b.id));
-    this.grid.updatePowerConnections(activeBuildingIds);
   }
 
   tick(): GameEvent[] {
@@ -362,7 +305,7 @@ export class GameState {
         lifeSupport: this.lifeSupport,
         earthCrisis: this.earthCrisis,
         grants: this.grants,
-        grid: this.grid,
+        districts: this.districts,
         scheduler: this.scheduler,
       },
       { autoAssignNewColonists: this.autoAssignNewColonists },
@@ -432,7 +375,7 @@ export class GameState {
       ideology: this.ideology.toJSON(),
       earthCrisis: this.earthCrisis.toJSON(),
       grants: this.grants.toJSON(),
-      grid: this.grid.toJSON(),
+      districts: this.districts.toJSON(),
       scheduler: this.scheduler.toJSON(),
       autoAssignNewColonists: this.autoAssignNewColonists,
     };
@@ -476,19 +419,15 @@ export class GameState {
       state.grants = GrantManager.fromJSON(data.grants);
     }
 
-    if (data.grid) {
-      state.grid.fromJSON(data.grid);
+    if (data.districts) {
+      state.districts = DistrictManager.fromJSON(data.districts);
     }
 
     if (data.scheduler) {
       state.scheduler = RecurringEventScheduler.fromJSON(data.scheduler);
     }
 
-    // Re-establish grid manager reference and update clusters after grid is restored
-    state.buildings.setGridManager(state.grid);
-    state.buildings.setGridQueries(state.grid);
     state.buildings.setWorkforceQueries(state.workforce);
-    state.buildings.triggerClusterUpdate();
 
     state.buildings.setVictoryManager(state.victory);
 
