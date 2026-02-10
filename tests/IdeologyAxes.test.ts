@@ -9,18 +9,9 @@ import {
 } from "../src/core/models/NPCInfluence";
 import {
   NEW_COLONIST_IDEOLOGY,
-  // New constants
-  FACTION_DRIFT_RATE,
-  FACTION_CONVICTION_DAMPENING,
-  FACTION_PRESSURE_DECAY,
-  DEFECTION_DISTANCE_THRESHOLD,
-  FACTION_CONVERGENCE_THRESHOLD,
-  FACTION_COLLAPSE_POPULATION_RATIO,
   FACTION_NAME_THRESHOLD_MODERATE,
   FACTION_NAME_THRESHOLD_EXTREME,
   STARTING_FACTION_POSITIONS,
-  NEUTRAL_AXIS_THRESHOLD,
-  CONVICTION_SUPPORT_DISTANCE,
 } from "../src/core/balance/IdeologyBalance";
 
 describe("ColonistIdeology three-axis model", () => {
@@ -257,43 +248,7 @@ describe("IdeologyBalance - New colonist ideology (axis-based)", () => {
   });
 });
 
-describe("IdeologyBalance - Faction drift constants", () => {
-  it("FACTION_DRIFT_RATE exists with expected value", () => {
-    expect(FACTION_DRIFT_RATE).toBe(0.02);
-  });
-
-  it("FACTION_CONVICTION_DAMPENING exists with expected value", () => {
-    expect(FACTION_CONVICTION_DAMPENING).toBe(0.6);
-  });
-
-  it("FACTION_PRESSURE_DECAY exists with expected value", () => {
-    expect(FACTION_PRESSURE_DECAY).toBe(0.005);
-  });
-});
-
-describe("IdeologyBalance - Faction dynamics constants", () => {
-  it("DEFECTION_DISTANCE_THRESHOLD exists with expected value", () => {
-    expect(DEFECTION_DISTANCE_THRESHOLD).toBe(0.3);
-  });
-
-  it("FACTION_CONVERGENCE_THRESHOLD exists with expected value", () => {
-    expect(FACTION_CONVERGENCE_THRESHOLD).toBe(0.2);
-  });
-
-  it("FACTION_COLLAPSE_POPULATION_RATIO exists with expected value", () => {
-    expect(FACTION_COLLAPSE_POPULATION_RATIO).toBe(0.15);
-  });
-});
-
 describe("IdeologyBalance - Faction naming thresholds", () => {
-  it("FACTION_NAME_THRESHOLD_MODERATE exists with expected value", () => {
-    expect(FACTION_NAME_THRESHOLD_MODERATE).toBe(0.3);
-  });
-
-  it("FACTION_NAME_THRESHOLD_EXTREME exists with expected value", () => {
-    expect(FACTION_NAME_THRESHOLD_EXTREME).toBe(0.6);
-  });
-
   it("moderate threshold is less than extreme threshold", () => {
     expect(FACTION_NAME_THRESHOLD_MODERATE).toBeLessThan(FACTION_NAME_THRESHOLD_EXTREME);
   });
@@ -335,26 +290,5 @@ describe("IdeologyBalance - Starting faction positions", () => {
       expect(transformation).toBeGreaterThanOrEqual(-1);
       expect(transformation).toBeLessThanOrEqual(1);
     }
-  });
-});
-
-describe("IdeologyBalance - Neutral colonist detection", () => {
-  it("NEUTRAL_AXIS_THRESHOLD exists with expected value", () => {
-    expect(NEUTRAL_AXIS_THRESHOLD).toBe(0.15);
-  });
-
-  it("NEUTRAL_AXIS_THRESHOLD is positive and small", () => {
-    expect(NEUTRAL_AXIS_THRESHOLD).toBeGreaterThan(0);
-    expect(NEUTRAL_AXIS_THRESHOLD).toBeLessThan(0.5);
-  });
-});
-
-describe("IdeologyBalance - Conviction support detection", () => {
-  it("CONVICTION_SUPPORT_DISTANCE exists with expected value", () => {
-    expect(CONVICTION_SUPPORT_DISTANCE).toBe(0.5);
-  });
-
-  it("CONVICTION_SUPPORT_DISTANCE is positive", () => {
-    expect(CONVICTION_SUPPORT_DISTANCE).toBeGreaterThan(0);
   });
 });

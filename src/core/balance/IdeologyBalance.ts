@@ -81,7 +81,7 @@ export const CONVICTION_GROWTH_RATE = 0.02;
 export const CONVICTION_DECAY_RATE = 0.03;
 
 /** Natural conviction decay applied to all colonists each tick (represents doubt/questioning) */
-export const CONVICTION_NATURAL_DECAY = 0.008;
+export const CONVICTION_NATURAL_DECAY = 0.015;
 
 /** Minimum conviction floor - some baseline conviction always remains */
 export const CONVICTION_MIN = 0.1;
@@ -154,4 +154,4 @@ export const NEUTRAL_AXIS_THRESHOLD = 0.15;
 // ============ Conviction Support Detection ============
 
 /** Max axis-space distance for neighbors to be considered "supporting" (conviction growth) */
-export const CONVICTION_SUPPORT_DISTANCE = 0.5;
+export const CONVICTION_SUPPORT_DISTANCE = 0.3;
