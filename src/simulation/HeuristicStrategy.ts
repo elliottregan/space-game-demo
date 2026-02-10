@@ -5,11 +5,13 @@ import { BuildingId } from "../core/models/Building";
 import type { EventChoice } from "../core/models/GameEvent";
 import { DepositType, type GridPosition } from "../core/models/Grid";
 import type { AxisPosition, NPCFaction, ProjectId } from "../core/models/NPCInfluence";
+import { GRANT_SOURCES } from "../core/data/grants";
 import { PROJECTS } from "../core/data/projects";
 import { POLICIES } from "../core/data/policies";
 import { rng } from "../core/utils/random";
 import type { GameAPI } from "../facade/GameAPI";
 import type { FactionSnapshot, IdeologySnapshot } from "../facade/types/ideology";
+import type { AvailableGrantSnapshot } from "../facade/types/grants";
 import type { ActionCategory, BlockedDecision, EventOccurrence, ExecutedAction } from "./types";
 
 // Center of the grid (5,5) for power source placement preference
@@ -383,6 +385,9 @@ export class HeuristicStrategy {
     if (this.committedBaseId && this.api.ideology.canRally()) {
       this.api.ideology.rallyFaction(this.committedBaseId);
     }
+
+    // Evaluate and assign available grants (free action, doesn't consume action budget)
+    this.handleGrantEvaluation();
 
     // TOP PRIORITY: If capstone is completed, build megastructure to win!
     if (this.committedFactionId && this.tryBuildMegastructureIfReady()) {
@@ -1579,6 +1584,74 @@ export class HeuristicStrategy {
       return true; // One action per tick
     }
     return false;
+  }
+
+  /**
+   * Evaluate available grants and assign the best one.
+   * Scores grants by: colony resource needs vs ideology alignment with committed faction.
+   * Assigns to district "colony" (no district system yet, so colony-wide).
+   */
+  private handleGrantEvaluation(): void {
+    const grantsSnapshot = this.api.grants.snapshot();
+    if (grantsSnapshot.available.length === 0) return;
+
+    const resources = this.api.resources.snapshot();
+
+    // Score each available grant
+    let bestGrant: AvailableGrantSnapshot | null = null;
+    let bestScore = -Infinity;
+
+    for (const grant of grantsSnapshot.available) {
+      let score = 0;
+
+      // Score by resource need
+      const source = GRANT_SOURCES.find((s) => s.id === grant.sourceId);
+      if (!source) continue;
+
+      // Check ideology alignment penalty when committed to a faction
+      if (this.committedBaseId) {
+        const faction = this.getFactionById(this.committedFactionId ?? "");
+        if (faction) {
+          // Calculate ideology distance between grant source and committed faction
+          const dist =
+            Math.abs(source.ideologyPosition.solidarity - faction.position.solidarity) +
+            Math.abs(source.ideologyPosition.sovereignty - faction.position.sovereignty) +
+            Math.abs(source.ideologyPosition.transformation - faction.position.transformation);
+          // Penalize grants that push away from committed faction
+          score -= dist * grant.ideologyMagnitude * 20;
+        }
+      }
+
+      // Score by resource value based on current needs
+      // Use the grant's effect description to estimate value
+      const foodFlow = (resources.production.food ?? 0) - (resources.consumption.food ?? 0);
+      const waterFlow = (resources.production.water ?? 0) - (resources.consumption.water ?? 0);
+
+      // Instant resource grants are straightforward to value
+      if (grant.effectType === "instant") {
+        score += 15; // Base value for instant grants (immediate benefit)
+      } else {
+        score += 10; // Timed grants have sustained value
+      }
+
+      // Prioritize grants when colony is struggling
+      if (foodFlow < 2) score += 10;
+      if (waterFlow < 2) score += 10;
+      if (resources.current.materials < 100) score += 10;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestGrant = grant;
+      }
+    }
+
+    // Only assign if the score is positive (benefit outweighs ideology cost)
+    if (bestGrant && bestScore > 0) {
+      const check = this.api.grants.canAssignGrant(bestGrant.id, "colony");
+      if (check.allowed) {
+        this.api.grants.assignGrant(bestGrant.id, "colony");
+      }
+    }
   }
 
   /**

@@ -39,6 +39,7 @@ describe("resources phases", () => {
           ideology: state.ideology,
           lifeSupport: state.lifeSupport,
           earthCrisis: state.earthCrisis,
+          grants: state.grants,
           grid: state.grid,
           scheduler: state.scheduler,
         },

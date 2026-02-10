@@ -131,6 +131,29 @@ interface GameUIState {
     position: { x: number; y: number };
     type: DepositType;
   }>;
+  grants: {
+    available: Array<{
+      id: number;
+      sourceName: string;
+      name: string;
+      description: string;
+      effectType: "instant" | "timed";
+    }>;
+    active: Array<{
+      id: number;
+      sourceName: string;
+      name: string;
+      districtId: string;
+      remainingSols?: number;
+    }>;
+    nextRefreshSol: number;
+  };
+  districts: Array<{
+    id: string;
+    name: string;
+    buildingCount: number;
+    buildingIds: string[];
+  }>;
 }
 
 /**
@@ -259,6 +282,12 @@ class GameService {
       },
       gridBuildings: [],
       gridDeposits: [],
+      grants: {
+        available: [],
+        active: [],
+        nextRefreshSol: 0,
+      },
+      districts: [],
     };
   }
 
@@ -431,6 +460,35 @@ class GameService {
     this.state.gridDeposits = this.facade.game.getGridDeposits().map((d) => ({
       position: d.position,
       type: d.type,
+    }));
+
+    // Grants
+    const grantsData = this.facade.grants.snapshot();
+    this.state.grants = {
+      available: grantsData.available.map((g) => ({
+        id: g.id,
+        sourceName: g.sourceName,
+        name: g.name,
+        description: g.description,
+        effectType: g.effectType,
+      })),
+      active: grantsData.active.map((g) => ({
+        id: g.id,
+        sourceName: g.sourceName,
+        name: g.name,
+        districtId: g.districtId,
+        remainingSols: g.remainingSols,
+      })),
+      nextRefreshSol: grantsData.nextRefreshSol,
+    };
+
+    // Districts
+    const districtData = this.facade.districts.snapshot();
+    this.state.districts = districtData.districts.map((d) => ({
+      id: d.id,
+      name: d.name,
+      buildingCount: d.buildingCount,
+      buildingIds: [...d.buildingIds],
     }));
   }
 

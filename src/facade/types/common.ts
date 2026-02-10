@@ -71,7 +71,8 @@ export interface NotFoundError {
     | "expedition"
     | "site"
     | "project"
-    | "npc";
+    | "npc"
+    | "grant";
   id: string;
 }
 

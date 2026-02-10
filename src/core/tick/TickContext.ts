@@ -4,6 +4,7 @@ import type { ColonistMoraleManager } from "../systems/ColonistMoraleManager";
 import type { ColonyManager } from "../systems/ColonyManager";
 import type { EarthCrisisManager } from "../systems/EarthCrisisManager";
 import type { EventManager } from "../systems/EventManager";
+import type { GrantManager } from "../systems/GrantManager";
 import type { GridManager } from "../systems/GridManager";
 import type { IdeologyManager } from "../systems/IdeologyManager";
 import type { OperationsManager } from "../systems/OperationsManager";
@@ -61,6 +62,7 @@ export interface TickContext {
   ideology: IdeologyManager;
   lifeSupport: LifeSupportManager;
   earthCrisis: EarthCrisisManager;
+  grants: GrantManager;
   grid: GridManager;
   scheduler: RecurringEventScheduler;
 
@@ -90,6 +92,7 @@ export function createTickContext(
     ideology: IdeologyManager;
     lifeSupport: LifeSupportManager;
     earthCrisis: EarthCrisisManager;
+    grants: GrantManager;
     grid: GridManager;
     scheduler: RecurringEventScheduler;
   },

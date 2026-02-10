@@ -30,6 +30,8 @@ import {
 import { processResearch } from "./technology";
 // Ideology phases
 import { propagateIdeology, processProjectVotes } from "./ideology";
+// Grants phases
+import { processGrants } from "./grants";
 // Operations phases
 import { processOperations, processDepositExtraction } from "./operations";
 // Earth Crisis phases
@@ -61,6 +63,7 @@ export {
 } from "./colony";
 export { processResearch } from "./technology";
 export { propagateIdeology, processProjectVotes } from "./ideology";
+export { processGrants } from "./grants";
 export { processOperations, processDepositExtraction } from "./operations";
 export { processEarthCrisis } from "./earthCrisis";
 export { processRandomEvents } from "./events";
@@ -119,6 +122,9 @@ export function createStandardTickRunner(): TickRunner {
   // 7. Ideology phases
   runner.register(propagateIdeology);
   runner.register(processProjectVotes);
+
+  // 7b. Grants phases (after ideology, before operations)
+  runner.register(processGrants);
 
   // 8. Operations phases
   runner.register(processOperations);

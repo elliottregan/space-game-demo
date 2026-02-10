@@ -17,6 +17,7 @@ import { BuildingManager } from "./systems/BuildingManager";
 import { ColonistMoraleManager } from "./systems/ColonistMoraleManager";
 import { ColonyManager } from "./systems/ColonyManager";
 import { EarthCrisisManager } from "./systems/EarthCrisisManager";
+import { GrantManager } from "./systems/GrantManager";
 import { GridManager } from "./systems/GridManager";
 import { EventManager } from "./systems/EventManager";
 import { IdeologyManager } from "./systems/IdeologyManager";
@@ -44,6 +45,7 @@ export class GameState {
   lifeSupport: LifeSupportManager;
   ideology: IdeologyManager;
   earthCrisis: EarthCrisisManager;
+  grants: GrantManager;
   grid: GridManager;
   scheduler: RecurringEventScheduler;
 
@@ -87,6 +89,7 @@ export class GameState {
     this.lifeSupport = new LifeSupportManager();
     this.ideology = new IdeologyManager();
     this.earthCrisis = new EarthCrisisManager();
+    this.grants = new GrantManager();
     this.grid = new GridManager();
     this.grid.generateDeposits(Date.now()); // Use timestamp as seed for variety
     this.scheduler = new RecurringEventScheduler();
@@ -358,6 +361,7 @@ export class GameState {
         ideology: this.ideology,
         lifeSupport: this.lifeSupport,
         earthCrisis: this.earthCrisis,
+        grants: this.grants,
         grid: this.grid,
         scheduler: this.scheduler,
       },
@@ -427,6 +431,7 @@ export class GameState {
       lifeSupport: this.lifeSupport.toJSON(),
       ideology: this.ideology.toJSON(),
       earthCrisis: this.earthCrisis.toJSON(),
+      grants: this.grants.toJSON(),
       grid: this.grid.toJSON(),
       scheduler: this.scheduler.toJSON(),
       autoAssignNewColonists: this.autoAssignNewColonists,
@@ -465,6 +470,10 @@ export class GameState {
 
     if (data.earthCrisis) {
       state.earthCrisis = EarthCrisisManager.fromJSON(data.earthCrisis);
+    }
+
+    if (data.grants) {
+      state.grants = GrantManager.fromJSON(data.grants);
     }
 
     if (data.grid) {

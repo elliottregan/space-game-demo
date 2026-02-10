@@ -335,6 +335,15 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
       canRally: mock(() => false),
       rallyFaction: mock(() => 0),
     },
+    grants: {
+      snapshot: mock(() => ({
+        available: [],
+        active: [],
+        nextRefreshSol: 0,
+      })),
+      canAssignGrant: mock(() => ({ allowed: true })),
+      assignGrant: mock(() => successResult({ grantId: 1, affectedColonists: 0 })),
+    },
     game: {
       currentSol: mock(() => overrides.currentSol ?? 100), // Default to 100 to bypass bootstrap
       advanceSol: mock(() => successResult({ events: [] })),

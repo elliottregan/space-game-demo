@@ -91,6 +91,15 @@ export type { Technology, TechnologySnapshot, TechResearch, UnlockId } from "./t
 // Technology types
 export { SpecialUnlockId, TechnologyId } from "./technology";
 // Grid types
+// Grant types
+export type {
+  ActiveGrantSnapshot,
+  AvailableGrantSnapshot,
+  GrantSourceSnapshot,
+  GrantsSnapshot,
+} from "./grants";
+// District types
+export type { DistrictEntry, DistrictSnapshot } from "./district";
 export type { GridPosition } from "../../core/models/Grid";
 export type { DepositInfo, GridSnapshot, PlacementHints, PowerSourceInfo } from "./grid";
 export { DepositType } from "../../core/models/Grid";

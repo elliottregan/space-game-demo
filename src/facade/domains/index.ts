@@ -3,9 +3,11 @@
 
 export { LifeSupportFacade } from "./LifeSupportFacade";
 export { BuildingsFacade } from "./BuildingsFacade";
+export { DistrictFacade } from "./DistrictFacade";
 export { ColonyFacade } from "./ColonyFacade";
 export { EventsFacade } from "./EventsFacade";
 export { GameFlowFacade } from "./GameFlowFacade";
+export { GrantsFacade } from "./GrantsFacade";
 export { GridFacade } from "./GridFacade";
 export { IdeologyFacade } from "./IdeologyFacade";
 export { OperationsFacade } from "./OperationsFacade";

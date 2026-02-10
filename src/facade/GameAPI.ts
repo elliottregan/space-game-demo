@@ -7,8 +7,10 @@ import {
   LifeSupportFacade,
   BuildingsFacade,
   ColonyFacade,
+  DistrictFacade,
   EventsFacade,
   GameFlowFacade,
+  GrantsFacade,
   GridFacade,
   IdeologyFacade,
   OperationsFacade,
@@ -61,7 +63,9 @@ export class GameAPI {
   private _lifeSupport: LifeSupportFacade | null = null;
   private _powerGrid: PowerGridFacade | null = null;
   private _ideology: IdeologyFacade | null = null;
+  private _grants: GrantsFacade | null = null;
   private _grid: GridFacade | null = null;
+  private _districts: DistrictFacade | null = null;
 
   constructor() {
     this.gameState = new GameState();
@@ -81,7 +85,9 @@ export class GameAPI {
     this._lifeSupport = null;
     this._powerGrid = null;
     this._ideology = null;
+    this._grants = null;
     this._grid = null;
+    this._districts = null;
   }
 
   // ==========================================================================
@@ -310,6 +316,16 @@ export class GameAPI {
   }
 
   /**
+   * Grants queries and commands (available grants, assign to districts).
+   */
+  get grants(): GrantsFacade {
+    if (!this._grants) {
+      this._grants = new GrantsFacade(this.gameState, this.executeCommand);
+    }
+    return this._grants;
+  }
+
+  /**
    * Grid queries (deposits, empty cells, power coverage).
    */
   get grid(): GridFacade {
@@ -317,6 +333,16 @@ export class GameAPI {
       this._grid = new GridFacade(this.gameState);
     }
     return this._grid;
+  }
+
+  /**
+   * District queries (district list, building assignments).
+   */
+  get districts(): DistrictFacade {
+    if (!this._districts) {
+      this._districts = new DistrictFacade(this.gameState);
+    }
+    return this._districts;
   }
 
   // ==========================================================================
