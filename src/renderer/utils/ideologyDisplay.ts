@@ -188,7 +188,7 @@ export function getIdeologyColorForGraph(
   const max = Math.max(solidarity, sovereignty, transformation);
 
   // If all values are very low, show as neutral
-  if (max < 0.2) return colors.textMuted;
+  if (max < 0.1) return colors.textMuted;
 
   // Check for clear dominance (must exceed others by threshold)
   if (

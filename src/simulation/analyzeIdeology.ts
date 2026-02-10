@@ -47,7 +47,7 @@ function getDominantFaction(ideology: ColonistIdeology): string | null {
   const max = Math.max(solidarity, sovereignty, transformation);
   const threshold = 0.15; // Must be 0.15 higher than others
 
-  if (max < 0.3) return null; // Below neutral threshold
+  if (max < 0.1) return null; // Below neutral threshold
 
   const factions = [
     { name: "Earth Loyalists", value: solidarity },
