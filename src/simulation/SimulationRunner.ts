@@ -563,7 +563,7 @@ export class SimulationRunner {
       const values = [solidarity, sovereignty, transformation].sort((a, b) => b - a);
       const highest = values[0] ?? 0;
       const second = values[1] ?? 0;
-      if (highest >= 0.3 && highest - second >= 0.15) {
+      if (highest >= 0.1 && highest - second >= 0.15) {
         dominantCount++;
       }
 
