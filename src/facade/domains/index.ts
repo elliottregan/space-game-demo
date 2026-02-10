@@ -3,7 +3,6 @@
 
 export { LifeSupportFacade } from "./LifeSupportFacade";
 export { BuildingsFacade } from "./BuildingsFacade";
-export { DistrictFacade } from "./DistrictFacade";
 export { ColonyFacade } from "./ColonyFacade";
 export { DistrictFacade } from "./DistrictFacade";
 export { EventsFacade } from "./EventsFacade";
