@@ -15,7 +15,6 @@ import {
   type FactionStatus,
   GameAPI,
   type GameEvent,
-  type GridPosition,
   ProjectId,
   type ProspectingSite,
   type RandomEventDefinition,
@@ -27,7 +26,6 @@ import {
   type TechResearch,
   type VictoryState,
 } from "../../facade";
-import { type PowerState, type DepositType } from "../../core/models/Grid";
 
 /**
  * Individual colonist morale data for UI display.
@@ -92,13 +90,20 @@ interface GameUIState {
   lifeSupportHealthEffect: number;
   lifeSupportMoraleEffect: number;
   lifeSupportEfficiency: number;
-  powerStats: {
-    totalProduction: number;
-    totalConsumption: number;
-    poweredCount: number;
-    onBatteryCount: number;
-    lowBatteryCount: number;
-    unpoweredCount: number;
+  districts: Array<{
+    id: string;
+    name: string;
+    population: number;
+    capacity: number;
+    buildingCount: number;
+    buildingIds: string[];
+    growthCap: number | null;
+  }>;
+  powerStatus: {
+    production: number;
+    consumption: number;
+    balance: number;
+    status: string;
   };
   ideology: {
     council: CouncilMemberSnapshot[];
@@ -113,24 +118,6 @@ interface GameUIState {
     severity: number;
     pointOfNoReturn: boolean;
   };
-  gridBuildings: Array<{
-    id: string;
-    defId: string;
-    name: string;
-    position: { x: number; y: number };
-    powerState: PowerState;
-    batteryLevel: number;
-    status: "pending" | "active" | "disabled" | "idle" | "recycling" | "upgrading";
-    constructionProgress?: number; // 0-1 for pending buildings
-    upgradeProgress?: number; // 0-1 for upgrading buildings
-    powerSourceId?: string; // ID of the power source this building is connected to
-    clusterId?: string; // ID of the transit cluster this building belongs to
-    depotRange?: number; // Range for depot buildings (transit connectivity extension)
-  }>;
-  gridDeposits: Array<{
-    position: { x: number; y: number };
-    type: DepositType;
-  }>;
   grants: {
     available: Array<{
       id: number;
@@ -148,12 +135,6 @@ interface GameUIState {
     }>;
     nextRefreshSol: number;
   };
-  districts: Array<{
-    id: string;
-    name: string;
-    buildingCount: number;
-    buildingIds: string[];
-  }>;
 }
 
 /**
@@ -259,14 +240,8 @@ class GameService {
       lifeSupportHealthEffect: 0,
       lifeSupportMoraleEffect: 0,
       lifeSupportEfficiency: 1,
-      powerStats: {
-        totalProduction: 0,
-        totalConsumption: 0,
-        poweredCount: 0,
-        onBatteryCount: 0,
-        lowBatteryCount: 0,
-        unpoweredCount: 0,
-      },
+      districts: [],
+      powerStatus: { production: 0, consumption: 0, balance: 0, status: "surplus" },
       ideology: {
         council: [],
         councilFactionCounts: {},
@@ -280,14 +255,11 @@ class GameService {
         severity: 0,
         pointOfNoReturn: false,
       },
-      gridBuildings: [],
-      gridDeposits: [],
       grants: {
         available: [],
         active: [],
         nextRefreshSol: 0,
       },
-      districts: [],
     };
   }
 
@@ -386,15 +358,22 @@ class GameService {
     this.state.lifeSupportMoraleEffect = lifeSupportData.moraleEffect;
     this.state.lifeSupportEfficiency = lifeSupportData.efficiencyMultiplier;
 
-    // Power Stats
-    const powerData = this.facade.powerGrid.snapshot();
-    this.state.powerStats = {
-      totalProduction: powerData.totalProduction,
-      totalConsumption: powerData.totalConsumption,
-      poweredCount: powerData.buildingCounts.powered,
-      onBatteryCount: powerData.buildingCounts.onBattery,
-      lowBatteryCount: powerData.buildingCounts.lowBattery,
-      unpoweredCount: powerData.buildingCounts.unpowered,
+    // Districts & Power
+    const districtData = this.facade.districts.snapshot();
+    this.state.districts = districtData.districts.map((d) => ({
+      id: d.id,
+      name: d.name,
+      population: d.population,
+      capacity: d.capacity,
+      buildingCount: d.buildingCount,
+      buildingIds: [...d.buildingIds],
+      growthCap: d.growthCap,
+    }));
+    this.state.powerStatus = {
+      production: districtData.power.production,
+      consumption: districtData.power.consumption,
+      balance: districtData.power.balance,
+      status: districtData.power.status,
     };
 
     // Ideology
@@ -419,49 +398,6 @@ class GameService {
       pointOfNoReturn: this.facade.game.earthCrisisPointOfNoReturn(),
     };
 
-    // Grid state - include both active and pending (under construction) buildings
-    const gridPlacements: GameUIState["gridBuildings"] = [];
-    const buildingSnapshot = this.facade.buildings.snapshot();
-    const allGridBuildings = [
-      ...buildingSnapshot.active,
-      ...buildingSnapshot.pending,
-      ...buildingSnapshot.upgrading,
-    ];
-    for (const building of allGridBuildings) {
-      const pos = this.facade.game.getGridBuildingPosition(building.id);
-      const placement = this.facade.game.getGridPlacement(building.id);
-      if (pos && placement) {
-        const def = this.facade.buildings.getDefinition(building.definitionId as BuildingId);
-        const constructionTime = def?.constructionTime ?? 1;
-        const upgradeTime = this.facade.buildings.getUpgradeTime(building.id) || 1;
-        gridPlacements.push({
-          id: building.id,
-          defId: building.definitionId,
-          name: def?.name ?? building.definitionId,
-          position: pos,
-          powerState: placement.powerState,
-          batteryLevel: placement.batteryLevel,
-          status: building.status,
-          constructionProgress:
-            building.status === "pending"
-              ? building.constructionProgress / constructionTime
-              : undefined,
-          upgradeProgress:
-            building.status === "upgrading" && building.upgradeProgress !== undefined
-              ? building.upgradeProgress / upgradeTime
-              : undefined,
-          powerSourceId: placement.powerSourceId,
-          clusterId: placement.clusterId,
-          depotRange: def?.depotRange,
-        });
-      }
-    }
-    this.state.gridBuildings = gridPlacements;
-    this.state.gridDeposits = this.facade.game.getGridDeposits().map((d) => ({
-      position: d.position,
-      type: d.type,
-    }));
-
     // Grants
     const grantsData = this.facade.grants.snapshot();
     this.state.grants = {
@@ -481,15 +417,6 @@ class GameService {
       })),
       nextRefreshSol: grantsData.nextRefreshSol,
     };
-
-    // Districts
-    const districtData = this.facade.districts.snapshot();
-    this.state.districts = districtData.districts.map((d) => ({
-      id: d.id,
-      name: d.name,
-      buildingCount: d.buildingCount,
-      buildingIds: [...d.buildingIds],
-    }));
   }
 
   /**
@@ -531,11 +458,6 @@ class GameService {
 
   startBuilding(defId: string): Building | null {
     const result = this.facade.buildings.build(defId as BuildingId);
-    return result.success ? result.data : null;
-  }
-
-  startBuildingAtPosition(defId: string, position: GridPosition): Building | null {
-    const result = this.facade.buildings.buildAtPosition(defId as BuildingId, position);
     return result.success ? result.data : null;
   }
 
@@ -595,19 +517,6 @@ class GameService {
       this.syncState();
     }
     return result.success;
-  }
-
-  // Cluster/connectivity methods
-  getBuildingClusterId(buildingId: string): string | undefined {
-    // Use synced state for reactivity
-    const building = this.state.gridBuildings.find((b) => b.id === buildingId);
-    return building?.clusterId;
-  }
-
-  isConnectedToHabitat(buildingId: string): boolean {
-    // Use synced state for reactivity
-    const building = this.state.gridBuildings.find((b) => b.id === buildingId);
-    return building?.clusterId !== undefined;
   }
 
   // Deposit methods
