@@ -115,7 +115,7 @@ describe("Recreation Buildings", () => {
     // Build extra habitat to push life support capacity above comfortable threshold
     gameState.resources.add({ materials: 200 });
     gameState.buildings.startBuilding(
-      BuildingId.HABITAT,
+      BuildingId.BASIC_FARM,
       gameState.resources,
       gameState.technology,
     );

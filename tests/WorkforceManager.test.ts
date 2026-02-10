@@ -12,8 +12,8 @@ import {
   MAX_SKILL_EFFICIENCY_BONUS,
   COWORKER_BONDING_RATE,
   INITIAL_COWORKER_RELATIONSHIP,
-  HOUSEMATE_BONDING_RATE,
-  INITIAL_HOUSEMATE_RELATIONSHIP,
+  NEIGHBORHOOD_BONDING_RATE,
+  INITIAL_NEIGHBORHOOD_RELATIONSHIP,
   MAX_COWORKER_RELATIONSHIP,
   COWORKER_RELATIONSHIP_DECAY,
   TEAM_COHESION_THRESHOLD,
@@ -892,45 +892,45 @@ describe("WorkforceManager", () => {
   });
 
   // ==========================================================================
-  // Housemate Relationship System tests
+  // Neighborhood Relationship System tests
   // ==========================================================================
-  describe("Housemate Relationship System", () => {
-    describe("processHousemateBonding()", () => {
-      it("should create relationship when two colonists share housing", () => {
+  describe("Neighborhood Relationship System", () => {
+    describe("processNeighborhoodBonding()", () => {
+      it("should create relationship when two colonists share a district", () => {
         const colonists = [
-          createColonist({ id: "c1", role: ColonistRole.ENGINEERING, housingId: "hab1" }),
-          createColonist({ id: "c2", role: ColonistRole.RESEARCH, housingId: "hab1" }),
+          createColonist({ id: "c1", role: ColonistRole.ENGINEERING, districtId: "dist1" }),
+          createColonist({ id: "c2", role: ColonistRole.RESEARCH, districtId: "dist1" }),
         ];
 
         const colony = mockColony(colonists);
         const events = workforce.tick(colony as any, mockBuildings([]) as any, 1);
 
-        const bondEvent = events.find((e) => e.type === "HOUSEMATE_BOND_FORMED");
+        const bondEvent = events.find((e) => e.type === "NEIGHBOR_BOND_FORMED");
         expect(bondEvent).toBeDefined();
         expect(bondEvent?.colonistA).toBe("c1");
         expect(bondEvent?.colonistB).toBe("c2");
-        expect(bondEvent?.housingId).toBe("hab1");
+        expect(bondEvent?.districtId).toBe("dist1");
 
         const relationship = workforce.getCoworkerRelationship("c1", "c2");
         expect(relationship).toBeDefined();
-        expect(relationship?.strength).toBe(INITIAL_HOUSEMATE_RELATIONSHIP);
+        expect(relationship?.strength).toBe(INITIAL_NEIGHBORHOOD_RELATIONSHIP);
       });
 
-      it("should not create relationship for colonists in different housing", () => {
+      it("should not create relationship for colonists in different districts", () => {
         const colonists = [
-          createColonist({ id: "c1", role: ColonistRole.ENGINEERING, housingId: "hab1" }),
-          createColonist({ id: "c2", role: ColonistRole.RESEARCH, housingId: "hab2" }),
+          createColonist({ id: "c1", role: ColonistRole.ENGINEERING, districtId: "dist1" }),
+          createColonist({ id: "c2", role: ColonistRole.RESEARCH, districtId: "dist2" }),
         ];
 
         const colony = mockColony(colonists);
         const events = workforce.tick(colony as any, mockBuildings([]) as any, 1);
 
-        const bondEvent = events.find((e) => e.type === "HOUSEMATE_BOND_FORMED");
+        const bondEvent = events.find((e) => e.type === "NEIGHBOR_BOND_FORMED");
         expect(bondEvent).toBeUndefined();
         expect(workforce.getCoworkerRelationship("c1", "c2")).toBeUndefined();
       });
 
-      it("should not create relationship for colonists without housing", () => {
+      it("should not create relationship for colonists without a district", () => {
         const colonists = [
           createColonist({ id: "c1", role: ColonistRole.ENGINEERING }),
           createColonist({ id: "c2", role: ColonistRole.RESEARCH }),
@@ -939,14 +939,14 @@ describe("WorkforceManager", () => {
         const colony = mockColony(colonists);
         const events = workforce.tick(colony as any, mockBuildings([]) as any, 1);
 
-        const bondEvent = events.find((e) => e.type === "HOUSEMATE_BOND_FORMED");
+        const bondEvent = events.find((e) => e.type === "NEIGHBOR_BOND_FORMED");
         expect(bondEvent).toBeUndefined();
       });
 
-      it("should strengthen relationship over time at housemate rate", () => {
+      it("should strengthen relationship over time at neighborhood rate", () => {
         const colonists = [
-          createColonist({ id: "c1", role: ColonistRole.ENGINEERING, housingId: "hab1" }),
-          createColonist({ id: "c2", role: ColonistRole.RESEARCH, housingId: "hab1" }),
+          createColonist({ id: "c1", role: ColonistRole.ENGINEERING, districtId: "dist1" }),
+          createColonist({ id: "c2", role: ColonistRole.RESEARCH, districtId: "dist1" }),
         ];
 
         const colony = mockColony(colonists);
@@ -959,24 +959,24 @@ describe("WorkforceManager", () => {
         const relationship = workforce.getCoworkerRelationship("c1", "c2");
         // After tick 1: relationship formed at 0.15
         // Ticks 2-3: relationship decays when not working together, but housemate bonding adds back
-        // Net effect per tick: -COWORKER_RELATIONSHIP_DECAY + HOUSEMATE_BONDING_RATE
+        // Net effect per tick: -COWORKER_RELATIONSHIP_DECAY + NEIGHBORHOOD_BONDING_RATE
         const expectedStrength =
-          INITIAL_HOUSEMATE_RELATIONSHIP +
-          2 * (HOUSEMATE_BONDING_RATE - COWORKER_RELATIONSHIP_DECAY);
+          INITIAL_NEIGHBORHOOD_RELATIONSHIP +
+          2 * (NEIGHBORHOOD_BONDING_RATE - COWORKER_RELATIONSHIP_DECAY);
         expect(relationship?.strength).toBeCloseTo(expectedStrength, 6);
       });
 
-      it("should bond all housemates in shared housing", () => {
+      it("should bond all neighbors in shared district", () => {
         const colonists = [
-          createColonist({ id: "c1", role: ColonistRole.ENGINEERING, housingId: "hab1" }),
-          createColonist({ id: "c2", role: ColonistRole.RESEARCH, housingId: "hab1" }),
-          createColonist({ id: "c3", role: ColonistRole.FARMING, housingId: "hab1" }),
+          createColonist({ id: "c1", role: ColonistRole.ENGINEERING, districtId: "dist1" }),
+          createColonist({ id: "c2", role: ColonistRole.RESEARCH, districtId: "dist1" }),
+          createColonist({ id: "c3", role: ColonistRole.FARMING, districtId: "dist1" }),
         ];
 
         const colony = mockColony(colonists);
         const events = workforce.tick(colony as any, mockBuildings([]) as any, 1);
 
-        const bondEvents = events.filter((e) => e.type === "HOUSEMATE_BOND_FORMED");
+        const bondEvents = events.filter((e) => e.type === "NEIGHBOR_BOND_FORMED");
         expect(bondEvents.length).toBe(3); // c1-c2, c1-c3, c2-c3
 
         expect(workforce.getCoworkerRelationship("c1", "c2")).toBeDefined();
@@ -984,17 +984,17 @@ describe("WorkforceManager", () => {
         expect(workforce.getCoworkerRelationship("c2", "c3")).toBeDefined();
       });
 
-      it("housemate bonding rate should be higher than coworker rate", () => {
-        expect(HOUSEMATE_BONDING_RATE).toBeGreaterThan(COWORKER_BONDING_RATE);
-        expect(INITIAL_HOUSEMATE_RELATIONSHIP).toBeGreaterThan(INITIAL_COWORKER_RELATIONSHIP);
+      it("neighborhood bonding rate should be lower than coworker rate", () => {
+        expect(NEIGHBORHOOD_BONDING_RATE).toBeLessThan(COWORKER_BONDING_RATE);
+        expect(INITIAL_NEIGHBORHOOD_RELATIONSHIP).toBeLessThan(INITIAL_COWORKER_RELATIONSHIP);
       });
     });
 
-    describe("combined coworker and housemate bonding", () => {
-      it("should accumulate both bonuses when colonists are coworkers and housemates", () => {
+    describe("combined coworker and neighborhood bonding", () => {
+      it("should accumulate both bonuses when colonists are coworkers and neighbors", () => {
         const colonists = [
-          createColonist({ id: "c1", role: ColonistRole.ENGINEERING, housingId: "hab1" }),
-          createColonist({ id: "c2", role: ColonistRole.ENGINEERING, housingId: "hab1" }),
+          createColonist({ id: "c1", role: ColonistRole.ENGINEERING, districtId: "dist1" }),
+          createColonist({ id: "c2", role: ColonistRole.ENGINEERING, districtId: "dist1" }),
         ];
         const buildings = mockBuildings([
           { id: "b1", status: "active", assignedWorkers: ["c1", "c2"] },
@@ -1010,13 +1010,15 @@ describe("WorkforceManager", () => {
         const relationship = workforce.getCoworkerRelationship("c1", "c2");
         expect(relationship).toBeDefined();
         // Initial coworker + housemate bonding in first tick
-        expect(relationship?.strength).toBe(INITIAL_COWORKER_RELATIONSHIP + HOUSEMATE_BONDING_RATE);
+        expect(relationship?.strength).toBe(
+          INITIAL_COWORKER_RELATIONSHIP + NEIGHBORHOOD_BONDING_RATE,
+        );
       });
 
       it("should continue to accumulate both bonuses over time", () => {
         const colonists = [
-          createColonist({ id: "c1", role: ColonistRole.ENGINEERING, housingId: "hab1" }),
-          createColonist({ id: "c2", role: ColonistRole.ENGINEERING, housingId: "hab1" }),
+          createColonist({ id: "c1", role: ColonistRole.ENGINEERING, districtId: "dist1" }),
+          createColonist({ id: "c2", role: ColonistRole.ENGINEERING, districtId: "dist1" }),
         ];
         const buildings = mockBuildings([
           { id: "b1", status: "active", assignedWorkers: ["c1", "c2"] },
@@ -1029,13 +1031,13 @@ describe("WorkforceManager", () => {
 
         const relationship = workforce.getCoworkerRelationship("c1", "c2");
         // After two ticks:
-        // Tick 1: INITIAL_COWORKER + HOUSEMATE_BONDING_RATE
-        // Tick 2: +COWORKER_BONDING_RATE + HOUSEMATE_BONDING_RATE
+        // Tick 1: INITIAL_COWORKER + NEIGHBORHOOD_BONDING_RATE
+        // Tick 2: +COWORKER_BONDING_RATE + NEIGHBORHOOD_BONDING_RATE
         const expected =
           INITIAL_COWORKER_RELATIONSHIP +
-          HOUSEMATE_BONDING_RATE +
+          NEIGHBORHOOD_BONDING_RATE +
           COWORKER_BONDING_RATE +
-          HOUSEMATE_BONDING_RATE;
+          NEIGHBORHOOD_BONDING_RATE;
         expect(relationship?.strength).toBeCloseTo(expected, 6);
       });
     });

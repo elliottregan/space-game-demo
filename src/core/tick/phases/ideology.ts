@@ -171,7 +171,7 @@ export const processProjectVotes = definePhase({
   id: "ideology:processProjectVotes",
   name: "Process Project Votes",
   reads: ["ideology", "colony", "workforce", "currentSol", "victory", "scheduler"],
-  writes: ["ideology", "victory", "resources", "scheduler"],
+  writes: ["ideology", "victory", "scheduler"],
   execute(ctx) {
     const events: GameEvent[] = [];
 

@@ -197,7 +197,7 @@ describe("BuildingsFacade", () => {
     });
 
     it("canRepurpose returns false when not found", () => {
-      const result = api.buildings.canRepurpose("nonexistent_building", BuildingId.HABITAT);
+      const result = api.buildings.canRepurpose("nonexistent_building", BuildingId.BASIC_FARM);
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain("not found");
     });
@@ -478,7 +478,7 @@ describe("BuildingsFacade", () => {
         api.buildings.build(BuildingId.SOLAR_PANEL);
       }
 
-      const result = api.buildings.canBuild(BuildingId.HABITAT);
+      const result = api.buildings.canBuild(BuildingId.BASIC_FARM);
       expect(result.allowed).toBe(false);
     });
   });

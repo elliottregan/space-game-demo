@@ -52,7 +52,7 @@ describe("VictoryManager", () => {
     });
 
     test("should not trigger victory for normal buildings", () => {
-      const event = manager.checkBuildingVictory(BuildingId.HABITAT);
+      const event = manager.checkBuildingVictory(BuildingId.BASIC_FARM);
 
       expect(event).toBeNull();
       expect(manager.getState().status).toBe("playing");

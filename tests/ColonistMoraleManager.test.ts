@@ -26,7 +26,7 @@ describe("ColonistMoraleManager", () => {
     it("returns high morale when all needs satisfied", () => {
       const colonists = colonyManager.getColonists();
       const colonist = colonists[0]!;
-      colonist.housingId = "habitat_1"; // Housed
+      colonist.districtId = "district_1"; // Housed
 
       // Create social connections
       const others = colonists.slice(1);
@@ -58,7 +58,7 @@ describe("ColonistMoraleManager", () => {
       });
 
       const colonist = colonyManager.getColonists()[0]!;
-      colonist.housingId = "habitat_1";
+      colonist.districtId = "district_1";
 
       // Test after grace period (100 sols)
       const baseMorale = moraleManager.calculateBaseMorale(
@@ -74,7 +74,7 @@ describe("ColonistMoraleManager", () => {
 
     it("returns high morale when stockpiles adequate despite negative net flow", () => {
       const colonist = colonyManager.getColonists()[0]!;
-      colonist.housingId = "habitat_1";
+      colonist.districtId = "district_1";
 
       // High consumption (negative net flow) but good stockpiles
       resourceManager.addConsumption({ food: 200, water: 200 });
@@ -101,7 +101,7 @@ describe("ColonistMoraleManager", () => {
       });
 
       const colonist = colonyManager.getColonists()[0]!;
-      colonist.housingId = "habitat_1";
+      colonist.districtId = "district_1";
 
       // Test during grace period (first 100 sols)
       const baseMorale = moraleManager.calculateBaseMorale(
@@ -120,8 +120,8 @@ describe("ColonistMoraleManager", () => {
       const colonists = colonyManager.getColonists();
       const housed = colonists[0]!;
       const unhoused = colonists[1]!;
-      housed.housingId = "habitat_1";
-      // unhoused has no housingId
+      housed.districtId = "district_1";
+      // unhoused has no districtId
 
       resourceManager.addProduction({ food: 10, water: 10 });
 
@@ -148,8 +148,8 @@ describe("ColonistMoraleManager", () => {
       const connected = colonists[0]!;
       const isolated = colonists[1]!;
 
-      connected.housingId = "h1";
-      isolated.housingId = "h2";
+      connected.districtId = "d1";
+      isolated.districtId = "d2";
 
       // Give connected colonist 2 friends (above isolation threshold of 1)
       relationshipManager.createRelationship(connected.id, colonists[2]!.id, 0, {
@@ -179,7 +179,7 @@ describe("ColonistMoraleManager", () => {
 
     it("penalizes low air quality (after grace period)", () => {
       const colonist = colonyManager.getColonists()[0]!;
-      colonist.housingId = "habitat_1";
+      colonist.districtId = "district_1";
 
       const highAirMorale = moraleManager.calculateBaseMorale(
         colonist,
@@ -204,7 +204,7 @@ describe("ColonistMoraleManager", () => {
 
     it("uses air quality directly as satisfaction (0-1 scale)", () => {
       const colonist = colonyManager.getColonists()[0]!;
-      colonist.housingId = "habitat_1";
+      colonist.districtId = "district_1";
 
       // With zero air quality, physiological need should be significantly reduced
       const zeroAirMorale = moraleManager.calculateBaseMorale(
@@ -234,7 +234,7 @@ describe("ColonistMoraleManager", () => {
   describe("propagateMorale", () => {
     it("isolated colonist morale converges to base morale", () => {
       const colonist = colonyManager.getColonists()[0]!;
-      colonist.housingId = "h1";
+      colonist.districtId = "d1";
       resourceManager.addProduction({ food: 10, water: 10 });
 
       // Set initial morale different from base
@@ -269,8 +269,8 @@ describe("ColonistMoraleManager", () => {
       const neighbor = colonists[1]!;
 
       // House everyone
-      hub.housingId = "h1";
-      neighbor.housingId = "h2";
+      hub.districtId = "d1";
+      neighbor.districtId = "d2";
       resourceManager.addProduction({ food: 10, water: 10 });
 
       // Create star topology (hub connected to all)
@@ -304,8 +304,8 @@ describe("ColonistMoraleManager", () => {
       const hub = colonists[0]!;
       const neighbor = colonists[1]!;
 
-      hub.housingId = "h1";
-      neighbor.housingId = "h2";
+      hub.districtId = "d1";
+      neighbor.districtId = "d2";
       resourceManager.addProduction({ food: 10, water: 10 });
 
       // Create connections

@@ -179,19 +179,12 @@ describe("Building Recycling", () => {
     tech.completeResearch(TechnologyId.HABITAT_FABRICATION);
     tech.completeResearch(TechnologyId.ROBOTICS);
 
-    // Build habitat first for life support capacity (factory has lifeSupportLoad: 1)
-    manager.startBuilding(BuildingId.HABITAT, resources, tech);
     const building = manager.startBuilding(BuildingId.AUTOMATED_FACTORY, resources, tech);
 
     // Complete construction (30 sols for factory)
     for (let i = 0; i < 35; i++) {
       manager.tick(resources);
     }
-
-    // Verify life support capacity exceeds load to avoid efficiency penalty
-    expect(manager.getTotalLifeSupportCapacity()).toBeGreaterThan(
-      manager.getTotalLifeSupportLoad(),
-    );
 
     // Automated Factory produces 12 materials
     const prodBefore = resources.getProduction();
@@ -341,7 +334,7 @@ describe("Building Repurposing", () => {
     }
 
     // Solar panel has no repurposeTargets
-    const canRepurpose = manager.canRepurpose(building!.id, BuildingId.HABITAT, resources, tech);
+    const canRepurpose = manager.canRepurpose(building!.id, BuildingId.BASIC_FARM, resources, tech);
     expect(canRepurpose).toBe(false);
   });
 

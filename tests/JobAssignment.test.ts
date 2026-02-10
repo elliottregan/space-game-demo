@@ -327,7 +327,10 @@ describe("Job Assignment", () => {
 
   describe("labor pool bonus", () => {
     it("unassigned colonists boost construction speed", () => {
-      // Count unassigned colonists
+      // Trigger tick to auto-assign workers and compute labor pool bonus
+      gameState.tick();
+
+      // Count unassigned colonists after tick (auto-assignment may have filled slots)
       const colonists = gameState.colony.getColonists();
       const assignedIds = new Set<string>();
       for (const building of gameState.buildings.getBuildings()) {
@@ -340,11 +343,7 @@ describe("Job Assignment", () => {
       // Expected bonus: 2% per unassigned, capped at 20%
       const expectedBonus = Math.min(unassignedCount * 0.02, 0.2);
 
-      // The GameState should apply this bonus
-      gameState.tick(); // Trigger recalculation
-
-      // Check that construction speed bonus is set
-      // We'll verify by checking the building manager's bonus
+      // Verify the bonus reflects the post-tick unassigned count
       expect(gameState.getConstructionSpeedBonus()).toBeCloseTo(expectedBonus, 2);
     });
   });
