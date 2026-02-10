@@ -294,7 +294,7 @@ export class GameAPI {
    */
   get districts(): DistrictFacade {
     if (!this._districts) {
-      this._districts = new DistrictFacade(this.gameState);
+      this._districts = new DistrictFacade(this.gameState, this.executeCommand);
     }
     return this._districts;
   }

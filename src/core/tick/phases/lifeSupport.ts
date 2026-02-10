@@ -13,12 +13,13 @@ import type { TickContext } from "../TickContext";
 export const calculateLifeSupport = definePhase({
   id: "lifeSupport:calculate",
   name: "Calculate Life Support",
-  reads: ["buildings", "colony"],
+  reads: ["buildings", "colony", "districts"],
   writes: ["derived.lifeSupportQuality", "derived.lifeSupportEffects", "buildings", "lifeSupport"],
   execute(ctx: TickContext): GameEvent[] {
     const events: GameEvent[] = [];
     const population = ctx.colony.getPopulation();
-    const totalCapacity = ctx.buildings.getTotalLifeSupportCapacity();
+    const totalCapacity =
+      ctx.buildings.getTotalLifeSupportCapacity() + ctx.districts.getTotalCapacity();
     const industrialLoad = ctx.buildings.getTotalLifeSupportLoad();
     const resourceFactor = 1;
     const quality = ctx.lifeSupport.calculate(

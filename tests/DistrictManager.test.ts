@@ -40,6 +40,16 @@ describe("DistrictManager", () => {
     test("getDistrict returns undefined for unknown ID", () => {
       expect(dm.getDistrict("nonexistent")).toBeUndefined();
     });
+
+    test("getTotalCapacity sums all district capacities", () => {
+      dm.foundDistrict("A", 0); // capacity 20
+      dm.foundDistrict("B", 5); // capacity 20
+      expect(dm.getTotalCapacity()).toBe(40);
+    });
+
+    test("getTotalCapacity returns 0 with no districts", () => {
+      expect(dm.getTotalCapacity()).toBe(0);
+    });
   });
 
   describe("building assignment", () => {

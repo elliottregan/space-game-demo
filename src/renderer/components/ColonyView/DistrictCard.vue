@@ -2,237 +2,172 @@
 import { computed, ref } from "vue";
 import { DISTRICT_BUILDING_SLOTS } from "../../../core/balance/DistrictBalance";
 import type { Building, BuildingDefinition } from "../../../facade";
-import { clearHighlights, highlightResources } from "../../directives/ResourceHighlight";
-import { gameService } from "../../services/GameService";
-import { GCard, GCardGrid } from "../../ui";
-import { calculateHighlightInfo } from "../../utils/formatters";
-import BuildingCard from "../BuildingPanel/BuildingCard.vue";
+import { computed } from "vue";
+import { DISTRICT_GROWTH_TRIGGER } from "../../../core/balance/DistrictBalance";
+import { GProgress } from "../../ui";
 
 const props = defineProps<{
   district: {
     id: string;
     name: string;
+    foundedAt: number;
+    population: number;
+    capacity: number;
     buildingCount: number;
     buildingIds: string[];
+    growthCap: number | null;
   };
+  currentSol: number;
   buildings: Building[];
   buildingDefinitions: BuildingDefinition[];
 }>();
 
-const state = gameService.getState();
-const api = gameService.api;
+const occupancyPercent = computed(() =>
+  props.district.capacity > 0 ? (props.district.population / props.district.capacity) * 100 : 0,
+);
 
-const showBuildPanel = ref(false);
+const progressVariant = computed(() => {
+  if (occupancyPercent.value >= 100) return "negative";
+  if (occupancyPercent.value >= DISTRICT_GROWTH_TRIGGER * 100) return "warning";
+  return "positive";
+});
 
-const districtBuildings = computed(() => {
+// oxlint-disable-next-line no-unused-vars
+const growthStatus = computed(() => {
+  const occupancy =
+    props.district.capacity > 0 ? props.district.population / props.district.capacity : 0;
+  if (occupancy >= 1) return { label: "At Capacity", variant: "danger" };
+  if (props.district.growthCap !== null && props.district.capacity >= props.district.growthCap)
+    return { label: "Capped", variant: "muted" };
+  if (occupancy >= DISTRICT_GROWTH_TRIGGER) return { label: "Growing", variant: "positive" };
+  return { label: "Stable", variant: "muted" };
+});
+
+// oxlint-disable-next-line no-unused-vars
+const buildingNames = computed(() => {
   const idSet = new Set(props.district.buildingIds);
-  return props.buildings.filter((b) => idSet.has(b.id));
-});
-
-// oxlint-disable-next-line no-unused-vars
-const slots = computed(() => {
-  const result: Array<{ occupied: true; name: string; buildingId: string } | { occupied: false }> =
-    [];
-
-  for (const b of districtBuildings.value) {
+  const matched = props.buildings.filter((b) => idSet.has(b.id));
+  return matched.map((b) => {
     const def = props.buildingDefinitions.find((d) => d.id === b.definitionId);
-    result.push({ occupied: true, name: def?.name ?? b.definitionId, buildingId: b.id });
-  }
-
-  while (result.length < DISTRICT_BUILDING_SLOTS) {
-    result.push({ occupied: false });
-  }
-
-  return result;
+    return def?.name ?? b.definitionId;
+  });
 });
-
-// oxlint-disable-next-line no-unused-vars
-const slotsFull = computed(() => districtBuildings.value.length >= DISTRICT_BUILDING_SLOTS);
-
-// oxlint-disable-next-line no-unused-vars
-const filteredDefinitions = computed(() => {
-  return state.buildingDefinitions.filter(() => true);
-});
-
-// oxlint-disable-next-line no-unused-vars
-function canBuild(defId: string): boolean {
-  return api.buildings.canBuild(defId).allowed;
-}
-
-// oxlint-disable-next-line no-unused-vars
-function getBuildReason(defId: string): string | undefined {
-  const check = api.buildings.canBuild(defId);
-  return check.allowed ? undefined : check.reason;
-}
-
-// oxlint-disable-next-line no-unused-vars
-function build(defId: string): void {
-  const result = api.buildings.build(defId);
-  if (!result.success) {
-    console.warn(`Build failed: ${result.error.type}`, result.error);
-    return;
-  }
-  if (districtBuildings.value.length + 1 >= DISTRICT_BUILDING_SLOTS) {
-    showBuildPanel.value = false;
-  }
-}
-
-// oxlint-disable-next-line no-unused-vars
-function getBuildingCount(defId: string): number {
-  return (
-    state.buildings.filter((b) => b.definitionId === defId).length +
-    state.pendingBuildings.filter((b) => b.definitionId === defId).length
-  );
-}
-
-// oxlint-disable-next-line no-unused-vars
-function getPendingCount(defId: string): number {
-  return state.pendingBuildings.filter((b) => b.definitionId === defId).length;
-}
-
-// oxlint-disable-next-line no-unused-vars
-function isLocked(def: BuildingDefinition): boolean {
-  if (!def.requiredTech) return false;
-  return !api.technology.isResearched(def.requiredTech);
-}
-
-// oxlint-disable-next-line no-unused-vars
-function getRequiredTechName(def: BuildingDefinition): string {
-  if (!def.requiredTech) return "";
-  const tech = api.technology.getById(def.requiredTech);
-  return tech?.name || def.requiredTech;
-}
-
-// oxlint-disable-next-line no-unused-vars
-function onHover(def: BuildingDefinition): void {
-  const currentResources = api.resources.snapshot().current as Record<string, number>;
-  const info = calculateHighlightInfo(def.cost, currentResources);
-  highlightResources(info.requiredResources, info.insufficientResources, info.deltas);
-}
-
-// oxlint-disable-next-line no-unused-vars
-function onLeave(): void {
-  clearHighlights();
-}
-
-// oxlint-disable-next-line no-unused-vars
-function toggleBuildPanel(): void {
-  showBuildPanel.value = !showBuildPanel.value;
-}
 </script>
 
 <template>
-  <GCard>
-    <div class="district-card">
-      <div class="district-header">
-        <strong>{{ district.name }}</strong>
-        <span class="slot-count">
-          {{ district.buildingIds.length }}/{{ DISTRICT_BUILDING_SLOTS }}
-        </span>
-      </div>
-
-      <div class="building-slots">
-        <div
-          v-for="(slot, i) in slots"
-          :key="i"
-          class="slot"
-          :class="{
-            'slot--occupied': slot.occupied,
-            'slot--empty': !slot.occupied,
-          }"
-          @click="!slot.occupied && toggleBuildPanel()"
-        >
-          <template v-if="slot.occupied">
-            {{ slot.name }}
-          </template>
-          <template v-else> + </template>
-        </div>
-      </div>
-
-      <div v-if="showBuildPanel && !slotsFull" class="build-panel">
-        <GCardGrid>
-          <BuildingCard
-            v-for="def in filteredDefinitions"
-            :key="def.id"
-            :definition="def"
-            :count="getBuildingCount(def.id)"
-            :pending-count="getPendingCount(def.id)"
-            :locked="isLocked(def)"
-            :can-build="canBuild(def.id)"
-            :build-reason="getBuildReason(def.id)"
-            :required-tech-name="getRequiredTechName(def)"
-            @build="build(def.id)"
-            @hover="onHover(def)"
-            @leave="onLeave"
-          />
-        </GCardGrid>
-      </div>
+  <div class="district-card">
+    <div class="district-header">
+      <span class="district-name">{{ district.name }}</span>
+      <span class="district-status" :class="`status--${growthStatus.variant}`">
+        {{ growthStatus.label }}
+      </span>
     </div>
-  </GCard>
+
+    <div class="district-pop">
+      <span class="pop-label">Population</span>
+      <span class="pop-count">{{ district.population }}/{{ district.capacity }}</span>
+    </div>
+    <GProgress
+      :percent="occupancyPercent"
+      :variant="progressVariant"
+      show-label
+      :label="`${Math.round(occupancyPercent)}%`"
+    />
+
+    <div class="district-buildings">
+      <ul v-if="buildingNames.length > 0" class="building-list">
+        <li v-for="(name, i) in buildingNames" :key="i">{{ name }}</li>
+      </ul>
+      <span v-else class="no-buildings">No buildings</span>
+    </div>
+
+    <div class="district-meta">
+      <span>Founded: Sol {{ district.foundedAt }}</span>
+    </div>
+  </div>
 </template>
 
 <style scoped>
 .district-card {
+  padding: var(--g-space-md);
+  background: var(--g-color-bg-surface);
+  border: 1px solid var(--g-color-border);
   display: flex;
   flex-direction: column;
-  gap: var(--g-space-xs);
+  gap: var(--g-space-sm);
 }
 
 .district-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: var(--color-info);
 }
 
-.slot-count {
-  font-family: var(--g-font-mono, monospace);
-  font-size: 0.8em;
-  color: var(--color-muted);
-}
-
-.building-slots {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.slot {
-  width: 80px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75em;
-  border-radius: 3px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.slot--occupied {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: var(--g-color-text, #ccc);
-  padding: 0 4px;
-}
-
-.slot--empty {
-  border: 1px dashed rgba(255, 255, 255, 0.2);
-  color: var(--color-muted);
-  cursor: pointer;
-  font-size: 1em;
+.district-name {
+  font-family: var(--g-font-mono);
   font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.slot--empty:hover {
-  border-color: var(--color-info);
-  color: var(--color-info);
-  background: rgba(255, 255, 255, 0.03);
+.district-status {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border: 1px solid var(--g-color-border);
 }
 
-.build-panel {
-  padding-top: var(--g-space-sm);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+.status--positive {
+  color: var(--g-color-positive);
+  border-color: var(--g-color-positive);
+}
+
+.status--danger {
+  color: var(--g-color-danger);
+  border-color: var(--g-color-danger);
+}
+
+.status--muted {
+  color: var(--g-color-text-muted);
+}
+
+.district-pop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--g-font-size-sm);
+  color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pop-count {
+  font-family: var(--g-font-mono);
+}
+
+.district-buildings {
+  font-size: var(--g-font-size-sm);
+}
+
+.building-list {
+  margin: 0;
+  padding-left: 1.2em;
+  line-height: 1.4;
+  color: var(--g-color-text-muted);
+}
+
+.no-buildings {
+  color: var(--g-color-text-muted);
+  font-style: italic;
+}
+
+.district-meta {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
 }
 </style>

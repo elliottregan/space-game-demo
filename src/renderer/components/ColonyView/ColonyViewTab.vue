@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { BuildingPurpose } from "../../../core/models/Building";
 import { gameService } from "../../services/GameService";
 import { GPanel } from "../../ui";
 import { ColonistDetailPanel, ColonistGraph } from "../ColonistGraph";
 import { RecreationPanel } from "../RecreationPanel";
-import BuildableList from "./BuildableList.vue";
 import BuildingSection from "./BuildingSection.vue";
 import ColonyStatsBar from "./ColonyStatsBar.vue";
-import HousingSection from "./HousingSection.vue";
+import DistrictSection from "./DistrictSection.vue";
 
 const state = gameService.getState();
 
@@ -16,29 +14,12 @@ const activeBuildings = computed(() =>
   state.buildings.filter((b) => b.status === "active" || b.status === "pending"),
 );
 
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-const buildingsByCategory = computed(() => {
-  const categories: Record<string, typeof state.buildings> = {
-    housing: [],
-    recreation: [],
-    research: [],
-  };
-
-  for (const building of activeBuildings.value) {
-    const def = state.buildingDefinitions.find((d) => d.id === building.definitionId);
-    if (!def) continue;
-
-    if (def.capacity) {
-      categories.housing.push(building);
-    } else if (def.moraleBoost) {
-      categories.recreation.push(building);
-    } else if (def.workerRole === "research") {
-      categories.research.push(building);
-    }
-    // Production and infrastructure buildings are now managed in Operations page
-  }
-
-  return categories;
+// oxlint-disable-next-line no-unused-vars
+const researchBuildings = computed(() => {
+  return activeBuildings.value.filter((b) => {
+    const def = state.buildingDefinitions.find((d) => d.id === b.definitionId);
+    return def?.workerRole === "research";
+  });
 });
 
 // Colonist relationship graph state
@@ -124,24 +105,14 @@ const buildingsForGraph = computed(() =>
       </div>
     </GPanel>
 
-    <GPanel title="Build Housing" accent="amber">
-      <BuildableList :purpose="BuildingPurpose.Residential" />
-    </GPanel>
-
-    <HousingSection
-      :buildings="buildingsByCategory.housing"
-      :housing-assignments="state.housingAssignments"
-      :building-definitions="state.buildingDefinitions"
-      :skill-definitions="state.skillDefinitions"
-      :unhoused="state.unhoused"
-    />
+    <DistrictSection />
 
     <RecreationPanel />
 
     <BuildingSection
-      v-if="buildingsByCategory.research.length > 0"
+      v-if="researchBuildings.length > 0"
       title="Research"
-      :buildings="buildingsByCategory.research"
+      :buildings="researchBuildings"
       :building-definitions="state.buildingDefinitions"
       :colonists="state.colonists"
       :skill-definitions="state.skillDefinitions"

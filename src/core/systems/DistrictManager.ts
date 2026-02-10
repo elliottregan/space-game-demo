@@ -116,6 +116,14 @@ export class DistrictManager {
     return this.districtColonists.get(districtId) ?? [];
   }
 
+  getTotalCapacity(): number {
+    let total = 0;
+    for (const district of this.districts.values()) {
+      total += district.capacity;
+    }
+    return total;
+  }
+
   processGrowth(currentSol: number): number {
     let totalMaterialsCost = 0;
     for (const [districtId, district] of this.districts) {

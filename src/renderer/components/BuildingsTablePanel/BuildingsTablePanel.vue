@@ -78,7 +78,7 @@ const buildingData = computed(() => {
 });
 
 function getOccupancy(buildingId: string): number {
-  const colonists = state.colonists.filter((c) => c.housingId === buildingId);
+  const colonists = state.colonists.filter((c) => c.districtId === buildingId);
   return colonists.length;
 }
 

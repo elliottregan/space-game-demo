@@ -93,6 +93,7 @@ interface GameUIState {
   districts: Array<{
     id: string;
     name: string;
+    foundedAt: number;
     population: number;
     capacity: number;
     buildingCount: number;
@@ -363,6 +364,7 @@ class GameService {
     this.state.districts = districtData.districts.map((d) => ({
       id: d.id,
       name: d.name,
+      foundedAt: d.foundedAt,
       population: d.population,
       capacity: d.capacity,
       buildingCount: d.buildingCount,

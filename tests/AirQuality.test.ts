@@ -167,6 +167,16 @@ describe("GameState life support integration", () => {
     const restored = GameState.fromJSON(json);
     expect(restored.lifeSupport.getQuality()).toBe(gameState.lifeSupport.getQuality());
   });
+
+  it("should use district capacity as life support capacity", () => {
+    const gameState = new GameState();
+    // GameState starts with a Landing Site district (capacity 20)
+    // After a tick, life support should use district capacity
+    gameState.tick();
+    const quality = gameState.lifeSupport.getQuality();
+    // With district capacity of 20 and small initial population, quality should be healthy
+    expect(quality).toBeGreaterThan(0.5);
+  });
 });
 
 describe("Building efficiency with life support", () => {

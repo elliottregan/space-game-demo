@@ -16,7 +16,9 @@ export class LifeSupportFacade implements Queryable<LifeSupportSnapshot> {
    * Get complete life support state snapshot.
    */
   snapshot(): LifeSupportSnapshot {
-    const totalCapacity = this.gameState.buildings.getTotalLifeSupportCapacity();
+    const totalCapacity =
+      this.gameState.buildings.getTotalLifeSupportCapacity() +
+      this.gameState.districts.getTotalCapacity();
     const totalLoad = this.gameState.buildings.getTotalLifeSupportLoad();
     const population = this.gameState.colony.getPopulation();
     const quality = this.gameState.lifeSupport.getQuality();
