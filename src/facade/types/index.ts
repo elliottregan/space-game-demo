@@ -5,8 +5,8 @@ import { BuildingId } from "./buildings";
 
 // Life support types
 export type { LifeSupportSnapshot } from "./lifeSupport";
-// Power grid types
-export type { PowerGridSnapshot } from "./powerGrid";
+// District types
+export type { DistrictSnapshot } from "../domains/DistrictFacade";
 export type {
   Building,
   BuildingDefinition,
@@ -90,7 +90,6 @@ export type {
 export type { Technology, TechnologySnapshot, TechResearch, UnlockId } from "./technology";
 // Technology types
 export { SpecialUnlockId, TechnologyId } from "./technology";
-// Grid types
 // Grant types
 export type {
   ActiveGrantSnapshot,
@@ -98,8 +97,3 @@ export type {
   GrantSourceSnapshot,
   GrantsSnapshot,
 } from "./grants";
-// District types
-export type { DistrictEntry, DistrictSnapshot } from "./district";
-export type { GridPosition } from "../../core/models/Grid";
-export type { DepositInfo, GridSnapshot, PlacementHints, PowerSourceInfo } from "./grid";
-export { DepositType } from "../../core/models/Grid";

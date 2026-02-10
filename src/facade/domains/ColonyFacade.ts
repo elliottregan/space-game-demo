@@ -367,21 +367,21 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
   }
 
   /**
-   * Auto-assign all unhoused colonists to available housing.
+   * Auto-assign all unhoused colonists to available districts.
    */
   optimizeHousing(): Result<{ assignmentsChanged: number }> {
     return this.executeCommand(() => {
       const unhousedBefore = this.gameState.colony.getUnhousedColonists().length;
-      this.gameState.colony.assignHousing(this.gameState.buildings);
+      this.gameState.colony.assignToDistrict(this.gameState.districts);
       const unhousedAfter = this.gameState.colony.getUnhousedColonists().length;
       return ok({ assignmentsChanged: unhousedBefore - unhousedAfter });
     });
   }
 
   /**
-   * Assign a colonist to housing in a building.
+   * Assign a colonist to a district.
    */
-  assignToHousing(colonistId: string, buildingId: string): Result<void> {
+  assignToHousing(colonistId: string, districtId: string): Result<void> {
     return this.executeCommand(() => {
       const colonist = this.gameState.colony.getColonist(colonistId);
       if (!colonist) {
@@ -392,10 +392,10 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
         });
       }
 
-      const success = this.gameState.colony.assignColonistToHousing(
+      const success = this.gameState.colony.assignColonistToDistrict(
         colonistId,
-        buildingId,
-        this.gameState.buildings,
+        districtId,
+        this.gameState.districts,
       );
 
       if (!success) {
@@ -403,7 +403,7 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
           type: "INVALID_STATE",
           current: "cannot assign",
           expected: "assignable",
-          reason: "Building full, not a housing building, or not active",
+          reason: "District full or colonist not found",
         });
       }
 
@@ -412,7 +412,7 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
   }
 
   /**
-   * Unassign a colonist from their current housing.
+   * Unassign a colonist from their current district.
    */
   unassignFromHousing(colonistId: string): Result<void> {
     return this.executeCommand(() => {
@@ -425,12 +425,12 @@ export class ColonyFacade implements Queryable<ColonySnapshot>, EntityLookup<Col
         });
       }
 
-      if (!colonist.housingId) {
+      if (!colonist.districtId) {
         return err({
           type: "INVALID_STATE",
           current: "not housed",
           expected: "housed",
-          reason: "Colonist is not assigned to any housing",
+          reason: "Colonist is not assigned to any district",
         });
       }
 

@@ -1,29 +1,54 @@
-import type { GameState } from "../../core/GameState";
-import type { DistrictSnapshot } from "../types/district";
+// src/facade/domains/DistrictFacade.ts
+// District queries facade
 
-/**
- * Provides district snapshot data for the UI.
- * Currently synthesizes a single "Colony" district containing all active buildings,
- * since the core DistrictManager hasn't been implemented yet.
- */
+import type { GameState } from "../../core/GameState";
+import { PowerStatus } from "../../core/models/District";
+
+export interface DistrictSnapshot {
+  districts: Array<{
+    id: string;
+    name: string;
+    foundedAt: number;
+    capacity: number;
+    population: number;
+    growthCap: number | null;
+    buildingCount: number;
+    buildingIds: string[];
+  }>;
+  power: {
+    production: number;
+    consumption: number;
+    balance: number;
+    status: PowerStatus;
+  };
+}
+
 export class DistrictFacade {
   constructor(private gameState: GameState) {}
 
   snapshot(): DistrictSnapshot {
-    const buildings = this.gameState.buildings.getBuildings();
-    const activeIds = buildings
-      .filter((b) => b.status === "active" || b.status === "pending")
-      .map((b) => b.id);
-
+    const dm = this.gameState.districts;
     return {
-      districts: [
-        {
-          id: "colony",
-          name: "Colony",
-          buildingCount: activeIds.length,
-          buildingIds: activeIds,
-        },
-      ],
+      districts: dm.getDistricts().map((d) => ({
+        id: d.id,
+        name: d.name,
+        foundedAt: d.foundedAt,
+        capacity: d.capacity,
+        population: dm.getDistrictPopulation(d.id),
+        growthCap: d.growthCap,
+        buildingCount: d.buildingIds.length,
+        buildingIds: [...d.buildingIds],
+      })),
+      power: {
+        production: dm.getTotalPowerProduction(),
+        consumption: dm.getTotalPowerConsumption(),
+        balance: dm.getPowerBalance(),
+        status: dm.getPowerStatus(),
+      },
     };
+  }
+
+  getDistrictColonists(districtId: string): string[] {
+    return this.gameState.districts.getDistrictColonistIds(districtId);
   }
 }

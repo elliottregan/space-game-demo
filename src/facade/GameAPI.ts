@@ -11,11 +11,9 @@ import {
   EventsFacade,
   GameFlowFacade,
   GrantsFacade,
-  GridFacade,
   IdeologyFacade,
   OperationsFacade,
   PoliticsFacade,
-  PowerGridFacade,
   ResourcesFacade,
   TechnologyFacade,
 } from "./domains";
@@ -61,11 +59,9 @@ export class GameAPI {
   private _events: EventsFacade | null = null;
   private _game: GameFlowFacade | null = null;
   private _lifeSupport: LifeSupportFacade | null = null;
-  private _powerGrid: PowerGridFacade | null = null;
+  private _districts: DistrictFacade | null = null;
   private _ideology: IdeologyFacade | null = null;
   private _grants: GrantsFacade | null = null;
-  private _grid: GridFacade | null = null;
-  private _districts: DistrictFacade | null = null;
 
   constructor() {
     this.gameState = new GameState();
@@ -83,11 +79,9 @@ export class GameAPI {
     this._events = null;
     this._game = null;
     this._lifeSupport = null;
-    this._powerGrid = null;
+    this._districts = null;
     this._ideology = null;
     this._grants = null;
-    this._grid = null;
-    this._districts = null;
   }
 
   // ==========================================================================
@@ -296,13 +290,13 @@ export class GameAPI {
   }
 
   /**
-   * Power grid queries (read-only).
+   * District queries (population, buildings, power).
    */
-  get powerGrid(): PowerGridFacade {
-    if (!this._powerGrid) {
-      this._powerGrid = new PowerGridFacade(this.gameState);
+  get districts(): DistrictFacade {
+    if (!this._districts) {
+      this._districts = new DistrictFacade(this.gameState);
     }
-    return this._powerGrid;
+    return this._districts;
   }
 
   /**
@@ -323,26 +317,6 @@ export class GameAPI {
       this._grants = new GrantsFacade(this.gameState, this.executeCommand);
     }
     return this._grants;
-  }
-
-  /**
-   * Grid queries (deposits, empty cells, power coverage).
-   */
-  get grid(): GridFacade {
-    if (!this._grid) {
-      this._grid = new GridFacade(this.gameState);
-    }
-    return this._grid;
-  }
-
-  /**
-   * District queries (district list, building assignments).
-   */
-  get districts(): DistrictFacade {
-    if (!this._districts) {
-      this._districts = new DistrictFacade(this.gameState);
-    }
-    return this._districts;
   }
 
   // ==========================================================================
