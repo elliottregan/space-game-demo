@@ -29,7 +29,7 @@ describe("EarthCrisisManager", () => {
     });
 
     it("should cap severity at 100%", () => {
-      for (let i = 0; i < 1000; i++) {
+      for (let i = 0; i < 1500; i++) {
         manager.tick(i);
       }
       const state = manager.getState();
@@ -37,7 +37,7 @@ describe("EarthCrisisManager", () => {
     });
 
     it("should set pointOfNoReturn at 100%", () => {
-      for (let i = 0; i < 1000; i++) {
+      for (let i = 0; i < 1500; i++) {
         manager.tick(i);
       }
       const state = manager.getState();
@@ -45,7 +45,7 @@ describe("EarthCrisisManager", () => {
     });
 
     it("should stop increasing severity after pointOfNoReturn", () => {
-      for (let i = 0; i < 1000; i++) {
+      for (let i = 0; i < 1500; i++) {
         manager.tick(i);
       }
       const stateBefore = manager.getState();
@@ -58,7 +58,9 @@ describe("EarthCrisisManager", () => {
   describe("threshold triggers", () => {
     it("should trigger refugee wave at 25% severity", () => {
       let effects: ReturnType<typeof manager.tick> = [];
-      for (let sol = 1; sol <= 200; sol++) {
+      // 25% severity at ceil(25 / severityPerSol) sols
+      const maxSol = Math.ceil(25 / EARTH_CRISIS_BALANCE.severityPerSol) + 10;
+      for (let sol = 1; sol <= maxSol; sol++) {
         effects = manager.tick(sol);
         if (effects.some((e) => e.type === "refugee_wave")) break;
       }
@@ -67,7 +69,8 @@ describe("EarthCrisisManager", () => {
 
     it("should include refugee count in effect params", () => {
       let effects: ReturnType<typeof manager.tick> = [];
-      for (let sol = 1; sol <= 200; sol++) {
+      const maxSol = Math.ceil(25 / EARTH_CRISIS_BALANCE.severityPerSol) + 10;
+      for (let sol = 1; sol <= maxSol; sol++) {
         effects = manager.tick(sol);
         if (effects.some((e) => e.type === "refugee_wave")) break;
       }
@@ -88,7 +91,7 @@ describe("EarthCrisisManager", () => {
 
     it("should emit earth_collapse event at 100%", () => {
       let collapseEvent = null;
-      for (let sol = 1; sol <= 1000; sol++) {
+      for (let sol = 1; sol <= 1500; sol++) {
         const effects = manager.tick(sol);
         const collapse = effects.find((e) => e.type === "earth_collapse");
         if (collapse) {

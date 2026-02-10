@@ -51,4 +51,8 @@ export class DistrictFacade {
   getDistrictColonists(districtId: string): string[] {
     return this.gameState.districts.getDistrictColonistIds(districtId);
   }
+
+  setGrowthCap(districtId: string, cap: number | null): void {
+    this.gameState.districts.setGrowthCap(districtId, cap);
+  }
 }

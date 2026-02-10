@@ -308,8 +308,8 @@ export const BUILDINGS: BuildingDefinition[] = [
     name: "Asteroid Mining Platform",
     description:
       "A massive orbital station that captures and processes asteroids. Infinite resources mean infinite profit and permanent corporate dominance.",
-    cost: { materials: 1000 },
-    constructionTime: 115,
+    cost: { materials: 600 },
+    constructionTime: 80,
     purpose: BuildingPurpose.Industrial,
     requiredProject: ProjectId.DEEP_SPACE_MINING_CHARTER,
     isVictoryBuilding: true,
@@ -319,8 +319,8 @@ export const BUILDINGS: BuildingDefinition[] = [
     name: "United Mars Station",
     description:
       "An orbital station symbolizing Martian unity and independence. A beacon of sovereignty visible from Earth.",
-    cost: { materials: 950 },
-    constructionTime: 110,
+    cost: { materials: 550 },
+    constructionTime: 75,
     purpose: BuildingPurpose.Industrial,
     requiredProject: ProjectId.DECLARATION_OF_SOVEREIGNTY,
     isVictoryBuilding: true,
@@ -330,8 +330,8 @@ export const BUILDINGS: BuildingDefinition[] = [
     name: "Space Elevator",
     description:
       "A tether to orbit enabling cheap, mass transportation between Earth and Mars. The gateway for humanity's great migration.",
-    cost: { materials: 900 },
-    constructionTime: 105,
+    cost: { materials: 500 },
+    constructionTime: 70,
     purpose: BuildingPurpose.Industrial,
     requiredProject: ProjectId.EARTH_RELIEF_COMPACT,
     isVictoryBuilding: true,
@@ -341,8 +341,8 @@ export const BUILDINGS: BuildingDefinition[] = [
     name: "Genesis Ark",
     description:
       "A vast biological archive preserving Earth's biodiversity. A living monument to humanity's heritage and a safeguard against extinction.",
-    cost: { materials: 950 },
-    constructionTime: 110,
+    cost: { materials: 550 },
+    constructionTime: 75,
     purpose: BuildingPurpose.Industrial,
     requiredProject: ProjectId.GENESIS_VAULT,
     isVictoryBuilding: true,
