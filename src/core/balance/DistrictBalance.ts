@@ -58,3 +58,6 @@ export const POWER_GRID_CRITICAL = 0.5;
  * Effective rate = BASE_RATE * (1 - population / SCALING_DENOMINATOR)
  */
 export const POPULATION_SCALING_DENOMINATOR = 200;
+
+/** Maximum building slots per district */
+export const DISTRICT_BUILDING_SLOTS = 8;
