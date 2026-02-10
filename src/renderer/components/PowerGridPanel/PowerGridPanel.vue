@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { Zap } from "lucide-vue-next";
-import {
-  POWER_GRID_COMFORTABLE,
-  POWER_GRID_CRITICAL,
-} from "../../../core/balance/PowerGridBalance";
+import { POWER_GRID_COMFORTABLE, POWER_GRID_CRITICAL } from "../../../core/balance/DistrictBalance";
 import { gameService } from "../../services/GameService";
 import { GBreakdownList, GMetricBar, GPanel } from "../../ui";
 import type { BreakdownItem } from "../../ui";

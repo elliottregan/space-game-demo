@@ -47,6 +47,12 @@ export const CROSS_DISTRICT_BONDING_RATE = 0.001;
 /** Critical power deficit threshold (fraction of total demand) */
 export const POWER_CRITICAL_THRESHOLD = 0.5;
 
+/** Power grid ratio below which UI shows warning (comfortable threshold) */
+export const POWER_GRID_COMFORTABLE = 0.8;
+
+/** Power grid ratio below which UI shows critical warning */
+export const POWER_GRID_CRITICAL = 0.5;
+
 /**
  * Population growth scaling.
  * Effective rate = BASE_RATE * (1 - population / SCALING_DENOMINATOR)

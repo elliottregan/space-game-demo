@@ -890,7 +890,6 @@ export class BuildingManager {
 
   /**
    * Get total power production from all active, non-broken buildings.
-   * Used by PowerGridManager to calculate grid strain.
    */
   getTotalPowerProduction(): number {
     return this.sumActiveBuildings((def) => def.powerProduction);
@@ -898,7 +897,6 @@ export class BuildingManager {
 
   /**
    * Get total power consumption from all active, non-broken buildings.
-   * Used by PowerGridManager to calculate grid strain.
    */
   getTotalPowerConsumption(): number {
     return this.sumActiveBuildings((def) => def.powerConsumption);

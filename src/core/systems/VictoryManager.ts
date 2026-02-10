@@ -82,9 +82,7 @@ export class VictoryManager {
    * Check if any faction can propose any capstone project.
    * Returns information about proposable capstones.
    */
-  checkCapstoneProposability(
-    ideologyManager: IdeologyManager,
-  ): {
+  checkCapstoneProposability(ideologyManager: IdeologyManager): {
     canProposeAny: boolean;
     proposableCapstones: Array<{
       projectId: ProjectId;

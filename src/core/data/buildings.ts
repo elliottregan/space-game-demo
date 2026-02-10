@@ -6,17 +6,6 @@ import { TechnologyId } from "../models/Technology";
 export const BUILDINGS: BuildingDefinition[] = [
   // Basic buildings (no tech required)
   {
-    id: BuildingId.HABITAT,
-    name: "Habitat Module",
-    description: "Basic living quarters for colonists",
-    cost: { materials: 50 },
-    constructionTime: 10,
-    powerConsumption: 4,
-    capacity: 6, // Houses 6 colonists
-    lifeSupportCapacity: 10,
-    purpose: BuildingPurpose.Residential,
-  },
-  {
     id: BuildingId.SOLAR_PANEL,
     name: "Solar Panel Array",
     description: "Generates power from sunlight",
@@ -122,17 +111,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     researchOutput: 3.0,
     lifeSupportLoad: 1,
     purpose: BuildingPurpose.Industrial,
-  },
-  {
-    id: BuildingId.ADVANCED_HABITAT,
-    name: "Advanced Habitat",
-    description: "Comfortable living for more colonists",
-    cost: { materials: 120 },
-    constructionTime: 18,
-    powerConsumption: 5,
-    capacity: 8, // Houses 8 colonists
-    lifeSupportCapacity: 12,
-    purpose: BuildingPurpose.Residential,
   },
   {
     id: BuildingId.FABRICATOR_3D,
@@ -283,20 +261,6 @@ export const BUILDINGS: BuildingDefinition[] = [
     purpose: BuildingPurpose.Social,
     bondingStrength: 1.2,
   },
-  {
-    id: BuildingId.ROVER_DEPOT,
-    name: "Rover Depot",
-    description:
-      "Extends transit connectivity to distant buildings, allowing colonists to commute across gaps in the base layout.",
-    cost: {
-      materials: 200,
-    },
-    constructionTime: 8,
-    powerConsumption: 5,
-    depotRange: 3,
-    purpose: BuildingPurpose.Industrial,
-  },
-
   // Institutional buildings (ideology axis pressure)
   {
     id: BuildingId.BROADCASTING_STATION,
