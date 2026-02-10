@@ -1,56 +1,44 @@
 // src/core/models/Project.ts
 
+import type { AxisPosition, AxisRequirement } from "./NPCInfluence";
 import type { ResourceDelta } from "./Resources";
-import { NPCFaction } from "./NPCInfluence";
 
 /**
  * Project identifiers for political projects.
+ * NOTE: The canonical ProjectId enum is in NPCInfluence.ts.
+ * This file is kept for backwards compatibility.
  */
-export enum ProjectId {
-  // Earth Loyalists
-  IMMIGRATION_PROGRAM = "immigration_program",
-  EARTH_MEMORIAL = "earth_memorial",
-  HERITAGE_ARCHIVE = "heritage_archive",
-  // Mars Independence
-  UNIVERSAL_HOUSING = "universal_housing",
-  HEALTHCARE_EXPANSION = "healthcare_expansion",
-  DEMOCRATIC_ASSEMBLY = "democratic_assembly",
-  // Corporate Interests
-  VENTURE_CAPITAL_INITIATIVE = "venture_capital_initiative",
-  ORBITAL_INFRASTRUCTURE = "orbital_infrastructure",
-  ASTEROID_SURVEY_PROGRAM = "asteroid_survey_program",
-}
+export { ProjectId } from "./NPCInfluence";
 
 /**
- * A political project that can be proposed when faction support is sufficient.
+ * A political project that can be proposed when axis requirements are met.
  */
 export interface Project {
-  id: ProjectId;
+  id: string;
   name: string;
   description: string;
-  /** Which faction this project belongs to */
-  faction: NPCFaction;
+  /** Axis position requirements for a faction to champion this project */
+  axisRequirements?: Partial<Record<keyof AxisPosition, AxisRequirement>>;
   /** Resource cost to propose the project */
   proposalCost: ResourceDelta;
-  /** Minimum faction support required (0-1) */
-  requiredSupport: number;
   /** Optional effects when the project passes */
   effects?: {
     unlockBuilding?: string;
     unlockTech?: string;
   };
+  /** True if this is a capstone victory project */
+  isCapstone?: boolean;
 }
 
 /**
- * Tier of project based on required support level.
+ * Tier of project based on capstone status.
  */
 export type ProjectTier = "minor" | "major" | "victory";
 
 /**
- * Get the tier of a project based on its required support.
+ * Get the tier of a project.
  */
-export function getProjectTier(requiredSupport: number): ProjectTier {
-  if (requiredSupport >= 0.5) return "victory";
-  if (requiredSupport >= 0.35) return "major";
+export function getProjectTier(project: { isCapstone?: boolean }): ProjectTier {
+  if (project.isCapstone) return "victory";
   return "minor";
 }

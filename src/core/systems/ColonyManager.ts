@@ -507,11 +507,11 @@ export class ColonyManager implements ColonistQueries {
     const roll = rng.random();
 
     if (roll < REFUGEE_IDEOLOGY.earthLoyalistWeight) {
-      // Earth Loyalist leaning (60% chance)
+      // Earth Loyalist leaning (60% chance): earth-tied, preservationist
       return {
-        earthLoyalist: 0.6 + rng.random() * 0.3,
-        marsIndependence: rng.random() * 0.3,
-        corporateInterests: rng.random() * 0.3,
+        solidarity: -0.2 + rng.random() * 0.4,
+        sovereignty: -0.4 - rng.random() * 0.4,
+        transformation: -0.1 - rng.random() * 0.3,
         conviction: 0.4 + rng.random() * 0.3,
       };
     } else if (roll < REFUGEE_IDEOLOGY.earthLoyalistWeight + REFUGEE_IDEOLOGY.neutralWeight) {
@@ -520,10 +520,20 @@ export class ColonyManager implements ColonistQueries {
     } else {
       // Other - Mars Independence or Corporate (15% chance)
       const isMars = rng.random() > 0.5;
+      if (isMars) {
+        // Mars Independence leaning: mars-sovereign, collectivist
+        return {
+          solidarity: 0.1 + rng.random() * 0.3,
+          sovereignty: 0.3 + rng.random() * 0.4,
+          transformation: rng.random() * 0.4,
+          conviction: 0.3 + rng.random() * 0.3,
+        };
+      }
+      // Corporate leaning: individualist, transformative
       return {
-        earthLoyalist: rng.random() * 0.3,
-        marsIndependence: isMars ? 0.5 + rng.random() * 0.3 : rng.random() * 0.3,
-        corporateInterests: isMars ? rng.random() * 0.3 : 0.5 + rng.random() * 0.3,
+        solidarity: -0.3 - rng.random() * 0.3,
+        sovereignty: -0.2 + rng.random() * 0.4,
+        transformation: 0.2 + rng.random() * 0.4,
         conviction: 0.3 + rng.random() * 0.3,
       };
     }

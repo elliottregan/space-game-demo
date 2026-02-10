@@ -10,7 +10,7 @@
 
 import type { ColonistIdeology } from "../../core/models/Colonist";
 import { NPCFaction } from "../../core/models/NPCInfluence";
-import { IDEOLOGY_NEUTRAL_THRESHOLD } from "../../core/balance/IdeologyBalance";
+import { NEUTRAL_AXIS_THRESHOLD } from "../../core/balance/IdeologyBalance";
 
 // ============ Faction Types ============
 
@@ -72,7 +72,7 @@ export const FACTION_FULL_NAMES: Record<FactionId, string> = {
  * Threshold for determining dominant faction.
  * Uses the core balance constant for consistency with game logic.
  */
-export const DOMINANT_FACTION_THRESHOLD = IDEOLOGY_NEUTRAL_THRESHOLD;
+export const DOMINANT_FACTION_THRESHOLD = NEUTRAL_AXIS_THRESHOLD;
 
 /**
  * Get the dominant faction for a colonist based on their ideology.
@@ -88,17 +88,17 @@ export const DOMINANT_FACTION_THRESHOLD = IDEOLOGY_NEUTRAL_THRESHOLD;
 export function getDominantFaction(ideology: ColonistIdeology | undefined | null): FactionId {
   if (!ideology) return "neutral";
 
-  const { earthLoyalist, marsIndependence, corporateInterests } = ideology;
-  const max = Math.max(earthLoyalist, marsIndependence, corporateInterests);
+  const { solidarity, sovereignty, transformation } = ideology;
+  const max = Math.max(solidarity, sovereignty, transformation);
 
   // If all affinities are below threshold, consider neutral
   if (max < DOMINANT_FACTION_THRESHOLD) return "neutral";
 
   // Return the faction with highest affinity
   // In case of ties, preference order: earth > mars > corporate
-  if (earthLoyalist === max) return "earth";
-  if (marsIndependence === max) return "mars";
-  if (corporateInterests === max) return "corporate";
+  if (solidarity === max) return "earth";
+  if (sovereignty === max) return "mars";
+  if (transformation === max) return "corporate";
 
   return "neutral";
 }
@@ -184,31 +184,31 @@ export function getIdeologyColorForGraph(
 ): string {
   if (!ideology) return colors.textMuted;
 
-  const { earthLoyalist, marsIndependence, corporateInterests } = ideology;
-  const max = Math.max(earthLoyalist, marsIndependence, corporateInterests);
+  const { solidarity, sovereignty, transformation } = ideology;
+  const max = Math.max(solidarity, sovereignty, transformation);
 
   // If all values are very low, show as neutral
-  if (max < 0.2) return colors.textMuted;
+  if (max < 0.1) return colors.textMuted;
 
   // Check for clear dominance (must exceed others by threshold)
   if (
-    earthLoyalist >= max - 0.01 &&
-    earthLoyalist - marsIndependence >= dominanceThreshold &&
-    earthLoyalist - corporateInterests >= dominanceThreshold
+    solidarity >= max - 0.01 &&
+    solidarity - sovereignty >= dominanceThreshold &&
+    solidarity - transformation >= dominanceThreshold
   ) {
     return colors.info;
   }
   if (
-    marsIndependence >= max - 0.01 &&
-    marsIndependence - earthLoyalist >= dominanceThreshold &&
-    marsIndependence - corporateInterests >= dominanceThreshold
+    sovereignty >= max - 0.01 &&
+    sovereignty - solidarity >= dominanceThreshold &&
+    sovereignty - transformation >= dominanceThreshold
   ) {
     return colors.positive;
   }
   if (
-    corporateInterests >= max - 0.01 &&
-    corporateInterests - earthLoyalist >= dominanceThreshold &&
-    corporateInterests - marsIndependence >= dominanceThreshold
+    transformation >= max - 0.01 &&
+    transformation - solidarity >= dominanceThreshold &&
+    transformation - sovereignty >= dominanceThreshold
   ) {
     return colors.warning;
   }

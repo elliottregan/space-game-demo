@@ -1,16 +1,16 @@
 import type { SkillId } from "../data/skills";
 
 /**
- * Colonist political ideology - affinity to each faction.
- * Values are 0-1 and independent (don't need to sum to 1).
+ * Colonist political ideology - position on three independent axes.
+ * Each axis ranges from -1.0 to +1.0.
  */
 export interface ColonistIdeology {
-  /** Affinity toward Earth Loyalists (0-1) */
-  earthLoyalist: number;
-  /** Affinity toward Mars Independence (0-1) */
-  marsIndependence: number;
-  /** Affinity toward Corporate Interests (0-1) */
-  corporateInterests: number;
+  /** Individualist (-1) <-> Collectivist (+1) */
+  solidarity: number;
+  /** Earth-tied (-1) <-> Mars-sovereign (+1) */
+  sovereignty: number;
+  /** Preservationist (-1) <-> Revolutionary (+1) */
+  transformation: number;
   /** How strongly held beliefs are - resistance to influence (0-1) */
   conviction: number;
 }

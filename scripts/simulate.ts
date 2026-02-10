@@ -403,20 +403,20 @@ function captureIdeologySnapshot(
   for (const colonist of colonists) {
     if (!colonist.ideology) continue;
 
-    const { earthLoyalist, marsIndependence, corporateInterests, conviction } = colonist.ideology;
-    sumEarth += earthLoyalist;
-    sumMars += marsIndependence;
-    sumCorp += corporateInterests;
+    const { solidarity, sovereignty, transformation, conviction } = colonist.ideology;
+    sumEarth += solidarity;
+    sumMars += sovereignty;
+    sumCorp += transformation;
     sumConviction += conviction;
 
     // Calculate spread (max - min affinity)
-    const max = Math.max(earthLoyalist, marsIndependence, corporateInterests);
-    const min = Math.min(earthLoyalist, marsIndependence, corporateInterests);
+    const max = Math.max(solidarity, sovereignty, transformation);
+    const min = Math.min(solidarity, sovereignty, transformation);
     sumSpread += max - min;
 
-    // Check for dominant faction (threshold of 0.15 difference)
-    const values = [earthLoyalist, marsIndependence, corporateInterests].sort((a, b) => b - a);
-    if (values[0]! >= 0.3 && values[0]! - values[1]! >= 0.15) {
+    // Check for dominant faction (threshold of 0.1 difference)
+    const values = [solidarity, sovereignty, transformation].sort((a, b) => b - a);
+    if (values[0]! >= 0.1 && values[0]! - values[1]! >= 0.15) {
       dominantCount++;
     }
 

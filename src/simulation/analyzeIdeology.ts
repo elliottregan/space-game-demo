@@ -43,16 +43,16 @@ interface IdeologyAnalysis {
 }
 
 function getDominantFaction(ideology: ColonistIdeology): string | null {
-  const { earthLoyalist, marsIndependence, corporateInterests } = ideology;
-  const max = Math.max(earthLoyalist, marsIndependence, corporateInterests);
+  const { solidarity, sovereignty, transformation } = ideology;
+  const max = Math.max(solidarity, sovereignty, transformation);
   const threshold = 0.15; // Must be 0.15 higher than others
 
-  if (max < 0.3) return null; // Below neutral threshold
+  if (max < 0.1) return null; // Below neutral threshold
 
   const factions = [
-    { name: "Earth Loyalists", value: earthLoyalist },
-    { name: "Mars Independence", value: marsIndependence },
-    { name: "Corporate Interests", value: corporateInterests },
+    { name: "Earth Loyalists", value: solidarity },
+    { name: "Mars Independence", value: sovereignty },
+    { name: "Corporate Interests", value: transformation },
   ];
 
   const sorted = factions.sort((a, b) => b.value - a.value);
@@ -65,7 +65,7 @@ function getDominantFaction(ideology: ColonistIdeology): string | null {
 }
 
 function getIdeologySpread(ideology: ColonistIdeology): number {
-  const values = [ideology.earthLoyalist, ideology.marsIndependence, ideology.corporateInterests];
+  const values = [ideology.solidarity, ideology.sovereignty, ideology.transformation];
   return Math.max(...values) - Math.min(...values);
 }
 
@@ -79,9 +79,9 @@ function captureColonistSnapshot(colonist: {
   return {
     id: colonist.id,
     name: colonist.name,
-    earthLoyalist: colonist.ideology.earthLoyalist,
-    marsIndependence: colonist.ideology.marsIndependence,
-    corporateInterests: colonist.ideology.corporateInterests,
+    earthLoyalist: colonist.ideology.solidarity,
+    marsIndependence: colonist.ideology.sovereignty,
+    corporateInterests: colonist.ideology.transformation,
     conviction: colonist.ideology.conviction,
     dominantFaction: getDominantFaction(colonist.ideology),
     ideologySpread: getIdeologySpread(colonist.ideology),

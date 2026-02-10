@@ -140,6 +140,16 @@ This is more cost-effective than building a new Research Lab (150 materials) and
 | **Hydroponic Garden** | 70 | +4 per sol, produces oxygen |
 | **Observatory Dome** | 150 | +8 per sol |
 
+#### Institutional Buildings (Ideology Pressure)
+
+These buildings passively push faction ideology on specific axes each sol they are active:
+
+| Building | Cost | Requires | Workers | Effect |
+|----------|------|----------|---------|--------|
+| **Broadcasting Station** | 100 | None | 2 Research | Sovereignty +0.01/sol (pushes Mars-sovereign) |
+| **Academy** | 140 | Advanced Materials | 2 Research | Transformation +0.015/sol (pushes revolutionary) |
+| **Heritage Museum** | 60 | None | 1 | Transformation -0.01/sol (pushes preservationist), +2 morale |
+
 ### Building Modes
 
 Toggle building operation modes to balance efficiency and resources:
@@ -601,46 +611,121 @@ Deposits provide resources for extraction buildings:
 
 ---
 
-## Politics
+## Politics & Ideology
 
-Three factions vie for influence over your colony's future.
+Your colony's political landscape is shaped by three evolving factions that drift along continuous ideology axes based on colony conditions.
+
+### Ideology Axes
+
+Every colonist and faction has a position on three ideological axes, each ranging from -1 to +1:
+
+| Axis | -1 (Negative) | +1 (Positive) |
+|------|---------------|---------------|
+| **Solidarity** | Individualist | Collectivist |
+| **Sovereignty** | Earth-tied | Mars-sovereign |
+| **Transformation** | Preservationist | Revolutionary |
+
+Each colonist also has **conviction** (0 to 1) representing how firmly they hold their beliefs. High-conviction colonists resist ideological change and are harder to sway.
 
 ### Factions
 
-| Faction | Priority | Key NPCs |
-|---------|----------|----------|
-| **Earth Loyalists** | Maintain Earth connection, stability | Dr. Chen Wei, Nova Silva, Alex Okonkwo |
-| **Mars Independence** | Self-governance, Mars-first policies | Maria Santos, James Liu, Aisha Patel, Marcus Reed |
-| **Corporate Interests** | Profit, efficiency, corporate involvement | Elena Volkov, David Morrison, Sarah Chen |
+Three factions compete for influence. Unlike static political parties, factions **evolve over time** — their positions drift based on colony conditions, and their names change to reflect their current ideology.
 
-### NPC Support
+| Starting Faction | Starting Position | Tendency |
+|-----------------|-------------------|----------|
+| **Earth Loyalists** | Sovereignty -0.7, Transformation -0.3 | Earth-tied, preservationist |
+| **Mars Independence** | Solidarity +0.3, Sovereignty +0.7, Transformation +0.3 | Mars-sovereign, collectivist |
+| **Corporate Interests** | Solidarity -0.6, Transformation +0.5 | Individualist, revolutionary |
 
-Each NPC has a support level from -1 (oppose) to +1 (support). NPCs influence each other through faction relationships.
+**Faction membership** is determined by proximity — each colonist belongs to whichever faction is nearest in 3D ideology space.
+
+#### Dynamic Faction Names
+
+As factions drift along the axes, they may rename themselves. Some examples:
+
+- **Earth Loyalists** may become: Terran Heritage Compact, Earth Unity Front, Colonial Enterprise League
+- **Mars Independence** may become: Ares Ascendancy, Mars People's Front, Red Frontier
+- **Corporate Interests** may become: Frontier Syndicate, Old Guard Consortium, Martian Trade Alliance
+
+#### Faction Drift
+
+Colony conditions create **pressure** that pushes faction positions over time:
+
+| Condition | Axis Effect |
+|-----------|-------------|
+| Food scarcity | Solidarity toward collectivist (+) |
+| Resource abundance | Solidarity toward individualist (-) |
+| Housing crisis | Solidarity toward collectivist (+) |
+| Large colony (50+ pop) | Sovereignty toward Mars-sovereign (+) |
+| Small colony (<15 pop) | Sovereignty toward Earth-tied (-) |
+| Many technologies researched | Transformation toward revolutionary (+) |
+| High health & morale | Transformation toward preservationist (-) |
+
+**Institutional buildings** also apply passive pressure (see Buildings > Institutional Buildings).
+
+High average conviction among a faction's members dampens drift, representing ideological inertia.
+
+#### Colonist Defection
+
+Colonists may defect to another faction if that faction's position is significantly closer to their personal ideology. High conviction makes defection harder.
+
+#### Faction Dynamics
+
+The colony always has exactly 3 factions. Two special events can reshape the political landscape:
+
+- **Merger**: If two factions converge within 0.2 distance on all axes, the smaller is absorbed and a new faction spawns at an underrepresented position in ideology space.
+- **Collapse**: If a faction drops below 15% of the population, it collapses and rebirths at an underrepresented position with a new identity.
+
+### Council
+
+The colony council is selected from colonists with the highest **political influence** (centrality x conviction). Council size scales with population (1 seat per 10 colonists, minimum 5, maximum 15). The council is recalculated every 30 sols.
+
+Council members vote on project proposals based on their faction alignment.
 
 ### Projects
 
-Factions propose projects that:
-- Cost materials to propose
-- Take 10 sols before vote
-- Require 40% NPC support to pass
-- Unlock buildings, technologies, or resources when approved
+Projects are **gated by axis requirements** — a faction must reach certain axis positions before it can champion a project. There are 17 projects organized by ideology:
 
-### Councils
+| Project | Axis Requirement | Key Effect |
+|---------|-----------------|------------|
+| **Universal Housing Initiative** | Solidarity >= +0.3 | Unlocks housing complex, +8% morale |
+| **Healthcare Expansion** | Solidarity >= +0.3 | Unlocks medical center |
+| **Democratic Assembly** | Solidarity >= +0.3 | Unlocks assembly hall, +10% morale |
+| **Heritage Archive** | Transformation <= -0.3 | Preserves Earth culture |
+| **Earth Memorial** | Transformation <= -0.3 | +5% morale |
+| **Immigration Program** | Sovereignty <= -0.3 | Recurring immigration waves |
+| **Venture Capital Initiative** | Solidarity <= -0.3 | +2 materials/sol |
+| **Private Mining Contracts** | Solidarity <= -0.3 | +3 materials/sol |
+| **Orbital Infrastructure** | Solidarity <= -0.3 | +10% production |
+| **Asteroid Survey Program** | Solidarity <= -0.3 | Unlocks asteroid prospecting |
+| **Genetic Adaptation Program** | Transformation >= +0.5 | Colony adaptation research |
+| **Mars Nationalism Charter** | Sovereignty >= +0.5, Transformation <= -0.3 | Martian identity charter |
+| **Transhuman Research Initiative** | Sovereignty >= +0.3, Transformation >= +0.5 | +8% production |
 
-Form councils to strengthen NPC relationships:
-- Cost: 50 materials
-- Effect: +0.2 relationship boost between council members
-- Permanent benefit
+To propose a project:
+1. A faction must meet the project's axis requirements
+2. The proposal costs materials
+3. After 10 sols, the council votes
+4. The project passes if the championing faction has more council votes than the opposition
 
-### Lobbying
+### Policy Declarations
 
-Spend materials to influence NPCs:
-- Cost: 10 materials per 0.1 support boost
-- Target specific NPCs for direct influence
+Policies are your primary lever for influencing faction ideology. Declare one policy at a time; it applies axis pressure for 30 sols then expires.
 
-### Faction Demands
+| Policy | Axis | Direction | Cost |
+|--------|------|-----------|------|
+| **Rationing Protocol** | Solidarity | Collectivist (+) | 50 materials |
+| **Free Market Decree** | Solidarity | Individualist (-) | 50 materials |
+| **Earth Communication Priority** | Sovereignty | Earth-tied (-) | 40 materials |
+| **Mars Self-Sufficiency Program** | Sovereignty | Mars-sovereign (+) | 70 materials |
+| **Open Research Mandate** | Transformation | Revolutionary (+) | 80 materials |
+| **Heritage Preservation Act** | Transformation | Preservationist (-) | 60 materials |
 
-Factions periodically demand their projects be proposed. Ignoring demands causes support decay.
+### Ideology Spread
+
+Colonist ideology spreads through the social network. Each sol, colonists' positions drift toward the weighted average of their neighbors. Stronger relationships and higher-conviction neighbors have more influence. Conviction resists this drift.
+
+New colonists arrive with neutral ideology (center of all axes) and are quickly "imprinted" by their strongest social connections.
 
 ---
 
@@ -709,6 +794,23 @@ Requirements:
 - Research and build the Generation Ship
 
 This represents humanity's expansion to the stars.
+
+#### Capstone Megastructure Victory (Political Victory)
+
+Push faction ideology to extreme positions, pass capstone projects, and build megastructures. There are 4 paths:
+
+| Capstone | Axis Requirements | Prerequisites | Megastructure |
+|----------|-------------------|---------------|---------------|
+| **Earth Relief Compact** | Sovereignty <= -0.6, Solidarity >= +0.5 | Earth Memorial, Heritage Archive, Immigration Program | Space Elevator |
+| **Declaration of Sovereignty** | Sovereignty >= +0.5 | Universal Housing, Healthcare, Democratic Assembly | United Mars Station |
+| **Deep Space Mining Charter** | Solidarity <= -0.5, Transformation >= +0.5 | Venture Capital, Orbital Infrastructure, Asteroid Survey | Asteroid Mining Platform |
+| **Genesis Vault** | Transformation <= -0.6, Solidarity >= +0.5 | None | Colony morale boost |
+
+Each capstone requires:
+1. A faction meeting the extreme axis requirements
+2. All prerequisite projects completed
+3. 65% council support from the championing faction
+4. Building the unlocked megastructure to win
 
 ### Defeat Conditions
 

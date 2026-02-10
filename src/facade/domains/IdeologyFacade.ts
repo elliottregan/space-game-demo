@@ -1,21 +1,20 @@
 // src/facade/domains/IdeologyFacade.ts
 
 import type { GameState } from "../../core/GameState";
-import { getProject } from "../../core/data/projects";
-import type { NPCFaction, ProjectId } from "../../core/models/NPCInfluence";
+import { getProject, meetsAxisRequirements } from "../../core/data/projects";
+import type { ProjectId } from "../../core/models/NPCInfluence";
 import type { Result } from "../types/common";
 import type { Queryable } from "../types/interfaces";
 import type {
   IdeologySnapshot,
-  FactionSupportSnapshot,
+  FactionSnapshot,
   CouncilMemberSnapshot,
   ProjectEligibility,
-  LobbyEligibility,
 } from "../types/ideology";
 
 /**
  * Facade for ideology system queries.
- * Provides access to council, faction support, and project eligibility.
+ * Provides access to council, faction support, project eligibility, and policy declarations.
  *
  * Implements: Queryable<IdeologySnapshot>
  */
@@ -29,11 +28,13 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
     const council = this.getCouncil();
     const councilFactionCounts = this.gameState.ideology.getCouncilFactionCounts();
     const factionSupport = this.getFactionSupport();
+    const factions = this.getFactions();
 
     return {
       council,
       councilFactionCounts,
       factionSupport,
+      factions,
     };
   }
 
@@ -45,9 +46,9 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
   }
 
   /**
-   * Get colony-wide faction support levels.
+   * Get colony-wide faction support levels keyed by faction id.
    */
-  getFactionSupport(): FactionSupportSnapshot {
+  getFactionSupport(): Record<string, number> {
     const colonists = this.gameState.colony.getColonists();
     const relationshipManager = this.gameState.workforce.getRelationshipManager();
 
@@ -55,24 +56,66 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
   }
 
   /**
-   * Get support level for a specific faction.
+   * Get current faction states.
    */
-  getFactionSupportFor(faction: NPCFaction): number {
-    const support = this.getFactionSupport();
-    switch (faction) {
-      case "earth_loyalists":
-        return support.earthLoyalists;
-      case "mars_independence":
-        return support.marsIndependence;
-      case "corporate_interests":
-        return support.corporateInterests;
-      default:
-        return 0;
-    }
+  getFactions(): FactionSnapshot[] {
+    return this.gameState.ideology.getFactions().map((f) => ({
+      id: f.id,
+      name: f.name,
+      baseId: f.baseId,
+      position: { ...f.position },
+      pressure: { ...f.pressure },
+    }));
   }
 
   /**
-   * Check if a project can be proposed based on faction support.
+   * Get the currently active policy, or null.
+   */
+  getActivePolicy(): {
+    policy: {
+      id: string;
+      name: string;
+      axis: string;
+      direction: number;
+      strength: number;
+      duration: number;
+    };
+    startSol: number;
+  } | null {
+    return this.gameState.ideology.getActivePolicy();
+  }
+
+  /**
+   * Declare a policy, replacing any existing one.
+   * Returns true if the policy was successfully declared.
+   */
+  declarePolicy(policyId: string): boolean {
+    return this.gameState.ideology.declarePolicy(policyId, this.gameState.currentSol);
+  }
+
+  /**
+   * Find the faction best suited to champion a project based on axis requirements.
+   * Returns the first faction whose position meets all axis requirements, or undefined.
+   */
+  private findChampionFaction(
+    projectId: ProjectId,
+  ): { factionId: string; baseId: string } | undefined {
+    const project = getProject(projectId);
+    if (!project) return undefined;
+
+    const factions = this.gameState.ideology.getFactions();
+    for (const faction of factions) {
+      if (meetsAxisRequirements(faction.position, project)) {
+        return { factionId: faction.id, baseId: faction.baseId };
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Check if a project can be proposed.
+   * Finds a faction that meets axis requirements and delegates to IdeologyManager.
    */
   canProposeProject(projectId: ProjectId): ProjectEligibility {
     const project = getProject(projectId);
@@ -87,11 +130,10 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
 
     // Check if already completed
     if (this.gameState.ideology.isProjectCompleted(projectId)) {
-      const currentSupport = this.getFactionSupportFor(project.type);
       return {
         canPropose: false,
-        currentSupport,
-        requiredSupport: project.requiredSupport,
+        currentSupport: 0,
+        requiredSupport: 0,
         reason: "Project already completed",
         isCompleted: true,
       };
@@ -99,11 +141,10 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
 
     // Check if pending vote
     if (this.gameState.ideology.isPendingProposal(projectId)) {
-      const currentSupport = this.getFactionSupportFor(project.type);
       return {
         canPropose: false,
-        currentSupport,
-        requiredSupport: project.requiredSupport,
+        currentSupport: 0,
+        requiredSupport: 0,
         reason: "Project awaiting council vote",
         isPending: true,
       };
@@ -111,54 +152,57 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
 
     // Check if failed vote (can be retried later)
     if (this.gameState.ideology.isFailedProposal(projectId)) {
-      const currentSupport = this.getFactionSupportFor(project.type);
       return {
         canPropose: false,
-        currentSupport,
-        requiredSupport: project.requiredSupport,
+        currentSupport: 0,
+        requiredSupport: 0,
         reason: "Project failed council vote",
         isFailed: true,
       };
     }
 
-    const currentSupport = this.getFactionSupportFor(project.type);
-    const canAfford = this.gameState.resources.canAfford(project.proposalCost);
+    // Find a faction that can champion this project
+    const champion = this.findChampionFaction(projectId);
+    if (!champion) {
+      return {
+        canPropose: false,
+        currentSupport: 0,
+        requiredSupport: 0,
+        reason: "No faction meets axis requirements for this project",
+      };
+    }
 
+    const canAfford = this.gameState.resources.canAfford(project.proposalCost);
     if (!canAfford) {
       return {
         canPropose: false,
-        currentSupport,
-        requiredSupport: project.requiredSupport,
+        currentSupport: 0,
+        requiredSupport: 0,
         reason: "Cannot afford proposal cost",
       };
     }
 
-    if (currentSupport < project.requiredSupport) {
+    // Delegate to core IdeologyManager for prerequisite/requirement checks
+    const coreCheck = this.gameState.ideology.canProposeProject(project, champion.factionId, {
+      technology: this.gameState.technology,
+      buildings: this.gameState.buildings,
+      colony: this.gameState.colony,
+      resources: this.gameState.resources,
+    });
+
+    if (!coreCheck.canPropose) {
       return {
         canPropose: false,
-        currentSupport,
-        requiredSupport: project.requiredSupport,
-        reason: `Insufficient faction support (need ${Math.round(project.requiredSupport * 100)}%)`,
+        currentSupport: 0,
+        requiredSupport: 0,
+        reason: coreCheck.reason,
       };
-    }
-
-    // Check capstone-specific requirements
-    if (project.isCapstone) {
-      const capstoneCheck = this.gameState.ideology.canProposeCapstone(project.type);
-      if (!capstoneCheck.canPropose) {
-        return {
-          canPropose: false,
-          currentSupport,
-          requiredSupport: project.requiredCouncilSupport ?? 0.65,
-          reason: capstoneCheck.reason,
-        };
-      }
     }
 
     return {
       canPropose: true,
-      currentSupport,
-      requiredSupport: project.requiredSupport,
+      currentSupport: 0,
+      requiredSupport: 0,
     };
   }
 
@@ -197,9 +241,15 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
     // Deduct cost
     this.gameState.resources.deduct(project.proposalCost);
 
+    // Find the champion faction to submit on behalf of.
+    // Use baseId for the proposal because vote resolution (getVoteProjection,
+    // processVotes) looks up council counts keyed by baseId, not dynamic id.
+    const champion = this.findChampionFaction(projectId);
+    const proposalFactionId = champion?.baseId ?? "";
+
     // Submit for vote
     const currentSol = this.gameState.currentSol;
-    this.gameState.ideology.submitProposal(projectId, project.type, currentSol);
+    this.gameState.ideology.submitProposal(projectId, proposalFactionId, currentSol);
 
     const proposal = this.gameState.ideology.getPendingProposal(projectId);
     return { success: true, data: { projectId, voteSol: proposal?.voteSol ?? currentSol + 10 } };
@@ -208,12 +258,12 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
   /**
    * Get the vote projection for a faction.
    */
-  getVoteProjection(faction: NPCFaction): {
+  getVoteProjection(factionId: string): {
     votesFor: number;
     votesAgainst: number;
     wouldPass: boolean;
   } {
-    return this.gameState.ideology.getVoteProjection(faction);
+    return this.gameState.ideology.getVoteProjection(factionId);
   }
 
   /**
@@ -244,7 +294,22 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
     return this.gameState.ideology.getCompletedProjects();
   }
 
-  // ============ Ideological Pressure ============
+  /**
+   * Rally a faction to boost conviction of aligned colonists.
+   * This improves council representation (council = centrality × conviction).
+   * Returns the number of colonists affected, or 0 if on cooldown.
+   */
+  rallyFaction(factionId: string): number {
+    const colonists = this.gameState.colony.getColonists();
+    return this.gameState.ideology.rallyFaction(factionId, colonists, this.gameState.currentSol);
+  }
+
+  /**
+   * Check if rally is available (not on cooldown).
+   */
+  canRally(): boolean {
+    return this.gameState.ideology.canRally(this.gameState.currentSol);
+  }
 
   /**
    * Get the ideological pressure a colonist experiences from their neighbors.
@@ -252,7 +317,7 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
    * along with pressure strength and conviction growth/decay rate.
    */
   getIdeologicalPressure(colonistId: string): {
-    pressure: { earthLoyalist: number; marsIndependence: number; corporateInterests: number };
+    pressure: { solidarity: number; sovereignty: number; transformation: number };
     totalWeight: number;
     neighborCount: number;
     convictionPressure: { growth: boolean; rate: number };
@@ -268,81 +333,5 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
       colonists,
       relationshipManager,
     );
-  }
-
-  // ============ Lobbying ============
-
-  /**
-   * Check if a council member can be lobbied.
-   */
-  canLobby(colonistId: string, faction: NPCFaction, affinityBoost: number): LobbyEligibility {
-    const check = this.gameState.ideology.canLobby(colonistId);
-    if (!check.canLobby) {
-      return { canLobby: false, cost: Infinity, reason: check.reason };
-    }
-
-    const cost = this.gameState.ideology.getLobbyCost(colonistId, faction, affinityBoost);
-    const canAfford = this.gameState.resources.canAfford({ materials: cost });
-
-    if (!canAfford) {
-      return { canLobby: false, cost, reason: "Cannot afford lobbying cost" };
-    }
-
-    return { canLobby: true, cost };
-  }
-
-  /**
-   * Get the cost to lobby a council member.
-   */
-  getLobbyCost(colonistId: string, faction: NPCFaction, affinityBoost: number): number {
-    return this.gameState.ideology.getLobbyCost(colonistId, faction, affinityBoost);
-  }
-
-  /**
-   * Lobby a council member to boost their faction affinity.
-   */
-  lobbyCouncilMember(
-    colonistId: string,
-    faction: NPCFaction,
-    affinityBoost: number,
-  ): Result<{ newAffinity: number }> {
-    const eligibility = this.canLobby(colonistId, faction, affinityBoost);
-    if (!eligibility.canLobby) {
-      return {
-        success: false,
-        error: {
-          type: "INVALID_STATE",
-          current: "ineligible",
-          expected: "eligible",
-          reason: eligibility.reason || "Cannot lobby",
-        },
-      };
-    }
-
-    // Deduct cost
-    this.gameState.resources.deduct({ materials: eligibility.cost });
-
-    // Apply lobby effect
-    const colonists = this.gameState.colony.getColonists();
-    const result = this.gameState.ideology.lobbyColonist(
-      colonistId,
-      faction,
-      affinityBoost,
-      colonists,
-    );
-
-    if (!result.success || result.newAffinity === undefined) {
-      return {
-        success: false,
-        error: {
-          type: "INVALID_STATE",
-          current: "failed",
-          expected: "success",
-          reason: result.reason || "Lobby failed",
-        },
-      };
-    }
-
-    return { success: true, data: { newAffinity: result.newAffinity } };
   }
 }

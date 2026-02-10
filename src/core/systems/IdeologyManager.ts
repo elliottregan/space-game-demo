@@ -2,20 +2,23 @@
 
 import type { Colonist, ColonistIdeology } from "../models/Colonist";
 import {
-  NPCFaction,
   ProjectRequirementType,
+  type AxisPosition,
+  type FactionState,
   type Project,
   type ProjectId,
+  AXIS_KEYS,
 } from "../models/NPCInfluence";
 import type { TechnologyTree } from "./TechnologyTree";
 import type { BuildingManager } from "./BuildingManager";
 import type { ColonyManager } from "./ColonyManager";
 import type { ResourceManager } from "./ResourceManager";
 import type { RelationshipManager } from "./RelationshipManager";
-import type { ColonistMoraleManager } from "./ColonistMoraleManager";
 import * as IdeologyBalance from "../balance/IdeologyBalance";
-import { getProject, getProjectsByFaction } from "../data/projects";
-import { rng } from "../utils/random";
+import { DRIFT_TRIGGERS, type DriftContext } from "../data/factionDrift";
+import { getFactionName } from "../data/factionNames";
+import { type Policy, getPolicy } from "../data/policies";
+import { getProject } from "../data/projects";
 import type { ProjectQueries } from "../interfaces/Queries";
 import type { GameEvent } from "../models/GameEvent";
 
@@ -27,28 +30,10 @@ export interface CouncilMember {
   name: string;
   centrality: number;
   conviction: number;
-  /** Political influence score = centrality × conviction */
+  /** Political influence score = centrality x conviction */
   influence: number;
-  /** Primary faction affiliation (or null if neutral) */
-  faction: NPCFaction | null;
-}
-
-/**
- * Result of a lobby attempt.
- */
-export interface LobbyResult {
-  success: boolean;
-  reason?: string;
-  newAffinity?: number;
-}
-
-/**
- * Colony-wide faction support levels.
- */
-export interface FactionSupport {
-  earthLoyalists: number;
-  marsIndependence: number;
-  corporateInterests: number;
+  /** Nearest faction id (or null if neutral) */
+  factionId: string | null;
 }
 
 /**
@@ -56,7 +41,7 @@ export interface FactionSupport {
  */
 export interface PendingProposal {
   projectId: ProjectId;
-  faction: NPCFaction;
+  factionId: string;
   proposedSol: number;
   voteSol: number;
 }
@@ -73,6 +58,36 @@ export interface VoteResult {
 }
 
 /**
+ * Compute Euclidean distance in 3D axis space.
+ */
+function axisDistance(a: AxisPosition, b: AxisPosition): number {
+  const ds = a.solidarity - b.solidarity;
+  const dv = a.sovereignty - b.sovereignty;
+  const dt = a.transformation - b.transformation;
+  return Math.sqrt(ds * ds + dv * dv + dt * dt);
+}
+
+/**
+ * Extract the axis position from a colonist ideology.
+ */
+function ideologyToAxis(ideology: ColonistIdeology): AxisPosition {
+  return {
+    solidarity: ideology.solidarity,
+    sovereignty: ideology.sovereignty,
+    transformation: ideology.transformation,
+  };
+}
+
+/**
+ * Check whether a colonist is ideologically neutral (near the origin on all axes).
+ */
+function isNeutral(ideology: ColonistIdeology): boolean {
+  return AXIS_KEYS.every(
+    (axis) => Math.abs(ideology[axis]) <= IdeologyBalance.NEUTRAL_AXIS_THRESHOLD,
+  );
+}
+
+/**
  * Manages colonist ideology, council selection, and faction support.
  * Ideology spreads through the social network similar to morale.
  */
@@ -83,42 +98,44 @@ export class IdeologyManager implements ProjectQueries {
   private completedProjects: Set<ProjectId> = new Set();
   private pendingProposals: Map<ProjectId, PendingProposal> = new Map();
   private failedProposals: Set<ProjectId> = new Set();
+  private factions: FactionState[] = [];
+  private activePolicy: { policy: Policy; startSol: number } | null = null;
+
+  constructor() {
+    this.factions = IdeologyBalance.STARTING_FACTION_POSITIONS.map((f) => ({
+      id: f.baseId,
+      baseId: f.baseId,
+      name: f.name,
+      position: { ...f.position },
+      pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+    }));
+  }
 
   // ============ Static Helpers ============
 
   /**
-   * Get the primary faction for a colonist's ideology.
-   * Returns null if all affinities are below the neutral threshold.
-   * When multiple factions are tied for highest, randomly selects one.
+   * Find the faction nearest to a colonist's ideology in 3D axis space.
+   * Returns null if the factions array is empty.
    */
-  static getPrimaryFaction(ideology: ColonistIdeology): NPCFaction | null {
-    const { earthLoyalist, marsIndependence, corporateInterests } = ideology;
-    const max = Math.max(earthLoyalist, marsIndependence, corporateInterests);
+  static getNearestFaction(
+    ideology: ColonistIdeology,
+    factions: readonly FactionState[],
+  ): FactionState | null {
+    if (factions.length === 0) return null;
 
-    if (max < IdeologyBalance.IDEOLOGY_NEUTRAL_THRESHOLD) return null;
+    const pos = ideologyToAxis(ideology);
+    let nearest: FactionState | null = null;
+    let bestDist = Infinity;
 
-    // Collect all factions tied for the maximum
-    const tiedFactions: NPCFaction[] = [];
-    if (earthLoyalist === max) tiedFactions.push(NPCFaction.EarthLoyalists);
-    if (marsIndependence === max) tiedFactions.push(NPCFaction.MarsIndependence);
-    if (corporateInterests === max) tiedFactions.push(NPCFaction.CorporateInterests);
-
-    // Randomly select from tied factions (array always has at least 1 element here)
-    return tiedFactions[rng.int(0, tiedFactions.length - 1)] ?? NPCFaction.EarthLoyalists;
-  }
-
-  /**
-   * Convert a faction enum to the corresponding ideology key.
-   */
-  static factionToKey(faction: NPCFaction): keyof Omit<ColonistIdeology, "conviction"> {
-    switch (faction) {
-      case NPCFaction.EarthLoyalists:
-        return "earthLoyalist";
-      case NPCFaction.MarsIndependence:
-        return "marsIndependence";
-      case NPCFaction.CorporateInterests:
-        return "corporateInterests";
+    for (const faction of factions) {
+      const dist = axisDistance(pos, faction.position);
+      if (dist < bestDist) {
+        bestDist = dist;
+        nearest = faction;
+      }
     }
+
+    return nearest;
   }
 
   /**
@@ -132,11 +149,6 @@ export class IdeologyManager implements ProjectQueries {
    * Imprint ideology on a new colonist based on their strongest connections.
    * This creates ideological clustering - new colonists adopt the beliefs
    * of whoever they're closest to (typically housemates/coworkers).
-   *
-   * @param colonist The colonist to imprint ideology on
-   * @param colonists All colonists (to find neighbors' ideologies)
-   * @param relationshipManager To find neighbor relationship strengths
-   * @param imprinting How much to weight neighbor influence (0-1, default 0.7)
    */
   static imprintIdeologyFromNeighbors(
     colonist: Colonist,
@@ -149,7 +161,6 @@ export class IdeologyManager implements ProjectQueries {
     const neighbors = relationshipManager.getNeighbors(colonist.id);
     if (neighbors.size === 0) return;
 
-    // Build a map for quick lookup
     const colonistMap = new Map(colonists.map((c) => [c.id, c]));
 
     // Find the strongest connection with ideology
@@ -167,7 +178,6 @@ export class IdeologyManager implements ProjectQueries {
       }
     }
 
-    // Only imprint if there's a reasonably strong connection with ideology
     if (
       !strongestNeighbor?.ideology ||
       strongestStrength < IdeologyBalance.IDEOLOGY_IMPRINTING_THRESHOLD
@@ -177,33 +187,143 @@ export class IdeologyManager implements ProjectQueries {
 
     const sourceIdeology = strongestNeighbor.ideology;
 
-    // Blend toward the neighbor's ideology (partial imprinting)
-    colonist.ideology.earthLoyalist =
-      colonist.ideology.earthLoyalist * (1 - imprinting) +
-      sourceIdeology.earthLoyalist * imprinting;
-    colonist.ideology.marsIndependence =
-      colonist.ideology.marsIndependence * (1 - imprinting) +
-      sourceIdeology.marsIndependence * imprinting;
-    colonist.ideology.corporateInterests =
-      colonist.ideology.corporateInterests * (1 - imprinting) +
-      sourceIdeology.corporateInterests * imprinting;
+    // Blend toward the neighbor's ideology on all axes
+    for (const axis of AXIS_KEYS) {
+      colonist.ideology[axis] =
+        colonist.ideology[axis] * (1 - imprinting) + sourceIdeology[axis] * imprinting;
+      colonist.ideology[axis] = Math.max(-1, Math.min(1, colonist.ideology[axis]));
+    }
+  }
 
-    // New colonists keep their low conviction (they're influenced, not converted)
+  // ============ Faction Access ============
+
+  /**
+   * Get all current factions.
+   */
+  getFactions(): readonly FactionState[] {
+    return this.factions;
+  }
+
+  /**
+   * Get a specific faction by id.
+   */
+  getFaction(id: string): FactionState | undefined {
+    return this.factions.find((f) => f.id === id);
+  }
+
+  // ============ Faction Drift ============
+
+  /**
+   * Update faction pressure based on colony conditions.
+   * Evaluates all drift triggers and applies to each faction's pressure.
+   */
+  updateFactionPressure(ctx: DriftContext): void {
+    for (const trigger of DRIFT_TRIGGERS) {
+      const delta = trigger.evaluate(ctx);
+      if (delta === 0) continue;
+
+      for (const faction of this.factions) {
+        faction.pressure[trigger.axis] = Math.max(
+          -1,
+          Math.min(1, faction.pressure[trigger.axis] + delta),
+        );
+      }
+    }
+  }
+
+  /**
+   * Drift faction positions toward their accumulated pressure.
+   * High average conviction among faction members dampens drift,
+   * representing ideological inertia from committed supporters.
+   */
+  driftFactionPositions(colonists: Colonist[]): void {
+    for (const faction of this.factions) {
+      const avgConviction = this.getAverageFactionConviction(faction, colonists);
+      const dampening = 1 - avgConviction * IdeologyBalance.FACTION_CONVICTION_DAMPENING;
+
+      for (const axis of AXIS_KEYS) {
+        const drift =
+          (faction.pressure[axis] - faction.position[axis]) *
+          IdeologyBalance.FACTION_DRIFT_RATE *
+          dampening;
+
+        faction.position[axis] = Math.max(-1, Math.min(1, faction.position[axis] + drift));
+      }
+    }
+  }
+
+  /**
+   * Decay faction pressure toward zero.
+   * Without reinforcement from colony conditions, pressure fades.
+   */
+  decayFactionPressure(): void {
+    for (const faction of this.factions) {
+      for (const axis of AXIS_KEYS) {
+        const pressure = faction.pressure[axis];
+        if (pressure > 0) {
+          faction.pressure[axis] = Math.max(0, pressure - IdeologyBalance.FACTION_PRESSURE_DECAY);
+        } else if (pressure < 0) {
+          faction.pressure[axis] = Math.min(0, pressure + IdeologyBalance.FACTION_PRESSURE_DECAY);
+        }
+      }
+    }
+  }
+
+  /**
+   * Calculate average conviction of colonists nearest to a faction.
+   */
+  private getAverageFactionConviction(faction: FactionState, colonists: Colonist[]): number {
+    let totalConviction = 0;
+    let count = 0;
+
+    for (const colonist of colonists) {
+      if (!colonist.ideology) continue;
+
+      const nearest = IdeologyManager.getNearestFaction(colonist.ideology, this.factions);
+      if (nearest?.id === faction.id) {
+        totalConviction += colonist.ideology.conviction;
+        count++;
+      }
+    }
+
+    if (count === 0) return 0;
+    return totalConviction / count;
+  }
+
+  // ============ Faction Naming ============
+
+  /**
+   * Update faction names based on current axis positions.
+   * Returns events for any name changes.
+   */
+  updateFactionNames(): GameEvent[] {
+    const events: GameEvent[] = [];
+    for (const faction of this.factions) {
+      const newName = getFactionName(faction.baseId, faction.position);
+      if (newName !== faction.name) {
+        const oldName = faction.name;
+        faction.name = newName;
+        events.push({
+          type: "FACTION_RENAMED",
+          severity: "info",
+          message: `${oldName} have reorganized as the ${newName}.`,
+        });
+      }
+    }
+    return events;
   }
 
   // ============ Council Selection ============
 
   /**
    * Select council members from colonists with highest political influence.
-   * Political influence = centrality × conviction.
-   * Uses the RelationshipManager's centrality cache.
+   * Political influence = centrality x conviction.
    */
   selectCouncil(
     colonists: Colonist[],
     relationshipManager: RelationshipManager,
     currentSol: number,
   ): CouncilMember[] {
-    // Determine council size based on population
     const councilSize = Math.min(
       IdeologyBalance.COUNCIL_SIZE_MAX,
       Math.max(
@@ -212,14 +332,13 @@ export class IdeologyManager implements ProjectQueries {
       ),
     );
 
-    // Calculate political influence for each colonist
     const candidates = colonists
       .filter((c): c is Colonist & { ideology: ColonistIdeology } => !!c.ideology)
       .map((colonist) => {
         const centrality = relationshipManager.getCentrality(colonist.id);
         const conviction = colonist.ideology.conviction;
         const influence = centrality * conviction;
-        const faction = IdeologyManager.getPrimaryFaction(colonist.ideology);
+        const nearest = IdeologyManager.getNearestFaction(colonist.ideology, this.factions);
 
         return {
           colonistId: colonist.id,
@@ -227,13 +346,11 @@ export class IdeologyManager implements ProjectQueries {
           centrality,
           conviction,
           influence,
-          faction,
+          factionId: nearest?.baseId ?? null,
         };
       });
 
-    // Sort by influence, take top N
     this.council = candidates.sort((a, b) => b.influence - a.influence).slice(0, councilSize);
-
     this.lastCouncilUpdateSol = currentSol;
     return this.council;
   }
@@ -250,7 +367,6 @@ export class IdeologyManager implements ProjectQueries {
       this.lastCouncilUpdateSol < 0 ||
       currentSol - this.lastCouncilUpdateSol >= IdeologyBalance.COUNCIL_UPDATE_INTERVAL
     ) {
-      // Ensure centrality is fresh
       relationshipManager.recalculateCentralityIfStale(
         currentSol,
         IdeologyBalance.COUNCIL_UPDATE_INTERVAL,
@@ -267,21 +383,20 @@ export class IdeologyManager implements ProjectQueries {
   }
 
   /**
-   * Get count of council seats by faction.
+   * Get count of council seats by faction baseId.
    */
-  getCouncilFactionCounts(): Record<NPCFaction | "neutral", number> {
-    const counts: Record<NPCFaction | "neutral", number> = {
-      [NPCFaction.EarthLoyalists]: 0,
-      [NPCFaction.MarsIndependence]: 0,
-      [NPCFaction.CorporateInterests]: 0,
-      neutral: 0,
-    };
+  getCouncilFactionCounts(): Record<string, number> {
+    const counts: Record<string, number> = { neutral: 0 };
+
+    for (const faction of this.factions) {
+      counts[faction.baseId] = 0;
+    }
 
     for (const member of this.council) {
-      if (member.faction) {
-        counts[member.faction]++;
+      if (member.factionId) {
+        counts[member.factionId] = (counts[member.factionId] ?? 0) + 1;
       } else {
-        counts.neutral++;
+        counts["neutral"] = (counts["neutral"] ?? 0) + 1;
       }
     }
 
@@ -291,60 +406,51 @@ export class IdeologyManager implements ProjectQueries {
   // ============ Faction Support Calculation ============
 
   /**
-   * Calculate colony-wide faction support levels.
-   * Support is weighted by colonist centrality (influential colonists matter more).
+   * Calculate colony-wide faction support levels based on axis-space distance.
+   * Closer colonists contribute more support. Support is normalized to sum to 1.
    */
   calculateFactionSupport(
     colonists: Colonist[],
     relationshipManager: RelationshipManager,
-  ): FactionSupport {
-    let totalWeight = 0;
-    const factionWeights = {
-      earthLoyalists: 0,
-      marsIndependence: 0,
-      corporateInterests: 0,
-    };
+  ): Record<string, number> {
+    if (this.factions.length === 0) {
+      return {};
+    }
+
+    const factionCloseness: Record<string, number> = {};
+    for (const faction of this.factions) {
+      factionCloseness[faction.id] = 0;
+    }
+
+    let totalCloseness = 0;
 
     for (const colonist of colonists) {
       if (!colonist.ideology) continue;
 
-      // Weight by centrality (influential colonists matter more) + baseline
       const weight = relationshipManager.getCentrality(colonist.id) + 0.1;
-      totalWeight += weight;
+      const pos = ideologyToAxis(colonist.ideology);
 
-      factionWeights.earthLoyalists += weight * colonist.ideology.earthLoyalist;
-      factionWeights.marsIndependence += weight * colonist.ideology.marsIndependence;
-      factionWeights.corporateInterests += weight * colonist.ideology.corporateInterests;
+      for (const faction of this.factions) {
+        const dist = axisDistance(pos, faction.position);
+        const closeness = weight / (1 + dist);
+        factionCloseness[faction.id] = (factionCloseness[faction.id] ?? 0) + closeness;
+        totalCloseness += closeness;
+      }
     }
 
-    if (totalWeight === 0) {
-      return { earthLoyalists: 0, marsIndependence: 0, corporateInterests: 0 };
+    if (totalCloseness === 0) {
+      const result: Record<string, number> = {};
+      for (const faction of this.factions) {
+        result[faction.id] = 0;
+      }
+      return result;
     }
 
-    return {
-      earthLoyalists: factionWeights.earthLoyalists / totalWeight,
-      marsIndependence: factionWeights.marsIndependence / totalWeight,
-      corporateInterests: factionWeights.corporateInterests / totalWeight,
-    };
-  }
-
-  /**
-   * Get support level for a specific faction.
-   */
-  getFactionSupportForFaction(
-    faction: NPCFaction,
-    colonists: Colonist[],
-    relationshipManager: RelationshipManager,
-  ): number {
-    const support = this.calculateFactionSupport(colonists, relationshipManager);
-    switch (faction) {
-      case NPCFaction.EarthLoyalists:
-        return support.earthLoyalists;
-      case NPCFaction.MarsIndependence:
-        return support.marsIndependence;
-      case NPCFaction.CorporateInterests:
-        return support.corporateInterests;
+    const result: Record<string, number> = {};
+    for (const faction of this.factions) {
+      result[faction.id] = (factionCloseness[faction.id] ?? 0) / totalCloseness;
     }
+    return result;
   }
 
   // ============ Ideology Spread ============
@@ -352,15 +458,12 @@ export class IdeologyManager implements ProjectQueries {
   /**
    * Propagate ideology through the social network.
    * Each colonist's ideology drifts toward their neighbors' weighted average.
-   * Influence is weighted by relationship strength, neighbor centrality, and neighbor conviction.
-   * Resistance is based on the colonist's own conviction.
    */
   propagateIdeology(
     colonists: Colonist[],
     relationshipManager: RelationshipManager,
     currentSol: number,
   ): void {
-    // Only spread every N sols for performance
     if (
       this.lastSpreadSol >= 0 &&
       currentSol - this.lastSpreadSol < IdeologyBalance.IDEOLOGY_SPREAD_INTERVAL
@@ -370,7 +473,6 @@ export class IdeologyManager implements ProjectQueries {
 
     this.lastSpreadSol = currentSol;
 
-    // Filter to colonists with ideology
     const ideologicalColonists = colonists.filter(
       (c): c is Colonist & { ideology: ColonistIdeology } => !!c.ideology,
     );
@@ -382,17 +484,13 @@ export class IdeologyManager implements ProjectQueries {
     );
 
     for (const colonist of ideologicalColonists) {
-      const ideology = colonist.ideology; // Guaranteed by filter above
+      const ideology = colonist.ideology;
       const neighbors = relationshipManager.getNeighbors(colonist.id);
       if (neighbors.size === 0) continue;
 
-      // Calculate weighted average of neighbor ideologies
+      // Calculate weighted average of neighbor ideologies on each axis
       let totalWeight = 0;
-      const avgInfluence = {
-        earthLoyalist: 0,
-        marsIndependence: 0,
-        corporateInterests: 0,
-      };
+      const avgInfluence: AxisPosition = { solidarity: 0, sovereignty: 0, transformation: 0 };
 
       for (const neighborId of neighbors) {
         const neighborIdeology = ideologySnapshot.get(neighborId);
@@ -403,8 +501,6 @@ export class IdeologyManager implements ProjectQueries {
           neighborId,
         );
 
-        // Skip weak connections - ideology only spreads through strong ties
-        // This creates ideological "pockets" in the social network
         if (relationshipStrength < IdeologyBalance.IDEOLOGY_SPREAD_CONNECTION_THRESHOLD) {
           continue;
         }
@@ -412,39 +508,29 @@ export class IdeologyManager implements ProjectQueries {
         const neighborCentrality = relationshipManager.getCentrality(neighborId);
         const neighborConviction = neighborIdeology.conviction;
 
-        // Weight = relationship² × (centrality + baseline) × conviction
-        // Squaring relationship strength makes strong bonds disproportionately more influential
         const weight = relationshipStrength ** 2 * (neighborCentrality + 0.1) * neighborConviction;
         totalWeight += weight;
 
-        avgInfluence.earthLoyalist += weight * neighborIdeology.earthLoyalist;
-        avgInfluence.marsIndependence += weight * neighborIdeology.marsIndependence;
-        avgInfluence.corporateInterests += weight * neighborIdeology.corporateInterests;
+        for (const axis of AXIS_KEYS) {
+          avgInfluence[axis] += weight * neighborIdeology[axis];
+        }
       }
 
       if (totalWeight === 0) continue;
 
-      // Normalize
-      avgInfluence.earthLoyalist /= totalWeight;
-      avgInfluence.marsIndependence /= totalWeight;
-      avgInfluence.corporateInterests /= totalWeight;
+      for (const axis of AXIS_KEYS) {
+        avgInfluence[axis] /= totalWeight;
+      }
 
       // Resistance based on own conviction
       const resistance = ideology.conviction * IdeologyBalance.CONVICTION_RESISTANCE_FACTOR;
       const effectiveRate = IdeologyBalance.IDEOLOGY_SPREAD_RATE * (1 - resistance);
 
       // Drift toward neighbor average
-      ideology.earthLoyalist +=
-        effectiveRate * (avgInfluence.earthLoyalist - ideology.earthLoyalist);
-      ideology.marsIndependence +=
-        effectiveRate * (avgInfluence.marsIndependence - ideology.marsIndependence);
-      ideology.corporateInterests +=
-        effectiveRate * (avgInfluence.corporateInterests - ideology.corporateInterests);
-
-      // Clamp values to [0, 1]
-      ideology.earthLoyalist = Math.max(0, Math.min(1, ideology.earthLoyalist));
-      ideology.marsIndependence = Math.max(0, Math.min(1, ideology.marsIndependence));
-      ideology.corporateInterests = Math.max(0, Math.min(1, ideology.corporateInterests));
+      for (const axis of AXIS_KEYS) {
+        ideology[axis] += effectiveRate * (avgInfluence[axis] - ideology[axis]);
+        ideology[axis] = Math.max(-1, Math.min(1, ideology[axis]));
+      }
     }
 
     // Evolve conviction after ideology spread
@@ -452,11 +538,104 @@ export class IdeologyManager implements ProjectQueries {
   }
 
   /**
+   * Calculate the ideological pressure a colonist experiences from their neighbors.
+   * Returns the weighted average ideology neighbors are pushing toward,
+   * along with pressure strength and conviction growth/decay info.
+   */
+  calculateIdeologicalPressure(
+    colonist: Colonist,
+    colonists: Colonist[],
+    relationshipManager: RelationshipManager,
+  ): {
+    pressure: { solidarity: number; sovereignty: number; transformation: number };
+    totalWeight: number;
+    neighborCount: number;
+    convictionPressure: { growth: boolean; rate: number };
+  } | null {
+    if (!colonist.ideology) return null;
+
+    const neighbors = relationshipManager.getNeighbors(colonist.id);
+    if (neighbors.size === 0) {
+      return {
+        pressure: { solidarity: 0, sovereignty: 0, transformation: 0 },
+        totalWeight: 0,
+        neighborCount: 0,
+        convictionPressure: { growth: false, rate: IdeologyBalance.CONVICTION_DECAY_RATE },
+      };
+    }
+
+    const colonistMap = new Map(colonists.map((c) => [c.id, c]));
+    let totalWeight = 0;
+    let neighborCount = 0;
+    const avgInfluence: AxisPosition = { solidarity: 0, sovereignty: 0, transformation: 0 };
+
+    // Also track conviction support
+    let supportWeight = 0;
+    const colonistPos = ideologyToAxis(colonist.ideology);
+
+    for (const neighborId of neighbors) {
+      const neighbor = colonistMap.get(neighborId);
+      if (!neighbor?.ideology) continue;
+
+      const relationshipStrength = relationshipManager.getRelationshipStrength(
+        colonist.id,
+        neighborId,
+      );
+      if (relationshipStrength < IdeologyBalance.IDEOLOGY_SPREAD_CONNECTION_THRESHOLD) continue;
+
+      const neighborCentrality = relationshipManager.getCentrality(neighborId);
+      const neighborConviction = neighbor.ideology.conviction;
+      const weight = relationshipStrength ** 2 * (neighborCentrality + 0.1) * neighborConviction;
+      totalWeight += weight;
+      neighborCount++;
+
+      for (const axis of AXIS_KEYS) {
+        avgInfluence[axis] += weight * neighbor.ideology[axis];
+      }
+
+      // Check proximity in axis space for conviction
+      const neighborPos = ideologyToAxis(neighbor.ideology);
+      const dist = axisDistance(colonistPos, neighborPos);
+      if (dist <= IdeologyBalance.CONVICTION_SUPPORT_DISTANCE) {
+        supportWeight += weight;
+      }
+    }
+
+    if (totalWeight > 0) {
+      for (const axis of AXIS_KEYS) {
+        avgInfluence[axis] /= totalWeight;
+      }
+    }
+
+    // Determine conviction pressure direction
+    const supportRatio = totalWeight > 0 ? supportWeight / totalWeight : 0;
+    const supportThreshold = 0.35;
+    const convictionGrowth = supportRatio >= supportThreshold;
+    let convictionRate: number;
+    if (convictionGrowth) {
+      const supportStrength = supportRatio - supportThreshold;
+      convictionRate = IdeologyBalance.CONVICTION_GROWTH_RATE * (supportStrength * 2 + 0.2);
+    } else {
+      const oppositionStrength = supportThreshold - supportRatio;
+      convictionRate = IdeologyBalance.CONVICTION_DECAY_RATE + oppositionStrength * 0.1;
+    }
+
+    return {
+      pressure: {
+        solidarity: avgInfluence.solidarity,
+        sovereignty: avgInfluence.sovereignty,
+        transformation: avgInfluence.transformation,
+      },
+      totalWeight,
+      neighborCount,
+      convictionPressure: { growth: convictionGrowth, rate: convictionRate },
+    };
+  }
+
+  /**
    * Evolve conviction based on ideology pressure from neighbors.
-   * Conviction grows when neighbors reinforce the colonist's primary faction
-   * and decays proportionally to how strongly neighbors oppose it.
-   * Neutral colonists experience conviction decay and stronger ideology drift
-   * toward the dominant neighborhood faction, preventing ideological stagnation.
+   * Conviction grows when neighbors are close in axis space (within CONVICTION_SUPPORT_DISTANCE)
+   * and decays when neighbors are distant.
    */
   private evolveConviction(colonists: Colonist[], relationshipManager: RelationshipManager): void {
     const colonistMap = new Map(colonists.map((c) => [c.id, c]));
@@ -464,15 +643,14 @@ export class IdeologyManager implements ProjectQueries {
     for (const colonist of colonists) {
       if (!colonist.ideology) continue;
 
-      // Natural decay applies to all colonists (represents doubt/questioning)
+      // Natural decay applies to all colonists
       colonist.ideology.conviction = Math.max(
         IdeologyBalance.CONVICTION_MIN,
         colonist.ideology.conviction - IdeologyBalance.CONVICTION_NATURAL_DECAY,
       );
 
-      const primaryFaction = IdeologyManager.getPrimaryFaction(colonist.ideology);
-      if (!primaryFaction) {
-        // Neutral colonists: decay conviction further and drift toward neighborhood ideology
+      const colonistIsNeutral = isNeutral(colonist.ideology);
+      if (colonistIsNeutral) {
         this.evolveNeutralColonist(
           colonist as Colonist & { ideology: ColonistIdeology },
           colonistMap,
@@ -483,7 +661,6 @@ export class IdeologyManager implements ProjectQueries {
 
       const neighbors = relationshipManager.getNeighbors(colonist.id);
       if (neighbors.size === 0) {
-        // Isolated colonists decay toward minimum
         colonist.ideology.conviction = Math.max(
           IdeologyBalance.CONVICTION_MIN,
           colonist.ideology.conviction - IdeologyBalance.CONVICTION_DECAY_RATE,
@@ -491,17 +668,17 @@ export class IdeologyManager implements ProjectQueries {
         continue;
       }
 
-      // Calculate weighted average neighbor ideology for the primary faction
+      // Calculate how many strong neighbors are close in axis space
       let totalWeight = 0;
-      let weightedFactionSum = 0;
+      let supportWeight = 0;
+
+      const colonistPos = ideologyToAxis(colonist.ideology);
 
       for (const neighborId of neighbors) {
         const relationshipStrength = relationshipManager.getRelationshipStrength(
           colonist.id,
           neighborId,
         );
-
-        // Only consider strong connections
         if (relationshipStrength < IdeologyBalance.IDEOLOGY_SPREAD_CONNECTION_THRESHOLD) {
           continue;
         }
@@ -511,24 +688,18 @@ export class IdeologyManager implements ProjectQueries {
 
         const neighborCentrality = relationshipManager.getCentrality(neighborId);
         const neighborConviction = neighbor.ideology.conviction;
-
-        // Use squared relationship strength (consistent with spread formula)
         const weight = relationshipStrength ** 2 * (neighborCentrality + 0.1) * neighborConviction;
         totalWeight += weight;
 
-        // Get neighbor's value for this colonist's primary faction
-        const neighborFactionValue =
-          primaryFaction === NPCFaction.EarthLoyalists
-            ? neighbor.ideology.earthLoyalist
-            : primaryFaction === NPCFaction.MarsIndependence
-              ? neighbor.ideology.marsIndependence
-              : neighbor.ideology.corporateInterests;
-
-        weightedFactionSum += weight * neighborFactionValue;
+        // Check proximity in axis space
+        const neighborPos = ideologyToAxis(neighbor.ideology);
+        const dist = axisDistance(colonistPos, neighborPos);
+        if (dist <= IdeologyBalance.CONVICTION_SUPPORT_DISTANCE) {
+          supportWeight += weight;
+        }
       }
 
       if (totalWeight === 0) {
-        // No strong connections with ideology, decay
         colonist.ideology.conviction = Math.max(
           IdeologyBalance.CONVICTION_MIN,
           colonist.ideology.conviction - IdeologyBalance.CONVICTION_DECAY_RATE,
@@ -536,26 +707,19 @@ export class IdeologyManager implements ProjectQueries {
         continue;
       }
 
-      // Normalize
-      const neighborFactionPressure = weightedFactionSum / totalWeight;
-
-      // Conviction grows when neighbors support your faction (high pressure value)
-      // Conviction decays when neighbors oppose your faction (low pressure value)
-      // Threshold: 0.4 = neighbors moderately support your faction
+      // Conviction grows when neighbors are close, decays when distant
+      const supportRatio = supportWeight / totalWeight;
       const supportThreshold = 0.35;
 
-      if (neighborFactionPressure >= supportThreshold) {
-        // Neighbors support this faction - conviction grows based on support level
-        // Growth doesn't depend on neighbor conviction - just alignment
-        const supportStrength = neighborFactionPressure - supportThreshold; // 0 to 0.65
+      if (supportRatio >= supportThreshold) {
+        const supportStrength = supportRatio - supportThreshold;
         const growth = IdeologyBalance.CONVICTION_GROWTH_RATE * (supportStrength * 2 + 0.2);
         colonist.ideology.conviction = Math.min(
           IdeologyBalance.CONVICTION_MAX,
           colonist.ideology.conviction + growth,
         );
       } else {
-        // Neighbors don't support this faction - conviction decays
-        const oppositionStrength = supportThreshold - neighborFactionPressure; // 0 to 0.35
+        const oppositionStrength = supportThreshold - supportRatio;
         const decay = IdeologyBalance.CONVICTION_DECAY_RATE + oppositionStrength * 0.1;
         colonist.ideology.conviction = Math.max(
           IdeologyBalance.CONVICTION_MIN,
@@ -566,17 +730,15 @@ export class IdeologyManager implements ProjectQueries {
   }
 
   /**
-   * Neutral colonists (no primary faction) experience:
+   * Neutral colonists (near origin on all axes) experience:
    * 1. Conviction decay - they become more open to influence over time
    * 2. Stronger ideology drift toward the dominant neighborhood faction
-   * This prevents colonists from getting stuck in an indecisive middle ground.
    */
   private evolveNeutralColonist(
     colonist: Colonist & { ideology: ColonistIdeology },
     colonistMap: Map<string, Colonist>,
     relationshipManager: RelationshipManager,
   ): void {
-    // Neutral colonists lose conviction faster (they lack reinforcement)
     colonist.ideology.conviction = Math.max(
       IdeologyBalance.CONVICTION_MIN,
       colonist.ideology.conviction - IdeologyBalance.CONVICTION_DECAY_RATE,
@@ -585,9 +747,8 @@ export class IdeologyManager implements ProjectQueries {
     const neighbors = relationshipManager.getNeighbors(colonist.id);
     if (neighbors.size === 0) return;
 
-    // Calculate weighted average neighbor ideology across all factions
     let totalWeight = 0;
-    const avgNeighborIdeology = { earthLoyalist: 0, marsIndependence: 0, corporateInterests: 0 };
+    const avgNeighborIdeology: AxisPosition = { solidarity: 0, sovereignty: 0, transformation: 0 };
 
     for (const neighborId of neighbors) {
       const relationshipStrength = relationshipManager.getRelationshipStrength(
@@ -603,299 +764,174 @@ export class IdeologyManager implements ProjectQueries {
       const weight = relationshipStrength ** 2 * neighborConviction;
       totalWeight += weight;
 
-      avgNeighborIdeology.earthLoyalist += weight * neighbor.ideology.earthLoyalist;
-      avgNeighborIdeology.marsIndependence += weight * neighbor.ideology.marsIndependence;
-      avgNeighborIdeology.corporateInterests += weight * neighbor.ideology.corporateInterests;
+      for (const axis of AXIS_KEYS) {
+        avgNeighborIdeology[axis] += weight * neighbor.ideology[axis];
+      }
     }
 
     if (totalWeight === 0) return;
 
-    avgNeighborIdeology.earthLoyalist /= totalWeight;
-    avgNeighborIdeology.marsIndependence /= totalWeight;
-    avgNeighborIdeology.corporateInterests /= totalWeight;
+    for (const axis of AXIS_KEYS) {
+      avgNeighborIdeology[axis] /= totalWeight;
+    }
 
-    // Neutral colonists are more susceptible - use higher drift rate and ignore conviction resistance
     const driftRate = IdeologyBalance.NEUTRAL_IDEOLOGY_DRIFT_RATE;
 
-    colonist.ideology.earthLoyalist +=
-      driftRate * (avgNeighborIdeology.earthLoyalist - colonist.ideology.earthLoyalist);
-    colonist.ideology.marsIndependence +=
-      driftRate * (avgNeighborIdeology.marsIndependence - colonist.ideology.marsIndependence);
-    colonist.ideology.corporateInterests +=
-      driftRate * (avgNeighborIdeology.corporateInterests - colonist.ideology.corporateInterests);
-
-    // Clamp
-    colonist.ideology.earthLoyalist = Math.max(0, Math.min(1, colonist.ideology.earthLoyalist));
-    colonist.ideology.marsIndependence = Math.max(
-      0,
-      Math.min(1, colonist.ideology.marsIndependence),
-    );
-    colonist.ideology.corporateInterests = Math.max(
-      0,
-      Math.min(1, colonist.ideology.corporateInterests),
-    );
+    for (const axis of AXIS_KEYS) {
+      colonist.ideology[axis] += driftRate * (avgNeighborIdeology[axis] - colonist.ideology[axis]);
+      colonist.ideology[axis] = Math.max(-1, Math.min(1, colonist.ideology[axis]));
+    }
   }
 
-  // ============ Ideological Pressure ============
+  // ============ Faction Rally ============
+
+  /** Sol of last rally action */
+  private lastRallySol = -Infinity;
 
   /**
-   * Calculate the ideological pressure a colonist experiences from their neighbors.
-   * Returns the weighted average ideology neighbors are pushing toward,
-   * along with the total pressure strength.
+   * Rally a faction: two effects that mirror old lobbying behavior.
+   *
+   * 1. Conviction boost: aligned colonists (nearest faction matches) get
+   *    conviction boosted, making them more likely to become council members.
+   * 2. Ideology nudge: ALL colonists get their ideology nudged slightly
+   *    toward the target faction's position. Low-conviction colonists are
+   *    more susceptible (inversely proportional to conviction).
+   *    This converts uncommitted colonists over time, like political campaigning.
+   *
+   * Cooldown: RALLY_COOLDOWN_SOLS between rallies.
+   * Returns the number of colonists affected.
    */
-  calculateIdeologicalPressure(
-    colonist: Colonist,
-    colonists: Colonist[],
-    relationshipManager: RelationshipManager,
-  ): {
-    pressure: {
-      earthLoyalist: number;
-      marsIndependence: number;
-      corporateInterests: number;
-    };
-    totalWeight: number;
-    neighborCount: number;
-    convictionPressure: { growth: boolean; rate: number };
-  } | null {
-    if (!colonist.ideology) return null;
+  rallyFaction(
+    factionId: string,
+    colonists: readonly { ideology?: ColonistIdeology }[],
+    currentSol: number,
+  ): number {
+    const RALLY_COOLDOWN_SOLS = 2;
+    const RALLY_CONVICTION_BOOST = 0.05;
+    const RALLY_IDEOLOGY_NUDGE = 0.08; // per-axis nudge toward faction position
 
-    const neighbors = relationshipManager.getNeighbors(colonist.id);
-    if (neighbors.size === 0) {
-      return {
-        pressure: {
-          earthLoyalist: 0,
-          marsIndependence: 0,
-          corporateInterests: 0,
-        },
-        totalWeight: 0,
-        neighborCount: 0,
-        convictionPressure: {
-          growth: false,
-          rate: IdeologyBalance.CONVICTION_DECAY_RATE,
-        },
-      };
-    }
+    if (currentSol - this.lastRallySol < RALLY_COOLDOWN_SOLS) return 0;
+    this.lastRallySol = currentSol;
 
-    const colonistMap = new Map(colonists.map((c) => [c.id, c]));
-    const primaryFaction = IdeologyManager.getPrimaryFaction(colonist.ideology);
+    const faction = this.factions.find((f) => f.id === factionId || f.baseId === factionId);
+    if (!faction) return 0;
 
-    let totalWeight = 0;
-    let neighborCount = 0;
-    const avgInfluence = {
-      earthLoyalist: 0,
-      marsIndependence: 0,
-      corporateInterests: 0,
-    };
-
-    for (const neighborId of neighbors) {
-      const neighbor = colonistMap.get(neighborId);
-      if (!neighbor?.ideology) continue;
-
-      const relationshipStrength = relationshipManager.getRelationshipStrength(
-        colonist.id,
-        neighborId,
-      );
-
-      // Skip weak connections
-      if (relationshipStrength < IdeologyBalance.IDEOLOGY_SPREAD_CONNECTION_THRESHOLD) {
-        continue;
-      }
-
-      neighborCount++;
-
-      const neighborCentrality = relationshipManager.getCentrality(neighborId);
-      const neighborConviction = neighbor.ideology.conviction;
-
-      // Weight = relationship² × (centrality + baseline) × conviction
-      // Squaring relationship strength makes strong bonds disproportionately more influential
-      const weight = relationshipStrength ** 2 * (neighborCentrality + 0.1) * neighborConviction;
-      totalWeight += weight;
-
-      avgInfluence.earthLoyalist += weight * neighbor.ideology.earthLoyalist;
-      avgInfluence.marsIndependence += weight * neighbor.ideology.marsIndependence;
-      avgInfluence.corporateInterests += weight * neighbor.ideology.corporateInterests;
-    }
-
-    // Normalize
-    if (totalWeight > 0) {
-      avgInfluence.earthLoyalist /= totalWeight;
-      avgInfluence.marsIndependence /= totalWeight;
-      avgInfluence.corporateInterests /= totalWeight;
-    }
-
-    // Calculate conviction pressure based on ideology pressure delta
-    let convictionPressure: { growth: boolean; rate: number };
-    if (!primaryFaction || neighborCount === 0) {
-      convictionPressure = { growth: false, rate: 0 };
-    } else {
-      const neighborFactionPressure =
-        primaryFaction === NPCFaction.EarthLoyalists
-          ? avgInfluence.earthLoyalist
-          : primaryFaction === NPCFaction.MarsIndependence
-            ? avgInfluence.marsIndependence
-            : avgInfluence.corporateInterests;
-
-      // Conviction grows when neighbors support your faction (high pressure value)
-      // Conviction decays when neighbors don't support your faction (low pressure value)
-      const supportThreshold = 0.35;
-
-      if (neighborFactionPressure >= supportThreshold) {
-        const supportStrength = neighborFactionPressure - supportThreshold;
-        convictionPressure = {
-          growth: true,
-          rate: IdeologyBalance.CONVICTION_GROWTH_RATE * (supportStrength * 2 + 0.2),
-        };
-      } else {
-        const oppositionStrength = supportThreshold - neighborFactionPressure;
-        convictionPressure = {
-          growth: false,
-          rate: IdeologyBalance.CONVICTION_DECAY_RATE + oppositionStrength * 0.1,
-        };
-      }
-    }
-
-    return {
-      pressure: avgInfluence,
-      totalWeight,
-      neighborCount,
-      convictionPressure,
-    };
-  }
-
-  // ============ Project Morale Effects ============
-
-  /**
-   * Apply morale and conviction effects when a project passes.
-   * - Morale boost/penalty based on faction affinity (base effects)
-   * - Project-specific supporter morale/conviction boosts (from project.effects)
-   * - Conviction boost for council members who voted for it
-   */
-  applyProjectMoraleEffects(
-    project: Project,
-    colonists: Colonist[],
-    moraleManager: ColonistMoraleManager,
-  ): void {
-    const projectFaction = project.type;
-    const factionKey = IdeologyManager.factionToKey(projectFaction);
-
-    // Get project-specific boosts (or use 0 if not specified)
-    const projectMoraleBoost = project.effects?.supporterMoraleBoost ?? 0;
-    const projectConvictionBoost = project.effects?.supporterConvictionBoost ?? 0;
-
-    // Build a set of council member IDs who voted for this project
-    const voterIds = new Set<string>();
-    for (const member of this.council) {
-      if (member.faction === projectFaction) {
-        voterIds.add(member.colonistId);
-      }
-    }
-
+    let affected = 0;
     for (const colonist of colonists) {
       if (!colonist.ideology) continue;
 
-      const affinity = colonist.ideology[factionKey];
-      const primaryFaction = IdeologyManager.getPrimaryFaction(colonist.ideology);
-
-      let moraleDelta = 0;
-      let convictionDelta = 0;
-
-      // Morale effects based on affinity (base + project-specific)
-      if (affinity >= 0.7) {
-        moraleDelta = IdeologyBalance.PROJECT_MORALE_STRONG_SUPPORTER + projectMoraleBoost;
-        convictionDelta =
-          IdeologyBalance.PROJECT_CONVICTION_BOOST_STRONG_SUPPORTER + projectConvictionBoost;
-      } else if (affinity >= 0.4) {
-        moraleDelta = IdeologyBalance.PROJECT_MORALE_SUPPORTER + projectMoraleBoost * 0.5;
-        convictionDelta =
-          IdeologyBalance.PROJECT_CONVICTION_BOOST_SUPPORTER + projectConvictionBoost * 0.5;
-      } else if (primaryFaction && primaryFaction !== projectFaction) {
-        // They belong to a different faction
-        moraleDelta =
-          colonist.ideology.conviction >= IdeologyBalance.PROJECT_MORALE_CONVICTION_THRESHOLD
-            ? IdeologyBalance.PROJECT_MORALE_STRONGLY_OPPOSED
-            : IdeologyBalance.PROJECT_MORALE_OPPOSED;
-      }
-
-      // Extra conviction boost for council members who voted for the project
-      if (voterIds.has(colonist.id)) {
-        convictionDelta = Math.max(convictionDelta, IdeologyBalance.PROJECT_CONVICTION_BOOST_VOTER);
-      }
-
-      // Apply morale effect
-      if (moraleDelta !== 0) {
-        moraleManager.adjustColonistMorale(colonist.id, moraleDelta);
-      }
-
-      // Apply conviction boost (capped at 1.0)
-      if (convictionDelta > 0) {
+      // Effect 1: Conviction boost for already-aligned colonists
+      const nearest = IdeologyManager.getNearestFaction(colonist.ideology, this.factions);
+      if (nearest?.id === factionId || nearest?.baseId === factionId) {
         colonist.ideology.conviction = Math.min(
-          1.0,
-          colonist.ideology.conviction + convictionDelta,
+          IdeologyBalance.CONVICTION_MAX,
+          colonist.ideology.conviction + RALLY_CONVICTION_BOOST,
         );
       }
+
+      // Effect 2: Nudge ALL colonists' ideology toward faction position.
+      // Low-conviction colonists are more susceptible (1 - conviction * 0.5).
+      const susceptibility = 1 - colonist.ideology.conviction * 0.5;
+      const nudge = RALLY_IDEOLOGY_NUDGE * susceptibility;
+      for (const axis of AXIS_KEYS) {
+        const diff = faction.position[axis] - colonist.ideology[axis];
+        colonist.ideology[axis] = Math.max(-1, Math.min(1, colonist.ideology[axis] + diff * nudge));
+      }
+
+      affected++;
     }
-  }
-
-  // ============ Lobbying ============
-
-  /**
-   * Calculate the cost in materials to lobby a council member.
-   * Cost scales with the colonist's influence (centrality × conviction).
-   */
-  getLobbyCost(colonistId: string, _faction: NPCFaction, affinityBoost: number): number {
-    const member = this.council.find((m) => m.colonistId === colonistId);
-    if (!member) return Infinity;
-
-    // Base cost + influence scaling
-    const influenceCost = member.influence * IdeologyBalance.LOBBY_INFLUENCE_COST_MULTIPLIER;
-    const boostMultiplier = affinityBoost / IdeologyBalance.LOBBY_AFFINITY_BOOST;
-
-    return Math.ceil(IdeologyBalance.LOBBY_BASE_COST + influenceCost * boostMultiplier);
+    return affected;
   }
 
   /**
-   * Lobby a council member to boost their affinity for a faction.
-   * The boosted affinity will naturally spread through the social network.
+   * Check if a rally action is available (not on cooldown).
    */
-  lobbyColonist(
-    colonistId: string,
-    faction: NPCFaction,
-    affinityBoost: number,
-    colonists: Colonist[],
-  ): LobbyResult {
-    // Verify target is a council member
-    const member = this.council.find((m) => m.colonistId === colonistId);
-    if (!member) {
-      return { success: false, reason: "Target is not a council member" };
-    }
+  canRally(currentSol: number): boolean {
+    const RALLY_COOLDOWN_SOLS = 2;
+    return currentSol - this.lastRallySol >= RALLY_COOLDOWN_SOLS;
+  }
 
-    // Find the colonist
-    const colonist = colonists.find((c) => c.id === colonistId);
-    if (!colonist || !colonist.ideology) {
-      return {
-        success: false,
-        reason: "Colonist not found or has no ideology",
-      };
-    }
+  // ============ Policy Declarations ============
 
-    // Apply the affinity boost
-    const factionKey = IdeologyManager.factionToKey(faction);
-    const currentAffinity = colonist.ideology[factionKey];
-    const newAffinity = Math.min(1.0, currentAffinity + affinityBoost);
-    colonist.ideology[factionKey] = newAffinity;
-
-    return { success: true, newAffinity };
+  /**
+   * Declare a policy, replacing any existing one.
+   * Returns false if policy not found.
+   */
+  declarePolicy(policyId: string, currentSol: number): boolean {
+    const policy = getPolicy(policyId);
+    if (!policy) return false;
+    this.activePolicy = { policy, startSol: currentSol };
+    return true;
   }
 
   /**
-   * Check if a colonist can be lobbied (must be council member).
+   * Get the currently active policy, or null.
    */
-  canLobby(colonistId: string): { canLobby: boolean; reason?: string } {
-    const member = this.council.find((m) => m.colonistId === colonistId);
-    if (!member) {
-      return { canLobby: false, reason: "Target is not a council member" };
+  getActivePolicy(): { policy: Policy; startSol: number } | null {
+    return this.activePolicy;
+  }
+
+  /**
+   * Process active policy effects: apply pressure and check expiry.
+   * Returns events for policy expiry.
+   */
+  processActivePolicy(
+    currentSol: number,
+    colonists?: readonly { ideology?: ColonistIdeology }[],
+  ): GameEvent[] {
+    if (!this.activePolicy) return [];
+
+    const { policy, startSol } = this.activePolicy;
+    const elapsed = currentSol - startSol;
+
+    // Check expiry
+    if (elapsed >= policy.duration) {
+      this.activePolicy = null;
+      return [
+        {
+          type: "POLICY_EXPIRED",
+          severity: "info",
+          message: `Policy "${policy.name}" has expired after ${policy.duration} sols.`,
+        },
+      ];
     }
-    return { canLobby: true };
+
+    // Apply pressure: the policy pushes the specified axis in the specified direction
+    const pressureDelta = policy.strength * policy.direction;
+    for (const faction of this.factions) {
+      faction.pressure[policy.axis] = Math.max(
+        -1,
+        Math.min(1, faction.pressure[policy.axis] + pressureDelta),
+      );
+    }
+
+    // Active policies also rally conviction: colonists aligned with the policy's
+    // direction get a small conviction boost. This simulates the policy creating
+    // political engagement and strengthening aligned colonists' council presence.
+    if (colonists) {
+      const POLICY_CONVICTION_BOOST = 0.005;
+      for (const colonist of colonists) {
+        if (!colonist.ideology) continue;
+        // Check if colonist's axis value aligns with the policy direction
+        const colonistValue = colonist.ideology[policy.axis];
+        const aligns = policy.direction > 0 ? colonistValue > 0 : colonistValue < 0;
+        if (aligns) {
+          colonist.ideology.conviction = Math.min(
+            IdeologyBalance.CONVICTION_MAX,
+            colonist.ideology.conviction + POLICY_CONVICTION_BOOST,
+          );
+        }
+      }
+    }
+
+    return [];
+  }
+
+  /**
+   * Cancel the active policy.
+   */
+  cancelPolicy(): void {
+    this.activePolicy = null;
   }
 
   // ============ Projects ============
@@ -935,8 +971,7 @@ export class IdeologyManager implements ProjectQueries {
   /**
    * Submit a project proposal for council vote.
    */
-  submitProposal(projectId: ProjectId, faction: NPCFaction, currentSol: number): boolean {
-    // Can't propose if already pending, completed, or failed
+  submitProposal(projectId: ProjectId, factionId: string, currentSol: number): boolean {
     if (
       this.pendingProposals.has(projectId) ||
       this.completedProjects.has(projectId) ||
@@ -947,7 +982,7 @@ export class IdeologyManager implements ProjectQueries {
 
     this.pendingProposals.set(projectId, {
       projectId,
-      faction,
+      factionId,
       proposedSol: currentSol,
       voteSol: currentSol + IdeologyBalance.PROJECT_VOTING_PERIOD,
     });
@@ -984,15 +1019,16 @@ export class IdeologyManager implements ProjectQueries {
   }
 
   /**
-   * Preview what the vote outcome would be for a project.
+   * Preview what the vote outcome would be for a faction.
+   * Counts council members whose nearest faction matches the given factionId.
    */
-  getVoteProjection(faction: NPCFaction): {
+  getVoteProjection(factionId: string): {
     votesFor: number;
     votesAgainst: number;
     wouldPass: boolean;
   } {
     const counts = this.getCouncilFactionCounts();
-    const votesFor = counts[faction] ?? 0;
+    const votesFor = counts[factionId] ?? 0;
     const totalVotes = this.council.length;
     const votesAgainst = totalVotes - votesFor;
     const wouldPass = votesFor > votesAgainst;
@@ -1002,14 +1038,13 @@ export class IdeologyManager implements ProjectQueries {
 
   /**
    * Process votes for proposals that have reached their vote sol.
-   * Returns the results of any votes that occurred.
    */
   processVotes(currentSol: number): VoteResult[] {
     const results: VoteResult[] = [];
 
     for (const [projectId, proposal] of this.pendingProposals) {
       if (currentSol >= proposal.voteSol) {
-        const projection = this.getVoteProjection(proposal.faction);
+        const projection = this.getVoteProjection(proposal.factionId);
 
         const result: VoteResult = {
           projectId,
@@ -1020,11 +1055,8 @@ export class IdeologyManager implements ProjectQueries {
         };
 
         results.push(result);
-
-        // Remove from pending
         this.pendingProposals.delete(projectId);
 
-        // Add to completed or failed
         if (result.passed) {
           this.completedProjects.add(projectId);
         } else {
@@ -1051,11 +1083,11 @@ export class IdeologyManager implements ProjectQueries {
   }
 
   /**
-   * Check if a project can be proposed based on its requirements.
-   * Returns an object indicating whether the project can be proposed and why not if it cannot.
+   * Check if a project can be proposed based on its requirements and axis gating.
    */
   canProposeProject(
     project: Project,
+    factionId: string,
     context: {
       technology?: TechnologyTree;
       buildings?: BuildingManager;
@@ -1063,7 +1095,6 @@ export class IdeologyManager implements ProjectQueries {
       resources?: ResourceManager;
     },
   ): { canPropose: boolean; reason?: string } {
-    // Check if already completed, pending, or failed
     if (this.completedProjects.has(project.id)) {
       return { canPropose: false, reason: "Project already completed" };
     }
@@ -1074,7 +1105,30 @@ export class IdeologyManager implements ProjectQueries {
       return { canPropose: false, reason: "Project previously failed (must clear first)" };
     }
 
-    // Check prerequisites
+    // Check axis requirements against proposing faction's position
+    if (project.axisRequirements) {
+      const faction = this.getFaction(factionId);
+      if (!faction) {
+        return { canPropose: false, reason: "Faction not found" };
+      }
+
+      for (const [axis, req] of Object.entries(project.axisRequirements)) {
+        const value = faction.position[axis as keyof AxisPosition];
+        if (req.min !== undefined && value < req.min) {
+          return {
+            canPropose: false,
+            reason: `${axis} position too low (${value.toFixed(2)} < ${req.min})`,
+          };
+        }
+        if (req.max !== undefined && value > req.max) {
+          return {
+            canPropose: false,
+            reason: `${axis} position too high (${value.toFixed(2)} > ${req.max})`,
+          };
+        }
+      }
+    }
+
     const prerequisites = project.prerequisites ?? [];
     for (const prereq of prerequisites) {
       if (!this.completedProjects.has(prereq)) {
@@ -1082,7 +1136,6 @@ export class IdeologyManager implements ProjectQueries {
       }
     }
 
-    // Check requirements
     const requirements = project.requirements ?? [];
     for (const req of requirements) {
       switch (req.type) {
@@ -1141,38 +1194,7 @@ export class IdeologyManager implements ProjectQueries {
     return { canPropose: true };
   }
 
-  // ============ Faction Conviction ============
-
-  /**
-   * Boost conviction for all colonists aligned with a faction.
-   * Only colonists with moderate or higher affinity (>0.2) receive the boost.
-   */
-  boostFactionConviction(faction: NPCFaction, amount: number, colonists: Colonist[]): void {
-    const affinityKey = IdeologyManager.factionToKey(faction);
-
-    for (const colonist of colonists) {
-      if (!colonist.ideology) continue;
-
-      const currentAffinity = colonist.ideology[affinityKey] ?? 0;
-
-      // Only boost if they have some alignment with this faction
-      if (currentAffinity > 0.2) {
-        colonist.ideology.conviction = Math.min(1, (colonist.ideology.conviction ?? 0) + amount);
-      }
-    }
-  }
-
   // ============ Capstone Projects ============
-
-  /**
-   * Get all passed projects for a specific faction.
-   */
-  getPassedProjectsForFaction(faction: NPCFaction): ProjectId[] {
-    const factionProjects = getProjectsByFaction(faction);
-    return factionProjects
-      .filter((p) => !p.isCapstone && this.completedProjects.has(p.id))
-      .map((p) => p.id);
-  }
 
   /**
    * Check if a project is a capstone victory project.
@@ -1182,46 +1204,197 @@ export class IdeologyManager implements ProjectQueries {
     return project?.isCapstone === true;
   }
 
+  // ============ Faction Dynamics ============
+
   /**
-   * Check if a capstone project can be proposed.
-   * Requires all prerequisites passed AND sufficient council support.
+   * Detect colonist defections: a colonist "defects" when a non-nearest faction
+   * is nearly as close as the nearest faction. Specifically, defection triggers
+   * when the distance gap (otherDist - nearestDist) is less than the threshold.
+   * High conviction resists defection by multiplying the gap by (1 + conviction),
+   * requiring closer proximity to trigger.
    */
-  canProposeCapstone(faction: NPCFaction): {
-    canPropose: boolean;
-    reason?: string;
-  } {
-    // Find the capstone for this faction
-    const factionProjects = getProjectsByFaction(faction);
-    const capstone = factionProjects.find((p) => p.isCapstone);
-    if (!capstone) {
-      return { canPropose: false, reason: "No capstone project for faction" };
+  processDefections(colonists: Colonist[]): GameEvent[] {
+    const events: GameEvent[] = [];
+
+    for (const colonist of colonists) {
+      if (!colonist.ideology) continue;
+
+      const pos = ideologyToAxis(colonist.ideology);
+      const nearest = IdeologyManager.getNearestFaction(colonist.ideology, this.factions);
+      if (!nearest) continue;
+
+      const nearestDist = axisDistance(pos, nearest.position);
+      const convictionMultiplier = 1 + colonist.ideology.conviction;
+
+      for (const faction of this.factions) {
+        if (faction.id === nearest.id) continue;
+
+        const otherDist = axisDistance(pos, faction.position);
+        const gap = (otherDist - nearestDist) * convictionMultiplier;
+
+        if (gap < IdeologyBalance.DEFECTION_DISTANCE_THRESHOLD) {
+          events.push({
+            type: "COLONIST_DEFECTION",
+            severity: "warning",
+            message: `${colonist.name} is drifting toward ${faction.name}.`,
+            colonistId: colonist.id,
+            fromFactionId: nearest.id,
+            toFactionId: faction.id,
+          });
+          break;
+        }
+      }
     }
 
-    // Check prerequisites
-    const prerequisites = capstone.prerequisites ?? [];
-    const passedPrereqs = prerequisites.filter((p) => this.completedProjects.has(p));
-    if (passedPrereqs.length < prerequisites.length) {
-      return {
-        canPropose: false,
-        reason: `Prerequisites not met: ${passedPrereqs.length}/${prerequisites.length} projects passed`,
-      };
+    return events;
+  }
+
+  /**
+   * If two factions converge within FACTION_CONVERGENCE_THRESHOLD on all axes,
+   * merge the smaller into the larger. The smaller faction is reborn at an
+   * underrepresented position in axis space to maintain exactly 3 factions.
+   */
+  checkFactionMerger(): GameEvent[] {
+    const events: GameEvent[] = [];
+
+    for (let i = 0; i < this.factions.length; i++) {
+      for (let j = i + 1; j < this.factions.length; j++) {
+        const a = this.factions[i];
+        const b = this.factions[j];
+        if (!a || !b) continue;
+        const dist = axisDistance(a.position, b.position);
+
+        if (dist >= IdeologyBalance.FACTION_CONVERGENCE_THRESHOLD) continue;
+
+        // Determine which faction is smaller (by index position as proxy;
+        // actual member count requires colonists, so we pick 'b' as the
+        // one to rebirth since it appears later). Callers needing member-count
+        // based ordering should pass colonists; for now we rebirth the second.
+        const survivor = a;
+        const absorbed = b;
+
+        events.push({
+          type: "FACTION_MERGER",
+          severity: "warning",
+          message: `${absorbed.name} has been absorbed into ${survivor.name}.`,
+          survivorId: survivor.id,
+          absorbedId: absorbed.id,
+        });
+
+        this.rebirthFaction(absorbed);
+
+        events.push({
+          type: "FACTION_REBIRTH",
+          severity: "info",
+          message: `A new movement emerges: ${absorbed.name}.`,
+          factionId: absorbed.id,
+          baseId: absorbed.baseId,
+        });
+
+        return events;
+      }
     }
 
-    // Check council support
-    const requiredSupport = capstone.requiredCouncilSupport ?? 0.65;
-    const counts = this.getCouncilFactionCounts();
-    const factionSeats = counts[faction] ?? 0;
-    const totalSeats = this.council.length;
-    const supportRatio = totalSeats > 0 ? factionSeats / totalSeats : 0;
+    return events;
+  }
 
-    if (supportRatio < requiredSupport) {
-      return {
-        canPropose: false,
-        reason: `Insufficient council support: ${Math.round(supportRatio * 100)}% (need ${Math.round(requiredSupport * 100)}%)`,
-      };
+  /**
+   * If any faction has fewer than FACTION_COLLAPSE_POPULATION_RATIO of total
+   * colonists as nearest supporters, collapse and rebirth it.
+   * Always maintains exactly 3 factions.
+   */
+  checkFactionCollapse(colonists: Colonist[]): GameEvent[] {
+    const events: GameEvent[] = [];
+    const totalWithIdeology = colonists.filter((c) => c.ideology).length;
+    if (totalWithIdeology === 0) return events;
+
+    const factionCounts = new Map<string, number>();
+    for (const faction of this.factions) {
+      factionCounts.set(faction.id, 0);
     }
 
-    return { canPropose: true };
+    for (const colonist of colonists) {
+      if (!colonist.ideology) continue;
+      const nearest = IdeologyManager.getNearestFaction(colonist.ideology, this.factions);
+      if (nearest) {
+        factionCounts.set(nearest.id, (factionCounts.get(nearest.id) ?? 0) + 1);
+      }
+    }
+
+    for (const faction of this.factions) {
+      const count = factionCounts.get(faction.id) ?? 0;
+      const ratio = count / totalWithIdeology;
+
+      if (ratio >= IdeologyBalance.FACTION_COLLAPSE_POPULATION_RATIO) continue;
+
+      events.push({
+        type: "FACTION_COLLAPSE",
+        severity: "warning",
+        message: `${faction.name} has collapsed due to lack of support.`,
+        factionId: faction.id,
+        baseId: faction.baseId,
+      });
+
+      this.rebirthFaction(faction);
+
+      events.push({
+        type: "FACTION_REBIRTH",
+        severity: "info",
+        message: `A new movement emerges: ${faction.name}.`,
+        factionId: faction.id,
+        baseId: faction.baseId,
+      });
+    }
+
+    return events;
+  }
+
+  /**
+   * Rebirth a faction at an underrepresented position in axis space.
+   * Generates a new unique id, resets pressure, and assigns a new name.
+   */
+  private rebirthFaction(faction: FactionState): void {
+    faction.id = `${faction.baseId}_v${Date.now()}`;
+    faction.position = this.findUnderrepresentedPosition();
+    faction.pressure = { solidarity: 0, sovereignty: 0, transformation: 0 };
+    faction.name = getFactionName(faction.baseId, faction.position);
+  }
+
+  /**
+   * Find a position in axis space that maximizes minimum distance to all
+   * existing factions. Evaluates a grid of candidate positions in [-1, 1]^3.
+   */
+  private findUnderrepresentedPosition(): AxisPosition {
+    const steps = 5;
+    let bestPosition: AxisPosition = { solidarity: 0, sovereignty: 0, transformation: 0 };
+    let bestMinDist = -Infinity;
+
+    for (let si = 0; si <= steps; si++) {
+      for (let vi = 0; vi <= steps; vi++) {
+        for (let ti = 0; ti <= steps; ti++) {
+          const candidate: AxisPosition = {
+            solidarity: -1 + (2 * si) / steps,
+            sovereignty: -1 + (2 * vi) / steps,
+            transformation: -1 + (2 * ti) / steps,
+          };
+
+          let minDist = Infinity;
+          for (const faction of this.factions) {
+            const dist = axisDistance(candidate, faction.position);
+            if (dist < minDist) {
+              minDist = dist;
+            }
+          }
+
+          if (minDist > bestMinDist) {
+            bestMinDist = minDist;
+            bestPosition = candidate;
+          }
+        }
+      }
+    }
+
+    return bestPosition;
   }
 
   // ============ Serialization ============
@@ -1233,6 +1406,8 @@ export class IdeologyManager implements ProjectQueries {
     completedProjects: ProjectId[];
     pendingProposals: PendingProposal[];
     failedProposals: ProjectId[];
+    factions: FactionState[];
+    activePolicy: { policy: Policy; startSol: number } | null;
   } {
     return {
       council: this.council,
@@ -1241,6 +1416,8 @@ export class IdeologyManager implements ProjectQueries {
       completedProjects: [...this.completedProjects],
       pendingProposals: [...this.pendingProposals.values()],
       failedProposals: [...this.failedProposals],
+      factions: this.factions,
+      activePolicy: this.activePolicy,
     };
   }
 
@@ -1258,6 +1435,12 @@ export class IdeologyManager implements ProjectQueries {
     }
     if (data.failedProposals) {
       manager.failedProposals = new Set(data.failedProposals);
+    }
+    if (data.factions) {
+      manager.factions = data.factions;
+    }
+    if (data.activePolicy) {
+      manager.activePolicy = data.activePolicy;
     }
     return manager;
   }

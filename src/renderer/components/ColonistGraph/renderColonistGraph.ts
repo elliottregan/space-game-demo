@@ -8,7 +8,7 @@ import {
 } from "../../utils/ideologyDisplay";
 
 export interface IdeologyPressureData {
-  pressure: { earthLoyalist: number; marsIndependence: number; corporateInterests: number };
+  pressure: { solidarity: number; sovereignty: number; transformation: number };
   totalWeight: number;
   neighborCount: number;
 }
@@ -74,11 +74,11 @@ function getIdeologyColor(
 }
 
 function getDominantPressureColor(
-  pressure: { earthLoyalist: number; marsIndependence: number; corporateInterests: number },
+  pressure: { solidarity: number; sovereignty: number; transformation: number },
   colors: ReturnType<typeof getThemeColors>,
 ): { color: string; faction: FactionId | "mixed" } | null {
-  const { earthLoyalist, marsIndependence, corporateInterests } = pressure;
-  const max = Math.max(earthLoyalist, marsIndependence, corporateInterests);
+  const { solidarity, sovereignty, transformation } = pressure;
+  const max = Math.max(solidarity, sovereignty, transformation);
 
   // If pressure is too low, don't show an arrow
   if (max < 0.15) return null;
@@ -86,23 +86,23 @@ function getDominantPressureColor(
   // Determine dominant faction with threshold for clear dominance
   const threshold = 0.1;
   if (
-    earthLoyalist >= max - 0.01 &&
-    earthLoyalist - marsIndependence >= threshold &&
-    earthLoyalist - corporateInterests >= threshold
+    solidarity >= max - 0.01 &&
+    solidarity - sovereignty >= threshold &&
+    solidarity - transformation >= threshold
   ) {
     return { color: getFactionColorFromTheme("earth", colors), faction: "earth" };
   }
   if (
-    marsIndependence >= max - 0.01 &&
-    marsIndependence - earthLoyalist >= threshold &&
-    marsIndependence - corporateInterests >= threshold
+    sovereignty >= max - 0.01 &&
+    sovereignty - solidarity >= threshold &&
+    sovereignty - transformation >= threshold
   ) {
     return { color: getFactionColorFromTheme("mars", colors), faction: "mars" };
   }
   if (
-    corporateInterests >= max - 0.01 &&
-    corporateInterests - earthLoyalist >= threshold &&
-    corporateInterests - marsIndependence >= threshold
+    transformation >= max - 0.01 &&
+    transformation - solidarity >= threshold &&
+    transformation - sovereignty >= threshold
   ) {
     return { color: getFactionColorFromTheme("corporate", colors), faction: "corporate" };
   }
@@ -287,11 +287,11 @@ export function renderColonistGraph(
         // Check if this neighbor is pushing toward the dominant pressure faction
         const neighborIdeology = neighborNode.colonist.ideology;
         let neighborFactionValue = 0;
-        if (pressureInfo.faction === "earth") neighborFactionValue = neighborIdeology.earthLoyalist;
+        if (pressureInfo.faction === "earth") neighborFactionValue = neighborIdeology.solidarity;
         else if (pressureInfo.faction === "mars")
-          neighborFactionValue = neighborIdeology.marsIndependence;
+          neighborFactionValue = neighborIdeology.sovereignty;
         else if (pressureInfo.faction === "corporate")
-          neighborFactionValue = neighborIdeology.corporateInterests;
+          neighborFactionValue = neighborIdeology.transformation;
 
         // Weight by relationship strength and neighbor's faction affinity
         const weight = link.weight * neighborFactionValue;

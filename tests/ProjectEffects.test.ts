@@ -233,7 +233,7 @@ describe("Project requirements", () => {
     const project = getProject(ProjectId.IMMIGRATION_PROGRAM);
     expect(project).toBeDefined();
 
-    const result = ideologyManager.canProposeProject(project!, { technology });
+    const result = ideologyManager.canProposeProject(project!, NPCFaction.EarthLoyalists, { technology });
 
     expect(result.canPropose).toBe(false);
     expect(result.reason).toBe(`Technology not researched: ${TechnologyId.HABITAT_FABRICATION}`);
@@ -246,7 +246,7 @@ describe("Project requirements", () => {
     // Research the required technology
     technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
 
-    const result = ideologyManager.canProposeProject(project!, { technology });
+    const result = ideologyManager.canProposeProject(project!, NPCFaction.EarthLoyalists, { technology });
 
     expect(result.canPropose).toBe(true);
     expect(result.reason).toBeUndefined();
@@ -259,7 +259,7 @@ describe("Project requirements", () => {
     technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
     ideologyManager.completeProject(ProjectId.IMMIGRATION_PROGRAM);
 
-    const result = ideologyManager.canProposeProject(project!, { technology });
+    const result = ideologyManager.canProposeProject(project!, NPCFaction.EarthLoyalists, { technology });
 
     expect(result.canPropose).toBe(false);
     expect(result.reason).toBe("Project already completed");
@@ -272,7 +272,7 @@ describe("Project requirements", () => {
     technology.completeResearch(TechnologyId.HABITAT_FABRICATION);
     ideologyManager.submitProposal(ProjectId.IMMIGRATION_PROGRAM, NPCFaction.EarthLoyalists, 100);
 
-    const result = ideologyManager.canProposeProject(project!, { technology });
+    const result = ideologyManager.canProposeProject(project!, NPCFaction.EarthLoyalists, { technology });
 
     expect(result.canPropose).toBe(false);
     expect(result.reason).toBe("Project already pending vote");
@@ -288,7 +288,7 @@ describe("Project requirements", () => {
     ideologyManager.submitProposal(ProjectId.IMMIGRATION_PROGRAM, NPCFaction.EarthLoyalists, 100);
     ideologyManager.processVotes(200); // Vote happens and fails
 
-    const result = ideologyManager.canProposeProject(project!, { technology });
+    const result = ideologyManager.canProposeProject(project!, NPCFaction.EarthLoyalists, { technology });
 
     expect(result.canPropose).toBe(false);
     expect(result.reason).toBe("Project previously failed (must clear first)");
@@ -304,137 +304,12 @@ describe("Project requirements", () => {
     ideologyManager.processVotes(200);
     ideologyManager.clearFailedProposal(ProjectId.IMMIGRATION_PROGRAM);
 
-    const result = ideologyManager.canProposeProject(project!, { technology });
+    const result = ideologyManager.canProposeProject(project!, NPCFaction.EarthLoyalists, { technology });
 
     expect(result.canPropose).toBe(true);
   });
 });
 
-describe("Conviction boost", () => {
-  let ideologyManager: IdeologyManager;
-
-  beforeEach(() => {
-    ideologyManager = new IdeologyManager();
-  });
-
-  test("boostFactionConviction increases conviction for aligned colonists", () => {
-    const colonist = createTestColonist("c1", "Earth Supporter", {
-      earthLoyalist: 0.6,
-      marsIndependence: 0.2,
-      corporateInterests: 0.1,
-      conviction: 0.3,
-    });
-
-    ideologyManager.boostFactionConviction(NPCFaction.EarthLoyalists, 0.1, [colonist]);
-
-    expect(colonist.ideology?.conviction).toBeCloseTo(0.4, 2);
-  });
-
-  test("boostFactionConviction does not affect unaligned colonists", () => {
-    const colonist = createTestColonist("c1", "Low Earth Affinity", {
-      earthLoyalist: 0.15, // Below 0.2 threshold
-      marsIndependence: 0.5,
-      corporateInterests: 0.3,
-      conviction: 0.3,
-    });
-
-    ideologyManager.boostFactionConviction(NPCFaction.EarthLoyalists, 0.1, [colonist]);
-
-    expect(colonist.ideology?.conviction).toBe(0.3); // Unchanged
-  });
-
-  test("boostFactionConviction affects multiple aligned colonists", () => {
-    const colonists = [
-      createTestColonist("c1", "Strong Supporter", {
-        earthLoyalist: 0.8,
-        marsIndependence: 0.1,
-        corporateInterests: 0.1,
-        conviction: 0.3,
-      }),
-      createTestColonist("c2", "Moderate Supporter", {
-        earthLoyalist: 0.4,
-        marsIndependence: 0.3,
-        corporateInterests: 0.3,
-        conviction: 0.5,
-      }),
-      createTestColonist("c3", "Not Aligned", {
-        earthLoyalist: 0.1,
-        marsIndependence: 0.6,
-        corporateInterests: 0.3,
-        conviction: 0.4,
-      }),
-    ];
-
-    ideologyManager.boostFactionConviction(NPCFaction.EarthLoyalists, 0.15, colonists);
-
-    expect(colonists[0]?.ideology?.conviction).toBeCloseTo(0.45, 2);
-    expect(colonists[1]?.ideology?.conviction).toBeCloseTo(0.65, 2);
-    expect(colonists[2]?.ideology?.conviction).toBe(0.4); // Unchanged
-  });
-
-  test("boostFactionConviction caps conviction at 1.0", () => {
-    const colonist = createTestColonist("c1", "High Conviction", {
-      earthLoyalist: 0.8,
-      marsIndependence: 0.1,
-      corporateInterests: 0.1,
-      conviction: 0.95,
-    });
-
-    ideologyManager.boostFactionConviction(NPCFaction.EarthLoyalists, 0.2, [colonist]);
-
-    expect(colonist.ideology?.conviction).toBe(1.0);
-  });
-
-  test("boostFactionConviction works for MarsIndependence faction", () => {
-    const colonist = createTestColonist("c1", "Mars Supporter", {
-      earthLoyalist: 0.1,
-      marsIndependence: 0.7,
-      corporateInterests: 0.2,
-      conviction: 0.3,
-    });
-
-    ideologyManager.boostFactionConviction(NPCFaction.MarsIndependence, 0.1, [colonist]);
-
-    expect(colonist.ideology?.conviction).toBeCloseTo(0.4, 2);
-  });
-
-  test("boostFactionConviction works for CorporateInterests faction", () => {
-    const colonist = createTestColonist("c1", "Corporate Supporter", {
-      earthLoyalist: 0.1,
-      marsIndependence: 0.2,
-      corporateInterests: 0.6,
-      conviction: 0.3,
-    });
-
-    ideologyManager.boostFactionConviction(NPCFaction.CorporateInterests, 0.1, [colonist]);
-
-    expect(colonist.ideology?.conviction).toBeCloseTo(0.4, 2);
-  });
-
-  test("boostFactionConviction skips colonists without ideology", () => {
-    const colonistWithIdeology = createTestColonist("c1", "With Ideology", {
-      earthLoyalist: 0.8,
-      marsIndependence: 0.1,
-      corporateInterests: 0.1,
-      conviction: 0.3,
-    });
-    const colonistWithoutIdeology: Colonist = {
-      id: "c2",
-      name: "Without Ideology",
-      role: ColonistRole.UNASSIGNED,
-      experience: 0,
-      masteryLevel: MasteryLevel.NOVICE,
-      skills: [],
-      // No ideology field
-    };
-
-    // Should not throw
-    ideologyManager.boostFactionConviction(NPCFaction.EarthLoyalists, 0.1, [
-      colonistWithIdeology,
-      colonistWithoutIdeology,
-    ]);
-
-    expect(colonistWithIdeology.ideology?.conviction).toBeCloseTo(0.4, 2);
-    expect(colonistWithoutIdeology.ideology).toBeUndefined();
-  });
-});
+// Note: boostFactionConviction tests were removed because that method
+// was replaced by the axis-based ideology system. Conviction is now
+// managed through ideology propagation and drift mechanics.

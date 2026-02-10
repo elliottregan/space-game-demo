@@ -24,6 +24,7 @@ export enum TechnologyId {
   CLOSED_ECOSYSTEM = "closed_ecosystem",
   ASTEROID_MINING_PLATFORM = "asteroid_mining_platform",
   PREFAB_CONSTRUCTION = "prefab_construction",
+  ADVANCED_MATERIALS = "advanced_materials",
 }
 
 export interface Technology {

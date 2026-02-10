@@ -78,12 +78,12 @@ export type {
   ProspectingSite,
 } from "./operations";
 // Politics types
-export type { FactionDemand, FactionStatus, NPCFaction, PoliticsSnapshot } from "./politics";
+export type { FactionStatus, PoliticsSnapshot } from "./politics";
 // Ideology types
 export type {
   ColonistIdeology,
   CouncilMemberSnapshot,
-  FactionSupportSnapshot,
+  FactionSnapshot,
   IdeologySnapshot,
   ProjectEligibility,
 } from "./ideology";

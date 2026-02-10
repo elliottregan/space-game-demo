@@ -28,11 +28,8 @@ describe("RefugeeArrival", () => {
       for (const colonist of colonists) {
         const ideology = colonist.ideology;
         if (ideology) {
-          // Check if Earth Loyalist is the highest affinity
-          if (
-            ideology.earthLoyalist > ideology.marsIndependence &&
-            ideology.earthLoyalist > ideology.corporateInterests
-          ) {
+          // Earth Loyalist refugees have negative sovereignty (earth-tied)
+          if (ideology.sovereignty < -0.2) {
             earthLoyalistBiasCount++;
           }
         }

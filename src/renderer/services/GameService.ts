@@ -11,13 +11,11 @@ import {
   type CouncilMemberSnapshot,
   type EventChoice,
   type ExpeditionType,
-  type FactionDemand,
+  type FactionSnapshot,
   type FactionStatus,
-  type FactionSupportSnapshot,
   GameAPI,
   type GameEvent,
   type GridPosition,
-  type NPCFaction,
   ProjectId,
   type ProspectingSite,
   type RandomEventDefinition,
@@ -80,7 +78,6 @@ interface GameUIState {
   researchQueue: string[];
   politics: {
     factions: FactionStatus[];
-    demands: FactionDemand[];
   };
   activeEvent: { definition: RandomEventDefinition; active: ActiveEvent } | null;
   eventChoices: EventChoice[];
@@ -106,7 +103,8 @@ interface GameUIState {
   ideology: {
     council: CouncilMemberSnapshot[];
     councilFactionCounts: Record<string, number>;
-    factionSupport: FactionSupportSnapshot;
+    factionSupport: Record<string, number>;
+    factions: FactionSnapshot[];
     completedProjects: ProjectId[];
     pendingProposals: Array<{ projectId: ProjectId; voteSol: number }>;
     failedProposals: ProjectId[];
@@ -188,7 +186,7 @@ class GameService {
    * - api.politics - Politics queries and decision commands
    * - api.operations - Operations queries and commands
    * - api.events - Event queries and resolve command
-   * - api.ideology - Ideology, council, and lobbying
+   * - api.ideology - Ideology, council, factions, and projects
    * - api.game - Game flow (advanceSol, save, load, newGame)
    */
   get api(): GameAPI {
@@ -224,7 +222,6 @@ class GameService {
       researchQueue: [],
       politics: {
         factions: [],
-        demands: [],
       },
       activeEvent: null,
       eventChoices: [],
@@ -250,7 +247,8 @@ class GameService {
       ideology: {
         council: [],
         councilFactionCounts: {},
-        factionSupport: { earthLoyalists: 0, marsIndependence: 0, corporateInterests: 0 },
+        factionSupport: {},
+        factions: [],
         completedProjects: [],
         pendingProposals: [],
         failedProposals: [],
@@ -332,7 +330,6 @@ class GameService {
     const politicsSnapshot = this.facade.politics.snapshot();
     this.state.politics = {
       factions: [...politicsSnapshot.factions],
-      demands: [...politicsSnapshot.demands],
     };
 
     // Events
@@ -378,6 +375,7 @@ class GameService {
       council: [...ideologyData.council],
       councilFactionCounts: { ...ideologyData.councilFactionCounts },
       factionSupport: { ...ideologyData.factionSupport },
+      factions: [...ideologyData.factions],
       completedProjects: [...this.facade.ideology.getCompletedProjects()],
       pendingProposals: pendingProposals.map((p) => ({
         projectId: p.projectId,
@@ -530,23 +528,6 @@ class GameService {
 
   setBuildingMode(buildingId: string, mode: BuildingMode): boolean {
     return this.facade.buildings.setMode(buildingId, mode).success;
-  }
-
-  // Ideology/Lobbying actions
-  lobbyCouncilMember(colonistId: string, faction: NPCFaction, affinityBoost: number): boolean {
-    const result = this.facade.ideology.lobbyCouncilMember(colonistId, faction, affinityBoost);
-    if (result.success) {
-      this.syncState();
-    }
-    return result.success;
-  }
-
-  getCouncilLobbyCost(colonistId: string, faction: NPCFaction, affinityBoost: number): number {
-    return this.facade.ideology.getLobbyCost(colonistId, faction, affinityBoost);
-  }
-
-  canLobbyCouncilMember(colonistId: string, faction: NPCFaction, affinityBoost: number): boolean {
-    return this.facade.ideology.canLobby(colonistId, faction, affinityBoost).canLobby;
   }
 
   // Project methods

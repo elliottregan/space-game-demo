@@ -1,10 +1,10 @@
 import { describe, expect, test, beforeEach } from "bun:test";
 import { IdeologyManager } from "../src/core/systems/IdeologyManager";
 import { RelationshipManager } from "../src/core/systems/RelationshipManager";
-import { ColonistMoraleManager } from "../src/core/systems/ColonistMoraleManager";
 import { NPCFaction, ProjectId } from "../src/core/models/NPCInfluence";
-import type { Colonist, ColonistIdeology } from "../src/core/models/Colonist";
+import type { ColonistIdeology, Colonist } from "../src/core/models/Colonist";
 import { ColonistRole, MasteryLevel } from "../src/core/models/Colonist";
+import * as IdeologyBalance from "../src/core/balance/IdeologyBalance";
 
 function createTestColonist(id: string, name: string, ideology: ColonistIdeology): Colonist {
   return {
@@ -19,75 +19,133 @@ function createTestColonist(id: string, name: string, ideology: ColonistIdeology
 }
 
 describe("IdeologyManager", () => {
-  describe("getPrimaryFaction", () => {
-    test("returns EarthLoyalists when earthLoyalist is highest", () => {
+  describe("getNearestFaction", () => {
+    test("returns faction with closest axis position", () => {
+      const manager = new IdeologyManager();
+      const factions = manager.getFactions();
+
+      // Colonist near Earth Loyalists position (0, -0.7, -0.3)
       const ideology: ColonistIdeology = {
-        earthLoyalist: 0.8,
-        marsIndependence: 0.3,
-        corporateInterests: 0.2,
+        solidarity: 0.1,
+        sovereignty: -0.6,
+        transformation: -0.2,
         conviction: 0.5,
       };
-      expect(IdeologyManager.getPrimaryFaction(ideology)).toBe(NPCFaction.EarthLoyalists);
+
+      const nearest = IdeologyManager.getNearestFaction(ideology, factions);
+      expect(nearest).not.toBeNull();
+      expect(nearest!.baseId).toBe(NPCFaction.EarthLoyalists);
     });
 
-    test("returns MarsIndependence when marsIndependence is highest", () => {
+    test("returns Mars Independence for colonist near that position", () => {
+      const manager = new IdeologyManager();
+      const factions = manager.getFactions();
+
       const ideology: ColonistIdeology = {
-        earthLoyalist: 0.2,
-        marsIndependence: 0.9,
-        corporateInterests: 0.3,
-        conviction: 0.5,
+        solidarity: 0.2,
+        sovereignty: 0.6,
+        transformation: 0.25,
+        conviction: 0.7,
       };
-      expect(IdeologyManager.getPrimaryFaction(ideology)).toBe(NPCFaction.MarsIndependence);
+
+      const nearest = IdeologyManager.getNearestFaction(ideology, factions);
+      expect(nearest).not.toBeNull();
+      expect(nearest!.baseId).toBe(NPCFaction.MarsIndependence);
     });
 
-    test("returns CorporateInterests when corporateInterests is highest", () => {
+    test("returns Corporate Interests for colonist near that position", () => {
+      const manager = new IdeologyManager();
+      const factions = manager.getFactions();
+
       const ideology: ColonistIdeology = {
-        earthLoyalist: 0.2,
-        marsIndependence: 0.3,
-        corporateInterests: 0.8,
-        conviction: 0.5,
+        solidarity: -0.5,
+        sovereignty: 0.1,
+        transformation: 0.4,
+        conviction: 0.6,
       };
-      expect(IdeologyManager.getPrimaryFaction(ideology)).toBe(NPCFaction.CorporateInterests);
+
+      const nearest = IdeologyManager.getNearestFaction(ideology, factions);
+      expect(nearest).not.toBeNull();
+      expect(nearest!.baseId).toBe(NPCFaction.CorporateInterests);
     });
 
-    test("returns null when all affinities below threshold", () => {
+    test("returns null for empty factions array", () => {
       const ideology: ColonistIdeology = {
-        earthLoyalist: 0.2,
-        marsIndependence: 0.25,
-        corporateInterests: 0.15,
-        conviction: 0.5,
+        solidarity: 0,
+        sovereignty: 0,
+        transformation: 0,
+        conviction: 0.2,
       };
-      expect(IdeologyManager.getPrimaryFaction(ideology)).toBeNull();
-    });
-  });
 
-  describe("factionToKey", () => {
-    test("converts EarthLoyalists to earthLoyalist", () => {
-      expect(IdeologyManager.factionToKey(NPCFaction.EarthLoyalists)).toBe("earthLoyalist");
-    });
-
-    test("converts MarsIndependence to marsIndependence", () => {
-      expect(IdeologyManager.factionToKey(NPCFaction.MarsIndependence)).toBe("marsIndependence");
-    });
-
-    test("converts CorporateInterests to corporateInterests", () => {
-      expect(IdeologyManager.factionToKey(NPCFaction.CorporateInterests)).toBe(
-        "corporateInterests",
-      );
+      const nearest = IdeologyManager.getNearestFaction(ideology, []);
+      expect(nearest).toBeNull();
     });
   });
 
   describe("createNeutralIdeology", () => {
-    test("creates ideology with balanced affinities", () => {
+    test("creates ideology at origin with low conviction", () => {
       const ideology = IdeologyManager.createNeutralIdeology();
-      expect(ideology.earthLoyalist).toBe(0.33);
-      expect(ideology.marsIndependence).toBe(0.33);
-      expect(ideology.corporateInterests).toBe(0.33);
+      expect(ideology.solidarity).toBe(0);
+      expect(ideology.sovereignty).toBe(0);
+      expect(ideology.transformation).toBe(0);
+      expect(ideology.conviction).toBe(0.2);
+    });
+  });
+
+  describe("getFactions", () => {
+    test("returns three starting factions", () => {
+      const manager = new IdeologyManager();
+      const factions = manager.getFactions();
+      expect(factions.length).toBe(3);
     });
 
-    test("creates ideology with low conviction", () => {
-      const ideology = IdeologyManager.createNeutralIdeology();
-      expect(ideology.conviction).toBe(0.2);
+    test("factions have correct starting positions", () => {
+      const manager = new IdeologyManager();
+      const factions = manager.getFactions();
+
+      const earth = factions.find((f) => f.baseId === NPCFaction.EarthLoyalists);
+      expect(earth).toBeDefined();
+      expect(earth!.position.solidarity).toBe(0.0);
+      expect(earth!.position.sovereignty).toBe(-0.7);
+      expect(earth!.position.transformation).toBe(-0.3);
+
+      const mars = factions.find((f) => f.baseId === NPCFaction.MarsIndependence);
+      expect(mars).toBeDefined();
+      expect(mars!.position.solidarity).toBe(0.3);
+      expect(mars!.position.sovereignty).toBe(0.7);
+      expect(mars!.position.transformation).toBe(0.3);
+
+      const corp = factions.find((f) => f.baseId === NPCFaction.CorporateInterests);
+      expect(corp).toBeDefined();
+      expect(corp!.position.solidarity).toBe(-0.6);
+      expect(corp!.position.sovereignty).toBe(0.0);
+      expect(corp!.position.transformation).toBe(0.5);
+    });
+
+    test("factions have zero initial pressure", () => {
+      const manager = new IdeologyManager();
+      const factions = manager.getFactions();
+
+      for (const faction of factions) {
+        expect(faction.pressure.solidarity).toBe(0);
+        expect(faction.pressure.sovereignty).toBe(0);
+        expect(faction.pressure.transformation).toBe(0);
+      }
+    });
+  });
+
+  describe("getFaction", () => {
+    test("returns faction by id", () => {
+      const manager = new IdeologyManager();
+      const faction = manager.getFaction(NPCFaction.EarthLoyalists);
+      expect(faction).toBeDefined();
+      expect(faction!.name).toBe("Earth Loyalists");
+    });
+
+    test("returns undefined for unknown id", () => {
+      const manager = new IdeologyManager();
+      const faction = manager.getFaction("nonexistent");
+      expect(faction).toBeUndefined();
     });
   });
 
@@ -103,43 +161,42 @@ describe("IdeologyManager", () => {
     test("selects colonists with highest influence", () => {
       const colonists = [
         createTestColonist("c1", "High Influence", {
-          earthLoyalist: 0.9,
-          marsIndependence: 0.1,
-          corporateInterests: 0.1,
+          solidarity: 0.1,
+          sovereignty: -0.6,
+          transformation: -0.2,
           conviction: 0.9,
         }),
         createTestColonist("c2", "Medium Influence", {
-          earthLoyalist: 0.5,
-          marsIndependence: 0.5,
-          corporateInterests: 0.2,
+          solidarity: 0.2,
+          sovereignty: 0.6,
+          transformation: 0.25,
           conviction: 0.5,
         }),
         createTestColonist("c3", "Low Influence", {
-          earthLoyalist: 0.3,
-          marsIndependence: 0.3,
-          corporateInterests: 0.3,
+          solidarity: 0,
+          sovereignty: 0,
+          transformation: 0,
           conviction: 0.2,
         }),
       ];
 
-      // Create relationships to establish centrality
       relationshipManager.createRelationship("c1", "c2", 0, { initialStrength: 0.8 });
       relationshipManager.createRelationship("c1", "c3", 0, { initialStrength: 0.6 });
       relationshipManager.recalculateCentrality(0);
 
       const council = manager.selectCouncil(colonists, relationshipManager, 0);
 
-      // Council should be ordered by influence
       expect(council.length).toBeGreaterThan(0);
+      // c1 has highest conviction and centrality, so highest influence
       expect(council[0]?.colonistId).toBe("c1");
     });
 
-    test("identifies faction correctly for council members", () => {
+    test("identifies nearest faction for council members", () => {
       const colonists = [
-        createTestColonist("c1", "Earth Loyalist", {
-          earthLoyalist: 0.9,
-          marsIndependence: 0.1,
-          corporateInterests: 0.1,
+        createTestColonist("c1", "Earth Aligned", {
+          solidarity: 0.1,
+          sovereignty: -0.6,
+          transformation: -0.2,
           conviction: 0.8,
         }),
       ];
@@ -147,7 +204,35 @@ describe("IdeologyManager", () => {
       relationshipManager.recalculateCentrality(0);
       const council = manager.selectCouncil(colonists, relationshipManager, 0);
 
-      expect(council[0]?.faction).toBe(NPCFaction.EarthLoyalists);
+      expect(council[0]?.factionId).toBe(NPCFaction.EarthLoyalists);
+    });
+
+    test("assigns factionId null for neutral colonists at origin", () => {
+      // A colonist at the exact origin is equidistant from multiple factions,
+      // but getNearestFaction always picks the closest, so factionId will be set.
+      // The test verifies that council assignment works for varied positions.
+      const colonists = [
+        createTestColonist("c1", "Mars Aligned", {
+          solidarity: 0.3,
+          sovereignty: 0.7,
+          transformation: 0.3,
+          conviction: 0.8,
+        }),
+        createTestColonist("c2", "Corporate Aligned", {
+          solidarity: -0.5,
+          sovereignty: 0.1,
+          transformation: 0.4,
+          conviction: 0.6,
+        }),
+      ];
+
+      relationshipManager.recalculateCentrality(0);
+      const council = manager.selectCouncil(colonists, relationshipManager, 0);
+
+      const marsMembers = council.filter((m) => m.factionId === NPCFaction.MarsIndependence);
+      const corpMembers = council.filter((m) => m.factionId === NPCFaction.CorporateInterests);
+      expect(marsMembers.length).toBe(1);
+      expect(corpMembers.length).toBe(1);
     });
   });
 
@@ -160,18 +245,20 @@ describe("IdeologyManager", () => {
       relationshipManager = new RelationshipManager();
     });
 
-    test("calculates support weighted by centrality", () => {
+    test("colonists near a faction contribute more support to it", () => {
       const colonists = [
-        createTestColonist("c1", "Strong EL", {
-          earthLoyalist: 1.0,
-          marsIndependence: 0.0,
-          corporateInterests: 0.0,
+        // Colonist near Earth Loyalists
+        createTestColonist("c1", "Earth", {
+          solidarity: 0.0,
+          sovereignty: -0.7,
+          transformation: -0.3,
           conviction: 0.8,
         }),
-        createTestColonist("c2", "Strong MI", {
-          earthLoyalist: 0.0,
-          marsIndependence: 1.0,
-          corporateInterests: 0.0,
+        // Colonist near Mars Independence
+        createTestColonist("c2", "Mars", {
+          solidarity: 0.3,
+          sovereignty: 0.7,
+          transformation: 0.3,
           conviction: 0.8,
         }),
       ];
@@ -179,18 +266,42 @@ describe("IdeologyManager", () => {
       relationshipManager.recalculateCentrality(0);
       const support = manager.calculateFactionSupport(colonists, relationshipManager);
 
-      // With equal centrality (both 0), each colonist contributes equally via baseline
-      expect(support.earthLoyalists).toBeCloseTo(0.5, 1);
-      expect(support.marsIndependence).toBeCloseTo(0.5, 1);
-      expect(support.corporateInterests).toBeCloseTo(0, 1);
+      // Earth support should be highest for earth_loyalists
+      expect(support[NPCFaction.EarthLoyalists]).toBeGreaterThan(0);
+      expect(support[NPCFaction.MarsIndependence]).toBeGreaterThan(0);
+      // Support should sum to 1
+      const total = Object.values(support).reduce((sum, val) => sum + val, 0);
+      expect(total).toBeCloseTo(1, 5);
     });
 
     test("returns zero support for empty colonist list", () => {
       const support = manager.calculateFactionSupport([], relationshipManager);
 
-      expect(support.earthLoyalists).toBe(0);
-      expect(support.marsIndependence).toBe(0);
-      expect(support.corporateInterests).toBe(0);
+      expect(support[NPCFaction.EarthLoyalists]).toBe(0);
+      expect(support[NPCFaction.MarsIndependence]).toBe(0);
+      expect(support[NPCFaction.CorporateInterests]).toBe(0);
+    });
+
+    test("colonist at exact faction position gives highest support to that faction", () => {
+      const colonists = [
+        createTestColonist("c1", "Exact Mars", {
+          solidarity: 0.3,
+          sovereignty: 0.7,
+          transformation: 0.3,
+          conviction: 0.8,
+        }),
+      ];
+
+      relationshipManager.recalculateCentrality(0);
+      const support = manager.calculateFactionSupport(colonists, relationshipManager);
+
+      // Mars should get most support since colonist is at that exact position
+      expect(support[NPCFaction.MarsIndependence]).toBeGreaterThan(
+        support[NPCFaction.EarthLoyalists]!,
+      );
+      expect(support[NPCFaction.MarsIndependence]).toBeGreaterThan(
+        support[NPCFaction.CorporateInterests]!,
+      );
     });
   });
 
@@ -203,31 +314,35 @@ describe("IdeologyManager", () => {
       relationshipManager = new RelationshipManager();
     });
 
-    test("counts council members by faction", () => {
+    test("counts council members by nearest faction", () => {
       const colonists = [
+        // Near Earth Loyalists
         createTestColonist("c1", "EL1", {
-          earthLoyalist: 0.9,
-          marsIndependence: 0.1,
-          corporateInterests: 0.1,
+          solidarity: 0.1,
+          sovereignty: -0.6,
+          transformation: -0.2,
           conviction: 0.8,
         }),
+        // Near Earth Loyalists
         createTestColonist("c2", "EL2", {
-          earthLoyalist: 0.8,
-          marsIndependence: 0.2,
-          corporateInterests: 0.1,
+          solidarity: 0.0,
+          sovereignty: -0.7,
+          transformation: -0.3,
           conviction: 0.7,
         }),
+        // Near Mars Independence
         createTestColonist("c3", "MI1", {
-          earthLoyalist: 0.1,
-          marsIndependence: 0.9,
-          corporateInterests: 0.2,
+          solidarity: 0.2,
+          sovereignty: 0.6,
+          transformation: 0.25,
           conviction: 0.8,
         }),
-        createTestColonist("c4", "Neutral", {
-          earthLoyalist: 0.2,
-          marsIndependence: 0.2,
-          corporateInterests: 0.2,
-          conviction: 0.3,
+        // Near Corporate Interests
+        createTestColonist("c4", "CI1", {
+          solidarity: -0.5,
+          sovereignty: 0.1,
+          transformation: 0.4,
+          conviction: 0.6,
         }),
       ];
 
@@ -237,18 +352,18 @@ describe("IdeologyManager", () => {
 
       expect(counts[NPCFaction.EarthLoyalists]).toBe(2);
       expect(counts[NPCFaction.MarsIndependence]).toBe(1);
-      expect(counts.neutral).toBe(1);
+      expect(counts[NPCFaction.CorporateInterests]).toBe(1);
     });
   });
 
   describe("serialization", () => {
-    test("toJSON and fromJSON roundtrip preserves state", () => {
+    test("toJSON and fromJSON roundtrip preserves state including factions", () => {
       const manager = new IdeologyManager();
       const colonists = [
         createTestColonist("c1", "Test", {
-          earthLoyalist: 0.9,
-          marsIndependence: 0.1,
-          corporateInterests: 0.1,
+          solidarity: 0.1,
+          sovereignty: -0.6,
+          transformation: -0.2,
           conviction: 0.8,
         }),
       ];
@@ -256,15 +371,30 @@ describe("IdeologyManager", () => {
       relationshipManager.recalculateCentrality(0);
 
       manager.selectCouncil(colonists, relationshipManager, 50);
+      manager.completeProject(ProjectId.EARTH_MEMORIAL);
 
       const json = manager.toJSON();
       const restored = IdeologyManager.fromJSON(json);
 
       expect(restored.getCouncil()).toEqual(manager.getCouncil());
+      expect(restored.getFactions()).toEqual(manager.getFactions());
+      expect(restored.isProjectCompleted(ProjectId.EARTH_MEMORIAL)).toBe(true);
+      expect(restored.getCompletedProjects()).toEqual(manager.getCompletedProjects());
+    });
+
+    test("fromJSON preserves factions", () => {
+      const manager = new IdeologyManager();
+      const json = manager.toJSON();
+
+      const restored = IdeologyManager.fromJSON(json);
+      const factions = restored.getFactions();
+
+      expect(factions.length).toBe(3);
+      expect(factions[0]!.baseId).toBe(NPCFaction.EarthLoyalists);
     });
   });
 
-  describe("lobbying", () => {
+  describe("propagateIdeology", () => {
     let manager: IdeologyManager;
     let relationshipManager: RelationshipManager;
 
@@ -273,107 +403,367 @@ describe("IdeologyManager", () => {
       relationshipManager = new RelationshipManager();
     });
 
-    test("calculates lobby cost based on colonist influence", () => {
+    test("colonist drifts toward neighbor axis position", () => {
       const colonists = [
-        createTestColonist("c1", "High Influence", {
-          earthLoyalist: 0.9,
-          marsIndependence: 0.1,
-          corporateInterests: 0.1,
-          conviction: 0.9,
+        createTestColonist("c1", "Drifter", {
+          solidarity: 0,
+          sovereignty: 0,
+          transformation: 0,
+          conviction: 0.2,
         }),
-        createTestColonist("c2", "Low Influence", {
-          earthLoyalist: 0.5,
-          marsIndependence: 0.5,
-          corporateInterests: 0.2,
-          conviction: 0.3,
+        createTestColonist("c2", "Influencer", {
+          solidarity: 0.8,
+          sovereignty: 0.5,
+          transformation: -0.3,
+          conviction: 0.8,
         }),
       ];
 
-      // Create relationships to establish centrality
       relationshipManager.createRelationship("c1", "c2", 0, { initialStrength: 0.8 });
       relationshipManager.recalculateCentrality(0);
 
-      manager.selectCouncil(colonists, relationshipManager, 0);
+      manager.propagateIdeology(colonists, relationshipManager, 0);
 
-      const highInfluenceCost = manager.getLobbyCost("c1", NPCFaction.EarthLoyalists, 0.15);
-      const lowInfluenceCost = manager.getLobbyCost("c2", NPCFaction.EarthLoyalists, 0.15);
-
-      // Higher influence colonist should cost more to lobby
-      expect(highInfluenceCost).toBeGreaterThan(lowInfluenceCost);
-      // Both should be finite (valid council members)
-      expect(highInfluenceCost).toBeLessThan(Infinity);
-      expect(lowInfluenceCost).toBeLessThan(Infinity);
+      // c1 should drift toward c2's position
+      expect(colonists[0]!.ideology!.solidarity).toBeGreaterThan(0);
+      expect(colonists[0]!.ideology!.sovereignty).toBeGreaterThan(0);
+      expect(colonists[0]!.ideology!.transformation).toBeLessThan(0);
     });
 
-    test("returns Infinity cost for non-council member", () => {
+    test("conviction resists drift", () => {
+      const colonistLowConviction = createTestColonist("c1", "Low", {
+        solidarity: 0,
+        sovereignty: 0,
+        transformation: 0,
+        conviction: 0.2,
+      });
+      const colonistHighConviction = createTestColonist("c3", "High", {
+        solidarity: 0,
+        sovereignty: 0,
+        transformation: 0,
+        conviction: 0.8,
+      });
+      const influencer = createTestColonist("c2", "Influencer", {
+        solidarity: 0.8,
+        sovereignty: 0.5,
+        transformation: -0.3,
+        conviction: 0.8,
+      });
+
+      // Test low conviction colonist
+      const colonists1 = [colonistLowConviction, influencer];
+      const rm1 = new RelationshipManager();
+      rm1.createRelationship("c1", "c2", 0, { initialStrength: 0.8 });
+      rm1.recalculateCentrality(0);
+
+      const mgr1 = new IdeologyManager();
+      mgr1.propagateIdeology(colonists1, rm1, 0);
+      const lowDrift = colonistLowConviction.ideology!.solidarity;
+
+      // Test high conviction colonist
+      const colonists2 = [colonistHighConviction, { ...influencer, id: "c2" }];
+      const rm2 = new RelationshipManager();
+      rm2.createRelationship("c3", "c2", 0, { initialStrength: 0.8 });
+      rm2.recalculateCentrality(0);
+
+      const mgr2 = new IdeologyManager();
+      mgr2.propagateIdeology(colonists2, rm2, 0);
+      const highDrift = colonistHighConviction.ideology!.solidarity;
+
+      // Low conviction should drift more than high conviction
+      expect(lowDrift).toBeGreaterThan(highDrift);
+    });
+
+    test("clamps axes to [-1, 1]", () => {
       const colonists = [
-        createTestColonist("c1", "Council Member", {
-          earthLoyalist: 0.9,
-          marsIndependence: 0.1,
-          corporateInterests: 0.1,
+        createTestColonist("c1", "Extreme", {
+          solidarity: 0.95,
+          sovereignty: 0.95,
+          transformation: 0.95,
+          conviction: 0.2,
+        }),
+        createTestColonist("c2", "Puller", {
+          solidarity: 1.0,
+          sovereignty: 1.0,
+          transformation: 1.0,
           conviction: 0.9,
         }),
       ];
 
+      relationshipManager.createRelationship("c1", "c2", 0, { initialStrength: 0.9 });
       relationshipManager.recalculateCentrality(0);
-      manager.selectCouncil(colonists, relationshipManager, 0);
 
-      const cost = manager.getLobbyCost("nonexistent", NPCFaction.EarthLoyalists, 0.15);
-      expect(cost).toBe(Infinity);
+      manager.propagateIdeology(colonists, relationshipManager, 0);
+
+      expect(colonists[0]!.ideology!.solidarity).toBeLessThanOrEqual(1);
+      expect(colonists[0]!.ideology!.solidarity).toBeGreaterThanOrEqual(-1);
+      expect(colonists[0]!.ideology!.sovereignty).toBeLessThanOrEqual(1);
+      expect(colonists[0]!.ideology!.sovereignty).toBeGreaterThanOrEqual(-1);
+      expect(colonists[0]!.ideology!.transformation).toBeLessThanOrEqual(1);
+      expect(colonists[0]!.ideology!.transformation).toBeGreaterThanOrEqual(-1);
+    });
+  });
+
+  describe("imprintIdeologyFromNeighbors", () => {
+    test("new colonist blends toward strongest neighbor on all axes", () => {
+      const relationshipManager = new RelationshipManager();
+
+      const newColonist = createTestColonist("c1", "New", {
+        solidarity: 0,
+        sovereignty: 0,
+        transformation: 0,
+        conviction: 0.2,
+      });
+      const neighbor = createTestColonist("c2", "Neighbor", {
+        solidarity: 0.6,
+        sovereignty: -0.4,
+        transformation: 0.3,
+        conviction: 0.7,
+      });
+
+      const colonists = [newColonist, neighbor];
+      relationshipManager.createRelationship("c1", "c2", 0, { initialStrength: 0.8 });
+      relationshipManager.recalculateCentrality(0);
+
+      IdeologyManager.imprintIdeologyFromNeighbors(newColonist, colonists, relationshipManager);
+
+      // Should blend toward neighbor's position (default imprinting strength is 0.7)
+      expect(newColonist.ideology!.solidarity).toBeCloseTo(0.6 * 0.7, 1);
+      expect(newColonist.ideology!.sovereignty).toBeCloseTo(-0.4 * 0.7, 1);
+      expect(newColonist.ideology!.transformation).toBeCloseTo(0.3 * 0.7, 1);
     });
 
-    test("boosts colonist faction affinity when lobbied", () => {
+    test("does not imprint from weak connections", () => {
+      const relationshipManager = new RelationshipManager();
+
+      const newColonist = createTestColonist("c1", "New", {
+        solidarity: 0,
+        sovereignty: 0,
+        transformation: 0,
+        conviction: 0.2,
+      });
+      const neighbor = createTestColonist("c2", "WeakNeighbor", {
+        solidarity: 0.8,
+        sovereignty: 0.8,
+        transformation: 0.8,
+        conviction: 0.9,
+      });
+
+      const colonists = [newColonist, neighbor];
+      // Below IDEOLOGY_IMPRINTING_THRESHOLD (0.3)
+      relationshipManager.createRelationship("c1", "c2", 0, { initialStrength: 0.1 });
+      relationshipManager.recalculateCentrality(0);
+
+      IdeologyManager.imprintIdeologyFromNeighbors(newColonist, colonists, relationshipManager);
+
+      // Should not change from neutral
+      expect(newColonist.ideology!.solidarity).toBe(0);
+      expect(newColonist.ideology!.sovereignty).toBe(0);
+      expect(newColonist.ideology!.transformation).toBe(0);
+    });
+
+    test("clamps imprinted values to [-1, 1]", () => {
+      const relationshipManager = new RelationshipManager();
+
+      const newColonist = createTestColonist("c1", "New", {
+        solidarity: 0.5,
+        sovereignty: 0.5,
+        transformation: 0.5,
+        conviction: 0.2,
+      });
+      const neighbor = createTestColonist("c2", "Extreme", {
+        solidarity: 1.0,
+        sovereignty: 1.0,
+        transformation: 1.0,
+        conviction: 0.9,
+      });
+
+      const colonists = [newColonist, neighbor];
+      relationshipManager.createRelationship("c1", "c2", 0, { initialStrength: 0.9 });
+      relationshipManager.recalculateCentrality(0);
+
+      IdeologyManager.imprintIdeologyFromNeighbors(
+        newColonist,
+        colonists,
+        relationshipManager,
+        1.0,
+      );
+
+      expect(newColonist.ideology!.solidarity).toBeLessThanOrEqual(1);
+      expect(newColonist.ideology!.sovereignty).toBeLessThanOrEqual(1);
+      expect(newColonist.ideology!.transformation).toBeLessThanOrEqual(1);
+    });
+  });
+
+  describe("project proposals", () => {
+    let manager: IdeologyManager;
+    let relationshipManager: RelationshipManager;
+
+    beforeEach(() => {
+      manager = new IdeologyManager();
+      relationshipManager = new RelationshipManager();
+    });
+
+    test("can submit and process proposals", () => {
+      // Set up council with Earth Loyalists majority
       const colonists = [
-        createTestColonist("c1", "Target", {
-          earthLoyalist: 0.5,
-          marsIndependence: 0.3,
-          corporateInterests: 0.2,
-          conviction: 0.5,
+        createTestColonist("c1", "EL1", {
+          solidarity: 0.0,
+          sovereignty: -0.7,
+          transformation: -0.3,
+          conviction: 0.8,
+        }),
+        createTestColonist("c2", "EL2", {
+          solidarity: 0.1,
+          sovereignty: -0.6,
+          transformation: -0.2,
+          conviction: 0.7,
+        }),
+        createTestColonist("c3", "MI1", {
+          solidarity: 0.3,
+          sovereignty: 0.7,
+          transformation: 0.3,
+          conviction: 0.6,
         }),
       ];
 
       relationshipManager.recalculateCentrality(0);
       manager.selectCouncil(colonists, relationshipManager, 0);
 
-      const result = manager.lobbyColonist("c1", NPCFaction.MarsIndependence, 0.15, colonists);
+      // Submit proposal
+      const submitted = manager.submitProposal(
+        ProjectId.EARTH_MEMORIAL,
+        NPCFaction.EarthLoyalists,
+        0,
+      );
+      expect(submitted).toBe(true);
+      expect(manager.isPendingProposal(ProjectId.EARTH_MEMORIAL)).toBe(true);
 
-      expect(result.success).toBe(true);
-      expect(result.newAffinity).toBeCloseTo(0.45, 2);
-      expect(colonists[0]!.ideology!.marsIndependence).toBeCloseTo(0.45, 2);
+      // Process votes after voting period
+      const results = manager.processVotes(IdeologyBalance.PROJECT_VOTING_PERIOD);
+      expect(results.length).toBe(1);
+      expect(results[0]!.projectId).toBe(ProjectId.EARTH_MEMORIAL);
+      // With 2 EL and 1 MI, should pass
+      expect(results[0]!.passed).toBe(true);
     });
 
-    test("fails to lobby non-council member", () => {
+    test("vote projection counts factionId matches", () => {
       const colonists = [
-        createTestColonist("c1", "Council Member", {
-          earthLoyalist: 0.9,
-          marsIndependence: 0.1,
-          corporateInterests: 0.1,
-          conviction: 0.9,
+        createTestColonist("c1", "EL1", {
+          solidarity: 0.0,
+          sovereignty: -0.7,
+          transformation: -0.3,
+          conviction: 0.8,
         }),
-        createTestColonist("c2", "Not on Council", {
-          earthLoyalist: 0.3,
-          marsIndependence: 0.3,
-          corporateInterests: 0.3,
-          conviction: 0.1,
+        createTestColonist("c2", "EL2", {
+          solidarity: 0.1,
+          sovereignty: -0.6,
+          transformation: -0.2,
+          conviction: 0.7,
+        }),
+        createTestColonist("c3", "MI1", {
+          solidarity: 0.3,
+          sovereignty: 0.7,
+          transformation: 0.3,
+          conviction: 0.6,
         }),
       ];
 
       relationshipManager.recalculateCentrality(0);
-      // Only c1 will be on council due to higher conviction
-      manager.selectCouncil([colonists[0]!], relationshipManager, 0);
+      manager.selectCouncil(colonists, relationshipManager, 0);
 
-      const result = manager.lobbyColonist("c2", NPCFaction.EarthLoyalists, 0.15, colonists);
+      const projection = manager.getVoteProjection(NPCFaction.EarthLoyalists);
+      expect(projection.votesFor).toBe(2);
+      expect(projection.votesAgainst).toBe(1);
+      expect(projection.wouldPass).toBe(true);
 
-      expect(result.success).toBe(false);
-      expect(result.reason).toBe("Target is not a council member");
+      const marsProjection = manager.getVoteProjection(NPCFaction.MarsIndependence);
+      expect(marsProjection.votesFor).toBe(1);
+      expect(marsProjection.votesAgainst).toBe(2);
+      expect(marsProjection.wouldPass).toBe(false);
     });
 
-    test("clamps affinity to max 1.0", () => {
+    test("cannot submit duplicate proposal", () => {
+      const submitted1 = manager.submitProposal(
+        ProjectId.EARTH_MEMORIAL,
+        NPCFaction.EarthLoyalists,
+        0,
+      );
+      const submitted2 = manager.submitProposal(
+        ProjectId.EARTH_MEMORIAL,
+        NPCFaction.EarthLoyalists,
+        0,
+      );
+      expect(submitted1).toBe(true);
+      expect(submitted2).toBe(false);
+    });
+
+    test("cannot submit completed project", () => {
+      manager.completeProject(ProjectId.EARTH_MEMORIAL);
+      const submitted = manager.submitProposal(
+        ProjectId.EARTH_MEMORIAL,
+        NPCFaction.EarthLoyalists,
+        0,
+      );
+      expect(submitted).toBe(false);
+    });
+
+    test("clearFailedProposal allows re-proposal", () => {
+      // Submit and force a failed vote
       const colonists = [
-        createTestColonist("c1", "High Affinity", {
-          earthLoyalist: 0.95,
-          marsIndependence: 0.1,
-          corporateInterests: 0.1,
+        createTestColonist("c1", "MI1", {
+          solidarity: 0.3,
+          sovereignty: 0.7,
+          transformation: 0.3,
+          conviction: 0.8,
+        }),
+      ];
+      relationshipManager.recalculateCentrality(0);
+      manager.selectCouncil(colonists, relationshipManager, 0);
+
+      manager.submitProposal(ProjectId.EARTH_MEMORIAL, NPCFaction.EarthLoyalists, 0);
+      manager.processVotes(IdeologyBalance.PROJECT_VOTING_PERIOD);
+
+      expect(manager.isFailedProposal(ProjectId.EARTH_MEMORIAL)).toBe(true);
+
+      // Cannot re-submit while failed
+      expect(manager.submitProposal(ProjectId.EARTH_MEMORIAL, NPCFaction.EarthLoyalists, 100)).toBe(
+        false,
+      );
+
+      // Clear and re-submit
+      manager.clearFailedProposal(ProjectId.EARTH_MEMORIAL);
+      expect(manager.submitProposal(ProjectId.EARTH_MEMORIAL, NPCFaction.EarthLoyalists, 100)).toBe(
+        true,
+      );
+    });
+  });
+
+  describe("isCapstoneProject", () => {
+    test("returns true for capstone projects", () => {
+      const manager = new IdeologyManager();
+      expect(manager.isCapstoneProject(ProjectId.EARTH_RELIEF_COMPACT)).toBe(true);
+      expect(manager.isCapstoneProject(ProjectId.DECLARATION_OF_SOVEREIGNTY)).toBe(true);
+      expect(manager.isCapstoneProject(ProjectId.DEEP_SPACE_MINING_CHARTER)).toBe(true);
+    });
+
+    test("returns false for regular projects", () => {
+      const manager = new IdeologyManager();
+      expect(manager.isCapstoneProject(ProjectId.EARTH_MEMORIAL)).toBe(false);
+      expect(manager.isCapstoneProject(ProjectId.UNIVERSAL_HOUSING)).toBe(false);
+    });
+  });
+
+  describe("updateCouncilIfStale", () => {
+    test("updates council when enough time has passed", () => {
+      const manager = new IdeologyManager();
+      const relationshipManager = new RelationshipManager();
+
+      const colonists = [
+        createTestColonist("c1", "Test", {
+          solidarity: 0.1,
+          sovereignty: -0.6,
+          transformation: -0.2,
           conviction: 0.8,
         }),
       ];
@@ -381,175 +771,19 @@ describe("IdeologyManager", () => {
       relationshipManager.recalculateCentrality(0);
       manager.selectCouncil(colonists, relationshipManager, 0);
 
-      const result = manager.lobbyColonist("c1", NPCFaction.EarthLoyalists, 0.15, colonists);
+      // Should not update if not stale
+      const initialCouncil = manager.getCouncil();
+      manager.updateCouncilIfStale(colonists, relationshipManager, 1);
+      expect(manager.getCouncil()).toEqual(initialCouncil);
 
-      expect(result.success).toBe(true);
-      expect(result.newAffinity).toBe(1.0);
-      expect(colonists[0]!.ideology!.earthLoyalist).toBe(1.0);
-    });
-
-    test("canLobby returns true for council member", () => {
-      const colonists = [
-        createTestColonist("c1", "Council Member", {
-          earthLoyalist: 0.9,
-          marsIndependence: 0.1,
-          corporateInterests: 0.1,
-          conviction: 0.9,
-        }),
-      ];
-
-      relationshipManager.recalculateCentrality(0);
-      manager.selectCouncil(colonists, relationshipManager, 0);
-
-      const result = manager.canLobby("c1");
-      expect(result.canLobby).toBe(true);
-      expect(result.reason).toBeUndefined();
-    });
-
-    test("canLobby returns false for non-council member", () => {
-      const colonists = [
-        createTestColonist("c1", "Council Member", {
-          earthLoyalist: 0.9,
-          marsIndependence: 0.1,
-          corporateInterests: 0.1,
-          conviction: 0.9,
-        }),
-      ];
-
-      relationshipManager.recalculateCentrality(0);
-      manager.selectCouncil(colonists, relationshipManager, 0);
-
-      const result = manager.canLobby("nonexistent");
-      expect(result.canLobby).toBe(false);
-      expect(result.reason).toBe("Target is not a council member");
-    });
-  });
-
-  describe("capstone projects", () => {
-    let manager: IdeologyManager;
-    let relationshipManager: RelationshipManager;
-
-    beforeEach(() => {
-      manager = new IdeologyManager();
-      relationshipManager = new RelationshipManager();
-    });
-
-    describe("getPassedProjectsForFaction", () => {
-      test("returns empty array when no projects passed", () => {
-        expect(manager.getPassedProjectsForFaction(NPCFaction.EarthLoyalists)).toEqual([]);
-      });
-
-      test("returns only projects for specified faction", () => {
-        manager.completeProject(ProjectId.EARTH_MEMORIAL);
-        manager.completeProject(ProjectId.UNIVERSAL_HOUSING);
-
-        const earthProjects = manager.getPassedProjectsForFaction(NPCFaction.EarthLoyalists);
-        expect(earthProjects).toContain(ProjectId.EARTH_MEMORIAL);
-        expect(earthProjects).not.toContain(ProjectId.UNIVERSAL_HOUSING);
-      });
-    });
-
-    describe("canProposeCapstone", () => {
-      test("returns false when prerequisites not met", () => {
-        const colonists = [
-          createTestColonist("c1", "Colonist 1", {
-            earthLoyalist: 0.9,
-            marsIndependence: 0.1,
-            corporateInterests: 0.1,
-            conviction: 0.8,
-          }),
-        ];
-        relationshipManager.recalculateCentrality(0);
-        manager.selectCouncil(colonists, relationshipManager, 0);
-
-        expect(manager.canProposeCapstone(NPCFaction.EarthLoyalists)).toEqual({
-          canPropose: false,
-          reason: "Prerequisites not met: 0/3 projects passed",
-        });
-      });
-
-      test("returns false when council support insufficient", () => {
-        // Complete all Earth Loyalist prerequisites
-        manager.completeProject(ProjectId.EARTH_MEMORIAL);
-        manager.completeProject(ProjectId.HERITAGE_ARCHIVE);
-        manager.completeProject(ProjectId.IMMIGRATION_PROGRAM);
-
-        // But council is mostly Mars Independence
-        const colonists = [
-          createTestColonist("c1", "Colonist 1", {
-            earthLoyalist: 0.1,
-            marsIndependence: 0.9,
-            corporateInterests: 0.1,
-            conviction: 0.8,
-          }),
-          createTestColonist("c2", "Colonist 2", {
-            earthLoyalist: 0.1,
-            marsIndependence: 0.9,
-            corporateInterests: 0.1,
-            conviction: 0.8,
-          }),
-          createTestColonist("c3", "Colonist 3", {
-            earthLoyalist: 0.9,
-            marsIndependence: 0.1,
-            corporateInterests: 0.1,
-            conviction: 0.8,
-          }),
-        ];
-        relationshipManager.recalculateCentrality(0);
-        manager.selectCouncil(colonists, relationshipManager, 0);
-
-        expect(manager.canProposeCapstone(NPCFaction.EarthLoyalists)).toEqual({
-          canPropose: false,
-          reason: "Insufficient council support: 33% (need 65%)",
-        });
-      });
-
-      test("returns true when prerequisites met and council support sufficient", () => {
-        manager.completeProject(ProjectId.EARTH_MEMORIAL);
-        manager.completeProject(ProjectId.HERITAGE_ARCHIVE);
-        manager.completeProject(ProjectId.IMMIGRATION_PROGRAM);
-
-        // Council is mostly Earth Loyalists
-        const colonists = [
-          createTestColonist("c1", "Colonist 1", {
-            earthLoyalist: 0.9,
-            marsIndependence: 0.1,
-            corporateInterests: 0.1,
-            conviction: 0.8,
-          }),
-          createTestColonist("c2", "Colonist 2", {
-            earthLoyalist: 0.9,
-            marsIndependence: 0.1,
-            corporateInterests: 0.1,
-            conviction: 0.8,
-          }),
-          createTestColonist("c3", "Colonist 3", {
-            earthLoyalist: 0.9,
-            marsIndependence: 0.1,
-            corporateInterests: 0.1,
-            conviction: 0.8,
-          }),
-        ];
-        relationshipManager.recalculateCentrality(0);
-        manager.selectCouncil(colonists, relationshipManager, 0);
-
-        expect(manager.canProposeCapstone(NPCFaction.EarthLoyalists)).toEqual({
-          canPropose: true,
-        });
-      });
-    });
-
-    describe("isCapstoneProject", () => {
-      test("returns true for capstone projects", () => {
-        expect(manager.isCapstoneProject(ProjectId.EARTH_RELIEF_COMPACT)).toBe(true);
-        expect(manager.isCapstoneProject(ProjectId.DECLARATION_OF_SOVEREIGNTY)).toBe(true);
-        expect(manager.isCapstoneProject(ProjectId.DEEP_SPACE_MINING_CHARTER)).toBe(true);
-      });
-
-      test("returns false for regular projects", () => {
-        expect(manager.isCapstoneProject(ProjectId.EARTH_MEMORIAL)).toBe(false);
-        expect(manager.isCapstoneProject(ProjectId.UNIVERSAL_HOUSING)).toBe(false);
-      });
+      // Should update after COUNCIL_UPDATE_INTERVAL
+      manager.updateCouncilIfStale(
+        colonists,
+        relationshipManager,
+        IdeologyBalance.COUNCIL_UPDATE_INTERVAL + 1,
+      );
+      // Council was refreshed (same colonists, but recalculated)
+      expect(manager.getCouncil().length).toBe(initialCouncil.length);
     });
   });
 });

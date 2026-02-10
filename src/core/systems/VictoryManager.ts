@@ -1,11 +1,12 @@
 import type { GameEvent } from "../models/GameEvent";
 import { ProjectId } from "../models/NPCInfluence";
 import { BuildingId } from "../models/Building";
-import { getProject } from "../data/projects";
+import { getProject, meetsAxisRequirements } from "../data/projects";
 import { BUILDINGS } from "../data/buildings";
 import type { ColonyManager } from "./ColonyManager";
 import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
+import type { IdeologyManager } from "./IdeologyManager";
 
 export type GameStatus = "playing" | "victory" | "defeat";
 
@@ -74,6 +75,89 @@ export class VictoryManager {
       reason: `${project.name} achieved! ${project.description}`,
       severity: "info",
       message: `${project.name} achieved! You can now build your faction's megastructure to win.`,
+    };
+  }
+
+  /**
+   * Check if any faction can propose any capstone project.
+   * Returns information about proposable capstones.
+   */
+  checkCapstoneProposability(
+    ideologyManager: IdeologyManager,
+  ): {
+    canProposeAny: boolean;
+    proposableCapstones: Array<{
+      projectId: ProjectId;
+      factionId: string;
+      factionName: string;
+    }>;
+  } {
+    const factions = ideologyManager.getFactions();
+    const councilCounts = ideologyManager.getCouncilFactionCounts();
+    const totalCouncilSeats = ideologyManager.getCouncil().length;
+    const proposableCapstones: Array<{
+      projectId: ProjectId;
+      factionId: string;
+      factionName: string;
+    }> = [];
+
+    // Get all capstone projects
+    const capstoneProjects = [
+      ProjectId.DECLARATION_OF_SOVEREIGNTY,
+      ProjectId.EARTH_RELIEF_COMPACT,
+      ProjectId.DEEP_SPACE_MINING_CHARTER,
+      ProjectId.GENESIS_VAULT,
+    ];
+
+    for (const projectId of capstoneProjects) {
+      // Skip already completed capstones
+      if (ideologyManager.isProjectCompleted(projectId)) {
+        continue;
+      }
+
+      const project = getProject(projectId);
+      if (!project?.isCapstone) {
+        continue;
+      }
+
+      // Check if any faction meets the axis requirements
+      for (const faction of factions) {
+        // Check axis requirements
+        if (!meetsAxisRequirements(faction.position, project)) {
+          continue;
+        }
+
+        // Check council support
+        const factionCouncilSeats = councilCounts[faction.baseId] ?? 0;
+        const requiredSupport = project.requiredCouncilSupport ?? 0.5;
+        const factionSupport = totalCouncilSeats > 0 ? factionCouncilSeats / totalCouncilSeats : 0;
+
+        if (factionSupport < requiredSupport) {
+          continue;
+        }
+
+        // Check prerequisites
+        const prerequisites = project.prerequisites ?? [];
+        const allPrereqsMet = prerequisites.every((prereq) =>
+          ideologyManager.isProjectCompleted(prereq),
+        );
+
+        if (!allPrereqsMet) {
+          continue;
+        }
+
+        // This faction can propose this capstone
+        proposableCapstones.push({
+          projectId,
+          factionId: faction.id,
+          factionName: faction.name,
+        });
+      }
+    }
+
+    return {
+      canProposeAny: proposableCapstones.length > 0,
+      proposableCapstones,
     };
   }
 

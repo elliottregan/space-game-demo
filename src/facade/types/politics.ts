@@ -1,16 +1,12 @@
 // src/facade/types/politics.ts
-import type { FactionDemand, NPCFaction } from "../../core/models/NPCInfluence";
 
 export interface FactionStatus {
-  id: NPCFaction;
+  factionId: string;
   name: string;
   support: number;
-  activeDemand: FactionDemand | null;
+  position: { solidarity: number; sovereignty: number; transformation: number };
 }
 
 export interface PoliticsSnapshot {
   readonly factions: readonly FactionStatus[];
-  readonly demands: readonly FactionDemand[];
 }
-
-export type { NPCFaction, FactionDemand };
