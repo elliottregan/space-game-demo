@@ -80,7 +80,8 @@ describe("EarthCrisisManager", () => {
 
     it("should repeat refugee waves at intervals", () => {
       let refugeeWaveCount = 0;
-      for (let sol = 1; sol <= 400; sol++) {
+      // Need enough sols for first wave (~sol 313 at 25%) plus repeat interval (100)
+      for (let sol = 1; sol <= 500; sol++) {
         const effects = manager.tick(sol);
         if (effects.some((e) => e.type === "refugee_wave")) {
           refugeeWaveCount++;
