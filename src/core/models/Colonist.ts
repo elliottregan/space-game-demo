@@ -51,7 +51,7 @@ export interface Colonist {
   trainingTarget?: ColonistRole;
   trainingProgress?: number;
   skills: SkillId[];
-  housingId?: string; // Building ID of assigned habitat
+  districtId?: string; // District where colonist lives
   arrivalSol?: number; // Sol when colonist arrived (for cohort bonding)
   guildIds?: string[]; // Guild memberships
   socialBuildingIds?: string[]; // Assigned social buildings (third spaces)

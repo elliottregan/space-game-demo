@@ -356,13 +356,13 @@ export class WorkforceManager implements WorkforceQueries {
   private processHousemateBonding(colonists: readonly Colonist[], currentSol: number): GameEvent[] {
     const events: GameEvent[] = [];
 
-    // Group colonists by housing
+    // Group colonists by district
     const housingGroups = new Map<string, Colonist[]>();
     for (const colonist of colonists) {
-      if (colonist.housingId) {
-        const group = housingGroups.get(colonist.housingId) || [];
+      if (colonist.districtId) {
+        const group = housingGroups.get(colonist.districtId) || [];
         group.push(colonist);
-        housingGroups.set(colonist.housingId, group);
+        housingGroups.set(colonist.districtId, group);
       }
     }
 

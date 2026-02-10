@@ -6,6 +6,7 @@ import type { AxisPosition } from "../models/NPCInfluence.js";
 import type { ResourceManager } from "../systems/ResourceManager.js";
 import type { ColonyManager } from "../systems/ColonyManager.js";
 import type { BuildingManager } from "../systems/BuildingManager.js";
+import type { DistrictManager } from "../systems/DistrictManager.js";
 import type { TechnologyTree } from "../systems/TechnologyTree.js";
 import { BUILDINGS } from "./buildings.js";
 
@@ -15,6 +16,7 @@ export interface DriftContext {
   resources: ResourceManager;
   colony: ColonyManager;
   buildings: BuildingManager;
+  districts: DistrictManager;
   technology: TechnologyTree;
 }
 
@@ -81,7 +83,7 @@ const housingCrisis: DriftTrigger = {
     const population = ctx.colony.getPopulation();
     if (population === 0) return 0;
 
-    const housingCapacity = ctx.colony.getHousingCapacity(ctx.buildings);
+    const housingCapacity = ctx.colony.getHousingCapacity(ctx.districts);
     if (housingCapacity === 0) return 0.03;
 
     const occupancyRate = population / housingCapacity;
@@ -103,7 +105,7 @@ const housingSurplus: DriftTrigger = {
     const population = ctx.colony.getPopulation();
     if (population === 0) return 0;
 
-    const housingCapacity = ctx.colony.getHousingCapacity(ctx.buildings);
+    const housingCapacity = ctx.colony.getHousingCapacity(ctx.districts);
     if (housingCapacity === 0) return 0;
 
     const occupancyRate = population / housingCapacity;
