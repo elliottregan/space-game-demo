@@ -61,3 +61,32 @@ export const POPULATION_SCALING_DENOMINATOR = 200;
 
 /** Maximum building slots per district */
 export const DISTRICT_BUILDING_SLOTS = 8;
+
+// --- District Migration ---
+
+/** Sols between migration checks */
+export const MIGRATION_CHECK_INTERVAL = 5;
+
+/** Occupancy ratio above which district pushes colonists out */
+export const MIGRATION_OVERCROWDING_THRESHOLD = 0.85;
+
+/** Occupancy ratio below which district accepts migrants */
+export const MIGRATION_SPACE_THRESHOLD = 0.7;
+
+/** Max migrations per check cycle */
+export const MIGRATION_MAX_PER_TICK = 1;
+
+/** Need at least 2 districts for migration */
+export const MIGRATION_MIN_DISTRICTS = 2;
+
+/** How much overcrowding pushes colonists out (weight, sums to 1.0 with others) */
+export const MIGRATION_OVERCROWDING_WEIGHT = 0.4;
+
+/** How much unfilled jobs attract colonists (weight) */
+export const MIGRATION_JOB_PULL_WEIGHT = 0.4;
+
+/** How much same-district relationships hold colonists (weight) */
+export const MIGRATION_SOCIAL_ANCHOR_WEIGHT = 0.2;
+
+/** Relationship sum at which social anchor effect maxes out */
+export const MIGRATION_WEAK_ATTACHMENT_THRESHOLD = 0.5;

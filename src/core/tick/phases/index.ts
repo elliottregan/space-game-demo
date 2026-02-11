@@ -30,6 +30,8 @@ import {
 import { processResearch } from "./technology";
 // Ideology phases
 import { propagateIdeology } from "./ideology";
+// District Migration phases
+import { processDistrictMigration } from "./migration";
 // District Grants phases
 import { processDistrictGrants } from "./grants";
 // Operations phases
@@ -64,6 +66,7 @@ export {
 } from "./colony";
 export { processResearch } from "./technology";
 export { propagateIdeology } from "./ideology";
+export { processDistrictMigration } from "./migration";
 export { processDistrictGrants } from "./grants";
 export { processOperations } from "./operations";
 export { processEarthCrisis } from "./earthCrisis";
@@ -114,6 +117,7 @@ export function createStandardTickRunner(): TickRunner {
   runner.register(processColonyTick);
   runner.register(autoAssignWorkers);
   runner.register(assignToDistrict);
+  runner.register(processDistrictMigration);
 
   // 6. Technology phases
   runner.register(processResearch);
