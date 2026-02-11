@@ -375,9 +375,9 @@ function formatRecycleValue(delta: ResourceDelta): string {
       </div>
     </div>
 
-    <div v-if="factionEntries.length > 0 || hasIdeologyValues" class="district-section">
-      <span class="section-label">Ideology</span>
-      <div v-if="factionEntries.length > 0" class="faction-badges">
+    <div v-if="factionEntries.length > 0" class="district-section">
+      <span class="section-label">Factions</span>
+      <div class="faction-badges">
         <span
           v-for="entry in factionEntries"
           :key="entry.id"
@@ -387,7 +387,11 @@ function formatRecycleValue(delta: ResourceDelta): string {
           {{ entry.label }}: {{ entry.count }}
         </span>
       </div>
-      <div v-if="hasIdeologyValues" class="ideology-radar-container">
+    </div>
+
+    <div v-if="hasIdeologyValues" class="district-section">
+      <span class="section-label">Ideology</span>
+      <div class="ideology-radar-container">
         <IdeologyRadar :values="district.ideologyAxes" :size="160" show-labels />
       </div>
     </div>
