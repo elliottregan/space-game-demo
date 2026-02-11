@@ -3,8 +3,8 @@ import type { Colonist, ColonistIdeology } from "../../../core/models/Colonist";
 import type { PositionedColonist } from "../../utils/ColonistSimulationManager";
 import {
   getIdeologyColorForGraph,
-  getFactionColorFromTheme,
-  type FactionId,
+  getAxisColorFromTheme,
+  type AxisId,
 } from "../../utils/ideologyDisplay";
 
 export interface IdeologyPressureData {
@@ -76,39 +76,39 @@ function getIdeologyColor(
 function getDominantPressureColor(
   pressure: { solidarity: number; sovereignty: number; transformation: number },
   colors: ReturnType<typeof getThemeColors>,
-): { color: string; faction: FactionId | "mixed" } | null {
+): { color: string; axis: AxisId | "mixed" } | null {
   const { solidarity, sovereignty, transformation } = pressure;
   const max = Math.max(solidarity, sovereignty, transformation);
 
   // If pressure is too low, don't show an arrow
   if (max < 0.15) return null;
 
-  // Determine dominant faction with threshold for clear dominance
+  // Determine dominant axis with threshold for clear dominance
   const threshold = 0.1;
   if (
     solidarity >= max - 0.01 &&
     solidarity - sovereignty >= threshold &&
     solidarity - transformation >= threshold
   ) {
-    return { color: getFactionColorFromTheme("earth", colors), faction: "earth" };
+    return { color: getAxisColorFromTheme("solidarity", colors), axis: "solidarity" };
   }
   if (
     sovereignty >= max - 0.01 &&
     sovereignty - solidarity >= threshold &&
     sovereignty - transformation >= threshold
   ) {
-    return { color: getFactionColorFromTheme("mars", colors), faction: "mars" };
+    return { color: getAxisColorFromTheme("sovereignty", colors), axis: "sovereignty" };
   }
   if (
     transformation >= max - 0.01 &&
     transformation - solidarity >= threshold &&
     transformation - sovereignty >= threshold
   ) {
-    return { color: getFactionColorFromTheme("corporate", colors), faction: "corporate" };
+    return { color: getAxisColorFromTheme("transformation", colors), axis: "transformation" };
   }
 
-  // Mixed pressure - use muted color
-  return { color: getFactionColorFromTheme("neutral", colors), faction: "mixed" };
+  // Mixed pressure
+  return { color: colors.textMuted, axis: "mixed" };
 }
 
 function getLinkColor(
@@ -284,17 +284,13 @@ export function renderColonistGraph(
         const neighborNode = data.nodes.find((n) => n.id === neighborId);
         if (!neighborNode?.colonist.ideology) continue;
 
-        // Check if this neighbor is pushing toward the dominant pressure faction
+        // Check if this neighbor is pushing toward the dominant pressure axis
         const neighborIdeology = neighborNode.colonist.ideology;
-        let neighborFactionValue = 0;
-        if (pressureInfo.faction === "earth") neighborFactionValue = neighborIdeology.solidarity;
-        else if (pressureInfo.faction === "mars")
-          neighborFactionValue = neighborIdeology.sovereignty;
-        else if (pressureInfo.faction === "corporate")
-          neighborFactionValue = neighborIdeology.transformation;
+        const neighborAxisValue =
+          pressureInfo.axis !== "mixed" ? neighborIdeology[pressureInfo.axis] : 0;
 
-        // Weight by relationship strength and neighbor's faction affinity
-        const weight = link.weight * neighborFactionValue;
+        // Weight by relationship strength and neighbor's axis value
+        const weight = link.weight * neighborAxisValue;
         if (weight > strongestWeight) {
           strongestWeight = weight;
           strongestNeighborId = neighborId;
@@ -338,7 +334,7 @@ export function renderColonistGraph(
       const ctrlX = (startX + endX) / 2 + px * curveOffset;
       const ctrlY = (startY + endY) / 2 + py * curveOffset;
 
-      const markerId = `pressure-arrow-${pressureInfo.faction}`;
+      const markerId = `pressure-arrow-${pressureInfo.axis}`;
 
       // Draw quadratic bezier curve
       pressureGroup

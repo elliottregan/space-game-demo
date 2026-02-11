@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { getDominantFactionInfo, FACTION_HEX_COLORS } from "../../utils/ideologyDisplay";
+import { getDominantAxisHexColor } from "../../utils/ideologyDisplay";
 import { renderRadar, type RadarData } from "./renderRadar";
 
 const props = withDefaults(
@@ -23,11 +23,7 @@ const svgRef = ref<SVGSVGElement | null>(null);
 
 const resolvedColor = computed(() => {
   if (props.fillColor) return props.fillColor;
-  const info = getDominantFactionInfo(props.values);
-  if (info) {
-    return FACTION_HEX_COLORS[info.faction];
-  }
-  return FACTION_HEX_COLORS.neutral;
+  return getDominantAxisHexColor(props.values);
 });
 
 function render() {

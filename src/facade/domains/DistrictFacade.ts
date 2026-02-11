@@ -6,22 +6,22 @@ import { NEUTRAL_AXIS_THRESHOLD } from "../../core/balance/IdeologyBalance";
 import type { GameState } from "../../core/GameState";
 import { ColonistRole } from "../../core/models/Colonist";
 import type { ColonistIdeology } from "../../core/models/Colonist";
+import type { AxisPosition } from "../../core/models/NPCInfluence";
 import { PowerStatus } from "../../core/models/District";
 import { RESOURCE_KEYS } from "../../core/models/Resources";
 import type { ResourceDelta } from "../../core/models/Resources";
 import type { CanDoResult, Result } from "../types/common";
 import { err, ok } from "../types/common";
 
-type FactionId = "earth" | "mars" | "corporate" | "neutral";
-
-function getDominantFaction(ideology: ColonistIdeology | undefined): FactionId {
+/** Get the dominant ideology axis for a colonist, or "neutral" if below threshold. */
+function getDominantAxis(ideology: ColonistIdeology | undefined): keyof AxisPosition | "neutral" {
   if (!ideology) return "neutral";
   const { solidarity, sovereignty, transformation } = ideology;
   const max = Math.max(solidarity, sovereignty, transformation);
   if (max < NEUTRAL_AXIS_THRESHOLD) return "neutral";
-  if (solidarity === max) return "earth";
-  if (sovereignty === max) return "mars";
-  if (transformation === max) return "corporate";
+  if (solidarity === max) return "solidarity";
+  if (sovereignty === max) return "sovereignty";
+  if (transformation === max) return "transformation";
   return "neutral";
 }
 
@@ -106,8 +106,8 @@ export class DistrictFacade {
           if (colonist) {
             const roleName = colonist.role || ColonistRole.UNASSIGNED;
             byRole[roleName] = (byRole[roleName] ?? 0) + 1;
-            const faction = getDominantFaction(colonist.ideology);
-            ideology[faction] = (ideology[faction] ?? 0) + 1;
+            const axis = getDominantAxis(colonist.ideology);
+            ideology[axis] = (ideology[axis] ?? 0) + 1;
             if (colonist.ideology) {
               axesSolidarity += colonist.ideology.solidarity;
               axesSovereignty += colonist.ideology.sovereignty;

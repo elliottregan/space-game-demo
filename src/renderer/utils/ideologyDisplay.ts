@@ -1,185 +1,79 @@
 // src/renderer/utils/ideologyDisplay.ts
 /**
- * Unified model for displaying colonist ideology in the UI.
- * This is the single source of truth for:
- * - Faction types and identifiers
- * - Color mappings (CSS variables and hex fallbacks)
- * - Display names (short and full)
- * - Dominant faction calculation
+ * Display utilities for ideology axes and political factions.
+ *
+ * These are distinct concepts:
+ * - Axes (solidarity, sovereignty, transformation) are ideology dimensions (-1 to +1)
+ * - Factions (earth, mars, corporate) are political groups with positions in axis space
+ *
+ * A colonist's dominant axis is NOT the same as their faction affiliation.
+ * Faction affiliation is determined by 3D distance to faction positions (see IdeologyManager).
  */
 
 import type { ColonistIdeology } from "../../core/models/Colonist";
+import type { AxisPosition } from "../../core/models/NPCInfluence";
 import { NPCFaction } from "../../core/models/NPCInfluence";
-import { NEUTRAL_AXIS_THRESHOLD } from "../../core/balance/IdeologyBalance";
 
-// ============ Faction Types ============
+// ============ Axis Types & Display ============
 
-/**
- * Faction identifiers for UI display.
- * "neutral" indicates no dominant faction.
- */
-export type FactionId = "earth" | "mars" | "corporate" | "neutral";
+export type AxisId = "solidarity" | "sovereignty" | "transformation";
 
-// ============ Color Mappings ============
-
-/**
- * CSS variable names for faction colors.
- * These reference the theme's semantic colors.
- */
-export const FACTION_CSS_VARS: Record<FactionId, string> = {
-  earth: "var(--g-color-info)", // Blue/Teal
-  mars: "var(--g-color-positive)", // Green
-  corporate: "var(--g-color-warning)", // Orange
-  neutral: "var(--g-color-text-muted)", // Gray
+/** Hex colors for each ideology axis (for D3/canvas rendering) */
+export const AXIS_HEX_COLORS: Record<AxisId, string> = {
+  solidarity: "#00838f", // Teal
+  sovereignty: "#2e7d32", // Green
+  transformation: "#ef6c00", // Orange
 } as const;
 
-/**
- * Hex fallback colors for contexts where CSS variables aren't available
- * (e.g., D3/canvas rendering before CSS is computed).
- */
-export const FACTION_HEX_COLORS: Record<FactionId, string> = {
-  earth: "#00838f", // Teal
-  mars: "#2e7d32", // Green
-  corporate: "#ef6c00", // Orange
-  neutral: "#888888", // Gray
+const AXIS_THEME_MAP: Record<AxisId, "info" | "positive" | "warning"> = {
+  solidarity: "info",
+  sovereignty: "positive",
+  transformation: "warning",
 } as const;
 
-// ============ Display Names ============
+type ThemeColors = { info: string; positive: string; warning: string; textMuted: string };
 
 /**
- * Short faction names for compact UI (badges, labels).
+ * Get the dominant ideology axis from axis values.
+ * Returns null if no axis value meets the threshold.
  */
-export const FACTION_SHORT_NAMES: Record<FactionId, string> = {
-  earth: "Earth",
-  mars: "Mars",
-  corporate: "Corp",
-  neutral: "Neutral",
-} as const;
-
-/**
- * Full faction names for detailed display.
- */
-export const FACTION_FULL_NAMES: Record<FactionId, string> = {
-  earth: "Earth Loyalists",
-  mars: "Mars Independence",
-  corporate: "Corporate Interests",
-  neutral: "Neutral",
-} as const;
-
-// ============ Dominant Faction Calculation ============
-
-/**
- * Threshold for determining dominant faction.
- * Uses the core balance constant for consistency with game logic.
- */
-export const DOMINANT_FACTION_THRESHOLD = NEUTRAL_AXIS_THRESHOLD;
-
-/**
- * Get the dominant faction for a colonist based on their ideology.
- *
- * Returns "neutral" if:
- * - Ideology is undefined/null
- * - All affinities are below the threshold
- * - Multiple factions are tied for highest (edge case)
- *
- * @param ideology - The colonist's ideology values
- * @returns The faction ID of the dominant faction, or "neutral"
- */
-export function getDominantFaction(ideology: ColonistIdeology | undefined | null): FactionId {
-  if (!ideology) return "neutral";
-
-  const { solidarity, sovereignty, transformation } = ideology;
+export function getDominantAxis(
+  values: AxisPosition | ColonistIdeology | undefined | null,
+  threshold: number = 0.15,
+): AxisId | null {
+  if (!values) return null;
+  const { solidarity, sovereignty, transformation } = values;
   const max = Math.max(solidarity, sovereignty, transformation);
-
-  // If all affinities are below threshold, consider neutral
-  if (max < DOMINANT_FACTION_THRESHOLD) return "neutral";
-
-  // Return the faction with highest affinity
-  // In case of ties, preference order: earth > mars > corporate
-  if (solidarity === max) return "earth";
-  if (sovereignty === max) return "mars";
-  if (transformation === max) return "corporate";
-
-  return "neutral";
+  if (max < threshold) return null;
+  if (solidarity === max) return "solidarity";
+  if (sovereignty === max) return "sovereignty";
+  return "transformation";
 }
 
 /**
- * Get the dominant faction info including color and name.
- * Returns null if the colonist is neutral (no strong affiliation).
- *
- * @param ideology - The colonist's ideology values
- * @returns Faction info object or null if neutral
+ * Get the hex color for the dominant axis (for radar/chart fills).
  */
-export function getDominantFactionInfo(
-  ideology: ColonistIdeology | undefined | null,
-): { faction: FactionId; color: string; name: string } | null {
-  const faction = getDominantFaction(ideology);
-  if (faction === "neutral") return null;
-
-  return {
-    faction,
-    color: FACTION_CSS_VARS[faction],
-    name: FACTION_SHORT_NAMES[faction],
-  };
-}
-
-// ============ Color Helpers ============
-
-/**
- * Get the CSS color variable for a faction.
- * @param faction - The faction ID
- * @returns CSS variable string (e.g., "var(--g-color-info)")
- */
-export function getFactionCssColor(faction: FactionId): string {
-  return FACTION_CSS_VARS[faction];
-}
-
-/**
- * Get the hex color for a faction (for D3/canvas contexts).
- * @param faction - The faction ID
- * @returns Hex color string (e.g., "#00838f")
- */
-export function getFactionHexColor(faction: FactionId): string {
-  return FACTION_HEX_COLORS[faction];
-}
-
-/**
- * Get faction color from theme colors object (for D3 rendering).
- * @param faction - The faction ID
- * @param colors - Theme colors object with info, positive, warning, textMuted
- * @returns The appropriate color from the theme
- */
-export function getFactionColorFromTheme(
-  faction: FactionId,
-  colors: { info: string; positive: string; warning: string; textMuted: string },
+export function getDominantAxisHexColor(
+  values: AxisPosition | ColonistIdeology | undefined | null,
 ): string {
-  switch (faction) {
-    case "earth":
-      return colors.info;
-    case "mars":
-      return colors.positive;
-    case "corporate":
-      return colors.warning;
-    case "neutral":
-    default:
-      return colors.textMuted;
-  }
+  const axis = getDominantAxis(values);
+  return axis ? AXIS_HEX_COLORS[axis] : "#888888";
 }
 
-// ============ Ideology Color for Graph Rendering ============
+/**
+ * Get axis color from a theme colors object.
+ */
+export function getAxisColorFromTheme(axis: AxisId, colors: ThemeColors): string {
+  return colors[AXIS_THEME_MAP[axis]];
+}
 
 /**
- * Get the ideology color for graph node rendering.
- * Uses a more nuanced approach with dominance threshold for clear visual distinction.
- *
- * @param ideology - The colonist's ideology values
- * @param colors - Theme colors object
- * @param dominanceThreshold - How much the highest must exceed others (default: 0.15)
- * @returns The color to use for the colonist node
+ * Get ideology color for graph node rendering.
+ * Colors by dominant axis with a dominance threshold for clear visual distinction.
  */
 export function getIdeologyColorForGraph(
   ideology: ColonistIdeology | undefined | null,
-  colors: { info: string; positive: string; warning: string; textMuted: string },
+  colors: ThemeColors,
   dominanceThreshold: number = 0.15,
 ): string {
   if (!ideology) return colors.textMuted;
@@ -187,10 +81,9 @@ export function getIdeologyColorForGraph(
   const { solidarity, sovereignty, transformation } = ideology;
   const max = Math.max(solidarity, sovereignty, transformation);
 
-  // If all values are very low, show as neutral
   if (max < 0.1) return colors.textMuted;
 
-  // Check for clear dominance (must exceed others by threshold)
+  // Check for clear dominance on each axis (must exceed others by threshold)
   if (
     solidarity >= max - 0.01 &&
     solidarity - sovereignty >= dominanceThreshold &&
@@ -213,17 +106,70 @@ export function getIdeologyColorForGraph(
     return colors.warning;
   }
 
-  // Mixed ideology - use neutral
+  // Mixed ideology
   return colors.textMuted;
+}
+
+// ============ Faction Types & Display ============
+
+/**
+ * Faction identifiers for UI display.
+ * "neutral" indicates no dominant faction.
+ */
+export type FactionId = "earth" | "mars" | "corporate" | "neutral";
+
+export const FACTION_CSS_VARS: Record<FactionId, string> = {
+  earth: "var(--g-color-info)",
+  mars: "var(--g-color-positive)",
+  corporate: "var(--g-color-warning)",
+  neutral: "var(--g-color-text-muted)",
+} as const;
+
+export const FACTION_HEX_COLORS: Record<FactionId, string> = {
+  earth: "#00838f",
+  mars: "#2e7d32",
+  corporate: "#ef6c00",
+  neutral: "#888888",
+} as const;
+
+export const FACTION_SHORT_NAMES: Record<FactionId, string> = {
+  earth: "Earth",
+  mars: "Mars",
+  corporate: "Corp",
+  neutral: "Neutral",
+} as const;
+
+export const FACTION_FULL_NAMES: Record<FactionId, string> = {
+  earth: "Earth Loyalists",
+  mars: "Mars Independence",
+  corporate: "Corporate Interests",
+  neutral: "Neutral",
+} as const;
+
+export function getFactionCssColor(faction: FactionId): string {
+  return FACTION_CSS_VARS[faction];
+}
+
+export function getFactionHexColor(faction: FactionId): string {
+  return FACTION_HEX_COLORS[faction];
+}
+
+export function getFactionColorFromTheme(faction: FactionId, colors: ThemeColors): string {
+  switch (faction) {
+    case "earth":
+      return colors.info;
+    case "mars":
+      return colors.positive;
+    case "corporate":
+      return colors.warning;
+    case "neutral":
+    default:
+      return colors.textMuted;
+  }
 }
 
 // ============ NPCFaction Conversion ============
 
-/**
- * Convert NPCFaction enum to FactionId for UI display.
- * @param faction - The NPCFaction enum value
- * @returns The corresponding FactionId
- */
 export function npcFactionToFactionId(faction: NPCFaction): Exclude<FactionId, "neutral"> {
   switch (faction) {
     case NPCFaction.EarthLoyalists:
@@ -235,12 +181,6 @@ export function npcFactionToFactionId(faction: NPCFaction): Exclude<FactionId, "
   }
 }
 
-/**
- * Convert FactionId to NPCFaction enum for game logic.
- * @param factionId - The FactionId (must not be "neutral")
- * @returns The corresponding NPCFaction
- * @throws Error if factionId is "neutral"
- */
 export function factionIdToNpcFaction(factionId: FactionId): NPCFaction {
   switch (factionId) {
     case "earth":

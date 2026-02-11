@@ -7,7 +7,7 @@ import {
   DISTRICT_GROWTH_TRIGGER,
 } from "../../../core/balance/DistrictBalance";
 import { ColonistRole, ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist";
-import { FACTION_SHORT_NAMES, FACTION_CSS_VARS, type FactionId } from "../../utils/ideologyDisplay";
+import { AXIS_HEX_COLORS, type AxisId } from "../../utils/ideologyDisplay";
 import { BuildingPurpose } from "../../../core/models/Building";
 import type { Building, BuildingDefinition } from "../../../facade";
 import type { ResourceDelta } from "../../../core/models/Resources";
@@ -101,17 +101,23 @@ const roleEntries = computed(() => {
   return entries;
 });
 
+const AXIS_DISPLAY_NAMES: Record<string, string> = {
+  solidarity: "Solidarity",
+  sovereignty: "Sovereignty",
+  transformation: "Transformation",
+  neutral: "Neutral",
+};
+
 // oxlint-disable-next-line no-unused-vars
-const factionEntries = computed(() => {
-  const entries: Array<{ id: FactionId; label: string; count: number; color: string }> = [];
-  for (const [faction, count] of Object.entries(props.district.ideology)) {
+const axisEntries = computed(() => {
+  const entries: Array<{ id: string; label: string; count: number; color: string }> = [];
+  for (const [axis, count] of Object.entries(props.district.ideology)) {
     if (count > 0) {
-      const fid = faction as FactionId;
       entries.push({
-        id: fid,
-        label: FACTION_SHORT_NAMES[fid] ?? faction,
+        id: axis,
+        label: AXIS_DISPLAY_NAMES[axis] ?? axis,
         count,
-        color: FACTION_CSS_VARS[fid] ?? "var(--g-color-text-muted)",
+        color: AXIS_HEX_COLORS[axis as AxisId] ?? "var(--g-color-text-muted)",
       });
     }
   }
@@ -375,11 +381,11 @@ function formatRecycleValue(delta: ResourceDelta): string {
       </div>
     </div>
 
-    <div v-if="factionEntries.length > 0" class="district-section">
-      <span class="section-label">Factions</span>
-      <div class="faction-badges">
+    <div v-if="axisEntries.length > 0 || hasIdeologyValues" class="district-section">
+      <span class="section-label">Ideology</span>
+      <div v-if="axisEntries.length > 0" class="faction-badges">
         <span
-          v-for="entry in factionEntries"
+          v-for="entry in axisEntries"
           :key="entry.id"
           class="faction-badge"
           :style="{ borderColor: entry.color, color: entry.color }"
@@ -387,11 +393,7 @@ function formatRecycleValue(delta: ResourceDelta): string {
           {{ entry.label }}: {{ entry.count }}
         </span>
       </div>
-    </div>
-
-    <div v-if="hasIdeologyValues" class="district-section">
-      <span class="section-label">Ideology</span>
-      <div class="ideology-radar-container">
+      <div v-if="hasIdeologyValues" class="ideology-radar-container">
         <IdeologyRadar :values="district.ideologyAxes" :size="160" show-labels />
       </div>
     </div>
