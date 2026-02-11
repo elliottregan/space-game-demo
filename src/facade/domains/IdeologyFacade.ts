@@ -51,13 +51,20 @@ export class IdeologyFacade implements Queryable<IdeologySnapshot> {
    * Get current faction states.
    */
   getFactions(): FactionSnapshot[] {
-    return this.gameState.ideology.getFactions().map((f) => ({
-      id: f.id,
-      name: f.name,
-      baseId: f.baseId,
-      position: { ...f.position },
-      pressure: { ...f.pressure },
-    }));
+    const colonists = this.gameState.colony.getColonists();
+    const memberStats = this.gameState.ideology.getFactionMemberStats(colonists);
+    return this.gameState.ideology.getFactions().map((f) => {
+      const stats = memberStats[f.id] ?? { members: 0, avgConviction: 0 };
+      return {
+        id: f.id,
+        name: f.name,
+        baseId: f.baseId,
+        position: { ...f.position },
+        pressure: { ...f.pressure },
+        members: stats.members,
+        avgConviction: stats.avgConviction,
+      };
+    });
   }
 
   /**

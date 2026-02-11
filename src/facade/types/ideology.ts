@@ -23,6 +23,10 @@ export interface FactionSnapshot {
   baseId: string;
   position: { solidarity: number; sovereignty: number; transformation: number };
   pressure: { solidarity: number; sovereignty: number; transformation: number };
+  /** Number of colonists nearest to this faction */
+  members: number;
+  /** Average conviction of faction members (0-1) */
+  avgConviction: number;
 }
 
 /**

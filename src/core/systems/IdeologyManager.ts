@@ -236,6 +236,17 @@ export class IdeologyManager {
    * Calculate average conviction of colonists nearest to a faction.
    */
   private getAverageFactionConviction(faction: FactionState, colonists: Colonist[]): number {
+    const stats = this.getFactionMemberStatsFor(faction, colonists);
+    return stats.avgConviction;
+  }
+
+  /**
+   * Get member stats for a single faction.
+   */
+  private getFactionMemberStatsFor(
+    faction: FactionState,
+    colonists: Colonist[],
+  ): { members: number; avgConviction: number } {
     let totalConviction = 0;
     let count = 0;
 
@@ -249,8 +260,23 @@ export class IdeologyManager {
       }
     }
 
-    if (count === 0) return 0;
-    return totalConviction / count;
+    return {
+      members: count,
+      avgConviction: count > 0 ? totalConviction / count : 0,
+    };
+  }
+
+  /**
+   * Get member count and average conviction for each faction.
+   */
+  getFactionMemberStats(
+    colonists: Colonist[],
+  ): Record<string, { members: number; avgConviction: number }> {
+    const result: Record<string, { members: number; avgConviction: number }> = {};
+    for (const faction of this.factions) {
+      result[faction.id] = this.getFactionMemberStatsFor(faction, colonists);
+    }
+    return result;
   }
 
   // ============ Faction Naming ============

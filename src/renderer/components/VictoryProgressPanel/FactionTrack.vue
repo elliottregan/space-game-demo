@@ -1,7 +1,6 @@
 <!-- src/renderer/components/VictoryProgressPanel/FactionTrack.vue -->
 <script setup lang="ts">
 import { computed } from "vue";
-import { AXIS_KEYS } from "../../../core/models/NPCInfluence";
 import { getCapstoneGrants, getDistrictGrantTemplate } from "../../../core/data/districtGrants";
 import { BUILDINGS } from "../../../core/data/buildings";
 import { CAPSTONE_UNLOCK_THRESHOLD } from "../../../core/balance/DistrictGrantBalance";
@@ -121,6 +120,15 @@ const bestCapstone = computed((): CapstoneProgress | null => {
   }
 
   return best;
+});
+
+// Faction support % (0-1)
+const supportPercent = computed((): number => {
+  return state.ideology.factionSupport[props.faction.id] ?? 0;
+});
+
+const totalColonists = computed((): number => {
+  return state.colonists.length;
 });
 
 // Council seats for this faction
@@ -246,28 +254,32 @@ const nextStep = computed(() => {
       <span class="faction-name">{{ faction.name }}</span>
     </div>
 
-    <!-- Axis Positions -->
-    <div class="axis-section">
-      <div class="section-label">Axis Positions</div>
-      <div v-for="axis in AXIS_KEYS" :key="axis" class="axis-row">
-        <span class="axis-label">{{ axis }}</span>
-        <div class="axis-bar-container">
-          <div class="axis-bar">
-            <div class="axis-center" />
+    <!-- Faction Strength -->
+    <div class="strength-section">
+      <div class="strength-row">
+        <span class="strength-label">Support</span>
+        <div class="strength-bar-container">
+          <div class="strength-bar">
+            <div class="strength-fill" :style="{ width: `${supportPercent * 100}%` }" />
+          </div>
+        </div>
+        <span class="strength-value">{{ (supportPercent * 100).toFixed(0) }}%</span>
+      </div>
+      <div class="strength-row">
+        <span class="strength-label">Conviction</span>
+        <div class="strength-bar-container">
+          <div class="strength-bar">
             <div
-              class="axis-fill"
-              :class="{
-                positive: faction.position[axis] > 0,
-                negative: faction.position[axis] < 0,
-              }"
-              :style="{
-                left: faction.position[axis] >= 0 ? '50%' : `${50 + faction.position[axis] * 50}%`,
-                width: `${Math.abs(faction.position[axis]) * 50}%`,
-              }"
+              class="strength-fill conviction-fill"
+              :style="{ width: `${faction.avgConviction * 100}%` }"
             />
           </div>
         </div>
-        <span class="axis-value">{{ (faction.position[axis] * 100).toFixed(0) }}</span>
+        <span class="strength-value">{{ (faction.avgConviction * 100).toFixed(0) }}%</span>
+      </div>
+      <div class="strength-row">
+        <span class="strength-label">Members</span>
+        <span class="strength-value members-value">{{ faction.members }}/{{ totalColonists }}</span>
       </div>
     </div>
 
@@ -417,12 +429,12 @@ const nextStep = computed(() => {
   margin-bottom: var(--g-space-xs);
 }
 
-/* Axis Positions */
-.axis-section {
+/* Faction Strength */
+.strength-section {
   margin-bottom: var(--g-space-xs);
 }
 
-.axis-row {
+.strength-row {
   display: flex;
   align-items: center;
   gap: var(--g-space-xs);
@@ -431,53 +443,41 @@ const nextStep = computed(() => {
   font-size: var(--g-font-size-xs);
 }
 
-.axis-label {
-  width: 90px;
+.strength-label {
+  width: 70px;
   color: var(--g-color-text-muted);
-  text-transform: capitalize;
 }
 
-.axis-bar-container {
+.strength-bar-container {
   flex: 1;
 }
 
-.axis-bar {
+.strength-bar {
   position: relative;
   height: 6px;
   background: var(--g-color-bg-base);
   border: 1px solid var(--g-color-border);
 }
 
-.axis-center {
-  position: absolute;
-  left: 50%;
-  top: -1px;
-  width: 1px;
-  height: 8px;
-  background: var(--g-color-text-muted);
-}
-
-.axis-fill {
-  position: absolute;
+.strength-fill {
   height: 100%;
-  transition:
-    width 0.3s,
-    left 0.3s;
-}
-
-.axis-fill.positive {
   background: var(--faction-color);
+  transition: width 0.3s;
 }
 
-.axis-fill.negative {
-  background: var(--faction-color);
-  opacity: 0.7;
+.conviction-fill {
+  opacity: 0.8;
 }
 
-.axis-value {
+.strength-value {
   width: 40px;
   text-align: right;
   color: var(--g-color-text);
+}
+
+.members-value {
+  width: auto;
+  margin-left: auto;
 }
 
 /* Capstone */
