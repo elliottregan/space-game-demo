@@ -11,13 +11,13 @@ import type { NPCFaction } from "../models/NPCInfluence.js";
 // ============ Ideology Spread ============
 
 /** Rate at which ideology drifts toward neighbors per spread tick */
-export const IDEOLOGY_SPREAD_RATE = 0.04;
+export const IDEOLOGY_SPREAD_RATE = 0.025;
 
 /** Sols between ideology propagation ticks */
 export const IDEOLOGY_SPREAD_INTERVAL = 1;
 
 /** How much conviction reduces influence susceptibility (0-1) */
-export const CONVICTION_RESISTANCE_FACTOR = 0.6;
+export const CONVICTION_RESISTANCE_FACTOR = 0.75;
 
 /**
  * Minimum relationship strength for ideology to spread.
@@ -26,7 +26,7 @@ export const CONVICTION_RESISTANCE_FACTOR = 0.6;
  * closely-bonded groups maintain distinct beliefs.
  * Set to 0 to disable threshold (all connections spread ideology).
  */
-export const IDEOLOGY_SPREAD_CONNECTION_THRESHOLD = 0.2;
+export const IDEOLOGY_SPREAD_CONNECTION_THRESHOLD = 0.4;
 
 // ============ Council Selection ============
 
@@ -64,7 +64,7 @@ export const NEW_COLONIST_IDEOLOGY = {
  * At 0.7, a neutral colonist near a sovereignty-positive neighbor would
  * shift their sovereignty axis toward that neighbor's position.
  */
-export const IDEOLOGY_IMPRINTING_STRENGTH = 0.7;
+export const IDEOLOGY_IMPRINTING_STRENGTH = 0.45;
 
 /**
  * Minimum relationship strength required for imprinting.
@@ -75,13 +75,13 @@ export const IDEOLOGY_IMPRINTING_THRESHOLD = 0.3;
 // ============ Conviction Evolution ============
 
 /** Rate at which conviction grows when surrounded by like-minded colonists (per propagation tick) */
-export const CONVICTION_GROWTH_RATE = 0.02;
+export const CONVICTION_GROWTH_RATE = 0.035;
 
 /** Rate at which conviction decays when isolated from faction (per propagation tick) */
 export const CONVICTION_DECAY_RATE = 0.03;
 
 /** Natural conviction decay applied to all colonists each tick (represents doubt/questioning) */
-export const CONVICTION_NATURAL_DECAY = 0.015;
+export const CONVICTION_NATURAL_DECAY = 0.005;
 
 /** Minimum conviction floor - some baseline conviction always remains */
 export const CONVICTION_MIN = 0.1;
