@@ -5,6 +5,7 @@ import {
   DISTRICT_BUILDING_SLOTS,
   DISTRICT_GROWTH_TRIGGER,
 } from "../../../core/balance/DistrictBalance";
+import { ColonistRole, ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist";
 import { BuildingPurpose } from "../../../core/models/Building";
 import type { Building, BuildingDefinition } from "../../../facade";
 import type { ResourceDelta } from "../../../core/models/Resources";
@@ -25,6 +26,10 @@ const props = defineProps<{
     buildingCount: number;
     buildingIds: string[];
     growthCap: number | null;
+    resourceProduction: Record<string, number>;
+    resourceConsumption: Record<string, number>;
+    power: { production: number; consumption: number; balance: number };
+    workforce: { employed: number; idle: number; byRole: Record<string, number> };
   };
   currentSol: number;
   buildings: Building[];
@@ -58,6 +63,44 @@ const growthStatus = computed(() => {
   if (occupancy >= DISTRICT_GROWTH_TRIGGER) return { label: "Growing", variant: "positive" };
   return { label: "Stable", variant: "muted" };
 });
+
+// oxlint-disable-next-line no-unused-vars
+const resourceFlows = computed(() => {
+  const flows: Array<{ key: string; label: string; net: number }> = [];
+  const allKeys = new Set([
+    ...Object.keys(props.district.resourceProduction),
+    ...Object.keys(props.district.resourceConsumption),
+  ]);
+  for (const key of allKeys) {
+    const prod = props.district.resourceProduction[key] ?? 0;
+    const cons = props.district.resourceConsumption[key] ?? 0;
+    const net = prod - cons;
+    if (net !== 0) {
+      flows.push({ key, label: key.charAt(0).toUpperCase() + key.slice(1), net });
+    }
+  }
+  return flows;
+});
+
+// oxlint-disable-next-line no-unused-vars
+const hasPower = computed(
+  () => props.district.power.production > 0 || props.district.power.consumption > 0,
+);
+
+// oxlint-disable-next-line no-unused-vars
+const roleEntries = computed(() => {
+  const entries: Array<{ label: string; count: number }> = [];
+  for (const [role, count] of Object.entries(props.district.workforce.byRole)) {
+    const displayName = ROLE_DISPLAY_NAMES[role as ColonistRole] ?? role;
+    entries.push({ label: displayName, count });
+  }
+  return entries;
+});
+
+// oxlint-disable-next-line no-unused-vars
+function formatNet(value: number): string {
+  return value > 0 ? `+${value.toFixed(1)}` : value.toFixed(1);
+}
 
 const districtBuildings = computed(() => {
   const idSet = new Set(props.district.buildingIds);
@@ -247,13 +290,14 @@ function formatRecycleValue(delta: ResourceDelta): string {
 <template>
   <div class="district-card">
     <div class="district-header">
-      <span class="district-name" :title="`Founded: Sol ${district.foundedAt}`">
+      <span class="district-name">
         {{ district.name }}
       </span>
       <span class="district-status" :class="`status--${growthStatus.variant}`">
         {{ growthStatus.label }}
       </span>
     </div>
+    <span class="founded-date">Sol {{ district.foundedAt }}</span>
 
     <div class="district-pop">
       <span class="pop-label">Population</span>
@@ -265,6 +309,45 @@ function formatRecycleValue(delta: ResourceDelta): string {
       show-label
       :label="`${Math.round(occupancyPercent)}%`"
     />
+
+    <div v-if="resourceFlows.length > 0" class="district-section">
+      <span class="section-label">Resources</span>
+      <div class="resource-flows">
+        <span
+          v-for="flow in resourceFlows"
+          :key="flow.key"
+          class="resource-flow"
+          :class="flow.net > 0 ? 'flow--positive' : 'flow--negative'"
+        >
+          {{ flow.label }} {{ formatNet(flow.net) }}
+        </span>
+      </div>
+    </div>
+
+    <div v-if="hasPower" class="district-section">
+      <span class="section-label">Power</span>
+      <span
+        class="power-value"
+        :class="district.power.balance >= 0 ? 'flow--positive' : 'flow--negative'"
+      >
+        {{ formatNet(district.power.balance) }} kW
+      </span>
+      <span class="power-detail"
+        >(+{{ district.power.production }} / -{{ district.power.consumption }})</span
+      >
+    </div>
+
+    <div v-if="district.population > 0" class="district-section">
+      <span class="section-label">Workforce</span>
+      <span class="workforce-summary">
+        {{ district.workforce.employed }} working / {{ district.workforce.idle }} idle
+      </span>
+      <div v-if="roleEntries.length > 0" class="role-badges">
+        <span v-for="entry in roleEntries" :key="entry.label" class="role-badge">
+          {{ entry.label }}: {{ entry.count }}
+        </span>
+      </div>
+    </div>
 
     <div class="district-buildings">
       <div class="buildings-header">
@@ -410,6 +493,86 @@ function formatRecycleValue(delta: ResourceDelta): string {
 
 .pop-count {
   font-family: var(--g-font-mono);
+}
+
+.founded-date {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: calc(-1 * var(--g-space-xs));
+}
+
+.district-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  font-size: var(--g-font-size-sm);
+}
+
+.section-label {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--g-color-text-muted);
+  width: 100%;
+}
+
+.resource-flows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+}
+
+.resource-flow {
+  white-space: nowrap;
+}
+
+.flow--positive {
+  color: var(--g-color-positive);
+}
+
+.flow--negative {
+  color: var(--g-color-danger);
+}
+
+.power-value {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-sm);
+  font-weight: bold;
+}
+
+.power-detail {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+}
+
+.workforce-summary {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+}
+
+.role-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: 100%;
+}
+
+.role-badge {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  padding: 1px 5px;
+  border: 1px solid var(--g-color-border);
+  border-radius: 2px;
+  white-space: nowrap;
 }
 
 .district-buildings {

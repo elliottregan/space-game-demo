@@ -116,6 +116,21 @@ export class DistrictManager {
     return this.districtColonists.get(districtId) ?? [];
   }
 
+  getDistrictPower(districtId: string): { production: number; consumption: number } {
+    const district = this.districts.get(districtId);
+    if (!district) return { production: 0, consumption: 0 };
+    const buildingIdSet = new Set(district.buildingIds);
+    let production = 0;
+    let consumption = 0;
+    for (const [bid, output] of this.powerSources) {
+      if (buildingIdSet.has(bid)) production += output;
+    }
+    for (const [bid, cons] of this.powerConsumers) {
+      if (buildingIdSet.has(bid)) consumption += cons;
+    }
+    return { production, consumption };
+  }
+
   getTotalCapacity(): number {
     let total = 0;
     for (const district of this.districts.values()) {

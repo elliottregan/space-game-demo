@@ -99,6 +99,10 @@ interface GameUIState {
     buildingCount: number;
     buildingIds: string[];
     growthCap: number | null;
+    resourceProduction: Record<string, number>;
+    resourceConsumption: Record<string, number>;
+    power: { production: number; consumption: number; balance: number };
+    workforce: { employed: number; idle: number; byRole: Record<string, number> };
   }>;
   powerStatus: {
     production: number;
@@ -370,6 +374,10 @@ class GameService {
       buildingCount: d.buildingCount,
       buildingIds: [...d.buildingIds],
       growthCap: d.growthCap,
+      resourceProduction: { ...d.resourceProduction },
+      resourceConsumption: { ...d.resourceConsumption },
+      power: { ...d.power },
+      workforce: { ...d.workforce, byRole: { ...d.workforce.byRole } },
     }));
     this.state.powerStatus = {
       production: districtData.power.production,

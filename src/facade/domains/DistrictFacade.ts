@@ -3,7 +3,10 @@
 
 import { DISTRICT_FOUNDING_COST } from "../../core/balance/DistrictBalance";
 import type { GameState } from "../../core/GameState";
+import { ColonistRole } from "../../core/models/Colonist";
 import { PowerStatus } from "../../core/models/District";
+import { RESOURCE_KEYS } from "../../core/models/Resources";
+import type { ResourceDelta } from "../../core/models/Resources";
 import type { CanDoResult, Result } from "../types/common";
 import { err, ok } from "../types/common";
 
@@ -17,6 +20,14 @@ export interface DistrictSnapshot {
     growthCap: number | null;
     buildingCount: number;
     buildingIds: string[];
+    resourceProduction: ResourceDelta;
+    resourceConsumption: ResourceDelta;
+    power: { production: number; consumption: number; balance: number };
+    workforce: {
+      employed: number;
+      idle: number;
+      byRole: Record<string, number>;
+    };
   }>;
   power: {
     production: number;
@@ -36,17 +47,70 @@ export class DistrictFacade {
 
   snapshot(): DistrictSnapshot {
     const dm = this.gameState.districts;
+    const bm = this.gameState.buildings;
+    const cm = this.gameState.colony;
     return {
-      districts: dm.getDistricts().map((d) => ({
-        id: d.id,
-        name: d.name,
-        foundedAt: d.foundedAt,
-        capacity: d.capacity,
-        population: dm.getDistrictPopulation(d.id),
-        growthCap: d.growthCap,
-        buildingCount: d.buildingIds.length,
-        buildingIds: [...d.buildingIds],
-      })),
+      districts: dm.getDistricts().map((d) => {
+        // Aggregate resource production/consumption from district buildings
+        const resourceProduction: ResourceDelta = {};
+        const resourceConsumption: ResourceDelta = {};
+        const employedSet = new Set<string>();
+        for (const bid of d.buildingIds) {
+          const prod = bm.getEffectiveProduction(bid);
+          for (const key of RESOURCE_KEYS) {
+            if (prod[key]) resourceProduction[key] = (resourceProduction[key] ?? 0) + prod[key]!;
+          }
+          const cons = bm.getEffectiveConsumption(bid);
+          for (const key of RESOURCE_KEYS) {
+            if (cons[key]) resourceConsumption[key] = (resourceConsumption[key] ?? 0) + cons[key]!;
+          }
+          // Collect assigned workers from this building
+          const building = bm.getBuilding(bid);
+          if (building) {
+            for (const wid of building.assignedWorkers) employedSet.add(wid);
+          }
+        }
+
+        // Per-district power
+        const districtPower = dm.getDistrictPower(d.id);
+
+        // Workforce breakdown
+        const colonistIds = dm.getDistrictColonistIds(d.id);
+        const byRole: Record<string, number> = {};
+        let employed = 0;
+        let idle = 0;
+        for (const cid of colonistIds) {
+          const colonist = cm.getColonist(cid);
+          if (colonist) {
+            const roleName = colonist.role || ColonistRole.UNASSIGNED;
+            byRole[roleName] = (byRole[roleName] ?? 0) + 1;
+          }
+          if (employedSet.has(cid)) {
+            employed++;
+          } else {
+            idle++;
+          }
+        }
+
+        return {
+          id: d.id,
+          name: d.name,
+          foundedAt: d.foundedAt,
+          capacity: d.capacity,
+          population: dm.getDistrictPopulation(d.id),
+          growthCap: d.growthCap,
+          buildingCount: d.buildingIds.length,
+          buildingIds: [...d.buildingIds],
+          resourceProduction,
+          resourceConsumption,
+          power: {
+            production: districtPower.production,
+            consumption: districtPower.consumption,
+            balance: districtPower.production - districtPower.consumption,
+          },
+          workforce: { employed, idle, byRole },
+        };
+      }),
       power: {
         production: dm.getTotalPowerProduction(),
         consumption: dm.getTotalPowerConsumption(),

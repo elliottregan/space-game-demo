@@ -207,6 +207,54 @@ describe("DistrictManager", () => {
     });
   });
 
+  describe("getDistrictPower", () => {
+    test("returns correct per-district power in multi-district scenario", () => {
+      const d1 = dm.foundDistrict("Alpha", 0);
+      const d2 = dm.foundDistrict("Beta", 0);
+      dm.assignBuilding(d1.id, "solar_1");
+      dm.assignBuilding(d1.id, "farm_1");
+      dm.assignBuilding(d2.id, "solar_2");
+      dm.assignBuilding(d2.id, "lab_1");
+      dm.registerPowerSource("solar_1", 10);
+      dm.registerPowerSource("solar_2", 5);
+      dm.registerPowerConsumer("farm_1", 3);
+      dm.registerPowerConsumer("lab_1", 8);
+
+      const p1 = dm.getDistrictPower(d1.id);
+      expect(p1.production).toBe(10);
+      expect(p1.consumption).toBe(3);
+
+      const p2 = dm.getDistrictPower(d2.id);
+      expect(p2.production).toBe(5);
+      expect(p2.consumption).toBe(8);
+    });
+
+    test("returns zeros for unknown district", () => {
+      const result = dm.getDistrictPower("nonexistent");
+      expect(result.production).toBe(0);
+      expect(result.consumption).toBe(0);
+    });
+
+    test("returns zeros for empty district", () => {
+      const d = dm.foundDistrict("Empty", 0);
+      const result = dm.getDistrictPower(d.id);
+      expect(result.production).toBe(0);
+      expect(result.consumption).toBe(0);
+    });
+
+    test("ignores power from buildings not in the district", () => {
+      const d = dm.foundDistrict("Test", 0);
+      dm.assignBuilding(d.id, "solar_1");
+      dm.registerPowerSource("solar_1", 10);
+      dm.registerPowerSource("solar_external", 20);
+      dm.registerPowerConsumer("lab_external", 5);
+
+      const result = dm.getDistrictPower(d.id);
+      expect(result.production).toBe(10);
+      expect(result.consumption).toBe(0);
+    });
+  });
+
   describe("serialization", () => {
     test("toJSON and fromJSON round-trip", () => {
       const d = dm.foundDistrict("Test", 5);
