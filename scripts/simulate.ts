@@ -2192,6 +2192,91 @@ function analyzeActionsPerSol(results: RunResult[]): void {
   const idlePct = ((totalIdleActions / (totalActions + totalIdleActions)) * 100).toFixed(1);
   output(`  Idle Percentage: ${idlePct}%`);
 
+  // Idle streak analysis: distribution of consecutive idle sol lengths
+  // and gaps between actions (how many sols between non-idle actions)
+  const allIdleStreaks: number[] = [];
+  const allActionGaps: number[] = [];
+
+  for (const result of results) {
+    if (!result.actionsExecuted || result.actionsExecuted.length === 0) continue;
+
+    // Sort actions by sol to ensure order
+    const sorted = [...result.actionsExecuted].sort((a, b) => a.sol - b.sol);
+
+    // Compute idle streaks (consecutive idle sols)
+    let currentStreak = 0;
+    for (const action of sorted) {
+      if (action.category === "idle") {
+        currentStreak++;
+      } else {
+        if (currentStreak > 0) {
+          allIdleStreaks.push(currentStreak);
+        }
+        currentStreak = 0;
+      }
+    }
+    if (currentStreak > 0) {
+      allIdleStreaks.push(currentStreak);
+    }
+
+    // Compute action gaps (sols between consecutive non-idle actions)
+    let lastActionSol: number | null = null;
+    for (const action of sorted) {
+      if (action.category !== "idle") {
+        if (lastActionSol !== null) {
+          const gap = action.sol - lastActionSol;
+          allActionGaps.push(gap);
+        }
+        lastActionSol = action.sol;
+      }
+    }
+  }
+
+  if (allIdleStreaks.length > 0) {
+    allIdleStreaks.sort((a, b) => a - b);
+    allActionGaps.sort((a, b) => a - b);
+
+    const medianStreak = allIdleStreaks[Math.floor(allIdleStreaks.length / 2)]!;
+    const meanStreak = allIdleStreaks.reduce((a, b) => a + b, 0) / allIdleStreaks.length;
+    const p90Streak = allIdleStreaks[Math.floor(allIdleStreaks.length * 0.9)]!;
+    const maxStreak = allIdleStreaks[allIdleStreaks.length - 1]!;
+
+    output("\n  Idle Streak Distribution (consecutive idle sols):");
+    output(`    Median: ${medianStreak} sols`);
+    output(`    Mean:   ${meanStreak.toFixed(1)} sols`);
+    output(`    P90:    ${p90Streak} sols`);
+    output(`    Max:    ${maxStreak} sols`);
+    output(`    Total streaks: ${allIdleStreaks.length}`);
+
+    // Histogram of idle streak lengths
+    const streakBuckets = [1, 2, 3, 5, 10, 20, 50, 100, 200];
+    const streakHistData: Array<{ label: string; count: number }> = [];
+    let prevBound = 0;
+    for (const bound of streakBuckets) {
+      const count = allIdleStreaks.filter((s) => s > prevBound && s <= bound).length;
+      streakHistData.push({ label: prevBound === 0 ? `${bound}` : `${prevBound + 1}-${bound}`, count });
+      prevBound = bound;
+    }
+    const overflowStreaks = allIdleStreaks.filter((s) => s > 200).length;
+    if (overflowStreaks > 0) {
+      streakHistData.push({ label: "201+", count: overflowStreaks });
+    }
+    drawAsciiHistogram(streakHistData, 35);
+
+    if (allActionGaps.length > 0) {
+      const medianGap = allActionGaps[Math.floor(allActionGaps.length / 2)]!;
+      const meanGap = allActionGaps.reduce((a, b) => a + b, 0) / allActionGaps.length;
+      const p90Gap = allActionGaps[Math.floor(allActionGaps.length * 0.9)]!;
+      const maxGap = allActionGaps[allActionGaps.length - 1]!;
+
+      output("\n  Action Gap Distribution (sols between actions):");
+      output(`    Median: ${medianGap} sols`);
+      output(`    Mean:   ${meanGap.toFixed(1)} sols`);
+      output(`    P90:    ${p90Gap} sols`);
+      output(`    Max:    ${maxGap} sols`);
+    }
+  }
+
   // Actions by Category histogram
   output("\n  Actions by Category:");
   const sortedCategories = Object.entries(actionsByCategory).sort((a, b) => b[1] - a[1]);
