@@ -8,20 +8,21 @@ import { GameAPI } from "../facade/GameAPI";
 import { HeuristicStrategy } from "./HeuristicStrategy";
 import { MetricsCollector } from "./MetricsCollector";
 import type { WorkerInput, WorkerOutput } from "./simulation.worker";
-import type {
-  AggregateStats,
-  CrisisPoint,
-  CrisisSeverity,
-  CrisisType,
-  DefeatReason,
-  ExecutedAction,
-  GuildSnapshot,
-  IdeologySnapshot,
-  ResourceFlowSnapshot,
-  ResourceSnapshot,
-  RunResult,
-  SimulationConfig,
-  VictoryType,
+import {
+  detectIdeologyPockets,
+  type AggregateStats,
+  type CrisisPoint,
+  type CrisisSeverity,
+  type CrisisType,
+  type DefeatReason,
+  type ExecutedAction,
+  type GuildSnapshot,
+  type IdeologySnapshot,
+  type ResourceFlowSnapshot,
+  type ResourceSnapshot,
+  type RunResult,
+  type SimulationConfig,
+  type VictoryType,
 } from "./types";
 import type { ColonistIdeology } from "../core/models/Colonist";
 
@@ -580,6 +581,7 @@ export class SimulationRunner {
       colonistsWithDominant: dominantCount,
       totalColonists: count,
       dominantFactionPct: count > 0 ? dominantCount / count : 0,
+      pockets: detectIdeologyPockets(colonists),
     };
   }
 

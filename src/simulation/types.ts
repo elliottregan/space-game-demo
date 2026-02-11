@@ -159,6 +159,109 @@ export interface IdeologySnapshot {
   totalColonists: number;
   /** Percentage of colonists with dominant faction */
   dominantFactionPct: number;
+  /** Ideology pockets detected via DBSCAN clustering */
+  pockets?: IdeologyPocketSnapshot;
+}
+
+/**
+ * Snapshot of ideology pocket/cluster analysis at a point in time.
+ */
+export interface IdeologyPocketSnapshot {
+  /** Number of distinct ideology clusters found */
+  pocketCount: number;
+  /** Sizes of each pocket (number of colonists), sorted descending */
+  pocketSizes: number[];
+  /** Number of colonists not in any pocket (noise/outliers) */
+  unclusteredCount: number;
+  /** Centroid of each pocket in [solidarity, sovereignty, transformation] */
+  pocketCentroids: Array<[number, number, number]>;
+  /** Average conviction within each pocket */
+  pocketConvictions: number[];
+}
+
+/**
+ * DBSCAN clustering for ideology pocket detection.
+ * Groups colonists whose ideology positions are within `eps` Euclidean distance
+ * in 3D (solidarity, sovereignty, transformation) space.
+ */
+export function detectIdeologyPockets(
+  colonists: readonly { ideology?: { solidarity: number; sovereignty: number; transformation: number; conviction: number } }[],
+  eps: number = 0.3,
+  minPts: number = 2,
+): IdeologyPocketSnapshot {
+  type Point = { s: number; sov: number; t: number; conv: number };
+
+  const points: Point[] = [];
+  for (const c of colonists) {
+    if (!c.ideology) continue;
+    points.push({ s: c.ideology.solidarity, sov: c.ideology.sovereignty, t: c.ideology.transformation, conv: c.ideology.conviction });
+  }
+
+  if (points.length === 0) {
+    return { pocketCount: 0, pocketSizes: [], unclusteredCount: 0, pocketCentroids: [], pocketConvictions: [] };
+  }
+
+  const dist = (a: Point, b: Point): number =>
+    Math.sqrt((a.s - b.s) ** 2 + (a.sov - b.sov) ** 2 + (a.t - b.t) ** 2);
+
+  const NOISE = -2;
+  const labels = new Int16Array(points.length).fill(-1); // -1 = unvisited
+  let clusterId = 0;
+
+  const regionQuery = (pIdx: number): number[] => {
+    const neighbors: number[] = [];
+    for (let j = 0; j < points.length; j++) {
+      if (dist(points[pIdx]!, points[j]!) <= eps) neighbors.push(j);
+    }
+    return neighbors;
+  };
+
+  for (let i = 0; i < points.length; i++) {
+    if (labels[i] !== -1) continue;
+    const neighbors = regionQuery(i);
+    if (neighbors.length < minPts) { labels[i] = NOISE; continue; }
+
+    labels[i] = clusterId;
+    const seeds = neighbors.filter((n) => n !== i);
+    let si = 0;
+    while (si < seeds.length) {
+      const q = seeds[si]!;
+      if (labels[q] === NOISE) labels[q] = clusterId;
+      if (labels[q] !== -1) { si++; continue; }
+      labels[q] = clusterId;
+      const qn = regionQuery(q);
+      if (qn.length >= minPts) {
+        for (const n of qn) {
+          if (labels[n] === -1 || labels[n] === NOISE) {
+            if (!seeds.includes(n)) seeds.push(n);
+          }
+        }
+      }
+      si++;
+    }
+    clusterId++;
+  }
+
+  const clusters = new Map<number, Point[]>();
+  let noiseCount = 0;
+  for (let i = 0; i < points.length; i++) {
+    const l = labels[i]!;
+    if (l === NOISE) { noiseCount++; continue; }
+    if (!clusters.has(l)) clusters.set(l, []);
+    clusters.get(l)!.push(points[i]!);
+  }
+
+  const sorted = [...clusters.entries()].sort((a, b) => b[1].length - a[1].length);
+  return {
+    pocketCount: sorted.length,
+    pocketSizes: sorted.map(([, pts]) => pts.length),
+    unclusteredCount: noiseCount,
+    pocketCentroids: sorted.map(([, pts]) => {
+      const n = pts.length;
+      return [pts.reduce((sum, p) => sum + p.s, 0) / n, pts.reduce((sum, p) => sum + p.sov, 0) / n, pts.reduce((sum, p) => sum + p.t, 0) / n];
+    }),
+    pocketConvictions: sorted.map(([, pts]) => pts.reduce((sum, p) => sum + p.conv, 0) / pts.length),
+  };
 }
 
 /**
