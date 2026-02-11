@@ -58,12 +58,12 @@ describe("IdeologySpread", () => {
       expect(colonistA.ideology!.sovereignty).toBeLessThan(initialSovereignty);
       expect(colonistA.ideology!.transformation).toBeGreaterThan(initialTransformation);
 
-      expect(Math.abs(colonistA.ideology!.solidarity - colonistB.ideology!.solidarity)).toBeLessThan(
-        0.8,
-      );
-      expect(Math.abs(colonistA.ideology!.sovereignty - colonistB.ideology!.sovereignty)).toBeLessThan(
-        0.6,
-      );
+      expect(
+        Math.abs(colonistA.ideology!.solidarity - colonistB.ideology!.solidarity),
+      ).toBeLessThan(0.8);
+      expect(
+        Math.abs(colonistA.ideology!.sovereignty - colonistB.ideology!.sovereignty),
+      ).toBeLessThan(0.6);
       expect(
         Math.abs(colonistA.ideology!.transformation - colonistB.ideology!.transformation),
       ).toBeLessThan(0.4);
@@ -95,17 +95,19 @@ describe("IdeologySpread", () => {
     });
 
     test("mutual drift between two connected colonists", () => {
+      // Colonists must be close enough in ideology space for distance-gated
+      // propagation to take effect (distance < ~1.43 at attenuation 0.7)
       const colonistA = createTestColonist("a", "Alice", {
-        solidarity: -0.4,
-        sovereignty: 0.6,
-        transformation: 0.3,
+        solidarity: -0.1,
+        sovereignty: 0.3,
+        transformation: 0.1,
         conviction: 0.3,
       });
 
       const colonistB = createTestColonist("b", "Bob", {
-        solidarity: 0.5,
-        sovereignty: -0.4,
-        transformation: -0.2,
+        solidarity: 0.2,
+        sovereignty: -0.1,
+        transformation: -0.1,
         conviction: 0.3,
       });
 
@@ -667,6 +669,8 @@ describe("IdeologySpread", () => {
     });
 
     test("strong connection creates faster drift than threshold connection", () => {
+      // With a single neighbor, weighted average cancels weight out.
+      // Add a competing anchor so connection strength affects the pull direction.
       const weakTarget = createTestColonist("weak", "Weak", {
         solidarity: 0,
         sovereignty: 0,
@@ -681,17 +685,33 @@ describe("IdeologySpread", () => {
         conviction: 0.2,
       });
 
+      // Influencer pulls toward positive values
       const influencerWeak = createTestColonist("influencer1", "Influencer1", {
-        solidarity: 0.8,
-        sovereignty: 0.7,
-        transformation: 0.6,
+        solidarity: 0.3,
+        sovereignty: 0.3,
+        transformation: 0.2,
         conviction: 0.5,
       });
 
       const influencerStrong = createTestColonist("influencer2", "Influencer2", {
-        solidarity: 0.8,
-        sovereignty: 0.7,
-        transformation: 0.6,
+        solidarity: 0.3,
+        sovereignty: 0.3,
+        transformation: 0.2,
+        conviction: 0.5,
+      });
+
+      // Anchor pulls toward negative values (competing with influencer)
+      const anchorWeak = createTestColonist("anchor1", "Anchor1", {
+        solidarity: -0.3,
+        sovereignty: -0.3,
+        transformation: -0.2,
+        conviction: 0.5,
+      });
+
+      const anchorStrong = createTestColonist("anchor2", "Anchor2", {
+        solidarity: -0.3,
+        sovereignty: -0.3,
+        transformation: -0.2,
         conviction: 0.5,
       });
 
@@ -700,43 +720,38 @@ describe("IdeologySpread", () => {
       const ideologyManagerWeak = new IdeologyManager();
       const ideologyManagerStrong = new IdeologyManager();
 
+      // Weak: threshold connection to influencer, threshold to anchor
       relationshipManagerWeak.createRelationship("weak", "influencer1", 0, {
+        initialStrength: IdeologyBalance.IDEOLOGY_SPREAD_CONNECTION_THRESHOLD,
+      });
+      relationshipManagerWeak.createRelationship("weak", "anchor1", 0, {
         initialStrength: IdeologyBalance.IDEOLOGY_SPREAD_CONNECTION_THRESHOLD,
       });
       relationshipManagerWeak.recalculateCentrality(0);
 
+      // Strong: strong connection to influencer, threshold to anchor
+      // The stronger connection should pull target more toward influencer
       relationshipManagerStrong.createRelationship("strong", "influencer2", 0, {
         initialStrength: 0.9,
       });
+      relationshipManagerStrong.createRelationship("strong", "anchor2", 0, {
+        initialStrength: IdeologyBalance.IDEOLOGY_SPREAD_CONNECTION_THRESHOLD,
+      });
       relationshipManagerStrong.recalculateCentrality(0);
 
-      const colonistsWeak = [weakTarget, influencerWeak];
-      const colonistsStrong = [strongTarget, influencerStrong];
+      const colonistsWeak = [weakTarget, influencerWeak, anchorWeak];
+      const colonistsStrong = [strongTarget, influencerStrong, anchorStrong];
 
       ideologyManagerWeak.propagateIdeology(colonistsWeak, relationshipManagerWeak, 1);
       ideologyManagerStrong.propagateIdeology(colonistsStrong, relationshipManagerStrong, 1);
 
-      expect(Math.abs(strongTarget.ideology!.solidarity)).toBeGreaterThanOrEqual(
-        Math.abs(weakTarget.ideology!.solidarity),
+      // Weak target: equal pull from both neighbors → stays near 0
+      // Strong target: stronger pull toward influencer → drifts positive
+      expect(strongTarget.ideology!.solidarity).toBeGreaterThan(weakTarget.ideology!.solidarity);
+      expect(strongTarget.ideology!.sovereignty).toBeGreaterThan(weakTarget.ideology!.sovereignty);
+      expect(strongTarget.ideology!.transformation).toBeGreaterThan(
+        weakTarget.ideology!.transformation,
       );
-      expect(Math.abs(strongTarget.ideology!.sovereignty)).toBeGreaterThanOrEqual(
-        Math.abs(weakTarget.ideology!.sovereignty),
-      );
-      expect(Math.abs(strongTarget.ideology!.transformation)).toBeGreaterThanOrEqual(
-        Math.abs(weakTarget.ideology!.transformation),
-      );
-
-      const weakTotal =
-        Math.abs(weakTarget.ideology!.solidarity) +
-        Math.abs(weakTarget.ideology!.sovereignty) +
-        Math.abs(weakTarget.ideology!.transformation);
-
-      const strongTotal =
-        Math.abs(strongTarget.ideology!.solidarity) +
-        Math.abs(strongTarget.ideology!.sovereignty) +
-        Math.abs(strongTarget.ideology!.transformation);
-
-      expect(strongTotal).toBeGreaterThanOrEqual(weakTotal);
     });
   });
 });

@@ -83,11 +83,12 @@ describe("IdeologyManager", () => {
   });
 
   describe("createNeutralIdeology", () => {
-    test("creates ideology at origin with low conviction", () => {
+    test("creates ideology near origin with low conviction and random lean", () => {
       const ideology = IdeologyManager.createNeutralIdeology();
-      expect(ideology.solidarity).toBe(0);
-      expect(ideology.sovereignty).toBe(0);
-      expect(ideology.transformation).toBe(0);
+      // Random lean within [-0.25, 0.25] per axis (spread=0.5)
+      expect(Math.abs(ideology.solidarity)).toBeLessThanOrEqual(0.25);
+      expect(Math.abs(ideology.sovereignty)).toBeLessThanOrEqual(0.25);
+      expect(Math.abs(ideology.transformation)).toBeLessThanOrEqual(0.25);
       expect(ideology.conviction).toBe(0.2);
     });
   });
