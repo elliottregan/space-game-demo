@@ -30,6 +30,8 @@ import type {
   AggregatedGuildSnapshot,
   GuildAnalysis,
   ActionsPerSolAnalysis,
+  IdeologyPocketSnapshot,
+  detectIdeologyPockets,
 } from "../src/simulation/types";
 import type { ColonistIdeology } from "../src/core/models/Colonist";
 
@@ -423,6 +425,9 @@ function captureIdeologySnapshot(
     count++;
   }
 
+  // Detect ideology pockets via DBSCAN clustering
+  const pockets = detectIdeologyPockets(colonists);
+
   return {
     sol,
     avgEarthLoyalist: count > 0 ? sumEarth / count : 0.33,
@@ -433,6 +438,7 @@ function captureIdeologySnapshot(
     colonistsWithDominant: dominantCount,
     totalColonists: count,
     dominantFactionPct: count > 0 ? dominantCount / count : 0,
+    pockets,
   };
 }
 
@@ -1967,6 +1973,183 @@ function analyzeIdeology(results: RunResult[]): void {
   } else {
     output("    ✓ Low convergence - ideological diversity maintained");
   }
+
+  // Ideology Pocket Analysis
+  analyzeIdeologyPockets(results);
+}
+
+/**
+ * Label a centroid position by its nearest faction archetype.
+ */
+function labelCentroid(centroid: [number, number, number]): string {
+  const [sol, sov, trans] = centroid;
+  // Faction reference positions from IdeologyBalance.ts
+  const factions = [
+    { name: "Earth Loyalist", s: 0.0, sov: -0.7, t: -0.3 },
+    { name: "Mars Indep.", s: 0.3, sov: 0.7, t: 0.3 },
+    { name: "Corporate", s: -0.6, sov: 0.0, t: 0.5 },
+    { name: "Neutral", s: 0.0, sov: 0.0, t: 0.0 },
+  ];
+  let best = factions[0]!;
+  let bestDist = Infinity;
+  for (const f of factions) {
+    const d = Math.sqrt((sol - f.s) ** 2 + (sov - f.sov) ** 2 + (trans - f.t) ** 2);
+    if (d < bestDist) {
+      bestDist = d;
+      best = f;
+    }
+  }
+  return best.name;
+}
+
+/**
+ * Analyze ideology pocket formation over time.
+ */
+function analyzeIdeologyPockets(results: RunResult[]): void {
+  output("\n  Ideology Pocket Analysis (DBSCAN eps=0.3, minPts=2):");
+  output("  " + "-".repeat(50));
+
+  // Collect pocket data at key time points
+  const timePoints = [50, 100, 200, 400, 600]; // sols to analyze (snapshots every 50 sols)
+  const pocketCountsOverTime = new Map<number, number[]>();
+  const pocketSizesOverTime = new Map<number, number[]>();
+  const unclusteredOverTime = new Map<number, number[]>();
+  const largestPocketOverTime = new Map<number, number[]>();
+
+  // Also collect all final-state pocket data
+  const finalPocketCounts: number[] = [];
+  const finalPocketSizes: number[][] = [];
+  const finalUnclusteredPcts: number[] = [];
+
+  for (const result of results) {
+    if (!result.ideologyTimeline || result.ideologyTimeline.length === 0) continue;
+
+    // Collect at specific time points
+    for (const tp of timePoints) {
+      const snap = result.ideologyTimeline.find((s) => s.sol === tp);
+      if (!snap?.pockets) continue;
+      if (!pocketCountsOverTime.has(tp)) {
+        pocketCountsOverTime.set(tp, []);
+        pocketSizesOverTime.set(tp, []);
+        unclusteredOverTime.set(tp, []);
+        largestPocketOverTime.set(tp, []);
+      }
+      pocketCountsOverTime.get(tp)!.push(snap.pockets.pocketCount);
+      const totalInPockets = snap.pockets.pocketSizes.reduce((a, b) => a + b, 0);
+      pocketSizesOverTime.get(tp)!.push(totalInPockets);
+      unclusteredOverTime.get(tp)!.push(snap.pockets.unclusteredCount);
+      largestPocketOverTime.get(tp)!.push(snap.pockets.pocketSizes[0] ?? 0);
+    }
+
+    // Final state
+    const last = result.ideologyTimeline[result.ideologyTimeline.length - 1]!;
+    if (last.pockets) {
+      finalPocketCounts.push(last.pockets.pocketCount);
+      finalPocketSizes.push(last.pockets.pocketSizes);
+      const total = last.totalColonists;
+      const unclustered = last.pockets.unclusteredCount;
+      finalUnclusteredPcts.push(total > 0 ? (unclustered / total) * 100 : 0);
+    }
+  }
+
+  if (finalPocketCounts.length === 0) {
+    output("    No pocket data available");
+    return;
+  }
+
+  const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
+  const median = (arr: number[]) => {
+    const s = [...arr].sort((a, b) => a - b);
+    return s[Math.floor(s.length / 2)]!;
+  };
+
+  // Pocket evolution over time
+  output("\n    Pockets Over Time (avg across runs):");
+  output("    Sol   Pockets  Largest  Unclustered  Population");
+  for (const tp of timePoints) {
+    const counts = pocketCountsOverTime.get(tp);
+    const sizes = pocketSizesOverTime.get(tp);
+    const unclustered = unclusteredOverTime.get(tp);
+    const largest = largestPocketOverTime.get(tp);
+    if (!counts || counts.length === 0) continue;
+    const totalPop = sizes!.map((s, i) => s + unclustered![i]!);
+    output(
+      `    ${String(tp).padStart(4)}  ` +
+        `${avg(counts).toFixed(1).padStart(7)}  ` +
+        `${avg(largest!).toFixed(1).padStart(7)}  ` +
+        `${avg(unclustered!).toFixed(1).padStart(11)}  ` +
+        `${avg(totalPop).toFixed(1).padStart(10)}`,
+    );
+  }
+
+  // Final state summary
+  output("\n    Final State:");
+  const avgPockets = avg(finalPocketCounts);
+  const medianPockets = median(finalPocketCounts);
+  const maxPockets = Math.max(...finalPocketCounts);
+  const minPockets = Math.min(...finalPocketCounts);
+  output(`      Avg Pockets:    ${avgPockets.toFixed(1)} (median: ${medianPockets}, range: ${minPockets}-${maxPockets})`);
+  output(`      Avg Unclustered: ${avg(finalUnclusteredPcts).toFixed(1)}%`);
+
+  // Distribution of final pocket counts
+  output("\n    Final Pocket Count Distribution:");
+  const countBuckets = new Map<number, number>();
+  for (const c of finalPocketCounts) {
+    countBuckets.set(c, (countBuckets.get(c) ?? 0) + 1);
+  }
+  const bucketData = [...countBuckets.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([count, freq]) => ({ label: `${count} pockets`, count: freq }));
+  drawAsciiHistogram(bucketData, 35);
+
+  // Pocket size distribution at end
+  output("\n    Final Pocket Size Distribution:");
+  const allFinalSizes = finalPocketSizes.flat();
+  if (allFinalSizes.length > 0) {
+    allFinalSizes.sort((a, b) => a - b);
+    const sizeBuckets = [2, 5, 10, 20, 50, 100];
+    const sizeHistData: Array<{ label: string; count: number }> = [];
+    let prevBound = 0;
+    for (const bound of sizeBuckets) {
+      const count = allFinalSizes.filter((s) => s > prevBound && s <= bound).length;
+      sizeHistData.push({ label: prevBound === 0 ? `1-${bound}` : `${prevBound + 1}-${bound}`, count });
+      prevBound = bound;
+    }
+    const overflow = allFinalSizes.filter((s) => s > 100).length;
+    if (overflow > 0) sizeHistData.push({ label: "101+", count: overflow });
+    drawAsciiHistogram(sizeHistData, 35);
+    output(`      Median pocket size: ${median(allFinalSizes)}`);
+    output(`      Mean pocket size:   ${avg(allFinalSizes).toFixed(1)}`);
+  }
+
+  // Show representative final pocket centroids from first run with data
+  for (const result of results) {
+    if (!result.ideologyTimeline || result.ideologyTimeline.length === 0) continue;
+    const last = result.ideologyTimeline[result.ideologyTimeline.length - 1]!;
+    if (last.pockets && last.pockets.pocketCount > 0) {
+      output("\n    Example Pocket Centroids (run 1, final state):");
+      output("    #   Size  Conviction  Solidarity  Sovereignty  Transform.  Nearest Faction");
+      for (let i = 0; i < last.pockets.pocketCount; i++) {
+        const size = last.pockets.pocketSizes[i]!;
+        const conv = last.pockets.pocketConvictions[i]!;
+        const centroid = last.pockets.pocketCentroids[i]!;
+        const label = labelCentroid(centroid);
+        output(
+          `    ${String(i + 1).padStart(2)}  ` +
+            `${String(size).padStart(4)}  ` +
+            `${conv.toFixed(2).padStart(10)}  ` +
+            `${centroid[0].toFixed(2).padStart(10)}  ` +
+            `${centroid[1].toFixed(2).padStart(11)}  ` +
+            `${centroid[2].toFixed(2).padStart(10)}  ` +
+            `${label}`,
+        );
+      }
+      if (last.pockets.unclusteredCount > 0) {
+        output(`    Unclustered: ${last.pockets.unclusteredCount} colonists`);
+      }
+      break;
+    }
+  }
 }
 
 /**
@@ -2191,6 +2374,91 @@ function analyzeActionsPerSol(results: RunResult[]): void {
 
   const idlePct = ((totalIdleActions / (totalActions + totalIdleActions)) * 100).toFixed(1);
   output(`  Idle Percentage: ${idlePct}%`);
+
+  // Idle streak analysis: distribution of consecutive idle sol lengths
+  // and gaps between actions (how many sols between non-idle actions)
+  const allIdleStreaks: number[] = [];
+  const allActionGaps: number[] = [];
+
+  for (const result of results) {
+    if (!result.actionsExecuted || result.actionsExecuted.length === 0) continue;
+
+    // Sort actions by sol to ensure order
+    const sorted = [...result.actionsExecuted].sort((a, b) => a.sol - b.sol);
+
+    // Compute idle streaks (consecutive idle sols)
+    let currentStreak = 0;
+    for (const action of sorted) {
+      if (action.category === "idle") {
+        currentStreak++;
+      } else {
+        if (currentStreak > 0) {
+          allIdleStreaks.push(currentStreak);
+        }
+        currentStreak = 0;
+      }
+    }
+    if (currentStreak > 0) {
+      allIdleStreaks.push(currentStreak);
+    }
+
+    // Compute action gaps (sols between consecutive non-idle actions)
+    let lastActionSol: number | null = null;
+    for (const action of sorted) {
+      if (action.category !== "idle") {
+        if (lastActionSol !== null) {
+          const gap = action.sol - lastActionSol;
+          allActionGaps.push(gap);
+        }
+        lastActionSol = action.sol;
+      }
+    }
+  }
+
+  if (allIdleStreaks.length > 0) {
+    allIdleStreaks.sort((a, b) => a - b);
+    allActionGaps.sort((a, b) => a - b);
+
+    const medianStreak = allIdleStreaks[Math.floor(allIdleStreaks.length / 2)]!;
+    const meanStreak = allIdleStreaks.reduce((a, b) => a + b, 0) / allIdleStreaks.length;
+    const p90Streak = allIdleStreaks[Math.floor(allIdleStreaks.length * 0.9)]!;
+    const maxStreak = allIdleStreaks[allIdleStreaks.length - 1]!;
+
+    output("\n  Idle Streak Distribution (consecutive idle sols):");
+    output(`    Median: ${medianStreak} sols`);
+    output(`    Mean:   ${meanStreak.toFixed(1)} sols`);
+    output(`    P90:    ${p90Streak} sols`);
+    output(`    Max:    ${maxStreak} sols`);
+    output(`    Total streaks: ${allIdleStreaks.length}`);
+
+    // Histogram of idle streak lengths
+    const streakBuckets = [1, 2, 3, 5, 10, 20, 50, 100, 200];
+    const streakHistData: Array<{ label: string; count: number }> = [];
+    let prevBound = 0;
+    for (const bound of streakBuckets) {
+      const count = allIdleStreaks.filter((s) => s > prevBound && s <= bound).length;
+      streakHistData.push({ label: prevBound === 0 ? `${bound}` : `${prevBound + 1}-${bound}`, count });
+      prevBound = bound;
+    }
+    const overflowStreaks = allIdleStreaks.filter((s) => s > 200).length;
+    if (overflowStreaks > 0) {
+      streakHistData.push({ label: "201+", count: overflowStreaks });
+    }
+    drawAsciiHistogram(streakHistData, 35);
+
+    if (allActionGaps.length > 0) {
+      const medianGap = allActionGaps[Math.floor(allActionGaps.length / 2)]!;
+      const meanGap = allActionGaps.reduce((a, b) => a + b, 0) / allActionGaps.length;
+      const p90Gap = allActionGaps[Math.floor(allActionGaps.length * 0.9)]!;
+      const maxGap = allActionGaps[allActionGaps.length - 1]!;
+
+      output("\n  Action Gap Distribution (sols between actions):");
+      output(`    Median: ${medianGap} sols`);
+      output(`    Mean:   ${meanGap.toFixed(1)} sols`);
+      output(`    P90:    ${p90Gap} sols`);
+      output(`    Max:    ${maxGap} sols`);
+    }
+  }
 
   // Actions by Category histogram
   output("\n  Actions by Category:");

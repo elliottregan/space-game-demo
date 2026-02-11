@@ -4,6 +4,7 @@ import type { Colonist, ColonistIdeology } from "../models/Colonist";
 import { type AxisPosition, type FactionState, AXIS_KEYS } from "../models/NPCInfluence";
 import type { RelationshipManager } from "./RelationshipManager";
 import * as IdeologyBalance from "../balance/IdeologyBalance";
+import { rng } from "../utils/random";
 import { DRIFT_TRIGGERS, type DriftContext } from "../data/factionDrift";
 import { getFactionName } from "../data/factionNames";
 import { type Policy, getPolicy } from "../data/policies";
@@ -102,10 +103,18 @@ export class IdeologyManager {
   }
 
   /**
-   * Create a neutral ideology for new colonists.
+   * Create ideology for new colonists with random variation.
+   * The random lean breaks symmetry so new colonists don't all cluster
+   * at the origin and bridge between existing ideology pockets.
    */
   static createNeutralIdeology(): ColonistIdeology {
-    return { ...IdeologyBalance.NEW_COLONIST_IDEOLOGY };
+    const spread = IdeologyBalance.NEW_COLONIST_IDEOLOGY_SPREAD;
+    return {
+      ...IdeologyBalance.NEW_COLONIST_IDEOLOGY,
+      solidarity: (rng.random() - 0.5) * spread,
+      sovereignty: (rng.random() - 0.5) * spread,
+      transformation: (rng.random() - 0.5) * spread,
+    };
   }
 
   /**
@@ -126,34 +135,35 @@ export class IdeologyManager {
 
     const colonistMap = new Map(colonists.map((c) => [c.id, c]));
 
-    // Find the strongest connection with ideology
-    let strongestNeighbor: Colonist | null = null;
-    let strongestStrength = 0;
+    // Blend from ALL qualifying neighbors weighted by relationship strength.
+    // This makes new colonists reflect the ideology of their local social cluster
+    // rather than a single dominant neighbor.
+    const weightedIdeology: AxisPosition = { solidarity: 0, sovereignty: 0, transformation: 0 };
+    let totalWeight = 0;
 
     for (const neighborId of neighbors) {
       const neighbor = colonistMap.get(neighborId);
       if (!neighbor?.ideology) continue;
 
       const strength = relationshipManager.getRelationshipStrength(colonist.id, neighborId);
-      if (strength > strongestStrength) {
-        strongestStrength = strength;
-        strongestNeighbor = neighbor;
+      if (strength < IdeologyBalance.IDEOLOGY_IMPRINTING_THRESHOLD) continue;
+
+      totalWeight += strength;
+      for (const axis of AXIS_KEYS) {
+        weightedIdeology[axis] += strength * neighbor.ideology[axis];
       }
     }
 
-    if (
-      !strongestNeighbor?.ideology ||
-      strongestStrength < IdeologyBalance.IDEOLOGY_IMPRINTING_THRESHOLD
-    ) {
-      return;
+    if (totalWeight === 0) return;
+
+    for (const axis of AXIS_KEYS) {
+      weightedIdeology[axis] /= totalWeight;
     }
 
-    const sourceIdeology = strongestNeighbor.ideology;
-
-    // Blend toward the neighbor's ideology on all axes
+    // Blend toward the weighted neighborhood ideology
     for (const axis of AXIS_KEYS) {
       colonist.ideology[axis] =
-        colonist.ideology[axis] * (1 - imprinting) + sourceIdeology[axis] * imprinting;
+        colonist.ideology[axis] * (1 - imprinting) + weightedIdeology[axis] * imprinting;
       colonist.ideology[axis] = Math.max(-1, Math.min(1, colonist.ideology[axis]));
     }
   }
@@ -480,6 +490,7 @@ export class IdeologyManager {
       // Calculate weighted average of neighbor ideologies on each axis
       let totalWeight = 0;
       const avgInfluence: AxisPosition = { solidarity: 0, sovereignty: 0, transformation: 0 };
+      const colonistPos = ideologyToAxis(ideology);
 
       for (const neighborId of neighbors) {
         const neighborIdeology = ideologySnapshot.get(neighborId);
@@ -494,10 +505,22 @@ export class IdeologyManager {
           continue;
         }
 
+        // Attenuate influence by ideological distance — like-minded neighbors
+        // have full influence, ideologically distant neighbors have near-zero
+        const neighborPos = ideologyToAxis(neighborIdeology);
+        const ideoDist = axisDistance(colonistPos, neighborPos);
+        const distanceFactor =
+          Math.max(0, 1 - ideoDist * IdeologyBalance.IDEOLOGY_DISTANCE_ATTENUATION) ** 2;
+        if (distanceFactor === 0) continue;
+
         const neighborCentrality = relationshipManager.getCentrality(neighborId);
         const neighborConviction = neighborIdeology.conviction;
 
-        const weight = relationshipStrength ** 2 * (neighborCentrality + 0.1) * neighborConviction;
+        const weight =
+          relationshipStrength ** 2 *
+          (neighborCentrality + 0.1) *
+          neighborConviction *
+          distanceFactor;
         totalWeight += weight;
 
         for (const axis of AXIS_KEYS) {
@@ -574,7 +597,19 @@ export class IdeologyManager {
 
       const neighborCentrality = relationshipManager.getCentrality(neighborId);
       const neighborConviction = neighbor.ideology.conviction;
-      const weight = relationshipStrength ** 2 * (neighborCentrality + 0.1) * neighborConviction;
+
+      // Apply distance gating so distant ideologies don't dilute pressure
+      const neighborPos = ideologyToAxis(neighbor.ideology);
+      const dist = axisDistance(colonistPos, neighborPos);
+      const distanceFactor =
+        Math.max(0, 1 - dist * IdeologyBalance.IDEOLOGY_DISTANCE_ATTENUATION) ** 2;
+      if (distanceFactor === 0) continue;
+
+      const weight =
+        relationshipStrength ** 2 *
+        (neighborCentrality + 0.1) *
+        neighborConviction *
+        distanceFactor;
       totalWeight += weight;
       neighborCount++;
 
@@ -583,8 +618,6 @@ export class IdeologyManager {
       }
 
       // Check proximity in axis space for conviction
-      const neighborPos = ideologyToAxis(neighbor.ideology);
-      const dist = axisDistance(colonistPos, neighborPos);
       if (dist <= IdeologyBalance.CONVICTION_SUPPORT_DISTANCE) {
         supportWeight += weight;
       }
@@ -598,7 +631,7 @@ export class IdeologyManager {
 
     // Determine conviction pressure direction
     const supportRatio = totalWeight > 0 ? supportWeight / totalWeight : 0;
-    const supportThreshold = 0.35;
+    const supportThreshold = IdeologyBalance.CONVICTION_SUPPORT_THRESHOLD;
     const convictionGrowth = supportRatio >= supportThreshold;
     let convictionRate: number;
     if (convictionGrowth) {
@@ -677,12 +710,23 @@ export class IdeologyManager {
 
         const neighborCentrality = relationshipManager.getCentrality(neighborId);
         const neighborConviction = neighbor.ideology.conviction;
-        const weight = relationshipStrength ** 2 * (neighborCentrality + 0.1) * neighborConviction;
+
+        // Apply distance gating so ideologically distant neighbors
+        // don't dilute the support ratio (echo chamber effect)
+        const neighborPos = ideologyToAxis(neighbor.ideology);
+        const dist = axisDistance(colonistPos, neighborPos);
+        const distanceFactor =
+          Math.max(0, 1 - dist * IdeologyBalance.IDEOLOGY_DISTANCE_ATTENUATION) ** 2;
+        if (distanceFactor === 0) continue;
+
+        const weight =
+          relationshipStrength ** 2 *
+          (neighborCentrality + 0.1) *
+          neighborConviction *
+          distanceFactor;
         totalWeight += weight;
 
         // Check proximity in axis space
-        const neighborPos = ideologyToAxis(neighbor.ideology);
-        const dist = axisDistance(colonistPos, neighborPos);
         if (dist <= IdeologyBalance.CONVICTION_SUPPORT_DISTANCE) {
           supportWeight += weight;
         }
@@ -698,7 +742,7 @@ export class IdeologyManager {
 
       // Conviction grows when neighbors are close, decays when distant
       const supportRatio = supportWeight / totalWeight;
-      const supportThreshold = 0.35;
+      const supportThreshold = IdeologyBalance.CONVICTION_SUPPORT_THRESHOLD;
 
       if (supportRatio >= supportThreshold) {
         const supportStrength = supportRatio - supportThreshold;
@@ -818,10 +862,22 @@ export class IdeologyManager {
         );
       }
 
-      // Effect 2: Nudge ALL colonists' ideology toward faction position.
+      // Effect 2: Nudge colonists' ideology toward faction position.
       // Low-conviction colonists are more susceptible (1 - conviction * 0.5).
+      // Distance gating: ideologically distant colonists are barely affected.
+      const colonistPos = ideologyToAxis(colonist.ideology);
+      const factionPos: AxisPosition = {
+        solidarity: faction.position.solidarity,
+        sovereignty: faction.position.sovereignty,
+        transformation: faction.position.transformation,
+      };
+      const ideoDist = axisDistance(colonistPos, factionPos);
+      const distanceFactor =
+        Math.max(0, 1 - ideoDist * IdeologyBalance.RALLY_DISTANCE_ATTENUATION) ** 2;
+      if (distanceFactor === 0) continue;
+
       const susceptibility = 1 - colonist.ideology.conviction * 0.5;
-      const nudge = RALLY_IDEOLOGY_NUDGE * susceptibility;
+      const nudge = RALLY_IDEOLOGY_NUDGE * susceptibility * distanceFactor;
       for (const axis of AXIS_KEYS) {
         const diff = faction.position[axis] - colonist.ideology[axis];
         colonist.ideology[axis] = Math.max(-1, Math.min(1, colonist.ideology[axis] + diff * nudge));

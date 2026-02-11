@@ -11,13 +11,13 @@ import type { NPCFaction } from "../models/NPCInfluence.js";
 // ============ Ideology Spread ============
 
 /** Rate at which ideology drifts toward neighbors per spread tick */
-export const IDEOLOGY_SPREAD_RATE = 0.04;
+export const IDEOLOGY_SPREAD_RATE = 0.015;
 
 /** Sols between ideology propagation ticks */
 export const IDEOLOGY_SPREAD_INTERVAL = 1;
 
 /** How much conviction reduces influence susceptibility (0-1) */
-export const CONVICTION_RESISTANCE_FACTOR = 0.6;
+export const CONVICTION_RESISTANCE_FACTOR = 0.75;
 
 /**
  * Minimum relationship strength for ideology to spread.
@@ -26,7 +26,23 @@ export const CONVICTION_RESISTANCE_FACTOR = 0.6;
  * closely-bonded groups maintain distinct beliefs.
  * Set to 0 to disable threshold (all connections spread ideology).
  */
-export const IDEOLOGY_SPREAD_CONNECTION_THRESHOLD = 0.2;
+export const IDEOLOGY_SPREAD_CONNECTION_THRESHOLD = 0.4;
+
+/**
+ * How strongly ideological distance attenuates influence (0-1).
+ * At 0.7: distance 0 → full influence, distance 1.0 → 30% influence, distance 1.43+ → zero.
+ * Creates "echo chambers" where like-minded colonists reinforce each other
+ * while ideologically distant colonists barely interact.
+ */
+export const IDEOLOGY_DISTANCE_ATTENUATION = 0.7;
+
+/**
+ * Distance attenuation for rally/propaganda effects (0-1).
+ * Lower than IDEOLOGY_DISTANCE_ATTENUATION because propaganda campaigns
+ * can reach across ideological lines more than casual conversation.
+ * At 0.35: distance 1.0 → 42% influence, distance 1.5 → 12% influence.
+ */
+export const RALLY_DISTANCE_ATTENUATION = 0.5;
 
 // ============ Council Selection ============
 
@@ -57,6 +73,13 @@ export const NEW_COLONIST_IDEOLOGY = {
   conviction: 0.2,
 } as const;
 
+/**
+ * Random ideology variation for new colonists (per axis).
+ * Each axis gets a random lean in [-range/2, +range/2].
+ * This breaks symmetry so new colonists don't all bridge between clusters.
+ */
+export const NEW_COLONIST_IDEOLOGY_SPREAD = 0.5;
+
 // ============ Ideology Imprinting ============
 
 /**
@@ -75,13 +98,13 @@ export const IDEOLOGY_IMPRINTING_THRESHOLD = 0.3;
 // ============ Conviction Evolution ============
 
 /** Rate at which conviction grows when surrounded by like-minded colonists (per propagation tick) */
-export const CONVICTION_GROWTH_RATE = 0.02;
+export const CONVICTION_GROWTH_RATE = 0.035;
 
 /** Rate at which conviction decays when isolated from faction (per propagation tick) */
 export const CONVICTION_DECAY_RATE = 0.03;
 
 /** Natural conviction decay applied to all colonists each tick (represents doubt/questioning) */
-export const CONVICTION_NATURAL_DECAY = 0.015;
+export const CONVICTION_NATURAL_DECAY = 0.005;
 
 /** Minimum conviction floor - some baseline conviction always remains */
 export const CONVICTION_MIN = 0.1;
@@ -149,9 +172,16 @@ export const STARTING_FACTION_POSITIONS: readonly {
 // ============ Neutral Colonist Detection ============
 
 /** How close to origin (0,0,0) to be considered neutral (per axis) */
-export const NEUTRAL_AXIS_THRESHOLD = 0.15;
+export const NEUTRAL_AXIS_THRESHOLD = 0.3;
 
 // ============ Conviction Support Detection ============
 
 /** Max axis-space distance for neighbors to be considered "supporting" (conviction growth) */
-export const CONVICTION_SUPPORT_DISTANCE = 0.3;
+export const CONVICTION_SUPPORT_DISTANCE = 0.5;
+
+/**
+ * Minimum ratio of supporting neighbors (by weight) for conviction to grow.
+ * Below this threshold, conviction decays instead.
+ * Lower values make it easier to maintain conviction in small groups.
+ */
+export const CONVICTION_SUPPORT_THRESHOLD = 0.25;

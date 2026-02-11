@@ -5,16 +5,17 @@ import { NPCFaction } from "../core/models/NPCInfluence";
 import { rng } from "../core/utils/random";
 import { GameAPI } from "../facade/GameAPI";
 import { HeuristicStrategy } from "./HeuristicStrategy";
-import type {
-  CrisisPoint,
-  CrisisSeverity,
-  CrisisType,
-  DefeatReason,
-  IdeologySnapshot,
-  ResourceFlowSnapshot,
-  ResourceSnapshot,
-  RunResult,
-  VictoryType,
+import {
+  detectIdeologyPockets,
+  type CrisisPoint,
+  type CrisisSeverity,
+  type CrisisType,
+  type DefeatReason,
+  type IdeologySnapshot,
+  type ResourceFlowSnapshot,
+  type ResourceSnapshot,
+  type RunResult,
+  type VictoryType,
 } from "./types";
 import type { ColonistIdeology } from "../core/models/Colonist";
 
@@ -496,6 +497,7 @@ function captureIdeologySnapshot(
     colonistsWithDominant: dominantCount,
     totalColonists: count,
     dominantFactionPct: count > 0 ? dominantCount / count : 0,
+    pockets: detectIdeologyPockets(colonists),
   };
 }
 
