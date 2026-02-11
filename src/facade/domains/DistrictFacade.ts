@@ -2,13 +2,28 @@
 // District queries facade
 
 import { DISTRICT_FOUNDING_COST } from "../../core/balance/DistrictBalance";
+import { NEUTRAL_AXIS_THRESHOLD } from "../../core/balance/IdeologyBalance";
 import type { GameState } from "../../core/GameState";
 import { ColonistRole } from "../../core/models/Colonist";
+import type { ColonistIdeology } from "../../core/models/Colonist";
 import { PowerStatus } from "../../core/models/District";
 import { RESOURCE_KEYS } from "../../core/models/Resources";
 import type { ResourceDelta } from "../../core/models/Resources";
 import type { CanDoResult, Result } from "../types/common";
 import { err, ok } from "../types/common";
+
+type FactionId = "earth" | "mars" | "corporate" | "neutral";
+
+function getDominantFaction(ideology: ColonistIdeology | undefined): FactionId {
+  if (!ideology) return "neutral";
+  const { solidarity, sovereignty, transformation } = ideology;
+  const max = Math.max(solidarity, sovereignty, transformation);
+  if (max < NEUTRAL_AXIS_THRESHOLD) return "neutral";
+  if (solidarity === max) return "earth";
+  if (sovereignty === max) return "mars";
+  if (transformation === max) return "corporate";
+  return "neutral";
+}
 
 export interface DistrictSnapshot {
   districts: Array<{
@@ -28,6 +43,7 @@ export interface DistrictSnapshot {
       idle: number;
       byRole: Record<string, number>;
     };
+    ideology: Record<string, number>;
   }>;
   power: {
     production: number;
@@ -74,9 +90,10 @@ export class DistrictFacade {
         // Per-district power
         const districtPower = dm.getDistrictPower(d.id);
 
-        // Workforce breakdown
+        // Workforce & ideology breakdown
         const colonistIds = dm.getDistrictColonistIds(d.id);
         const byRole: Record<string, number> = {};
+        const ideology: Record<string, number> = {};
         let employed = 0;
         let idle = 0;
         for (const cid of colonistIds) {
@@ -84,6 +101,8 @@ export class DistrictFacade {
           if (colonist) {
             const roleName = colonist.role || ColonistRole.UNASSIGNED;
             byRole[roleName] = (byRole[roleName] ?? 0) + 1;
+            const faction = getDominantFaction(colonist.ideology);
+            ideology[faction] = (ideology[faction] ?? 0) + 1;
           }
           if (employedSet.has(cid)) {
             employed++;
@@ -109,6 +128,7 @@ export class DistrictFacade {
             balance: districtPower.production - districtPower.consumption,
           },
           workforce: { employed, idle, byRole },
+          ideology,
         };
       }),
       power: {

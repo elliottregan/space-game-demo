@@ -6,6 +6,7 @@ import {
   DISTRICT_GROWTH_TRIGGER,
 } from "../../../core/balance/DistrictBalance";
 import { ColonistRole, ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist";
+import { FACTION_SHORT_NAMES, FACTION_CSS_VARS, type FactionId } from "../../utils/ideologyDisplay";
 import { BuildingPurpose } from "../../../core/models/Building";
 import type { Building, BuildingDefinition } from "../../../facade";
 import type { ResourceDelta } from "../../../core/models/Resources";
@@ -30,6 +31,7 @@ const props = defineProps<{
     resourceConsumption: Record<string, number>;
     power: { production: number; consumption: number; balance: number };
     workforce: { employed: number; idle: number; byRole: Record<string, number> };
+    ideology: Record<string, number>;
   };
   currentSol: number;
   buildings: Building[];
@@ -93,6 +95,23 @@ const roleEntries = computed(() => {
   for (const [role, count] of Object.entries(props.district.workforce.byRole)) {
     const displayName = ROLE_DISPLAY_NAMES[role as ColonistRole] ?? role;
     entries.push({ label: displayName, count });
+  }
+  return entries;
+});
+
+// oxlint-disable-next-line no-unused-vars
+const factionEntries = computed(() => {
+  const entries: Array<{ id: FactionId; label: string; count: number; color: string }> = [];
+  for (const [faction, count] of Object.entries(props.district.ideology)) {
+    if (count > 0) {
+      const fid = faction as FactionId;
+      entries.push({
+        id: fid,
+        label: FACTION_SHORT_NAMES[fid] ?? faction,
+        count,
+        color: FACTION_CSS_VARS[fid] ?? "var(--g-color-text-muted)",
+      });
+    }
   }
   return entries;
 });
@@ -349,6 +368,20 @@ function formatRecycleValue(delta: ResourceDelta): string {
       </div>
     </div>
 
+    <div v-if="factionEntries.length > 0" class="district-section">
+      <span class="section-label">Ideology</span>
+      <div class="faction-badges">
+        <span
+          v-for="entry in factionEntries"
+          :key="entry.id"
+          class="faction-badge"
+          :style="{ borderColor: entry.color, color: entry.color }"
+        >
+          {{ entry.label }}: {{ entry.count }}
+        </span>
+      </div>
+    </div>
+
     <div class="district-buildings">
       <div class="buildings-header">
         <span class="buildings-label">Buildings</span>
@@ -571,6 +604,22 @@ function formatRecycleValue(delta: ResourceDelta): string {
   color: var(--g-color-text-muted);
   padding: 1px 5px;
   border: 1px solid var(--g-color-border);
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.faction-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: 100%;
+}
+
+.faction-badge {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  padding: 1px 5px;
+  border: 1px solid;
   border-radius: 2px;
   white-space: nowrap;
 }

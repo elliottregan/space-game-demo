@@ -103,6 +103,7 @@ interface GameUIState {
     resourceConsumption: Record<string, number>;
     power: { production: number; consumption: number; balance: number };
     workforce: { employed: number; idle: number; byRole: Record<string, number> };
+    ideology: Record<string, number>;
   }>;
   powerStatus: {
     production: number;
@@ -378,6 +379,7 @@ class GameService {
       resourceConsumption: { ...d.resourceConsumption },
       power: { ...d.power },
       workforce: { ...d.workforce, byRole: { ...d.workforce.byRole } },
+      ideology: { ...d.ideology },
     }));
     this.state.powerStatus = {
       production: districtData.power.production,
