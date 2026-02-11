@@ -18,9 +18,9 @@ export interface RadarOptions {
 
 // Axes at 120-degree intervals: top, bottom-left, bottom-right
 const AXES = [
-  { angle: -Math.PI / 2, key: "transformation" as const, label: "Rev" },
-  { angle: -Math.PI / 2 + (2 * Math.PI) / 3, key: "solidarity" as const, label: "Col" },
-  { angle: -Math.PI / 2 + (4 * Math.PI) / 3, key: "sovereignty" as const, label: "Sov" },
+  { angle: -Math.PI / 2, key: "transformation" as const, label: "Transformation" },
+  { angle: -Math.PI / 2 + (2 * Math.PI) / 3, key: "solidarity" as const, label: "Solidarity" },
+  { angle: -Math.PI / 2 + (4 * Math.PI) / 3, key: "sovereignty" as const, label: "Sovereignty" },
 ];
 
 const GRID_RINGS = 5;
@@ -55,7 +55,7 @@ export function renderRadar(
   svg.attr("viewBox", `0 0 ${size} ${size}`);
 
   const center = size / 2;
-  const labelPadding = showLabels ? 20 : 6;
+  const labelPadding = showLabels ? size * 0.22 : 6;
   const radius = center - labelPadding;
 
   const g = svg.append("g").attr("transform", `translate(${center}, ${center})`);
@@ -126,20 +126,36 @@ export function renderRadar(
 
   // Labels at axis endpoints
   if (showLabels) {
+    const fontSize = Math.max(8, size * 0.07);
     for (const axis of AXES) {
-      const labelR = radius + 10;
+      const labelR = radius + 8;
       const x = Math.cos(axis.angle) * labelR;
       const y = Math.sin(axis.angle) * labelR;
+      const rawValue = data[axis.key];
+      const valueStr = rawValue >= 0 ? `+${rawValue.toFixed(2)}` : rawValue.toFixed(2);
 
+      // Label name
       g.append("text")
         .attr("x", x)
-        .attr("y", y)
+        .attr("y", y - fontSize * 0.6)
         .attr("text-anchor", "middle")
         .attr("dominant-baseline", "central")
         .attr("fill", colors.textMuted)
-        .attr("font-size", `${Math.max(8, size * 0.08)}px`)
+        .attr("font-size", `${fontSize}px`)
         .attr("font-family", "monospace")
         .text(axis.label);
+
+      // Raw value below name
+      g.append("text")
+        .attr("x", x)
+        .attr("y", y + fontSize * 0.6)
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "central")
+        .attr("fill", colors.textMuted)
+        .attr("font-size", `${fontSize}px`)
+        .attr("font-family", "monospace")
+        .attr("font-weight", "bold")
+        .text(valueStr);
     }
   }
 }

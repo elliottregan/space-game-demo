@@ -388,7 +388,7 @@ function formatRecycleValue(delta: ResourceDelta): string {
         </span>
       </div>
       <div v-if="hasIdeologyValues" class="ideology-radar-container">
-        <IdeologyRadar :values="district.ideologyAxes" :size="100" show-labels />
+        <IdeologyRadar :values="district.ideologyAxes" :size="160" show-labels />
       </div>
     </div>
 
@@ -635,7 +635,7 @@ function formatRecycleValue(delta: ResourceDelta): string {
 }
 
 .ideology-radar-container {
-  width: 100px;
+  width: 160px;
   margin: 0 auto;
 }
 
