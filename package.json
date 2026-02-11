@@ -23,7 +23,8 @@
     "visualize": "bun run scripts/visualize.ts",
     "build:visualizer": "vite build --config vite.visualizer.config.ts",
     "preview:visualizer": "vite preview --config vite.visualizer.config.ts",
-    "dev:visualizer": "vite dev --config vite.visualizer.config.ts"
+    "dev:visualizer": "vite dev --config vite.visualizer.config.ts",
+    "move-docs": "bash scripts/move-docs-to-branch.sh"
   },
   "devDependencies": {
     "@types/bun": "latest",
