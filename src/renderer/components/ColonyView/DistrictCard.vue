@@ -32,6 +32,7 @@ const props = defineProps<{
     power: { production: number; consumption: number; balance: number };
     workforce: { employed: number; idle: number; byRole: Record<string, number> };
     ideology: Record<string, number>;
+    ideologyAxes: { solidarity: number; sovereignty: number; transformation: number };
   };
   currentSol: number;
   buildings: Building[];
@@ -115,6 +116,22 @@ const factionEntries = computed(() => {
   }
   return entries;
 });
+
+// oxlint-disable-next-line no-unused-vars
+const axisEntries = computed(() => {
+  const { solidarity, sovereignty, transformation } = props.district.ideologyAxes;
+  if (solidarity === 0 && sovereignty === 0 && transformation === 0) return [];
+  return [
+    { key: "solidarity", low: "Individual", high: "Collective", value: solidarity },
+    { key: "sovereignty", low: "Earth-tied", high: "Mars-sov", value: sovereignty },
+    { key: "transformation", low: "Preserve", high: "Revolution", value: transformation },
+  ];
+});
+
+// oxlint-disable-next-line no-unused-vars
+function formatAxis(value: number): string {
+  return value >= 0 ? `+${value.toFixed(2)}` : value.toFixed(2);
+}
 
 // oxlint-disable-next-line no-unused-vars
 function formatNet(value: number): string {
@@ -368,9 +385,9 @@ function formatRecycleValue(delta: ResourceDelta): string {
       </div>
     </div>
 
-    <div v-if="factionEntries.length > 0" class="district-section">
+    <div v-if="factionEntries.length > 0 || axisEntries.length > 0" class="district-section">
       <span class="section-label">Ideology</span>
-      <div class="faction-badges">
+      <div v-if="factionEntries.length > 0" class="faction-badges">
         <span
           v-for="entry in factionEntries"
           :key="entry.id"
@@ -379,6 +396,20 @@ function formatRecycleValue(delta: ResourceDelta): string {
         >
           {{ entry.label }}: {{ entry.count }}
         </span>
+      </div>
+      <div v-if="axisEntries.length > 0" class="ideology-axes">
+        <div v-for="axis in axisEntries" :key="axis.key" class="axis-row">
+          <span class="axis-low">{{ axis.low }}</span>
+          <div class="axis-bar">
+            <div class="axis-track">
+              <div class="axis-marker" :style="{ left: `${((axis.value + 1) / 2) * 100}%` }" />
+            </div>
+          </div>
+          <span class="axis-high">{{ axis.high }}</span>
+          <span class="axis-value" :class="axis.value >= 0 ? 'flow--positive' : 'flow--negative'">
+            {{ formatAxis(axis.value) }}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -622,6 +653,64 @@ function formatRecycleValue(delta: ResourceDelta): string {
   border: 1px solid;
   border-radius: 2px;
   white-space: nowrap;
+}
+
+.ideology-axes {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+}
+
+.axis-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+}
+
+.axis-low,
+.axis-high {
+  color: var(--g-color-text-muted);
+  width: 62px;
+  flex-shrink: 0;
+}
+
+.axis-low {
+  text-align: right;
+}
+
+.axis-high {
+  text-align: left;
+}
+
+.axis-bar {
+  flex: 1;
+  min-width: 40px;
+}
+
+.axis-track {
+  position: relative;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+.axis-marker {
+  position: absolute;
+  top: -1px;
+  width: 8px;
+  height: 8px;
+  background: var(--g-color-text);
+  border-radius: 50%;
+  transform: translateX(-50%);
+}
+
+.axis-value {
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 .district-buildings {

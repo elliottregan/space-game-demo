@@ -44,6 +44,7 @@ export interface DistrictSnapshot {
       byRole: Record<string, number>;
     };
     ideology: Record<string, number>;
+    ideologyAxes: { solidarity: number; sovereignty: number; transformation: number };
   }>;
   power: {
     production: number;
@@ -94,6 +95,10 @@ export class DistrictFacade {
         const colonistIds = dm.getDistrictColonistIds(d.id);
         const byRole: Record<string, number> = {};
         const ideology: Record<string, number> = {};
+        let axesSolidarity = 0;
+        let axesSovereignty = 0;
+        let axesTransformation = 0;
+        let ideologyCount = 0;
         let employed = 0;
         let idle = 0;
         for (const cid of colonistIds) {
@@ -103,6 +108,12 @@ export class DistrictFacade {
             byRole[roleName] = (byRole[roleName] ?? 0) + 1;
             const faction = getDominantFaction(colonist.ideology);
             ideology[faction] = (ideology[faction] ?? 0) + 1;
+            if (colonist.ideology) {
+              axesSolidarity += colonist.ideology.solidarity;
+              axesSovereignty += colonist.ideology.sovereignty;
+              axesTransformation += colonist.ideology.transformation;
+              ideologyCount++;
+            }
           }
           if (employedSet.has(cid)) {
             employed++;
@@ -110,6 +121,14 @@ export class DistrictFacade {
             idle++;
           }
         }
+        const ideologyAxes =
+          ideologyCount > 0
+            ? {
+                solidarity: axesSolidarity / ideologyCount,
+                sovereignty: axesSovereignty / ideologyCount,
+                transformation: axesTransformation / ideologyCount,
+              }
+            : { solidarity: 0, sovereignty: 0, transformation: 0 };
 
         return {
           id: d.id,
@@ -129,6 +148,7 @@ export class DistrictFacade {
           },
           workforce: { employed, idle, byRole },
           ideology,
+          ideologyAxes,
         };
       }),
       power: {
