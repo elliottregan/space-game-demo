@@ -124,15 +124,22 @@ interface GameUIState {
   grants: {
     available: Array<{
       id: number;
+      templateId: string;
       name: string;
       description: string;
       category: string;
       identityTag: string;
+      cost: { food?: number; water?: number; materials?: number };
+      baseDuration: number;
+      sourceName?: string;
+      isCapstone?: boolean;
     }>;
     active: Array<{
       id: number;
+      templateId: string;
       name: string;
       districtId: string;
+      assignedSol: number;
       remainingSols: number;
       totalDuration: number;
     }>;
@@ -405,15 +412,22 @@ class GameService {
     this.state.grants = {
       available: grantsData.available.map((g) => ({
         id: g.id,
+        templateId: g.templateId,
         name: g.name,
         description: g.description,
         category: g.category,
         identityTag: g.identityTag,
+        cost: g.cost,
+        baseDuration: g.baseDuration,
+        sourceName: g.sourceName,
+        isCapstone: g.isCapstone,
       })),
       active: grantsData.active.map((g) => ({
         id: g.id,
+        templateId: g.templateId,
         name: g.name,
         districtId: g.districtId,
+        assignedSol: g.assignedSol,
         remainingSols: g.remainingSols,
         totalDuration: g.totalDuration,
       })),
