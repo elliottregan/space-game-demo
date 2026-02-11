@@ -185,6 +185,7 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
           },
       ),
       getDistrictColonists: mock(() => []),
+      setGrowthCap: mock(() => {}),
     },
     ideology: {
       snapshot: mock(
@@ -284,6 +285,7 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
       })),
       canAssignGrant: mock(() => ({ allowed: true })),
       assignGrant: mock(() => successResult({ grantId: 1, affectedColonists: 0 })),
+      refreshPanel: mock(() => successResult(undefined)),
     },
     game: {
       currentSol: mock(() => overrides.currentSol ?? 100), // Default to 100 to bypass bootstrap
@@ -735,7 +737,7 @@ describe("HeuristicStrategy", () => {
   });
 
   describe("Priority 4 - Growth", () => {
-    it("builds food building when population < 60 and morale > 60 with low food surplus", () => {
+    it("builds food building when population < 80 and morale > 60 with low food surplus", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         colonySnapshot: {
@@ -793,11 +795,11 @@ describe("HeuristicStrategy", () => {
       expect(result.category).not.toBe("growth");
     });
 
-    it("does not grow when population >= 60", () => {
+    it("does not grow when population >= 80", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         colonySnapshot: {
-          population: 60,
+          population: 80,
           health: 80,
           morale: 80,
           colonists: [],

@@ -60,6 +60,10 @@ export class HeuristicStrategy {
   // District growth cap — set once at faction commitment and held steady
   private districtGrowthCapSet = false;
 
+  // Track last grant panel refresh to avoid churning every tick
+  private lastGrantRefreshSol = -1;
+  private readonly GRANT_REFRESH_COOLDOWN = 10; // Only refresh every 10 sols
+
   // Strategy options
   private readonly targetFaction: NPCFaction | null;
 
@@ -537,19 +541,21 @@ export class HeuristicStrategy {
 
   /**
    * Manage district growth caps to prevent uncontrolled population growth.
-   * Caps districts at a target of 30 colonists — enough workers for a healthy
-   * economy but small enough to prevent refugee-driven resource drain.
+   * Sets caps early to prevent refugee-driven expansion from spiraling.
    */
   private manageDistrictGrowthCap(): void {
-    if (!this.committedFactionId) return;
+    const currentSol = this.api.game.currentSol();
+
+    // Set growth caps starting at sol 20 — early enough to catch refugee waves
+    if (currentSol < 20) return;
 
     const districts = this.api.districts.snapshot();
 
-    // Cap at 30 — prevents costly auto-expansion while maintaining enough
-    // worker capacity. Materials saved go toward project proposals & megastructure.
+    // Cap at 50 — allows population to grow enough for a robust economy
+    // while still saving materials for the victory path.
     for (const district of districts.districts) {
-      if (district.growthCap === null || district.growthCap > 30) {
-        this.api.districts.setGrowthCap(district.id, 30);
+      if (district.growthCap === null || district.growthCap > 50) {
+        this.api.districts.setGrowthCap(district.id, 50);
       }
     }
   }
@@ -757,7 +763,7 @@ export class HeuristicStrategy {
   /**
    * Handle water production by building water extractors or reclaimers.
    * Water Extractor: +4/sol
-   * Water Reclaimer: +8/sol, requires WATER_RECYCLING tech
+   * Water Reclaimer: +12/sol, requires WATER_RECYCLING tech
    * @returns the building ID if built, null otherwise
    */
   private handleWaterProduction(
@@ -779,7 +785,7 @@ export class HeuristicStrategy {
     // (exception: critically low stockpile)
     if (currentWater > 20 && this.isResourceUnderstaffed(BuildingId.WATER_EXTRACTOR)) return null;
 
-    // Prefer Water Reclaimer (+8/sol) if tech is available - no deposit needed
+    // Prefer Water Reclaimer (+12/sol) if tech is available - no deposit needed
     if (this.tryBuild(BuildingId.WATER_RECLAIMER, "survival", false)) {
       return BuildingId.WATER_RECLAIMER;
     }
@@ -1120,8 +1126,8 @@ export class HeuristicStrategy {
     const colony = this.api.colony.snapshot({ lightweight: true });
     const resources = this.api.resources.snapshot();
 
-    // Only grow if population < 60 and morale > 60
-    if (colony.population >= 60 || colony.morale <= 60) return null;
+    // Only grow if population < 80 and morale > 60
+    if (colony.population >= 80 || colony.morale <= 60) return null;
 
     // Don't grow if water is tight - each new colonist needs food, and farms consume water
     const waterSurplus = (resources.production.water ?? 0) - (resources.consumption.water ?? 0);
@@ -1438,11 +1444,21 @@ export class HeuristicStrategy {
   /**
    * Try to assign a grant from the available panel that advances the victory path.
    * Prefers grants that are prerequisites of the target capstone, then the capstone itself.
+   * If no victory-path grants are available, refreshes the panel (free action).
    * @returns true if a grant was assigned
    */
   private tryAssignVictoryGrant(capstone: DistrictGrantTemplate): boolean {
     const grantsSnapshot = this.api.grants.snapshot();
-    if (grantsSnapshot.available.length === 0) return false;
+    const currentSol = this.api.game.currentSol();
+
+    if (grantsSnapshot.available.length === 0) {
+      // Panel is empty, refresh it
+      if (currentSol - this.lastGrantRefreshSol >= this.GRANT_REFRESH_COOLDOWN) {
+        this.api.grants.refreshPanel();
+        this.lastGrantRefreshSol = currentSol;
+      }
+      return false;
+    }
 
     const prereqIds = new Set(capstone.prerequisites ?? []);
     const districts = this.api.districts.snapshot().districts;
@@ -1473,49 +1489,80 @@ export class HeuristicStrategy {
       }
     }
 
+    // No useful grants found — refresh the panel to get new ones (free action)
+    // Only refresh with cooldown to avoid churning and let infrastructure grants be picked up
+    if (currentSol - this.lastGrantRefreshSol >= this.GRANT_REFRESH_COOLDOWN) {
+      this.api.grants.refreshPanel();
+      this.lastGrantRefreshSol = currentSol;
+    }
     return false;
   }
 
   /**
-   * Evaluate available infrastructure grants and assign the best one.
-   * Only handles infrastructure grants here; identity grants are handled
-   * by the victory path in tryAssignVictoryGrant.
-   * Assigns to the first district (simulation simplification).
+   * Evaluate available grants and assign the best one (free action).
+   * Prioritizes victory-path identity grants, then infrastructure grants.
+   * Also refreshes the panel (with cooldown) when no useful grants are available.
    */
   private handleGrantEvaluation(): void {
     const grantsSnapshot = this.api.grants.snapshot();
-    if (grantsSnapshot.available.length === 0) return;
+    const currentSol = this.api.game.currentSol();
+
+    if (grantsSnapshot.available.length === 0) {
+      this.maybeRefreshPanel(currentSol);
+      return;
+    }
 
     const districts = this.api.districts.snapshot().districts;
     if (districts.length === 0) return;
 
     const districtId = districts[0]!.id;
-    const resources = this.api.resources.snapshot();
 
-    // Score each available infrastructure grant
+    // Priority 1: Victory-path grants (identity grants for capstone prerequisites)
+    if (this.committedFactionId && this.targetCapstoneId) {
+      const capstone = getDistrictGrantTemplate(this.targetCapstoneId);
+      if (capstone) {
+        const prereqIds = new Set(capstone.prerequisites ?? []);
+        // Look for capstone or prerequisite grants
+        for (const grant of grantsSnapshot.available) {
+          if (prereqIds.has(grant.templateId) || grant.templateId === capstone.id) {
+            const check = this.api.grants.canAssignGrant(grant.id, districtId);
+            if (check.canAssign) {
+              this.api.grants.assignGrant(grant.id, districtId);
+              return;
+            }
+          }
+        }
+        // Look for any assignable identity grant
+        for (const grant of grantsSnapshot.available) {
+          if (grant.category === "identity") {
+            const check = this.api.grants.canAssignGrant(grant.id, districtId);
+            if (check.canAssign) {
+              this.api.grants.assignGrant(grant.id, districtId);
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    // Priority 2: Infrastructure grants
+    const resources = this.api.resources.snapshot();
     let bestGrant: AvailableGrantSnapshot | null = null;
     let bestScore = -Infinity;
 
     for (const grant of grantsSnapshot.available) {
-      // Skip identity grants -- those are handled by the victory path
       if (grant.category === "identity") continue;
 
-      let score = 10; // Base value for infrastructure grants
-
-      // Score by resource value based on current needs
+      let score = 10;
       const foodFlow = (resources.production.food ?? 0) - (resources.consumption.food ?? 0);
       const waterFlow = (resources.production.water ?? 0) - (resources.consumption.water ?? 0);
 
-      // Prioritize grants when colony is struggling
       if (foodFlow < 2) score += 10;
       if (waterFlow < 2) score += 10;
       if (resources.current.materials < 100) score += 10;
 
-      // Check if we can afford the grant cost
       const materialCost = grant.cost?.materials ?? 0;
-      if (materialCost > 0 && resources.current.materials < materialCost) {
-        continue; // Skip grants we cannot afford
-      }
+      if (materialCost > 0 && resources.current.materials < materialCost) continue;
 
       if (score > bestScore) {
         bestScore = score;
@@ -1523,12 +1570,27 @@ export class HeuristicStrategy {
       }
     }
 
-    // Assign the best infrastructure grant
     if (bestGrant && bestScore > 0) {
       const check = this.api.grants.canAssignGrant(bestGrant.id, districtId);
       if (check.canAssign) {
         this.api.grants.assignGrant(bestGrant.id, districtId);
+        return;
       }
+    }
+
+    // No grants assigned — refresh the panel with cooldown
+    if (this.committedFactionId) {
+      this.maybeRefreshPanel(currentSol);
+    }
+  }
+
+  /**
+   * Refresh the grant panel if cooldown has elapsed.
+   */
+  private maybeRefreshPanel(currentSol: number): void {
+    if (currentSol - this.lastGrantRefreshSol >= this.GRANT_REFRESH_COOLDOWN) {
+      this.api.grants.refreshPanel();
+      this.lastGrantRefreshSol = currentSol;
     }
   }
 

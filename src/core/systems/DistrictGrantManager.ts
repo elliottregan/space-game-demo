@@ -60,22 +60,45 @@ export class DistrictGrantManager implements GrantCompletionQueries {
 
     const panelTemplateIds = new Set(this.availableGrants.map((g) => g.templateId));
     const activeTemplateIds = new Set(this.activeGrants.map((g) => g.templateId));
+    const excluded = (t: DistrictGrantTemplate) =>
+      panelTemplateIds.has(t.id) || activeTemplateIds.has(t.id);
 
-    while (this.availableGrants.length < GRANT_PANEL_SIZE) {
-      const eligible = drawPool.filter(
-        (t) => !panelTemplateIds.has(t.id) && !activeTemplateIds.has(t.id),
+    // Guarantee at least one identity grant on the panel for victory path progression
+    const hasIdentityOnPanel = this.availableGrants.some((g) => {
+      const t = getDistrictGrantTemplate(g.templateId);
+      return t?.category === DistrictGrantCategory.IDENTITY;
+    });
+
+    if (!hasIdentityOnPanel && this.availableGrants.length < GRANT_PANEL_SIZE) {
+      const identityPool = drawPool.filter(
+        (t) => t.category === DistrictGrantCategory.IDENTITY && !excluded(t),
       );
+      if (identityPool.length > 0) {
+        const picked = rng.weightedPick(identityPool, (t) => t.weight);
+        if (picked) {
+          this.availableGrants.push({
+            id: this.nextGrantId++,
+            templateId: picked.id,
+            drawnSol: currentSol,
+          });
+          panelTemplateIds.add(picked.id);
+        }
+      }
+    }
+
+    // Fill remaining slots from the full pool
+    while (this.availableGrants.length < GRANT_PANEL_SIZE) {
+      const eligible = drawPool.filter((t) => !excluded(t));
       if (eligible.length === 0) break;
 
       const picked = rng.weightedPick(eligible, (t) => t.weight);
       if (!picked) break;
 
-      const grant: AvailableDistrictGrant = {
+      this.availableGrants.push({
         id: this.nextGrantId++,
         templateId: picked.id,
         drawnSol: currentSol,
-      };
-      this.availableGrants.push(grant);
+      });
       panelTemplateIds.add(picked.id);
     }
   }

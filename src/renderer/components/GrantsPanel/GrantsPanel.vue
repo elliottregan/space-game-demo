@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { GRANT_REFRESH_COST } from "../../../core/balance/DistrictGrantBalance";
 import { gameService } from "../../services/GameService";
 import { GBadge, GButton, GEmptyState, GPanel, GProgress, GSection } from "../../ui";
 import GSelect from "../../ui/primitives/GSelect.vue";
@@ -54,11 +53,6 @@ function handleAssign(grantId: number): void {
 function handleRefresh(): void {
   gameService.api.grants.refreshPanel();
 }
-
-// oxlint-disable-next-line no-unused-vars
-const canRefresh = computed(() => {
-  return state.resources.materials >= GRANT_REFRESH_COST;
-});
 
 // Active grants grouped by district
 // oxlint-disable-next-line no-unused-vars
@@ -157,9 +151,7 @@ function grantProgress(grant: (typeof state.grants.active)[number]): number {
 
     <template #footer>
       <div class="grants-footer">
-        <GButton size="sm" :disabled="!canRefresh" @click="handleRefresh">
-          Refresh ({{ GRANT_REFRESH_COST }} MAT)
-        </GButton>
+        <GButton size="sm" @click="handleRefresh"> Refresh </GButton>
       </div>
     </template>
   </GPanel>

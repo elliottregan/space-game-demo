@@ -207,12 +207,12 @@ function runSingleGame(seed: number): RunResult {
 
     // Take periodic snapshots
     if (currentSol % SNAPSHOT_INTERVAL === 0) {
-      const powerGrid = api.powerGrid.snapshot();
+      const power = api.districts.snapshot().power;
       // Calculate power ratio: 1.0 = production meets consumption
       const powerRatio =
-        powerGrid.totalConsumption > 0
-          ? Math.min(1.0, powerGrid.totalProduction / powerGrid.totalConsumption)
-          : powerGrid.totalProduction > 0
+        power.consumption > 0
+          ? Math.min(1.0, power.production / power.consumption)
+          : power.production > 0
             ? 1.0
             : 0;
       resourceTimeline.push({
@@ -329,14 +329,14 @@ function runSingleGame(seed: number): RunResult {
     defeatSol = finalSol;
     const resources = api.resources.snapshot();
     const colony = api.colony.snapshot();
-    const powerGrid = api.powerGrid.snapshot();
+    const pgPower = api.districts.snapshot().power;
     const isolatedCount = colony.colonists.filter(
       (c) => !colony.coworkerRelationships.has(c.id),
     ).length;
     const powerRatio =
-      powerGrid.totalConsumption > 0
-        ? Math.min(1.0, powerGrid.totalProduction / powerGrid.totalConsumption)
-        : powerGrid.totalProduction > 0
+      pgPower.consumption > 0
+        ? Math.min(1.0, pgPower.production / pgPower.consumption)
+        : pgPower.production > 0
           ? 1.0
           : 0;
     resourcesAtDeath = {

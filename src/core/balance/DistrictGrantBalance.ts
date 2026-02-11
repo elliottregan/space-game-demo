@@ -2,7 +2,7 @@
 export const GRANT_PANEL_SIZE = 3;
 
 /** Resource cost to refresh all panel cards (materials) */
-export const GRANT_REFRESH_COST = 30;
+export const GRANT_REFRESH_COST = 0;
 
 /** Earliest sol grants can appear */
 export const GRANT_MIN_SOL = 15;
