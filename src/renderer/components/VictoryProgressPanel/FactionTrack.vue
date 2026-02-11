@@ -60,7 +60,8 @@ function computeAxisProgress(
     const met = value >= req.min;
     // Progress from 0 toward the required minimum
     // If the value is negative and min is positive, start from 0%
-    const percent = req.min === 0 ? (met ? 100 : 0) : Math.max(0, Math.min(100, (value / req.min) * 100));
+    const percent =
+      req.min === 0 ? (met ? 100 : 0) : Math.max(0, Math.min(100, (value / req.min) * 100));
     return { current: value, required: req.min, direction: "min", met, percent };
   }
 
@@ -68,7 +69,8 @@ function computeAxisProgress(
     const met = value <= req.max;
     // Progress toward the required maximum (lower/more negative)
     // e.g., if max is -0.6 and value is -0.3, progress is -0.3/-0.6 = 50%
-    const percent = req.max === 0 ? (met ? 100 : 0) : Math.max(0, Math.min(100, (value / req.max) * 100));
+    const percent =
+      req.max === 0 ? (met ? 100 : 0) : Math.max(0, Math.min(100, (value / req.max) * 100));
     return { current: value, required: req.max, direction: "max", met, percent };
   }
 
@@ -260,7 +262,10 @@ const nextStep = computed(() => {
   }
 
   // Check prerequisites
-  if (capstone.prerequisitesTotal > 0 && capstone.prerequisitesPassed < capstone.prerequisitesTotal) {
+  if (
+    capstone.prerequisitesTotal > 0 &&
+    capstone.prerequisitesPassed < capstone.prerequisitesTotal
+  ) {
     return {
       action: `Pass ${capstone.prerequisitesTotal - capstone.prerequisitesPassed} more prerequisite(s)`,
       type: "locked" as const,
@@ -350,7 +355,9 @@ const nextStep = computed(() => {
       <!-- Prerequisites -->
       <div v-if="bestCapstone.prerequisitesTotal > 0" class="prereqs-section">
         <div class="prereqs-label">
-          Prerequisites ({{ bestCapstone.prerequisitesPassed }}/{{ bestCapstone.prerequisitesTotal }})
+          Prerequisites ({{ bestCapstone.prerequisitesPassed }}/{{
+            bestCapstone.prerequisitesTotal
+          }})
         </div>
         <div
           v-for="prereqId in bestCapstone.project.prerequisites"
@@ -363,7 +370,9 @@ const nextStep = computed(() => {
             <template v-else-if="getProjectStatus(prereqId) === 'pending'">&#x25D0;</template>
             <template v-else>&#x25CB;</template>
           </span>
-          <span class="project-name">{{ PROJECTS.find((p) => p.id === prereqId)?.name ?? prereqId }}</span>
+          <span class="project-name">{{
+            PROJECTS.find((p) => p.id === prereqId)?.name ?? prereqId
+          }}</span>
           <GBadge v-if="getProjectStatus(prereqId) === 'pending'" variant="info" size="sm">
             {{ getPendingVoteSols(prereqId) }} sols
           </GBadge>
@@ -419,7 +428,9 @@ const nextStep = computed(() => {
       </div>
       <div class="council-stats">
         <span class="council-count">{{ councilSeats }}/{{ totalSeats }}</span>
-        <span v-if="hasCouncilMajority" class="council-status majority"> Majority secured &#x2713; </span>
+        <span v-if="hasCouncilMajority" class="council-status majority">
+          Majority secured &#x2713;
+        </span>
         <span v-else class="council-status needed"> Need {{ seatsNeeded }} more </span>
       </div>
     </div>
@@ -508,7 +519,9 @@ const nextStep = computed(() => {
 .axis-fill {
   position: absolute;
   height: 100%;
-  transition: width 0.3s, left 0.3s;
+  transition:
+    width 0.3s,
+    left 0.3s;
 }
 
 .axis-fill.positive {

@@ -8,6 +8,7 @@ import {
   ROLE_DISPLAY_NAMES,
 } from "../../../core/models/Colonist";
 import type { CoworkerRelationship } from "../../../core/systems/WorkforceManager";
+import { gameService } from "../../services/GameService";
 
 interface BuildingInfo {
   id: string;
@@ -52,12 +53,11 @@ const buildingAssignment = computed(() => {
   return null;
 });
 
-// Get colonist's housing
+// Get colonist's district
 const housingInfo = computed(() => {
-  if (!props.colonist.housingId) return null;
-  // Find housing building name from buildings list
-  const housing = props.buildings.find((b) => b.id === props.colonist.housingId);
-  return housing ? housing.name : props.colonist.housingId;
+  if (!props.colonist.districtId) return null;
+  const district = gameService.getState().districts.find((d) => d.id === props.colonist.districtId);
+  return district ? district.name : props.colonist.districtId;
 });
 
 // Get coworkers (same building)
@@ -69,11 +69,11 @@ const coworkers = computed(() => {
   );
 });
 
-// Get housemates (same housing)
+// Get housemates (same district)
 const housemates = computed(() => {
-  if (!props.colonist.housingId) return [];
+  if (!props.colonist.districtId) return [];
   return props.colonists.filter(
-    (c) => c.id !== props.colonist.id && c.housingId === props.colonist.housingId,
+    (c) => c.id !== props.colonist.id && c.districtId === props.colonist.districtId,
   );
 });
 

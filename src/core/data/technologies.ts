@@ -26,7 +26,7 @@ export const TECHNOLOGIES: Technology[] = [
     description: "Prefabricated modular habitat construction techniques",
     prerequisites: [],
     cost: { sols: 55 },
-    unlocks: [BuildingId.RESEARCH_LAB, BuildingId.ADVANCED_HABITAT],
+    unlocks: [BuildingId.RESEARCH_LAB],
   },
   {
     id: TechnologyId.PREFAB_CONSTRUCTION,

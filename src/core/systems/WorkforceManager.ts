@@ -10,9 +10,10 @@ import {
   GUILD_FORMATION_MIN_POPULATION,
   GUILD_FORMATION_RELATIONSHIP_THRESHOLD,
   GUILD_INITIAL_RELATIONSHIP_BONUS,
-  HOUSEMATE_BONDING_RATE,
+  NEIGHBORHOOD_BONDING_RATE,
+  CROSS_DISTRICT_BONDING_RATE,
   INITIAL_COWORKER_RELATIONSHIP,
-  INITIAL_HOUSEMATE_RELATIONSHIP,
+  INITIAL_NEIGHBORHOOD_RELATIONSHIP,
   INITIAL_SOCIAL_RELATIONSHIP,
   MASTER_EVENT_CHANCE,
   MAX_CONNECTION_PROBABILITY,
@@ -88,10 +89,11 @@ export class WorkforceManager implements WorkforceQueries {
     const events: GameEvent[] = [];
     const colonists = colony.getColonists();
 
-    // Process coworker and housemate bonding
+    // Process coworker and neighborhood bonding
     if (buildings) {
       events.push(...this.processCoworkerBonding(buildings, currentSol));
-      events.push(...this.processHousemateBonding(colonists, currentSol));
+      events.push(...this.processNeighborhoodBonding(colonists, currentSol));
+      events.push(...this.processCrossDistrictBonding(colonists, currentSol));
     }
 
     // Process guild bonding
@@ -350,32 +352,35 @@ export class WorkforceManager implements WorkforceQueries {
   }
 
   /**
-   * Process housemate bonding for all colonists sharing housing.
-   * Colonists living together develop stronger relationships.
+   * Process neighborhood bonding for all colonists sharing a district.
+   * Colonists living in the same district develop stronger relationships.
    */
-  private processHousemateBonding(colonists: readonly Colonist[], currentSol: number): GameEvent[] {
+  private processNeighborhoodBonding(
+    colonists: readonly Colonist[],
+    currentSol: number,
+  ): GameEvent[] {
     const events: GameEvent[] = [];
 
-    // Group colonists by housing
-    const housingGroups = new Map<string, Colonist[]>();
+    // Group colonists by district
+    const districtGroups = new Map<string, Colonist[]>();
     for (const colonist of colonists) {
-      if (colonist.housingId) {
-        const group = housingGroups.get(colonist.housingId) || [];
+      if (colonist.districtId) {
+        const group = districtGroups.get(colonist.districtId) || [];
         group.push(colonist);
-        housingGroups.set(colonist.housingId, group);
+        districtGroups.set(colonist.districtId, group);
       }
     }
 
-    // Bond colonists who share housing
-    for (const [housingId, housemates] of housingGroups) {
-      if (housemates.length < 2) continue;
+    // Bond colonists who share a district
+    for (const [districtId, neighbors] of districtGroups) {
+      if (neighbors.length < 2) continue;
 
-      for (let i = 0; i < housemates.length; i++) {
-        const colonistA = housemates[i];
+      for (let i = 0; i < neighbors.length; i++) {
+        const colonistA = neighbors[i];
         if (!colonistA) continue;
 
-        for (let j = i + 1; j < housemates.length; j++) {
-          const colonistB = housemates[j];
+        for (let j = i + 1; j < neighbors.length; j++) {
+          const colonistB = neighbors[j];
           if (!colonistB) continue;
 
           const existingRelationship = this.relationshipManager.getRelationship(
@@ -384,30 +389,89 @@ export class WorkforceManager implements WorkforceQueries {
           );
 
           if (!existingRelationship) {
-            // First time living together - create via RelationshipManager
+            // First time as neighbors - create via RelationshipManager
             this.relationshipManager.createRelationship(colonistA.id, colonistB.id, currentSol, {
-              initialStrength: INITIAL_HOUSEMATE_RELATIONSHIP,
+              initialStrength: INITIAL_NEIGHBORHOOD_RELATIONSHIP,
             });
 
             events.push({
-              type: "HOUSEMATE_BOND_FORMED",
+              type: "NEIGHBOR_BOND_FORMED",
               severity: "info",
               colonistA: colonistA.id,
               colonistB: colonistB.id,
-              housingId,
-              message: `${colonistA.name} and ${colonistB.name} are now housemates`,
+              districtId,
+              message: `${colonistA.name} and ${colonistB.name} are now neighbors`,
             });
           } else {
-            // Strengthen existing relationship (housemates bond faster)
+            // Strengthen existing relationship
             this.relationshipManager.strengthenRelationship(
               colonistA.id,
               colonistB.id,
-              HOUSEMATE_BONDING_RATE,
+              NEIGHBORHOOD_BONDING_RATE,
               currentSol,
             );
           }
         }
       }
+    }
+
+    return events;
+  }
+
+  /**
+   * Process cross-district weak tie bonding.
+   * Each sol, pick a few random cross-district pairs and strengthen existing ties.
+   * Only strengthens existing relationships, does not create new ones.
+   */
+  private processCrossDistrictBonding(
+    colonists: readonly Colonist[],
+    currentSol: number,
+  ): GameEvent[] {
+    const events: GameEvent[] = [];
+    if (colonists.length < 2) return events;
+
+    // Group by district
+    const byDistrict = new Map<string, Colonist[]>();
+    for (const c of colonists) {
+      if (!c.districtId) continue;
+      const group = byDistrict.get(c.districtId) || [];
+      group.push(c);
+      byDistrict.set(c.districtId, group);
+    }
+
+    const districtIds = Array.from(byDistrict.keys());
+    if (districtIds.length < 2) return events;
+
+    // For each district, pick one random colonist and bond with one from another district
+    for (const districtId of districtIds) {
+      const residents = byDistrict.get(districtId);
+      if (!residents || residents.length === 0) continue;
+
+      const colonistA = residents[Math.floor(Math.random() * residents.length)];
+      if (!colonistA) continue;
+
+      // Pick a random other district
+      const otherDistricts = districtIds.filter((d) => d !== districtId);
+      if (otherDistricts.length === 0) continue;
+      const otherDistrictId = otherDistricts[Math.floor(Math.random() * otherDistricts.length)];
+      if (!otherDistrictId) continue;
+
+      const otherResidents = byDistrict.get(otherDistrictId);
+      if (!otherResidents || otherResidents.length === 0) continue;
+
+      const colonistB = otherResidents[Math.floor(Math.random() * otherResidents.length)];
+      if (!colonistB) continue;
+
+      const existing = this.relationshipManager.getRelationship(colonistA.id, colonistB.id);
+      if (existing) {
+        this.relationshipManager.strengthenRelationship(
+          colonistA.id,
+          colonistB.id,
+          CROSS_DISTRICT_BONDING_RATE,
+          currentSol,
+        );
+      }
+      // Don't create new relationships cross-district — only strengthen existing ones
     }
 
     return events;

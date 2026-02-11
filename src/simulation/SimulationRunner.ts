@@ -385,12 +385,12 @@ export class SimulationRunner {
           (c) => !colony.coworkerRelationships.has(c.id),
         ).length;
 
-        const powerGrid = api.powerGrid.snapshot();
+        const power = api.districts.snapshot().power;
         resourceTimeline.push({
           sol: currentSol,
           food: resources.current.food,
           water: resources.current.water,
-          powerGrid: computePowerRatio(powerGrid.totalProduction, powerGrid.totalConsumption),
+          powerGrid: computePowerRatio(power.production, power.consumption),
           materials: resources.current.materials,
           population: currentPop,
           morale: colony.morale,
@@ -480,12 +480,12 @@ export class SimulationRunner {
       const isolatedCount = colony.colonists.filter(
         (c) => !colony.coworkerRelationships.has(c.id),
       ).length;
-      const pgSnapshot = api.powerGrid.snapshot();
+      const pgPower = api.districts.snapshot().power;
       resourcesAtDeath = {
         sol: finalSol,
         food: resources.current.food,
         water: resources.current.water,
-        powerGrid: computePowerRatio(pgSnapshot.totalProduction, pgSnapshot.totalConsumption),
+        powerGrid: computePowerRatio(pgPower.production, pgPower.consumption),
         materials: resources.current.materials,
         population: colony.population,
         morale: colony.morale,

@@ -68,16 +68,6 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
           progress: 0,
         });
       }),
-      buildAtPosition: mock((defId: string, _position: { x: number; y: number }) => {
-        if (overrides.buildCalled) overrides.buildCalled(defId);
-        return successResult({
-          id: "b1",
-          definitionId: defId,
-          status: "pending" as const,
-          mode: "normal" as const,
-          progress: 0,
-        });
-      }),
       snapshot: mock(
         () =>
           overrides.buildingsSnapshot ?? {
@@ -176,74 +166,25 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
       canDevelopSite: mock(() => allowed),
       developSite: mock(() => successResult(undefined)),
     },
-    grid: {
-      snapshot: mock(() => ({
-        size: 10,
-        deposits: overrides.gridAvailableDeposits ?? [],
-        powerSources: [],
-        occupiedCells: [],
-      })),
-      getEmptyCells: mock(() => {
-        // Return all cells as empty by default
-        const cells: { x: number; y: number }[] = [];
-        for (let y = 0; y < 10; y++) {
-          for (let x = 0; x < 10; x++) {
-            cells.push({ x, y });
-          }
-        }
-        return cells;
-      }),
-      getDeposits: mock(() => overrides.gridAvailableDeposits ?? []),
-      getAvailableDeposits: mock((type: string) => {
-        if (overrides.gridAvailableDeposits) {
-          return overrides.gridAvailableDeposits.filter((d) => d.type === type && !d.isOccupied);
-        }
-        return [];
-      }),
-      getCellsInPowerRange: mock(() => {
-        // Return center cells as powered by default
-        const cells: { x: number; y: number }[] = [];
-        for (let y = 3; y <= 6; y++) {
-          for (let x = 3; x <= 6; x++) {
-            cells.push({ x, y });
-          }
-        }
-        return cells;
-      }),
-      getPlacementHints: mock(() => ({
-        position: { x: 5, y: 5 },
-        isOccupied: false,
-        hasPower: true,
-        powerCapacityAvailable: 10,
-        distanceToNearestPower: 0,
-      })),
-      hasDeposit: mock(() => false),
-      getDepositAt: mock(() => undefined),
-      isEmpty: mock(() => true),
-      calculateDistance: mock((a: { x: number; y: number }, b: { x: number; y: number }) => {
-        return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
-      }),
-    },
-    npc: {
-      snapshot: mock(() => ({ factions: [], matrix: [], activeActions: [], nextActionIn: 0 })),
-      getInfluence: mock(() => 0),
-      canInfluence: mock(() => allowed),
-      influence: mock(() => successResult(undefined)),
-    },
-    powerGrid: {
+    districts: {
       snapshot: mock(
         () =>
-          overrides.powerGridSnapshot ?? {
-            totalProduction: 20,
-            totalConsumption: 10,
-            buildingCounts: {
-              powered: 5,
-              onBattery: 0,
-              lowBattery: 0,
-              unpowered: 0,
-            },
+          overrides.districtSnapshot ?? {
+            districts: [
+              {
+                id: "d1",
+                name: "Central",
+                foundedAt: 0,
+                population: 20,
+                capacity: 30,
+                buildingCount: 5,
+                growthCap: null,
+              },
+            ],
+            power: { production: 50, consumption: 30, balance: 20, status: "comfortable" },
           },
       ),
+      getDistrictColonists: mock(() => []),
     },
     ideology: {
       snapshot: mock(
@@ -369,15 +310,17 @@ function createMockAPI(overrides: Partial<MockedAPI> = {}): GameAPI {
 
 interface MockedAPI {
   resourceSnapshot?: ResourceSnapshot;
-  powerGridSnapshot?: {
-    totalProduction: number;
-    totalConsumption: number;
-    buildingCounts: {
-      powered: number;
-      onBattery: number;
-      lowBattery: number;
-      unpowered: number;
-    };
+  districtSnapshot?: {
+    districts: Array<{
+      id: string;
+      name: string;
+      foundedAt: number;
+      population: number;
+      capacity: number;
+      buildingCount: number;
+      growthCap: number | null;
+    }>;
+    power: { production: number; consumption: number; balance: number; status: string };
   };
   colonySnapshot?: Partial<ColonySnapshot>;
   techSnapshot?: TechnologySnapshot;
@@ -435,12 +378,6 @@ interface MockedAPI {
   voteProjection?: { votesFor: number; votesAgainst: number; wouldPass: boolean };
   clearFailedProposalCalled?: (projectId: string) => void;
   earthCrisisSeverity?: number;
-  // Grid mocking
-  gridAvailableDeposits?: Array<{
-    position: { x: number; y: number };
-    type: string;
-    isOccupied: boolean;
-  }>;
 }
 
 describe("HeuristicStrategy", () => {
@@ -467,43 +404,7 @@ describe("HeuristicStrategy", () => {
       expect(builtFood).toBe(true);
     });
 
-    it("builds habitat when life support capacity is low", () => {
-      const buildCalls: string[] = [];
-      const api = createMockAPI({
-        resourceSnapshot: {
-          current: { food: 100, water: 100, materials: 100 },
-          production: { food: 10, water: 10 },
-          consumption: { food: 5, water: 5 },
-          netFlow: { food: 5, water: 5 },
-        },
-        buildingsSnapshot: {
-          active: [],
-          pending: [],
-          upgrading: [],
-          definitions: [],
-          moraleBoost: 0,
-          totalLifeSupportCapacity: 10, // Low capacity
-          totalLifeSupportLoad: 2,
-        },
-        colonySnapshot: {
-          population: 14, // totalDemand = 14 + 2 = 16, need capacity >= 16 * 1.2 = 19.2
-          health: 80,
-          morale: 70,
-          colonists: [],
-          skillDefinitions: [],
-          housingAssignments: {},
-          unhoused: [],
-        },
-        buildCalled: (defId) => buildCalls.push(defId),
-      });
-
-      const strategy = new HeuristicStrategy(api);
-      strategy.executeTick();
-
-      expect(buildCalls).toContain(BuildingId.HABITAT);
-    });
-
-    it("builds farm when food production <= consumption", () => {
+    it("builds food building when food production equals consumption", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         resourceSnapshot: {
@@ -518,39 +419,20 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      // Prefers greenhouse over basic farm for food production
       const builtFood = buildCalls.some(
         (id) => id === BuildingId.GREENHOUSE || id === BuildingId.BASIC_FARM,
       );
       expect(builtFood).toBe(true);
     });
 
-    it("builds habitat when life support capacity is zero", () => {
+    it("builds water building when water is low", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         resourceSnapshot: {
-          current: { food: 100, water: 100, materials: 100 },
-          production: { food: 10, water: 10 },
-          consumption: { food: 5, water: 5 },
-          netFlow: { food: 5, water: 5 },
-        },
-        buildingsSnapshot: {
-          active: [],
-          pending: [],
-          upgrading: [],
-          definitions: [],
-          moraleBoost: 0,
-          totalLifeSupportCapacity: 0, // No capacity at all
-          totalLifeSupportLoad: 5,
-        },
-        colonySnapshot: {
-          population: 14, // totalDemand = 14 + 5 = 19, capacity 0 triggers habitat build
-          health: 80,
-          morale: 70,
-          colonists: [],
-          skillDefinitions: [],
-          housingAssignments: {},
-          unhoused: [],
+          current: { food: 100, water: 30, materials: 100 },
+          production: { food: 10, water: 2 },
+          consumption: { food: 5, water: 3 },
+          netFlow: { food: 5, water: -1 },
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -558,7 +440,10 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).toContain(BuildingId.HABITAT);
+      const builtWater = buildCalls.some(
+        (id) => id === BuildingId.WATER_EXTRACTOR || id === BuildingId.WATER_RECLAIMER,
+      );
+      expect(builtWater).toBe(true);
     });
 
     it("does not build if cannot afford", () => {
@@ -793,24 +678,28 @@ describe("HeuristicStrategy", () => {
       expect(researchCalls).toHaveLength(0);
     });
 
-    it("builds solar panel when power production is low", () => {
+    it("builds solar panel when power balance is negative", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         resourceSnapshot: {
           current: { food: 100, water: 100, materials: 100 },
-          production: { food: 10, water: 10, materials: 10 }, // Materials production >= 10 to skip materials handler
+          production: { food: 10, water: 10, materials: 10 },
           consumption: { food: 5, water: 5 },
           netFlow: { food: 5, water: 5, materials: 10 },
         },
-        powerGridSnapshot: {
-          totalProduction: 10,
-          totalConsumption: 15, // Production < consumption, ratio < 1.0
-          buildingCounts: {
-            powered: 3,
-            onBattery: 0,
-            lowBattery: 0,
-            unpowered: 1, // Has unpowered buildings
-          },
+        districtSnapshot: {
+          districts: [
+            {
+              id: "d1",
+              name: "Central",
+              foundedAt: 0,
+              population: 20,
+              capacity: 30,
+              buildingCount: 5,
+              growthCap: null,
+            },
+          ],
+          power: { production: 10, consumption: 15, balance: -5, status: "shortage" },
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -818,7 +707,6 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      // Has unpowered buildings, so should build solar panel
       expect(buildCalls).toContain(BuildingId.SOLAR_PANEL);
     });
 
@@ -827,7 +715,6 @@ describe("HeuristicStrategy", () => {
       const api = createMockAPI({
         resourceSnapshot: {
           current: { food: 100, water: 100, materials: 50 },
-          // Materials production >= 10 to skip handleMaterialsProduction
           production: { food: 10, water: 10, materials: 10 },
           consumption: { food: 5, water: 5 },
           netFlow: { food: 5, water: 5, materials: 10 },
@@ -838,8 +725,6 @@ describe("HeuristicStrategy", () => {
           return { allowed: true };
         },
         buildCalled: (defId) => buildCalls.push(defId),
-        // Provide an available mineral deposit for the mining station
-        gridAvailableDeposits: [{ position: { x: 2, y: 2 }, type: "mineral", isOccupied: false }],
       });
 
       const strategy = new HeuristicStrategy(api);
@@ -850,7 +735,7 @@ describe("HeuristicStrategy", () => {
   });
 
   describe("Priority 4 - Growth", () => {
-    it("builds habitat when population < 100 and morale > 60", () => {
+    it("builds food building when population < 60 and morale > 60 with low food surplus", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         colonySnapshot: {
@@ -863,10 +748,10 @@ describe("HeuristicStrategy", () => {
           unhoused: [],
         },
         resourceSnapshot: {
-          current: { food: 100, water: 100, materials: 100 },
-          production: { food: 10, water: 10, materials: 10 }, // Materials production >= 10 to skip materials handler
+          current: { food: 70, water: 100, materials: 100 },
+          production: { food: 6, water: 10, materials: 10 },
           consumption: { food: 5, water: 5 },
-          netFlow: { food: 5, water: 5, materials: 10 },
+          netFlow: { food: 1, water: 5, materials: 10 },
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
@@ -874,10 +759,13 @@ describe("HeuristicStrategy", () => {
       const strategy = new HeuristicStrategy(api);
       strategy.executeTick();
 
-      expect(buildCalls).toContain(BuildingId.HABITAT);
+      const builtFood = buildCalls.some(
+        (id) => id === BuildingId.GREENHOUSE || id === BuildingId.BASIC_FARM,
+      );
+      expect(builtFood).toBe(true);
     });
 
-    it("does not build habitat when morale <= 60", () => {
+    it("does not grow when morale <= 60", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         colonySnapshot: {
@@ -891,24 +779,25 @@ describe("HeuristicStrategy", () => {
         },
         resourceSnapshot: {
           current: { food: 100, water: 100, materials: 100 },
-          production: { food: 10 },
-          consumption: { food: 5 },
-          netFlow: { food: 5, materials: 5 },
+          production: { food: 10, water: 10 },
+          consumption: { food: 5, water: 5 },
+          netFlow: { food: 5, water: 5, materials: 5 },
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
 
       const strategy = new HeuristicStrategy(api);
-      strategy.executeTick();
+      const result = strategy.executeTick();
 
-      expect(buildCalls).not.toContain(BuildingId.HABITAT);
+      // Growth handler skipped because morale is too low
+      expect(result.category).not.toBe("growth");
     });
 
-    it("does not build habitat when population >= 100", () => {
+    it("does not grow when population >= 60", () => {
       const buildCalls: string[] = [];
       const api = createMockAPI({
         colonySnapshot: {
-          population: 100,
+          population: 60,
           health: 80,
           morale: 80,
           colonists: [],
@@ -918,17 +807,18 @@ describe("HeuristicStrategy", () => {
         },
         resourceSnapshot: {
           current: { food: 100, water: 100, materials: 100 },
-          production: { food: 10 },
-          consumption: { food: 5 },
-          netFlow: { food: 5, materials: 5 },
+          production: { food: 10, water: 10 },
+          consumption: { food: 5, water: 5 },
+          netFlow: { food: 5, water: 5, materials: 5 },
         },
         buildCalled: (defId) => buildCalls.push(defId),
       });
 
       const strategy = new HeuristicStrategy(api);
-      strategy.executeTick();
+      const result = strategy.executeTick();
 
-      expect(buildCalls).not.toContain(BuildingId.HABITAT);
+      // Growth handler skipped because population is at the threshold
+      expect(result.category).not.toBe("growth");
     });
   });
 

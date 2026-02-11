@@ -12,7 +12,7 @@ function profileTick(colonistCount: number, buildingCount: number): void {
     BuildingId.BASIC_FARM,
     BuildingId.WATER_EXTRACTOR,
     BuildingId.SOLAR_PANEL,
-    BuildingId.HABITAT,
+    BuildingId.COMMON_ROOM,
   ];
 
   for (let i = 0; i < buildingCount; i++) {

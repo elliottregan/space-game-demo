@@ -89,17 +89,29 @@ export const autoAssignWorkers = definePhase({
 });
 
 /**
- * Assign Housing Phase
+ * Assign to District Phase
  *
- * Assigns colonists to available housing.
+ * Assigns colonists without a district to available districts.
  */
-export const assignHousing = definePhase({
-  id: "colony:assignHousing",
-  name: "Assign Housing",
-  reads: ["colony", "buildings"],
-  writes: ["colony"],
+export const assignToDistrict = definePhase({
+  id: "colony:assignToDistrict",
+  name: "Assign to District",
+  reads: ["colony", "districts"],
+  writes: ["districts"],
   execute(ctx: TickContext): GameEvent[] {
-    ctx.colony.assignHousing(ctx.buildings);
+    const colonists = ctx.colony.getColonists();
+    for (const colonist of colonists) {
+      // Check if colonist already has a district
+      if (ctx.districts.getColonistDistrictId(colonist.id)) continue;
+
+      // Find a district with capacity
+      const districts = ctx.districts.getDistricts();
+      for (const district of districts) {
+        if (ctx.districts.assignColonist(district.id, colonist.id)) {
+          break;
+        }
+      }
+    }
     return [];
   },
 });

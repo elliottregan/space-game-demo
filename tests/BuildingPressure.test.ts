@@ -7,6 +7,7 @@ import type { BuildingManager } from "../src/core/systems/BuildingManager";
 import type { ResourceManager } from "../src/core/systems/ResourceManager";
 import type { ColonyManager } from "../src/core/systems/ColonyManager";
 import type { TechnologyTree } from "../src/core/systems/TechnologyTree";
+import type { DistrictManager } from "../src/core/systems/DistrictManager";
 
 function createMockBuilding(definitionId: BuildingId): Building {
   return {
@@ -39,6 +40,9 @@ function createDriftContext(activeBuildings: Building[]): DriftContext {
       getMorale: () => 70,
     } as unknown as ColonyManager,
     buildings: createMockBuildingManager(activeBuildings),
+    districts: {
+      getTotalCapacity: () => 30,
+    } as unknown as DistrictManager,
     technology: {
       getResearchedCount: () => 0,
     } as unknown as TechnologyTree,
@@ -84,7 +88,10 @@ describe("Institutional Building Pressure", () => {
 
   test("multiple buildings stack their pressure", () => {
     const station1 = createMockBuilding(BuildingId.BROADCASTING_STATION);
-    const station2 = { ...createMockBuilding(BuildingId.BROADCASTING_STATION), id: "building_bs_2" };
+    const station2 = {
+      ...createMockBuilding(BuildingId.BROADCASTING_STATION),
+      id: "building_bs_2",
+    };
     const ctx = createDriftContext([station1, station2]);
 
     const trigger = findTrigger("institutional_sovereignty");
@@ -106,9 +113,9 @@ describe("Institutional Building Pressure", () => {
   });
 
   test("buildings without axisPressure do not affect drift", () => {
-    const habitat = createMockBuilding(BuildingId.HABITAT);
+    const basicFarm = createMockBuilding(BuildingId.BASIC_FARM);
     const solarPanel = createMockBuilding(BuildingId.SOLAR_PANEL);
-    const ctx = createDriftContext([habitat, solarPanel]);
+    const ctx = createDriftContext([basicFarm, solarPanel]);
 
     const solidarityTrigger = findTrigger("institutional_solidarity");
     const sovereigntyTrigger = findTrigger("institutional_sovereignty");

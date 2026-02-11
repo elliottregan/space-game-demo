@@ -8,7 +8,6 @@ describe("victory:checkConditions", () => {
     expect(checkVictoryConditions.id).toBe("victory:checkConditions");
     expect(checkVictoryConditions.reads).toContain("technology");
     expect(checkVictoryConditions.reads).toContain("colony");
-    expect(checkVictoryConditions.reads).toContain("resources");
     expect(checkVictoryConditions.writes).toContain("victory");
   });
 
@@ -30,7 +29,7 @@ describe("victory:checkConditions", () => {
         lifeSupport: state.lifeSupport,
         earthCrisis: state.earthCrisis,
         grants: state.grants,
-        grid: state.grid,
+        districts: state.districts,
         scheduler: state.scheduler,
       },
       { autoAssignNewColonists: true },

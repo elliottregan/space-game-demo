@@ -8,6 +8,7 @@ import {
   FlaskConical,
   Heart,
   Home,
+  Landmark,
   Smile,
   Sprout,
   User,
@@ -92,27 +93,24 @@ const workforceStats = computed<GridStat[]>(() => {
   }));
 });
 
-// biome-ignore lint/correctness/noUnusedVariables: used in template
-const housingStats = computed<GridStat[]>(() => {
-  let housed = 0;
-  let unhoused = 0;
+// oxlint-disable-next-line no-unused-vars
+const districtStats = computed<GridStat[]>(() => {
+  let totalCapacity = 0;
+  let totalPopulation = 0;
 
-  for (const colonist of state.colonists) {
-    if (colonist.housingId) {
-      housed++;
-    } else {
-      unhoused++;
-    }
+  for (const district of state.districts) {
+    totalCapacity += district.capacity;
+    totalPopulation += district.population;
   }
 
+  const unhoused = state.colonists.length - totalPopulation;
+
   return [
-    { key: "housed", icon: Home, count: housed, label: "Housed" },
-    {
-      key: "unhoused",
-      icon: CircleOff,
-      count: unhoused,
-      label: "Unhoused",
-    },
+    { key: "districts", icon: Landmark, count: state.districts.length, label: "Districts" },
+    { key: "capacity", icon: Home, count: totalCapacity, label: "Capacity" },
+    ...(unhoused > 0
+      ? [{ key: "unhoused", icon: CircleOff, count: unhoused, label: "Unhoused" }]
+      : []),
   ];
 });
 </script>
@@ -149,7 +147,7 @@ const housingStats = computed<GridStat[]>(() => {
       />
     </div>
     <GStatsGrid title="Workforce" :stats="workforceStats" />
-    <GStatsGrid title="Housing" :stats="housingStats" />
+    <GStatsGrid title="Districts" :stats="districtStats" />
   </GPanel>
 </template>
 

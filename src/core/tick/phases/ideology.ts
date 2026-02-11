@@ -96,7 +96,16 @@ function processProjectOnCompletionEffects(
 export const propagateIdeology = definePhase({
   id: "ideology:propagateIdeology",
   name: "Propagate Ideology",
-  reads: ["ideology", "colony", "workforce", "currentSol", "resources", "buildings", "technology"],
+  reads: [
+    "ideology",
+    "colony",
+    "workforce",
+    "currentSol",
+    "resources",
+    "buildings",
+    "districts",
+    "technology",
+  ],
   writes: ["ideology"],
   execute(ctx) {
     const events: GameEvent[] = [];
@@ -122,6 +131,7 @@ export const propagateIdeology = definePhase({
       resources: ctx.resources,
       colony: ctx.colony,
       buildings: ctx.buildings,
+      districts: ctx.districts,
       technology: ctx.technology,
     });
 
@@ -161,7 +171,7 @@ export const processProjectVotes = definePhase({
   id: "ideology:processProjectVotes",
   name: "Process Project Votes",
   reads: ["ideology", "colony", "workforce", "currentSol", "victory", "scheduler"],
-  writes: ["ideology", "victory", "resources", "scheduler"],
+  writes: ["ideology", "victory", "scheduler"],
   execute(ctx) {
     const events: GameEvent[] = [];
 

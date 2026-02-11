@@ -7,6 +7,7 @@ import {
   SHORTAGE_THRESHOLDS,
 } from "../balance/EconomyBaseline";
 import { REFUGEE_IDEOLOGY } from "../balance/EarthCrisisBalance";
+import { POPULATION_SCALING_DENOMINATOR } from "../balance/DistrictBalance";
 import { COLONIST_SKILL_COUNT, SOCIAL_COHESION } from "../balance/WorkforceBalance";
 import { type SkillId, SKILLS } from "../data/skills";
 import type { Colonist, ColonistIdeology } from "../models/Colonist";
@@ -15,6 +16,7 @@ import { IdeologyManager } from "./IdeologyManager";
 import type { GameEvent } from "../models/GameEvent";
 import { BuildingPurpose } from "../models/Building";
 import type { BuildingManager } from "./BuildingManager";
+import type { DistrictManager } from "./DistrictManager";
 import type { ResourceManager } from "./ResourceManager";
 import { rng } from "../utils/random";
 import type { ColonistQueries } from "../interfaces/Queries";
@@ -180,7 +182,8 @@ export class ColonyManager implements ColonistQueries {
         ((this.health - COLONY_HEALTH.GROWTH_REQUIREMENT) /
           (100 - COLONY_HEALTH.GROWTH_REQUIREMENT)) *
         COLONY_HEALTH.GROWTH_BONUS_MAX;
-      const adjustedGrowthRate = POPULATION_GROWTH_RATE * (1 + healthBonus);
+      const scalingFactor = Math.max(0, 1 - population / POPULATION_SCALING_DENOMINATOR);
+      const adjustedGrowthRate = POPULATION_GROWTH_RATE * scalingFactor * (1 + healthBonus);
 
       if (rng.chance(adjustedGrowthRate)) {
         const newColonist = this.addColonist();
@@ -409,8 +412,8 @@ export class ColonyManager implements ColonistQueries {
     }
 
     // Clear housing assignment
-    if (colonist.housingId) {
-      colonist.housingId = undefined;
+    if (colonist.districtId) {
+      colonist.districtId = undefined;
     }
 
     this.colonists.delete(id);
@@ -550,52 +553,18 @@ export class ColonyManager implements ColonistQueries {
   }
 
   /**
-   * Assigns unhoused colonists to available habitats with capacity.
+   * Assigns unhoused colonists to available districts with capacity.
    * Already-housed colonists are not reassigned.
-   * Clears housing for colonists in non-existent or inactive habitats.
    */
-  assignHousing(buildingManager: BuildingManager): void {
-    const habitats = buildingManager.getBuildings().filter((b) => {
-      const def = buildingManager.getDefinition(b.definitionId);
-      return (
-        def?.capacity &&
-        def.capacity > 0 &&
-        def.purpose === BuildingPurpose.Residential &&
-        b.status === "active"
-      );
-    });
-
-    // Clear housing for colonists in non-existent or inactive habitats
-    const validHabitatIds = new Set(habitats.map((h) => h.id));
+  assignToDistrict(districtManager: DistrictManager): void {
     for (const colonist of this.colonists.values()) {
-      if (colonist.housingId && !validHabitatIds.has(colonist.housingId)) {
-        colonist.housingId = undefined;
-      }
-    }
+      if (colonist.districtId) continue; // Already in a district
 
-    // Get current housing counts per habitat
-    const housingCounts = new Map<string, number>();
-    for (const habitat of habitats) {
-      housingCounts.set(habitat.id, 0);
-    }
-
-    // Count currently housed colonists
-    for (const colonist of this.colonists.values()) {
-      if (colonist.housingId && housingCounts.has(colonist.housingId)) {
-        housingCounts.set(colonist.housingId, (housingCounts.get(colonist.housingId) || 0) + 1);
-      }
-    }
-
-    // Assign unhoused colonists to available habitats
-    for (const colonist of this.colonists.values()) {
-      if (colonist.housingId) continue; // Already housed
-
-      for (const habitat of habitats) {
-        const def = buildingManager.getDefinition(habitat.definitionId);
-        const currentCount = housingCounts.get(habitat.id) || 0;
-        if (def?.capacity && currentCount < def.capacity) {
-          colonist.housingId = habitat.id;
-          housingCounts.set(habitat.id, currentCount + 1);
+      // Find a district with capacity
+      const districts = districtManager.getDistricts();
+      for (const district of districts) {
+        if (districtManager.assignColonist(district.id, colonist.id)) {
+          colonist.districtId = district.id;
           break;
         }
       }
@@ -606,18 +575,17 @@ export class ColonyManager implements ColonistQueries {
    * Returns all colonists without housing assignments.
    */
   getUnhousedColonists(): Colonist[] {
-    return Array.from(this.colonists.values()).filter((c) => !c.housingId);
+    return Array.from(this.colonists.values()).filter((c) => !c.districtId);
   }
 
   /**
-   * Returns colonists grouped by their housing assignment (habitat ID).
+   * Returns colonists grouped by their district assignment.
    */
   getHousingAssignments(): Record<string, Colonist[]> {
     const assignments: Record<string, Colonist[]> = {};
     for (const colonist of this.colonists.values()) {
-      if (colonist.housingId) {
-        const housingId = colonist.housingId;
-        (assignments[housingId] ??= []).push(colonist);
+      if (colonist.districtId) {
+        (assignments[colonist.districtId] ??= []).push(colonist);
       }
     }
     return assignments;
@@ -629,38 +597,27 @@ export class ColonyManager implements ColonistQueries {
   clearHousingAssignment(colonistId: string): void {
     const colonist = this.colonists.get(colonistId);
     if (colonist) {
-      colonist.housingId = undefined;
+      colonist.districtId = undefined;
     }
   }
 
   /**
-   * Assign a colonist to a specific habitat.
-   * Returns false if colonist not found, building not a habitat, or at capacity.
+   * Assign a colonist to a specific district.
+   * Returns false if colonist not found or district at capacity.
    */
-  assignColonistToHousing(
+  assignColonistToDistrict(
     colonistId: string,
-    buildingId: string,
-    buildings: BuildingManager,
+    districtId: string,
+    districtManager: DistrictManager,
   ): boolean {
     const colonist = this.colonists.get(colonistId);
     if (!colonist) return false;
 
-    const building = buildings.getBuilding(buildingId);
-    if (!building || building.status !== "active") return false;
-
-    const def = buildings.getDefinition(building.definitionId);
-    if (!def?.capacity) return false;
-
-    // Count current residents
-    let currentCount = 0;
-    for (const c of this.colonists.values()) {
-      if (c.housingId === buildingId) currentCount++;
+    if (districtManager.assignColonist(districtId, colonistId)) {
+      colonist.districtId = districtId;
+      return true;
     }
-
-    if (currentCount >= def.capacity) return false;
-
-    colonist.housingId = buildingId;
-    return true;
+    return false;
   }
 
   /**
@@ -741,16 +698,12 @@ export class ColonyManager implements ColonistQueries {
   }
 
   /**
-   * Get total housing capacity from active residential buildings.
+   * Get total housing capacity from all districts.
    */
-  getHousingCapacity(buildingManager: BuildingManager): number {
+  getHousingCapacity(districtManager: DistrictManager): number {
     let totalCapacity = 0;
-    for (const building of buildingManager.getBuildings()) {
-      if (building.status !== "active") continue;
-      const def = buildingManager.getDefinition(building.definitionId);
-      if (def?.capacity && def.capacity > 0 && def.purpose === BuildingPurpose.Residential) {
-        totalCapacity += def.capacity;
-      }
+    for (const district of districtManager.getDistricts()) {
+      totalCapacity += district.capacity;
     }
     return totalCapacity;
   }

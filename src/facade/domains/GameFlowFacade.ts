@@ -4,8 +4,6 @@
 import { GameState } from "../../core/GameState";
 import { STARTING_CONDITIONS } from "../../core/data/startingConditions";
 import type { StartingCondition } from "../../core/models/StartingCondition";
-import type { GridPosition, DepositType, PowerState } from "../../core/models/Grid";
-import type { BuildingPlacement } from "../../core/models/Grid";
 import type { AdvanceSolsResult, GameEvent, VictoryState } from "../types";
 import { err, ok, type Result } from "../types/common";
 
@@ -72,38 +70,6 @@ export class GameFlowFacade {
    */
   getStartingConditions(): readonly StartingCondition[] {
     return STARTING_CONDITIONS;
-  }
-
-  // ==========================================================================
-  // Grid Queries
-  // ==========================================================================
-
-  /**
-   * Get the position of a building on the grid.
-   */
-  getGridBuildingPosition(buildingId: string): GridPosition | null {
-    return this.gameState.grid.getBuildingPosition(buildingId);
-  }
-
-  /**
-   * Get the placement data for a building on the grid.
-   */
-  getGridPlacement(buildingId: string): BuildingPlacement | undefined {
-    return this.gameState.grid.getPlacement(buildingId);
-  }
-
-  /**
-   * Get all deposits on the grid.
-   */
-  getGridDeposits(): Array<{ position: GridPosition; type: DepositType }> {
-    return this.gameState.grid.getAllDeposits();
-  }
-
-  /**
-   * Get power state for a building.
-   */
-  getGridPowerState(buildingId: string): PowerState {
-    return this.gameState.grid.getPowerState(buildingId);
   }
 
   // ==========================================================================

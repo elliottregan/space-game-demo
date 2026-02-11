@@ -17,8 +17,6 @@ export const STARTING_CONDITIONS: StartingCondition[] = [
     preBuiltBuildings: [
       BuildingId.SOLAR_PANEL,
       BuildingId.SOLAR_PANEL,
-      BuildingId.HABITAT,
-      BuildingId.HABITAT,
       BuildingId.BASIC_FARM,
       BuildingId.WATER_EXTRACTOR,
       BuildingId.BASIC_MINE,
@@ -30,14 +28,7 @@ export const STARTING_CONDITIONS: StartingCondition[] = [
     description: "A small outpost with basic infrastructure already in place.",
     population: STARTING_POPULATION,
     resources: STARTING_RESOURCES,
-    preBuiltBuildings: [
-      BuildingId.HABITAT,
-      BuildingId.HABITAT,
-      BuildingId.HABITAT,
-      BuildingId.SOLAR_PANEL,
-      BuildingId.BASIC_FARM,
-      BuildingId.BASIC_FARM,
-    ],
+    preBuiltBuildings: [BuildingId.SOLAR_PANEL, BuildingId.BASIC_FARM, BuildingId.BASIC_FARM],
   },
 ];
 

@@ -91,13 +91,16 @@ export const TEAM_COHESION_THRESHOLD = 0.2;
 /** Initial relationship strength when colonists first work together */
 export const INITIAL_COWORKER_RELATIONSHIP = 0.1;
 
-// ============ Housemate Relationship System ============
+// ============ Neighborhood Relationship System ============
 
-/** Amount relationship strength increases per sol when colonists share housing */
-export const HOUSEMATE_BONDING_RATE = 0.015;
+/** Amount relationship strength increases per sol for colonists in same district */
+export const NEIGHBORHOOD_BONDING_RATE = 0.005;
 
-/** Initial relationship strength when colonists first share housing */
-export const INITIAL_HOUSEMATE_RELATIONSHIP = 0.15;
+/** Initial relationship strength when colonists first share a district */
+export const INITIAL_NEIGHBORHOOD_RELATIONSHIP = 0.08;
+
+/** Weak tie bonding rate for colonists in different districts */
+export const CROSS_DISTRICT_BONDING_RATE = 0.001;
 
 // ============ Cohort Effect System ============
 

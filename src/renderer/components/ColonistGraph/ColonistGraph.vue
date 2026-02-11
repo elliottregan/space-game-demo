@@ -94,16 +94,16 @@ const coworkerPairs = computed(() => {
   return pairs;
 });
 
-// Build housemate pairs from colonist housing
+// Build housemate pairs from colonist districts
 const housematePairs = computed(() => {
   const pairs = new Set<string>();
   const housingGroups = new Map<string, string[]>();
 
   for (const colonist of props.colonists) {
-    if (colonist.housingId) {
-      const group = housingGroups.get(colonist.housingId) || [];
+    if (colonist.districtId) {
+      const group = housingGroups.get(colonist.districtId) || [];
       group.push(colonist.id);
-      housingGroups.set(colonist.housingId, group);
+      housingGroups.set(colonist.districtId, group);
     }
   }
 

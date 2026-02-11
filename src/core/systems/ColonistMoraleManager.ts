@@ -97,7 +97,7 @@ export class ColonistMoraleManager {
    * Returns 0-1 satisfaction.
    */
   private calculateSafetyNeed(colonist: Colonist): number {
-    return colonist.housingId ? 1.0 : 0.0;
+    return colonist.districtId ? 1.0 : 0.0;
   }
 
   /**

@@ -3,7 +3,7 @@ import { TickRunner } from "../TickRunner";
 // Pre-tick phases
 import { updateLaborPoolBonus } from "./pretick";
 import { calculateLifeSupport } from "./lifeSupport";
-import { processGridTick } from "./grid";
+import { processDistrictGrowth } from "./districts";
 // Resource phases
 import { applyResourceFlows, checkResourceDepletion } from "./resources";
 // Building phases
@@ -13,7 +13,7 @@ import {
   processRepairs,
   processRecycling,
 } from "./buildings";
-// Auto-housing phase
+// Auto-housing phase (no-op, replaced by district growth)
 import { checkAutoHousing } from "./autoHousing";
 // Workforce phases
 import { processWorkforceTick } from "./workforce";
@@ -24,7 +24,7 @@ import {
   calculateSocialCohesion,
   processColonyTick,
   autoAssignWorkers,
-  assignHousing,
+  assignToDistrict,
 } from "./colony";
 // Technology phases
 import { processResearch } from "./technology";
@@ -33,7 +33,7 @@ import { propagateIdeology, processProjectVotes } from "./ideology";
 // Grants phases
 import { processGrants } from "./grants";
 // Operations phases
-import { processOperations, processDepositExtraction } from "./operations";
+import { processOperations } from "./operations";
 // Earth Crisis phases
 import { processEarthCrisis } from "./earthCrisis";
 // Events phases
@@ -44,7 +44,7 @@ import { checkVictoryConditions } from "./victory";
 // Re-export all phases
 export { updateLaborPoolBonus } from "./pretick";
 export { calculateLifeSupport } from "./lifeSupport";
-export { processGridTick } from "./grid";
+export { processDistrictGrowth } from "./districts";
 export { applyResourceFlows, checkResourceDepletion } from "./resources";
 export {
   processBuildingsTick,
@@ -52,6 +52,7 @@ export {
   processRepairs,
   processRecycling,
 } from "./buildings";
+// checkAutoHousing is now a no-op; district growth replaces it
 export { checkAutoHousing } from "./autoHousing";
 export { processWorkforceTick } from "./workforce";
 export { visitSocialBuildings, propagateColonistMorale } from "./colonistMorale";
@@ -59,12 +60,12 @@ export {
   calculateSocialCohesion,
   processColonyTick,
   autoAssignWorkers,
-  assignHousing,
+  assignToDistrict,
 } from "./colony";
 export { processResearch } from "./technology";
 export { propagateIdeology, processProjectVotes } from "./ideology";
 export { processGrants } from "./grants";
-export { processOperations, processDepositExtraction } from "./operations";
+export { processOperations } from "./operations";
 export { processEarthCrisis } from "./earthCrisis";
 export { processRandomEvents } from "./events";
 export { checkVictoryConditions } from "./victory";
@@ -90,7 +91,7 @@ export function createStandardTickRunner(): TickRunner {
   // 1. Pre-tick phases
   runner.register(updateLaborPoolBonus);
   runner.register(calculateLifeSupport);
-  runner.register(processGridTick);
+  runner.register(processDistrictGrowth);
 
   // 2. Resource phases
   runner.register(applyResourceFlows);
@@ -111,10 +112,7 @@ export function createStandardTickRunner(): TickRunner {
   runner.register(calculateSocialCohesion);
   runner.register(processColonyTick);
   runner.register(autoAssignWorkers);
-  runner.register(assignHousing);
-
-  // 5b. Auto-housing (after colony phases, before technology)
-  runner.register(checkAutoHousing);
+  runner.register(assignToDistrict);
 
   // 6. Technology phases
   runner.register(processResearch);
@@ -128,7 +126,6 @@ export function createStandardTickRunner(): TickRunner {
 
   // 8. Operations phases
   runner.register(processOperations);
-  runner.register(processDepositExtraction);
 
   // 8b. Earth Crisis phases
   runner.register(processEarthCrisis);

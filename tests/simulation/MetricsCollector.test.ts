@@ -13,7 +13,7 @@ function createVictoryResult(overrides: Partial<RunResult> = {}): RunResult {
     finalSol: 250,
     peakPopulation: 100,
     techsResearched: [TechnologyId.HYDROPONICS],
-    buildingsBuilt: { [BuildingId.HABITAT]: 5 },
+    buildingsBuilt: { [BuildingId.BASIC_FARM]: 5 },
     ...overrides,
   };
 }
@@ -26,7 +26,7 @@ function createDefeatResult(overrides: Partial<RunResult> = {}): RunResult {
     finalSol: 45,
     peakPopulation: 12,
     techsResearched: [],
-    buildingsBuilt: { [BuildingId.HABITAT]: 1 },
+    buildingsBuilt: { [BuildingId.BASIC_FARM]: 1 },
     ...overrides,
   };
 }

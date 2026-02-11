@@ -21,7 +21,7 @@ import { BuildingId, type Building, type BuildingDefinition } from "../../src/co
 
 function createBuildingDefinition(overrides: Partial<BuildingDefinition> = {}): BuildingDefinition {
   return {
-    id: BuildingId.HABITAT,
+    id: BuildingId.BASIC_FARM,
     name: "Test Building",
     description: "A test building",
     cost: { materials: 100 },
@@ -33,7 +33,7 @@ function createBuildingDefinition(overrides: Partial<BuildingDefinition> = {}): 
 function createBuilding(overrides: Partial<Building> = {}): Building {
   return {
     id: "building-1",
-    definitionId: BuildingId.HABITAT,
+    definitionId: BuildingId.BASIC_FARM,
     status: "active",
     constructionProgress: 10,
     assignedWorkers: [],

@@ -79,7 +79,7 @@ describe("GameAPI", () => {
         api.buildings.build(BuildingId.SOLAR_PANEL);
       }
 
-      const result = api.buildings.build(BuildingId.HABITAT);
+      const result = api.buildings.build(BuildingId.BASIC_FARM);
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.type).toBeDefined();

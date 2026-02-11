@@ -5,7 +5,6 @@
  */
 
 import type { Colonist } from "../models/Colonist";
-import type { BuildingPlacement } from "../models/Grid";
 import type { ProjectId } from "../models/NPCInfluence";
 
 /**
@@ -34,10 +33,10 @@ export interface ProjectQueries {
 }
 
 /**
- * Query interface for grid/placement data.
- * Implemented by GridManager.
+ * Query interface for district/placement data.
+ * Implemented by DistrictManager.
  */
-export interface GridQueries {
-  getPlacement(buildingId: string): BuildingPlacement | undefined;
-  getBuildingClusterId(buildingId: string): string | undefined;
+export interface DistrictQueries {
+  getBuildingDistrictId(buildingId: string): string | undefined;
+  getColonistDistrictId(colonistId: string): string | undefined;
 }

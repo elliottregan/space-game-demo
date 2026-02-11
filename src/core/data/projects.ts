@@ -177,12 +177,8 @@ export const PROJECTS: Project[] = [
     axisRequirements: { sovereignty: { min: 0.5 } },
     proposalCost: { materials: 150 },
     isCapstone: true,
-    prerequisites: [
-      ProjectId.UNIVERSAL_HOUSING,
-      ProjectId.HEALTHCARE_EXPANSION,
-      ProjectId.DEMOCRATIC_ASSEMBLY,
-    ],
-    requiredCouncilSupport: 0.65,
+    prerequisites: [ProjectId.UNIVERSAL_HOUSING, ProjectId.DEMOCRATIC_ASSEMBLY],
+    requiredCouncilSupport: 0.55,
     effects: { unlockBuilding: BuildingId.UNITED_MARS_STATION },
   },
 
@@ -238,12 +234,8 @@ export const PROJECTS: Project[] = [
     axisRequirements: { sovereignty: { max: -0.6 }, solidarity: { min: 0.5 } },
     proposalCost: {},
     isCapstone: true,
-    prerequisites: [
-      ProjectId.EARTH_MEMORIAL,
-      ProjectId.HERITAGE_ARCHIVE,
-      ProjectId.IMMIGRATION_PROGRAM,
-    ],
-    requiredCouncilSupport: 0.65,
+    prerequisites: [ProjectId.EARTH_MEMORIAL, ProjectId.HERITAGE_ARCHIVE],
+    requiredCouncilSupport: 0.55,
     effects: { unlockBuilding: BuildingId.SPACE_ELEVATOR },
     onCompletionEffects: [
       {
@@ -265,12 +257,8 @@ export const PROJECTS: Project[] = [
     axisRequirements: { solidarity: { max: -0.5 }, transformation: { min: 0.5 } },
     proposalCost: {},
     isCapstone: true,
-    prerequisites: [
-      ProjectId.VENTURE_CAPITAL_INITIATIVE,
-      ProjectId.ORBITAL_INFRASTRUCTURE,
-      ProjectId.ASTEROID_SURVEY_PROGRAM,
-    ],
-    requiredCouncilSupport: 0.65,
+    prerequisites: [ProjectId.ORBITAL_INFRASTRUCTURE, ProjectId.ASTEROID_SURVEY_PROGRAM],
+    requiredCouncilSupport: 0.55,
     effects: { unlockBuilding: BuildingId.ASTEROID_MINING_PLATFORM },
   },
   {
@@ -281,12 +269,8 @@ export const PROJECTS: Project[] = [
     axisRequirements: { transformation: { max: -0.6 }, solidarity: { min: 0.5 } },
     proposalCost: {},
     isCapstone: true,
-    prerequisites: [
-      ProjectId.HERITAGE_ARCHIVE,
-      ProjectId.EARTH_MEMORIAL,
-      ProjectId.HEALTHCARE_EXPANSION,
-    ],
-    requiredCouncilSupport: 0.65,
+    prerequisites: [ProjectId.HERITAGE_ARCHIVE, ProjectId.HEALTHCARE_EXPANSION],
+    requiredCouncilSupport: 0.55,
     effects: { unlockBuilding: BuildingId.GENESIS_ARK, colonyMoraleBoost: 0.15 },
   },
 ];

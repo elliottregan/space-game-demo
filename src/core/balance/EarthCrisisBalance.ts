@@ -3,7 +3,7 @@
 import type { CrisisThreshold } from "../models/EarthCrisis.js";
 
 export const EARTH_CRISIS_BALANCE = {
-  severityPerSol: 0.15, // ~667 sols to reach 100%
+  severityPerSol: 0.08, // ~1250 sols to reach 100%
   startingSeverity: 0,
 } as const;
 
@@ -16,15 +16,15 @@ export const EARTH_CRISIS_THRESHOLDS: CrisisThreshold[] = [
   },
   {
     severity: 50,
-    effects: [{ type: "refugee_wave", params: { count: 3 } }],
+    effects: [{ type: "refugee_wave", params: { count: 2 } }],
     repeatable: true,
-    repeatInterval: 75,
+    repeatInterval: 100,
   },
   {
     severity: 75,
-    effects: [{ type: "refugee_wave", params: { count: 4 } }],
+    effects: [{ type: "refugee_wave", params: { count: 3 } }],
     repeatable: true,
-    repeatInterval: 50,
+    repeatInterval: 75,
   },
   {
     severity: 100,

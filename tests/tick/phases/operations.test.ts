@@ -25,7 +25,7 @@ describe("operations phases", () => {
         lifeSupport: state.lifeSupport,
         earthCrisis: state.earthCrisis,
         grants: state.grants,
-        grid: state.grid,
+        districts: state.districts,
         scheduler: state.scheduler,
       },
       { autoAssignNewColonists: true },

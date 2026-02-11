@@ -68,7 +68,7 @@ const colonistData = computed(() => {
         workplace: assignment?.buildingName ?? null,
         mastery: MASTERY_DISPLAY_NAMES[c.masteryLevel],
         experience: c.experience,
-        housed: !!c.housingId,
+        housed: !!c.districtId,
         centrality: moraleData?.centrality ?? 0,
         connections,
         isCouncilMember: councilMemberIds.has(c.id),

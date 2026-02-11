@@ -3,7 +3,7 @@ import {
   calculateSocialCohesion,
   processColonyTick,
   autoAssignWorkers,
-  assignHousing,
+  assignToDistrict,
 } from "../../../src/core/tick/phases/colony";
 import { createTickContext } from "../../../src/core/tick/TickContext";
 import { GameState } from "../../../src/core/GameState";
@@ -27,7 +27,7 @@ describe("colony phases", () => {
         lifeSupport: state.lifeSupport,
         earthCrisis: state.earthCrisis,
         grants: state.grants,
-        grid: state.grid,
+        districts: state.districts,
         scheduler: state.scheduler,
       },
       { autoAssignNewColonists: true },
@@ -117,7 +117,7 @@ describe("colony phases", () => {
           lifeSupport: state.lifeSupport,
           earthCrisis: state.earthCrisis,
           grants: state.grants,
-          grid: state.grid,
+          districts: state.districts,
           scheduler: state.scheduler,
         },
         { autoAssignNewColonists: false },
@@ -133,24 +133,24 @@ describe("colony phases", () => {
     });
   });
 
-  describe("assignHousing", () => {
+  describe("assignToDistrict", () => {
     test("has correct phase metadata", () => {
-      expect(assignHousing.id).toBe("colony:assignHousing");
-      expect(assignHousing.name).toBe("Assign Housing");
-      expect(assignHousing.reads).toContain("colony");
-      expect(assignHousing.reads).toContain("buildings");
-      expect(assignHousing.writes).toContain("colony");
+      expect(assignToDistrict.id).toBe("colony:assignToDistrict");
+      expect(assignToDistrict.name).toBe("Assign to District");
+      expect(assignToDistrict.reads).toContain("colony");
+      expect(assignToDistrict.reads).toContain("districts");
+      expect(assignToDistrict.writes).toContain("districts");
     });
 
     test("executes without error", () => {
       const ctx = createTestContext();
-      const events = assignHousing.execute(ctx);
+      const events = assignToDistrict.execute(ctx);
       expect(Array.isArray(events)).toBe(true);
     });
 
     test("returns empty events array", () => {
       const ctx = createTestContext();
-      const events = assignHousing.execute(ctx);
+      const events = assignToDistrict.execute(ctx);
       expect(events).toEqual([]);
     });
   });

@@ -3,14 +3,14 @@ import { IdeologyManager } from "../src/core/systems/IdeologyManager";
 import { ResourceManager } from "../src/core/systems/ResourceManager";
 import { ColonyManager } from "../src/core/systems/ColonyManager";
 import { BuildingManager } from "../src/core/systems/BuildingManager";
+import { DistrictManager } from "../src/core/systems/DistrictManager";
 import type { TechnologyTree } from "../src/core/systems/TechnologyTree";
 import type { DriftContext } from "../src/core/data/factionDrift";
 import type { Colonist, ColonistIdeology } from "../src/core/models/Colonist";
 import { ColonistRole, MasteryLevel } from "../src/core/models/Colonist";
-import { BuildingId, BuildingPurpose } from "../src/core/models/Building";
-import type { BuildingDefinition } from "../src/core/models/Building";
 import * as IdeologyBalance from "../src/core/balance/IdeologyBalance";
 import { AXIS_KEYS } from "../src/core/models/NPCInfluence";
+import { BUILDINGS } from "../src/core/data/buildings";
 
 function createTestColonist(id: string, name: string, ideology: ColonistIdeology): Colonist {
   return {
@@ -28,34 +28,12 @@ function createMockResources(food: number): ResourceManager {
   return new ResourceManager({ food, water: 100, materials: 100 });
 }
 
-function createHabitatDef(capacity: number): BuildingDefinition {
-  return {
-    id: BuildingId.HABITAT,
-    name: "Habitat",
-    description: "Test habitat",
-    cost: { materials: 50 },
-    constructionTime: 5,
-    purpose: BuildingPurpose.Residential,
-    capacity,
-  };
-}
-
-function createMockBuildings(habitatCapacity: number): BuildingManager {
-  const def = createHabitatDef(habitatCapacity);
-  const manager = new BuildingManager([def]);
-
-  if (habitatCapacity > 0) {
-    manager.addBuilding({
-      definitionId: BuildingId.HABITAT,
-      status: "active",
-      constructionProgress: 5,
-      assignedWorkers: [],
-      mode: "normal",
-      broken: false,
-      repairProgress: 0,
-    });
+function createMockDistricts(capacity: number): DistrictManager {
+  const manager = new DistrictManager();
+  if (capacity > 0) {
+    const district = manager.foundDistrict("Central", 0);
+    district.capacity = capacity;
   }
-
   return manager;
 }
 
@@ -93,7 +71,8 @@ function createDriftContext(overrides: {
   return {
     resources: createMockResources(food),
     colony,
-    buildings: createMockBuildings(habitatCapacity),
+    buildings: new BuildingManager(BUILDINGS),
+    districts: createMockDistricts(habitatCapacity),
     technology: createMockTechnology(researchedCount),
   };
 }

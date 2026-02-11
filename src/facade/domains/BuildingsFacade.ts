@@ -3,7 +3,6 @@
 
 import type { GameState } from "../../core/GameState";
 import { BuildingId } from "../../core/models/Building";
-import type { GridPosition } from "../../core/models/Grid";
 import type {
   ActionChecker,
   Building,
@@ -295,11 +294,11 @@ export class BuildingsFacade
   }
 
   /**
-   * Get colonists who can be assigned to a building based on cluster connectivity.
-   * Only returns unassigned colonists whose housing is in the same cluster as the workplace.
+   * Get colonists who can be assigned to a building based on district.
+   * Only returns unassigned colonists whose district matches the building's district.
    */
   getAssignableWorkersForBuilding(buildingId: string): readonly Colonist[] {
-    const workplaceCluster = this.gameState.grid.getBuildingClusterId(buildingId);
+    const workplaceDistrict = this.gameState.districts.getBuildingDistrictId(buildingId);
 
     // Get unassigned colonists
     const unassigned = this.gameState.colony.getColonists().filter((c) => {
@@ -311,9 +310,8 @@ export class BuildingsFacade
     });
 
     return unassigned.filter((colonist) => {
-      if (!colonist.housingId) return false;
-      const housingCluster = this.gameState.grid.getBuildingClusterId(colonist.housingId);
-      return housingCluster === workplaceCluster;
+      if (!colonist.districtId) return false;
+      return colonist.districtId === workplaceDistrict;
     });
   }
 
@@ -322,9 +320,9 @@ export class BuildingsFacade
   // ==========================================================================
 
   /**
-   * Start construction of a new building.
+   * Start construction of a new building, optionally in a specific district.
    */
-  build(defId: BuildingId): Result<Building> {
+  build(defId: BuildingId, districtId?: string): Result<Building> {
     return this.executeCommand(() => {
       const check = this.canBuild(defId);
       if (!check.allowed) {
@@ -349,82 +347,22 @@ export class BuildingsFacade
         });
       }
 
-      return ok(building);
-    });
-  }
-
-  /**
-   * Start construction of a new building at a specific grid position.
-   */
-  buildAtPosition(defId: BuildingId, position: GridPosition): Result<Building> {
-    return this.executeCommand(() => {
-      const check = this.canBuild(defId);
-      if (!check.allowed) {
-        return err({
-          type: "PREREQUISITE_NOT_MET",
-          required: defId,
-          reason: check.reason ?? "Cannot build",
-        });
-      }
-
-      // Check if grid position is available
-      const cell = this.gameState.grid.getCell(position.x, position.y);
-      if (!cell) {
-        return err({
-          type: "INVALID_TARGET",
-          target: `${position.x},${position.y}`,
-          reason: "Position is out of bounds",
-        });
-      }
-      if (cell.buildingId) {
-        return err({
-          type: "INVALID_STATE",
-          current: "occupied",
-          expected: "empty",
-          reason: "Cell is already occupied",
-        });
-      }
-
-      // Build the building
-      const building = this.gameState.buildings.startBuilding(
-        defId,
-        this.gameState.resources,
-        this.gameState.technology,
-      );
-
-      if (!building) {
-        return err({
-          type: "INVALID_TARGET",
-          target: defId,
-          reason: "Build operation failed",
-        });
-      }
-
-      // Place on grid - should succeed since we already validated
-      const placementResult = this.gameState.grid.placeBuilding(building.id, position);
-      if (!placementResult.success) {
-        // This should never happen since we pre-validated, but handle gracefully
-        console.error("Grid placement failed after validation:", placementResult.error);
-        // Don't return error since building was created - let it exist without grid position
-        // A future task could add proper rollback support
+      // Assign to district if specified
+      const targetDistrict = districtId ?? this.gameState.districts.getDistricts()[0]?.id;
+      if (targetDistrict) {
+        this.gameState.districts.assignBuilding(targetDistrict, building.id);
       }
 
       // Register power if this is a power-producing building
       const def = this.gameState.buildings.getDefinition(defId);
       if (def?.powerProduction) {
-        this.gameState.grid.registerPowerSource(building.id, def.powerProduction);
+        this.gameState.districts.registerPowerSource(building.id, def.powerProduction);
       }
 
       // Register power consumption
       if (def?.powerConsumption) {
-        this.gameState.grid.setBuildingPowerConsumption(building.id, def.powerConsumption);
+        this.gameState.districts.registerPowerConsumer(building.id, def.powerConsumption);
       }
-
-      // Update power connections (only active buildings can provide power)
-      const activeBuildingIds = new Set(
-        this.gameState.buildings.getActiveBuildings().map((b) => b.id),
-      );
-      this.gameState.grid.updatePowerConnections(activeBuildingIds);
 
       return ok(building);
     });
@@ -488,16 +426,10 @@ export class BuildingsFacade
         });
       }
 
-      // Remove from grid when recycling starts
-      const pos = this.gameState.grid.getBuildingPosition(buildingId);
-      if (pos) {
-        this.gameState.grid.removeBuilding(pos);
-        // Update power connections after removal
-        const activeBuildingIds = new Set(
-          this.gameState.buildings.getActiveBuildings().map((b) => b.id),
-        );
-        this.gameState.grid.updatePowerConnections(activeBuildingIds);
-      }
+      // Remove from district and unregister power
+      this.gameState.districts.removeBuilding(buildingId);
+      this.gameState.districts.unregisterPowerSource(buildingId);
+      this.gameState.districts.unregisterPowerConsumer(buildingId);
 
       return ok(undefined);
     });
@@ -518,11 +450,8 @@ export class BuildingsFacade
         });
       }
 
-      // Remove from grid first
-      const pos = this.gameState.grid.getBuildingPosition(buildingId);
-      if (pos) {
-        this.gameState.grid.removeBuilding(pos);
-      }
+      // Remove from district
+      this.gameState.districts.removeBuilding(buildingId);
 
       const success = this.gameState.buildings.cancelConstruction(
         buildingId,

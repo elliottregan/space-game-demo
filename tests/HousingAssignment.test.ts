@@ -1,201 +1,122 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { ColonyManager } from "../src/core/systems/ColonyManager";
-import { BuildingManager } from "../src/core/systems/BuildingManager";
-import { ResourceManager } from "../src/core/systems/ResourceManager";
-import { BUILDINGS } from "../src/core/data/buildings";
-import { BuildingId } from "../src/core/models/Building";
+import { DistrictManager } from "../src/core/systems/DistrictManager";
 
 describe("Housing Assignment", () => {
   let colonyManager: ColonyManager;
-  let buildingManager: BuildingManager;
-  let resources: ResourceManager;
+  let districtManager: DistrictManager;
 
   beforeEach(() => {
     colonyManager = new ColonyManager(0);
-    buildingManager = new BuildingManager(BUILDINGS);
-    resources = new ResourceManager({
-      food: 500,
-      water: 500,
-
-      materials: 500,
-    });
+    districtManager = new DistrictManager();
   });
 
-  it("assigns new colonist to available habitat", () => {
-    // Build a habitat (manually set to active for test)
-    const building = buildingManager.startBuilding(BuildingId.HABITAT, resources, {
-      isResearched: () => true,
-    } as never);
-    if (building) {
-      // Force complete construction for test (habitat has constructionTime: 10)
-      for (let i = 0; i < 10; i++) {
-        buildingManager.tick(resources);
-      }
-    }
+  it("assigns new colonist to available district", () => {
+    const district = districtManager.foundDistrict("Alpha", 1);
 
     const colonist = colonyManager.addColonist();
-    colonyManager.assignHousing(buildingManager);
+    colonyManager.assignToDistrict(districtManager);
 
-    expect(colonist.housingId).toBeDefined();
-    expect(colonist.housingId).toBe(building?.id);
+    expect(colonist.districtId).toBeDefined();
+    expect(colonist.districtId).toBe(district.id);
   });
 
-  it("returns unhoused colonists when no capacity", () => {
-    // Add colonists without any habitats
+  it("returns unhoused colonists when no districts exist", () => {
     colonyManager.addColonist();
     colonyManager.addColonist();
-    colonyManager.assignHousing(buildingManager);
+    colonyManager.assignToDistrict(districtManager);
 
     const unhoused = colonyManager.getUnhousedColonists();
     expect(unhoused.length).toBe(2);
   });
 
-  it("respects habitat capacity limits", () => {
-    // Build a habitat with capacity 4
-    const building = buildingManager.startBuilding(BuildingId.HABITAT, resources, {
-      isResearched: () => true,
-    } as never);
-    if (building) {
-      for (let i = 0; i < 10; i++) {
-        buildingManager.tick(resources);
-      }
-    }
+  it("respects district capacity limits", () => {
+    const district = districtManager.foundDistrict("Alpha", 1);
+    district.capacity = 6;
 
-    // Add 8 colonists - only 6 should be housed (habitat capacity is 6)
     for (let i = 0; i < 8; i++) {
       colonyManager.addColonist();
     }
-    colonyManager.assignHousing(buildingManager);
+    colonyManager.assignToDistrict(districtManager);
 
     const unhoused = colonyManager.getUnhousedColonists();
     expect(unhoused.length).toBe(2);
 
-    const housed = colonyManager.getColonists().filter((c) => c.housingId);
+    const housed = colonyManager.getColonists().filter((c) => c.districtId);
     expect(housed.length).toBe(6);
   });
 
-  it("getHousingAssignments returns colonists grouped by habitat", () => {
-    const building = buildingManager.startBuilding(BuildingId.HABITAT, resources, {
-      isResearched: () => true,
-    } as never);
-    if (building) {
-      for (let i = 0; i < 10; i++) {
-        buildingManager.tick(resources);
-      }
-    }
+  it("getHousingAssignments returns colonists grouped by district", () => {
+    const district = districtManager.foundDistrict("Alpha", 1);
 
     colonyManager.addColonist();
     colonyManager.addColonist();
-    colonyManager.assignHousing(buildingManager);
+    colonyManager.assignToDistrict(districtManager);
 
     const assignments = colonyManager.getHousingAssignments();
     expect(Object.keys(assignments).length).toBeGreaterThan(0);
-    expect(assignments[building!.id]?.length).toBe(2);
+    expect(assignments[district.id]?.length).toBe(2);
   });
 
   it("does not reassign already housed colonists", () => {
-    const building = buildingManager.startBuilding(BuildingId.HABITAT, resources, {
-      isResearched: () => true,
-    } as never);
-    if (building) {
-      for (let i = 0; i < 10; i++) {
-        buildingManager.tick(resources);
-      }
-    }
+    districtManager.foundDistrict("Alpha", 1);
 
     const colonist = colonyManager.addColonist();
-    colonyManager.assignHousing(buildingManager);
+    colonyManager.assignToDistrict(districtManager);
 
-    const originalHousingId = colonist.housingId;
+    const originalDistrictId = colonist.districtId;
 
     // Add another colonist and reassign
     colonyManager.addColonist();
-    colonyManager.assignHousing(buildingManager);
+    colonyManager.assignToDistrict(districtManager);
 
-    // Original colonist should still have the same housing
-    expect(colonist.housingId).toBe(originalHousingId);
+    // Original colonist should still have the same district
+    expect(colonist.districtId).toBe(originalDistrictId);
   });
 
   it("clearHousingAssignment removes housing from colonist", () => {
-    const building = buildingManager.startBuilding(BuildingId.HABITAT, resources, {
-      isResearched: () => true,
-    } as never);
-    if (building) {
-      for (let i = 0; i < 10; i++) {
-        buildingManager.tick(resources);
-      }
-    }
+    districtManager.foundDistrict("Alpha", 1);
 
     const colonist = colonyManager.addColonist();
-    colonyManager.assignHousing(buildingManager);
-    expect(colonist.housingId).toBeDefined();
+    colonyManager.assignToDistrict(districtManager);
+    expect(colonist.districtId).toBeDefined();
 
     colonyManager.clearHousingAssignment(colonist.id);
-    expect(colonist.housingId).toBeUndefined();
+    expect(colonist.districtId).toBeUndefined();
   });
 
-  it("only assigns to active habitats, not pending", () => {
-    // Start building but don't complete
-    buildingManager.startBuilding(BuildingId.HABITAT, resources, {
-      isResearched: () => true,
-    } as never);
+  it("assigns across multiple districts", () => {
+    const district1 = districtManager.foundDistrict("Alpha", 1);
+    district1.capacity = 4;
+    const district2 = districtManager.foundDistrict("Beta", 1);
+    district2.capacity = 4;
 
-    colonyManager.addColonist();
-    colonyManager.assignHousing(buildingManager);
-
-    const unhoused = colonyManager.getUnhousedColonists();
-    expect(unhoused.length).toBe(1);
-  });
-
-  it("assigns across multiple habitats", () => {
-    // Build two habitats (capacity 4 each = 8 total)
-    const building1 = buildingManager.startBuilding(BuildingId.HABITAT, resources, {
-      isResearched: () => true,
-    } as never);
-    const building2 = buildingManager.startBuilding(BuildingId.HABITAT, resources, {
-      isResearched: () => true,
-    } as never);
-
-    // Complete both
-    for (let i = 0; i < 10; i++) {
-      buildingManager.tick(resources);
-    }
-
-    // Add 6 colonists - should fit across both habitats
     for (let i = 0; i < 6; i++) {
       colonyManager.addColonist();
     }
-    colonyManager.assignHousing(buildingManager);
+    colonyManager.assignToDistrict(districtManager);
 
     const unhoused = colonyManager.getUnhousedColonists();
     expect(unhoused.length).toBe(0);
 
     const assignments = colonyManager.getHousingAssignments();
     const totalHoused =
-      (assignments[building1!.id]?.length || 0) + (assignments[building2!.id]?.length || 0);
+      (assignments[district1.id]?.length || 0) + (assignments[district2.id]?.length || 0);
     expect(totalHoused).toBe(6);
   });
 
-  it("clears housing when habitat becomes broken", () => {
-    const building = buildingManager.startBuilding(BuildingId.HABITAT, resources, {
-      isResearched: () => true,
-    } as never);
-    // Complete construction
-    for (let i = 0; i < 10; i++) {
-      buildingManager.tick(resources);
-    }
+  it("clears housing when district is removed", () => {
+    const district = districtManager.foundDistrict("Alpha", 1);
 
     const colonist = colonyManager.addColonist();
-    colonyManager.assignHousing(buildingManager);
-    expect(colonist.housingId).toBeDefined();
+    colonyManager.assignToDistrict(districtManager);
+    expect(colonist.districtId).toBeDefined();
 
-    // Simulate habitat becoming broken
-    if (building) {
-      building.broken = true;
-      building.status = "disabled";
-    }
+    // Clear the colonist's district assignment to simulate district removal
+    colonyManager.clearHousingAssignment(colonist.id);
+    expect(colonist.districtId).toBeUndefined();
 
-    colonyManager.assignHousing(buildingManager);
-    expect(colonist.housingId).toBeUndefined();
+    const unhoused = colonyManager.getUnhousedColonists();
+    expect(unhoused.length).toBe(1);
   });
 });

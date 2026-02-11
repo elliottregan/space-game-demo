@@ -4,7 +4,6 @@ import type { ResourceDelta } from "./Resources";
 import type { TechnologyId } from "./Technology";
 
 export enum BuildingId {
-  HABITAT = "habitat",
   SOLAR_PANEL = "solar_panel",
   WATER_EXTRACTOR = "water_extractor",
   BASIC_FARM = "basic_farm",
@@ -13,7 +12,6 @@ export enum BuildingId {
   GREENHOUSE = "greenhouse",
   WATER_RECLAIMER = "water_reclaimer",
   RESEARCH_LAB = "research_lab",
-  ADVANCED_HABITAT = "advanced_habitat",
   AUTOMATED_FACTORY = "automated_factory",
   FABRICATOR_3D = "fabricator_3d",
   MINING_STATION = "mining_station",
@@ -26,7 +24,6 @@ export enum BuildingId {
   HYDROPONIC_GARDEN = "hydroponic_garden",
   OBSERVATORY_DOME = "observatory_dome",
   ASSEMBLY_HALL = "assembly_hall",
-  ROVER_DEPOT = "rover_depot",
   SCIENCE_STATION = "science_station",
   BROADCASTING_STATION = "broadcasting_station",
   ACADEMY = "academy",
@@ -71,8 +68,6 @@ export interface BuildingDefinition {
   bondingStrength?: number; // Multiplier for relationship growth rate (default 1.0)
   requiredProject?: ProjectId; // Project that must be passed to unlock
   isVictoryBuilding?: boolean; // Completing this building wins the game
-  /** Range in tiles for extending transit connectivity */
-  depotRange?: number;
   /** Research output per sol when active (for research buildings) */
   researchOutput?: number;
   /** Passive pressure on ideology axes when building is active */

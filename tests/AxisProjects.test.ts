@@ -249,6 +249,6 @@ describe("Axis-gated projects", () => {
     const project = getProject(ProjectId.DECLARATION_OF_SOVEREIGNTY)!;
     expect(project.isCapstone).toBe(true);
     expect(project.axisRequirements?.sovereignty?.min).toBe(0.5);
-    expect(project.requiredCouncilSupport).toBe(0.65);
+    expect(project.requiredCouncilSupport).toBe(0.55);
   });
 });

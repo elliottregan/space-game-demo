@@ -3,7 +3,6 @@
 
 import { BuildingId } from "../core/models/Building";
 import type { EventChoice } from "../core/models/GameEvent";
-import { DepositType, type GridPosition } from "../core/models/Grid";
 import type { AxisPosition, NPCFaction, ProjectId } from "../core/models/NPCInfluence";
 import { GRANT_SOURCES } from "../core/data/grants";
 import { PROJECTS } from "../core/data/projects";
@@ -13,19 +12,6 @@ import type { GameAPI } from "../facade/GameAPI";
 import type { FactionSnapshot, IdeologySnapshot } from "../facade/types/ideology";
 import type { AvailableGrantSnapshot } from "../facade/types/grants";
 import type { ActionCategory, BlockedDecision, EventOccurrence, ExecutedAction } from "./types";
-
-// Center of the grid (5,5) for power source placement preference
-const GRID_CENTER: GridPosition = { x: 5, y: 5 };
-
-// Buildings that produce power (should be placed avoiding deposits)
-const POWER_SOURCE_BUILDINGS = new Set([BuildingId.SOLAR_PANEL, BuildingId.NUCLEAR_REACTOR]);
-
-// Buildings that require deposits
-const RESOURCE_EXTRACTORS: Partial<Record<BuildingId, DepositType>> = {
-  [BuildingId.WATER_EXTRACTOR]: DepositType.WATER,
-  [BuildingId.BASIC_MINE]: DepositType.MINERAL,
-  [BuildingId.MINING_STATION]: DepositType.MINERAL,
-};
 
 /**
  * HeuristicStrategy simulates a "competent player" making reasonable decisions.
@@ -70,6 +56,9 @@ export class HeuristicStrategy {
   private readonly COMMITMENT_FALLBACK_SOL = 50; // If no faction has threshold by this sol, commit to leader
   private readonly MEGASTRUCTURE_MATERIAL_RESERVE = 400; // Reserve for megastructure once close
 
+  // District growth cap — set once at faction commitment and held steady
+  private districtGrowthCapSet = false;
+
   // Strategy options
   private readonly targetFaction: NPCFaction | null;
 
@@ -78,8 +67,8 @@ export class HeuristicStrategy {
     options?: StrategyOptions,
   ) {
     this.targetFaction = options?.targetFaction ?? null;
-    // Balance early rally vs council stability - too early and faction may be volatile
-    this.commitmentMinSol = rng.int(10, 20);
+    // Commit early to maximize rally time — earlier commitment = more council influence
+    this.commitmentMinSol = rng.int(5, 12);
   }
 
   /**
@@ -179,7 +168,7 @@ export class HeuristicStrategy {
   }
 
   /**
-   * Try to build a building at an optimal grid position.
+   * Try to build a building in a district.
    * Returns true if built, records blocked decision if not.
    * When committed to a faction, reserves materials for ideology projects.
    */
@@ -210,108 +199,9 @@ export class HeuristicStrategy {
       }
     }
 
-    // Find the best position for this building type
-    const position = this.findBestPosition(buildingId);
-    if (!position) {
-      if (recordIfBlocked) {
-        this.recordBlockedDecision(category, `build_${buildingId}`, "no valid grid position");
-      }
-      return false;
-    }
-
-    const result = this.api.buildings.buildAtPosition(buildingId, position);
+    // Build in the default district (facade defaults to first district)
+    const result = this.api.buildings.build(buildingId);
     return result.success;
-  }
-
-  /**
-   * Find the best grid position for a building based on its type.
-   * - Power sources: near center, avoiding deposits
-   * - Resource extractors: on matching deposit
-   * - Power consumers: in power range, avoiding deposits
-   */
-  private findBestPosition(buildingId: BuildingId): GridPosition | null {
-    // Resource extractors need matching deposit
-    const requiredDeposit = RESOURCE_EXTRACTORS[buildingId];
-    if (requiredDeposit) {
-      const deposits = this.api.grid.getAvailableDeposits(requiredDeposit);
-      const firstDeposit = deposits[0];
-      if (firstDeposit) {
-        return firstDeposit.position;
-      }
-      return null; // No available deposit of required type
-    }
-
-    // Power sources: prefer center, avoid deposits
-    if (POWER_SOURCE_BUILDINGS.has(buildingId)) {
-      return this.findPowerSourcePosition();
-    }
-
-    // Power consumers: need to be in power range, avoid deposits
-    return this.findPoweredPosition();
-  }
-
-  /**
-   * Find a position for a power source building.
-   * Prefers positions near the center, avoiding deposits.
-   */
-  private findPowerSourcePosition(): GridPosition | null {
-    const emptyCells = this.api.grid.getEmptyCells();
-    const candidates = emptyCells.filter((pos) => !this.api.grid.hasDeposit(pos));
-
-    if (candidates.length === 0) {
-      // Fallback: use any empty cell (even if on deposit)
-      return emptyCells[0] ?? null;
-    }
-
-    // Sort by distance to center (closest first)
-    candidates.sort((a, b) => {
-      const distA = this.api.grid.calculateDistance(a, GRID_CENTER);
-      const distB = this.api.grid.calculateDistance(b, GRID_CENTER);
-      return distA - distB;
-    });
-
-    return candidates[0] ?? null;
-  }
-
-  /**
-   * Find a position for a power-consuming building.
-   * Prefers positions in power range, avoiding deposits.
-   */
-  private findPoweredPosition(): GridPosition | null {
-    const emptyCells = this.api.grid.getEmptyCells();
-
-    // First, try to find a powered cell that's not on a deposit
-    const poweredCells = new Set(this.api.grid.getCellsInPowerRange().map((p) => `${p.x},${p.y}`));
-
-    // Candidates: empty, in power range, not on deposit
-    const poweredCandidates = emptyCells.filter(
-      (pos) => poweredCells.has(`${pos.x},${pos.y}`) && !this.api.grid.hasDeposit(pos),
-    );
-
-    if (poweredCandidates.length > 0) {
-      // Sort by distance to center (prefer central locations)
-      poweredCandidates.sort((a, b) => {
-        const distA = this.api.grid.calculateDistance(a, GRID_CENTER);
-        const distB = this.api.grid.calculateDistance(b, GRID_CENTER);
-        return distA - distB;
-      });
-      return poweredCandidates[0] ?? null;
-    }
-
-    // Fallback: any empty cell not on deposit (building will be unpowered until power expands)
-    const fallbackCandidates = emptyCells.filter((pos) => !this.api.grid.hasDeposit(pos));
-    if (fallbackCandidates.length > 0) {
-      // Sort by distance to center
-      fallbackCandidates.sort((a, b) => {
-        const distA = this.api.grid.calculateDistance(a, GRID_CENTER);
-        const distB = this.api.grid.calculateDistance(b, GRID_CENTER);
-        return distA - distB;
-      });
-      return fallbackCandidates[0] ?? null;
-    }
-
-    // Last resort: any empty cell
-    return emptyCells[0] ?? null;
   }
 
   /**
@@ -379,6 +269,9 @@ export class HeuristicStrategy {
     // First, ensure workers are assigned to buildings
     this.handleWorkerAssignment();
 
+    // Manage district growth cap to save materials for the victory path.
+    this.manageDistrictGrowthCap();
+
     // Rally committed faction every few sols (free action, doesn't consume action budget).
     // This nudges colonist ideology toward the faction and boosts aligned conviction,
     // building council majority over time like the old lobbying system.
@@ -388,6 +281,11 @@ export class HeuristicStrategy {
 
     // Evaluate and assign available grants (free action, doesn't consume action budget)
     this.handleGrantEvaluation();
+
+    // Ensure research is always running (free action — queuing research shouldn't
+    // prevent other decisions). Without research, the colony can never reach
+    // critical techs like Habitat Fabrication or Robotics.
+    this.ensureResearchActive();
 
     // TOP PRIORITY: If capstone is completed, build megastructure to win!
     if (this.committedFactionId && this.tryBuildMegastructureIfReady()) {
@@ -408,9 +306,10 @@ export class HeuristicStrategy {
     const eventResult = this.handleEventResolutionWithResult();
     if (eventResult) return eventResult;
 
-    // Morale: only build morale buildings before earth crisis becomes urgent
+    // Morale: only build morale buildings before earth crisis becomes urgent.
+    // After 40% severity, focus actions on ideology victory instead of morale.
     const earthSeverity = this.api.game.earthCrisisSeverity();
-    const ideologyUrgent = earthSeverity > 50;
+    const ideologyUrgent = earthSeverity > 40;
 
     if (!ideologyUrgent) {
       const moraleResult = this.handleMoraleWithResult();
@@ -567,6 +466,7 @@ export class HeuristicStrategy {
 
   /**
    * Early game bootstrap with action result tracking.
+   * Districts provide housing automatically, so bootstrap only needs food production.
    * @returns TickResult if an action was taken, null otherwise
    */
   private handleEarlyGameBootstrapWithResult(): TickResult | null {
@@ -574,16 +474,13 @@ export class HeuristicStrategy {
 
     // Count active and pending survival buildings
     let farmCount = 0;
-    let habitatCount = 0;
 
     for (const b of buildings.active) {
       if (b.definitionId === BuildingId.BASIC_FARM) farmCount++;
-      if (b.definitionId === BuildingId.HABITAT) habitatCount++;
     }
 
     for (const b of buildings.pending) {
       if (b.definitionId === BuildingId.BASIC_FARM) farmCount++;
-      if (b.definitionId === BuildingId.HABITAT) habitatCount++;
     }
 
     // Critical: must have at least 1 farm
@@ -593,21 +490,121 @@ export class HeuristicStrategy {
       }
     }
 
-    // Critical: must have at least 1 habitat for life support
-    if (habitatCount === 0) {
-      if (this.tryBuild(BuildingId.HABITAT, "survival", false)) {
-        return { category: "survival", action: "build_habitat" };
-      }
-    }
-
     // If we have basic infrastructure, allow normal flow
     // The regular handleSurvival will continue building more as needed
     return null;
   }
 
   /**
+   * Ensure research is always running when a science station exists.
+   * This is a free action (doesn't consume the sol's action budget) because
+   * queueing research is a passive decision, not active construction.
+   * Without continuous research, critical techs like Habitat Fabrication
+   * are never reached and the upgrade/advanced building path is blocked.
+   */
+  private ensureResearchActive(): void {
+    if (!this.hasBuilding(BuildingId.SCIENCE_STATION)) return;
+
+    const techSnapshot = this.api.technology.snapshot();
+    if (techSnapshot.currentResearch) return; // Already researching
+    if (techSnapshot.available.length === 0) return; // Nothing to research
+
+    const affordableTechs = techSnapshot.available
+      .filter((tech) => this.api.technology.canResearch(tech.id).allowed)
+      .sort((a, b) => a.cost.sols - b.cost.sols);
+
+    if (affordableTechs.length > 0 && affordableTechs[0]) {
+      this.api.technology.startResearch(affordableTechs[0].id);
+    }
+  }
+
+  /**
+   * Manage district growth caps to prevent uncontrolled population growth.
+   * Caps districts at a target of 30 colonists — enough workers for a healthy
+   * economy but small enough to prevent refugee-driven resource drain.
+   */
+  private manageDistrictGrowthCap(): void {
+    if (!this.committedFactionId) return;
+
+    const districts = this.api.districts.snapshot();
+
+    // Cap at 30 — prevents costly auto-expansion while maintaining enough
+    // worker capacity. Materials saved go toward project proposals & megastructure.
+    for (const district of districts.districts) {
+      if (district.growthCap === null || district.growthCap > 30) {
+        this.api.districts.setGrowthCap(district.id, 30);
+      }
+    }
+  }
+
+  /**
+   * Get staffing priority for a building definition.
+   * Higher values = staff first. Research buildings get top priority because
+   * without research, the colony can never progress toward victory.
+   */
+  private getStaffingPriority(
+    def: { researchOutput?: number; production?: Record<string, number> } | undefined,
+  ): number {
+    if (!def) return 0;
+    if (def.researchOutput && def.researchOutput > 0) return 4; // Research is critical for victory
+    if (def.production?.food) return 3; // Food prevents starvation
+    if (def.production?.water) return 2; // Water supports farms
+    if (def.production?.materials) return 1; // Materials for building
+    return 0;
+  }
+
+  /**
+   * Check if resource buildings of a given type are understaffed.
+   * Returns true if more than half of worker slots are unfilled.
+   */
+  private isResourceUnderstaffed(buildingId: BuildingId): boolean {
+    const buildings = this.api.buildings.snapshot();
+    const defMap = new Map(buildings.definitions.map((d) => [d.id, d]));
+    const def = defMap.get(buildingId);
+    if (!def?.workerSlots) return false;
+
+    let totalSlots = 0;
+    let filledSlots = 0;
+    for (const b of buildings.active) {
+      if (b.definitionId === buildingId && b.status === "active") {
+        totalSlots += def.workerSlots;
+        filledSlots += b.assignedWorkers.length;
+      }
+    }
+
+    // If no buildings of this type, not understaffed
+    if (totalSlots === 0) return false;
+
+    // Understaffed if less than half the slots are filled
+    return filledSlots < totalSlots * 0.5;
+  }
+
+  /**
+   * Check if the colony is globally workforce-constrained.
+   * Returns true when most worker-requiring buildings are understaffed.
+   * This prevents the AI from spam-building when refugees arrive but
+   * workers are spread too thin to actually produce anything.
+   */
+  private isWorkforceConstrained(): boolean {
+    const buildings = this.api.buildings.snapshot();
+    const defMap = new Map(buildings.definitions.map((d) => [d.id, d]));
+
+    let totalSlots = 0;
+    let filledSlots = 0;
+    for (const b of buildings.active) {
+      const def = defMap.get(b.definitionId);
+      if (!def?.workerSlots || b.status !== "active") continue;
+      totalSlots += def.workerSlots;
+      filledSlots += b.assignedWorkers.length;
+    }
+
+    if (totalSlots === 0) return false;
+    return filledSlots < totalSlots * 0.6;
+  }
+
+  /**
    * Assign unassigned colonists to buildings with worker slots.
-   * Prioritizes: 1) Farms for food production 2) Other production buildings
+   * Prioritizes: 1) Research 2) Food 3) Water 4) Materials
    * Tries to match colonist roles to building requirements.
    */
   private handleWorkerAssignment(): void {
@@ -626,13 +623,13 @@ export class HeuristicStrategy {
 
     if (needsWorkers.length === 0) return;
 
-    // Sort buildings by priority: farms first (food production), then others
+    // Sort buildings by staffing priority: research > food > water > materials > other
     needsWorkers.sort((a, b) => {
       const defA = defMap.get(a.definitionId);
       const defB = defMap.get(b.definitionId);
-      const aIsFood = defA?.production?.food ? 1 : 0;
-      const bIsFood = defB?.production?.food ? 1 : 0;
-      return bIsFood - aIsFood; // Food producers first
+      const priorityA = this.getStaffingPriority(defA);
+      const priorityB = this.getStaffingPriority(defB);
+      return priorityB - priorityA; // Higher priority first
     });
 
     // Get unassigned colonists
@@ -684,11 +681,11 @@ export class HeuristicStrategy {
 
   /**
    * Priority 1 - Survival with action result tracking.
+   * Life support is handled by the colony-wide ledger; districts provide housing.
    * @returns TickResult if an action was taken, null otherwise
    */
   private handleSurvivalWithResult(): TickResult | null {
     const resources = this.api.resources.snapshot();
-    const buildings = this.api.buildings.snapshot();
     const currentFood = resources.current.food;
     const currentWater = resources.current.water;
     const foodProduction = resources.production.food ?? 0;
@@ -696,9 +693,14 @@ export class HeuristicStrategy {
     const waterProduction = resources.production.water ?? 0;
     const waterConsumption = resources.consumption.water ?? 0;
 
-    // Calculate life support capacity vs demand
-    const lifeSupportCapacity = buildings.totalLifeSupportCapacity;
-    const lifeSupportLoad = buildings.totalLifeSupportLoad;
+    const foodFlow = foodProduction - foodConsumption;
+    const waterFlow = waterProduction - waterConsumption;
+
+    // Global workforce check: don't build more resource buildings when existing
+    // ones are understaffed. Exception: critical resource shortages.
+    // Include negative flow as critical — refugees can spike consumption suddenly.
+    const critical = currentFood < 50 || currentWater < 30 || foodFlow < -1 || waterFlow < -1;
+    if (!critical && this.isWorkforceConstrained()) return null;
 
     // Handle water production early - needed for morale recovery
     const waterBuilding = this.handleWaterProduction(
@@ -710,9 +712,7 @@ export class HeuristicStrategy {
       return { category: "survival", action: `build_${waterBuilding}` };
     }
 
-    const foodFlow = foodProduction - foodConsumption;
-
-    // Critical food shortage - prefer greenhouse (25 food/cell) over basic farm (10 food/cell)
+    // Critical food shortage - prefer greenhouse over basic farm
     if (currentFood < 80 || foodFlow < 0) {
       if (this.tryBuild(BuildingId.GREENHOUSE, "survival", false)) {
         return { category: "survival", action: "build_greenhouse" };
@@ -734,24 +734,13 @@ export class HeuristicStrategy {
       }
     }
 
-    // Life support: only build habitats when overcrowded or no capacity.
-    // Habitats also provide housing, so the growth handler already builds them
-    // when housing is needed. This only intervenes in life support emergencies.
-    const colony = this.api.colony.snapshot({ lightweight: true });
-    const totalDemand = colony.population + lifeSupportLoad;
-    if (lifeSupportCapacity === 0 || totalDemand > lifeSupportCapacity) {
-      if (this.tryBuild(BuildingId.HABITAT, "survival")) {
-        return { category: "survival", action: "build_habitat" };
-      }
-    }
-
     return null;
   }
 
   /**
    * Handle water production by building water extractors or reclaimers.
-   * Water Extractor: +4/sol, requires water deposit
-   * Water Reclaimer: +8/sol, requires WATER_RECYCLING tech, no deposit needed
+   * Water Extractor: +4/sol
+   * Water Reclaimer: +8/sol, requires WATER_RECYCLING tech
    * @returns the building ID if built, null otherwise
    */
   private handleWaterProduction(
@@ -769,12 +758,16 @@ export class HeuristicStrategy {
     // Water is fine - no action needed
     if (waterFlow >= WATER_BUFFER && currentWater > MIN_WATER_STOCKPILE) return null;
 
+    // Don't build more water buildings if existing ones are understaffed
+    // (exception: critically low stockpile)
+    if (currentWater > 20 && this.isResourceUnderstaffed(BuildingId.WATER_EXTRACTOR)) return null;
+
     // Prefer Water Reclaimer (+8/sol) if tech is available - no deposit needed
     if (this.tryBuild(BuildingId.WATER_RECLAIMER, "survival", false)) {
       return BuildingId.WATER_RECLAIMER;
     }
 
-    // Fall back to Water Extractor (+4/sol) on water deposits
+    // Fall back to Water Extractor (+4/sol)
     if (this.tryBuild(BuildingId.WATER_EXTRACTOR, "survival")) {
       return BuildingId.WATER_EXTRACTOR;
     }
@@ -798,6 +791,9 @@ export class HeuristicStrategy {
     // If we have enough production, don't build more
     if (materialsProd >= TARGET_MATERIALS_PRODUCTION) return null;
 
+    // Don't build more mines if existing ones are understaffed
+    if (this.isResourceUnderstaffed(BuildingId.BASIC_MINE)) return null;
+
     // Try advanced buildings first (better ROI if tech is available)
     // Automated Factory: 15/sol, no workers needed, requires ROBOTICS
     if (this.tryBuild(BuildingId.AUTOMATED_FACTORY, "infrastructure", false)) {
@@ -809,7 +805,7 @@ export class HeuristicStrategy {
       return BuildingId.FABRICATOR_3D;
     }
 
-    // Basic Mine: 4/sol, requires mineral deposit
+    // Basic Mine: 4/sol
     // Build multiple mines to reach target production
     if (this.tryBuild(BuildingId.BASIC_MINE, "infrastructure")) {
       return BuildingId.BASIC_MINE;
@@ -911,27 +907,18 @@ export class HeuristicStrategy {
   private scoreEventChoice(choice: Readonly<EventChoice>): number {
     let score = 0;
 
-    // Population effects - context-dependent scoring
+    // Population effects
     if (choice.effects.population !== undefined) {
       if (choice.effects.population < 0) {
         // Avoid population loss - heavily penalize
         score -= 1000 * Math.abs(choice.effects.population);
       } else {
-        // Population gain: check if we can sustain more colonists.
-        // When grid space is critically low, more colonists lead to starvation
-        // because farms need grid cells and there's nowhere to build them.
-        const gridEmpty = this.api.grid.getEmptyCells().length;
-
-        if (gridEmpty < 15) {
-          // Grid nearly full - population gain will cause starvation
-          score -= 50 * choice.effects.population;
-        } else {
-          score += 100 * choice.effects.population;
-        }
+        // Population gain is always positive — districts auto-grow housing
+        score += 100 * choice.effects.population;
       }
     }
 
-    // Resource effects - sum up net stockpiled resources (power is grid-based, not scored here)
+    // Resource effects - sum up net stockpiled resources
     if (choice.effects.resources) {
       const resources = choice.effects.resources;
       score += resources.food ?? 0;
@@ -1023,7 +1010,6 @@ export class HeuristicStrategy {
   private handleInfrastructureWithResult(): TickResult | null {
     const techSnapshot = this.api.technology.snapshot();
     const resources = this.api.resources.snapshot();
-    const gridEmpty = this.api.grid.getEmptyCells().length;
 
     // Build Science Station for research capability (needed for any research to progress)
     if (!this.hasBuilding(BuildingId.SCIENCE_STATION)) {
@@ -1033,7 +1019,6 @@ export class HeuristicStrategy {
     }
 
     // Upgrade Science Station -> Research Lab for 3x research output (requires HABITAT_FABRICATION)
-    // Upgrades don't consume grid space, so always try
     if (
       this.hasBuilding(BuildingId.SCIENCE_STATION) &&
       !this.hasBuilding(BuildingId.RESEARCH_LAB)
@@ -1044,20 +1029,13 @@ export class HeuristicStrategy {
       }
     }
 
-    // Start cheapest available research if none active (no grid cost)
+    // Research is now handled as a free action in ensureResearchActive().
+    // Record blocked research for bottleneck analysis only.
     if (!techSnapshot.currentResearch && techSnapshot.available.length > 0) {
-      const affordableTechs = techSnapshot.available
-        .filter((tech) => this.api.technology.canResearch(tech.id).allowed)
-        .sort((a, b) => a.cost.sols - b.cost.sols);
-
-      if (affordableTechs.length > 0) {
-        const cheapest = affordableTechs[0];
-        if (cheapest) {
-          this.api.technology.startResearch(cheapest.id);
-          return { category: "infrastructure", action: `research_${cheapest.id}` };
-        }
-      } else {
-        // All available techs are blocked - record first one
+      const affordableTechs = techSnapshot.available.filter(
+        (tech) => this.api.technology.canResearch(tech.id).allowed,
+      );
+      if (affordableTechs.length === 0) {
         const firstTech = techSnapshot.available[0];
         if (firstTech) {
           const canResearch = this.api.technology.canResearch(firstTech.id);
@@ -1070,18 +1048,12 @@ export class HeuristicStrategy {
       }
     }
 
-    // Build solar panel if we have unpowered buildings - essential for all other buildings
-    const powerGrid = this.api.powerGrid.snapshot();
-    const hasUnpowered = powerGrid.buildingCounts.unpowered > 0;
-    if (hasUnpowered) {
+    // Build solar panel if power balance is negative
+    const districtPower = this.api.districts.snapshot().power;
+    if (districtPower.balance < 0) {
       if (this.tryBuild(BuildingId.SOLAR_PANEL, "infrastructure")) {
         return { category: "infrastructure", action: "build_solar_panel" };
       }
-    }
-
-    // When grid space is tight, skip non-essential building to reserve cells for survival
-    if (gridEmpty < 15) {
-      return null;
     }
 
     // Establish materials production - build mines, fabricators, or factories
@@ -1090,11 +1062,11 @@ export class HeuristicStrategy {
       return { category: "infrastructure", action: `build_${materialsBuilding}` };
     }
 
-    // Build speculative solar panels for power headroom (only when grid has space)
+    // Build speculative solar panels for power headroom
     const productionRatio =
-      powerGrid.totalConsumption > 0
-        ? powerGrid.totalProduction / powerGrid.totalConsumption
-        : powerGrid.totalProduction > 0
+      districtPower.consumption > 0
+        ? districtPower.production / districtPower.consumption
+        : districtPower.production > 0
           ? 1.0
           : 0;
     if (productionRatio < 1.05) {
@@ -1123,6 +1095,8 @@ export class HeuristicStrategy {
 
   /**
    * Priority 5 - Growth with action result tracking.
+   * Districts auto-grow housing, so growth handler focuses on food production
+   * to sustain larger populations.
    * @returns TickResult if an action was taken, null otherwise
    */
   private handleGrowthWithResult(): TickResult | null {
@@ -1130,31 +1104,16 @@ export class HeuristicStrategy {
     const resources = this.api.resources.snapshot();
 
     // Only grow if population < 60 and morale > 60
-    // Lower cap preserves grid space for survival buildings and saves materials for ideology
     if (colony.population >= 60 || colony.morale <= 60) return null;
-
-    // Don't grow if grid space is tight - each new colonist eventually requires
-    // ~2 more buildings (food + power), so stop growing before grid fills up
-    const emptyCells = this.api.grid.getEmptyCells();
-    if (emptyCells.length < 20) return null;
 
     // Don't grow if water is tight - each new colonist needs food, and farms consume water
     const waterSurplus = (resources.production.water ?? 0) - (resources.consumption.water ?? 0);
     if (waterSurplus < 2) return null;
 
-    // Don't grow if life support utilization is high - adding habitats for growth
-    // increases both capacity and housing, creating a feedback loop
-    const buildings = this.api.buildings.snapshot();
-    const lifeSupportCapacity = buildings.totalLifeSupportCapacity;
-    const lifeSupportLoad = buildings.totalLifeSupportLoad;
-    const totalDemand = colony.population + lifeSupportLoad;
-    if (lifeSupportCapacity > 0 && totalDemand / lifeSupportCapacity > 0.85) return null;
-
     // Calculate resource surpluses
     const foodSurplus = (resources.production.food ?? 0) - (resources.consumption.food ?? 0);
 
-    // Need at least 4 food surplus before growing (increased from 2)
-    // This prevents building habitats when food is barely sufficient
+    // Need at least 4 food surplus to support population growth
     if (foodSurplus < 4) {
       if (this.tryBuild(BuildingId.GREENHOUSE, "growth", false)) {
         return { category: "growth", action: "build_greenhouse" };
@@ -1171,23 +1130,6 @@ export class HeuristicStrategy {
       }
       if (this.tryBuild(BuildingId.BASIC_FARM, "growth", false)) {
         return { category: "growth", action: "build_basic_farm" };
-      }
-      return null; // Don't build habitat if food stockpile is low
-    }
-
-    // Build habitat to grow population
-    if (this.tryBuild(BuildingId.HABITAT, "growth")) {
-      return { category: "growth", action: "build_habitat" };
-    }
-
-    // Fallback: Upgrade existing habitats when grid space is limited
-    // Habitat upgrade: 70 materials for +2 capacity (6->8)
-    // Less efficient than new habitat (50 mat for 6 cap), but saves grid space
-    const remainingCells = this.api.grid.getEmptyCells();
-    if (remainingCells.length < 10 && this.hasBuilding(BuildingId.HABITAT)) {
-      const upgradedId = this.tryUpgrade(BuildingId.HABITAT, "growth");
-      if (upgradedId) {
-        return { category: "growth", action: "upgrade_habitat" };
       }
     }
 
@@ -1429,9 +1371,9 @@ export class HeuristicStrategy {
     }
 
     // Step 2: Build institutional buildings for continuous axis pressure.
-    // Only when grid space allows - each uses 1 grid cell and 80-100 materials.
+    // Build early to start nudging faction axes toward capstone requirements.
     const currentSol = this.api.game.currentSol();
-    if (currentSol >= 100) {
+    if (currentSol >= 30) {
       if (!this.hasBuilding(BuildingId.BROADCASTING_STATION)) {
         if (this.tryBuild(BuildingId.BROADCASTING_STATION, "victory")) {
           return { category: "victory", action: "build_broadcasting_station" };
@@ -1461,9 +1403,9 @@ export class HeuristicStrategy {
     }
 
     // Step 4: Propose prerequisite projects when we have council support.
-    // Lower threshold when earth crisis is urgent - better to risk failure than run out of time.
-    const earthSeverity = this.api.game.earthCrisisSeverity();
-    const proposalThreshold = earthSeverity > 50 ? 0.3 : 0.4;
+    // Use an aggressive 30% threshold — failed votes can be retried and
+    // the rally mechanic steadily builds support over time.
+    const proposalThreshold = 0.3;
     if (supportRatio >= proposalThreshold) {
       for (const project of prerequisites) {
         if (completedProjects.includes(project.id)) continue;
@@ -1523,14 +1465,17 @@ export class HeuristicStrategy {
       return false;
     }
 
-    // Check vote projection to avoid wasting materials on doomed proposals.
-    // Only propose when the vote would pass (strict majority) or when urgent.
+    // Check vote projection — skip proposals that would definitely fail.
+    // But if we've met the 30% council threshold, go ahead even without strict majority.
+    // Rally steadily builds support, so early proposals often pass on retry.
     const baseId = this.committedBaseId;
     if (baseId) {
       const projection = this.api.ideology.getVoteProjection(baseId);
       if (!projection.wouldPass) {
-        const earthSev = this.api.game.earthCrisisSeverity();
-        if (earthSev <= 50) {
+        // Only block if support is very low — otherwise take the gamble
+        const totalVotes = projection.votesFor + projection.votesAgainst;
+        const ratio = totalVotes > 0 ? projection.votesFor / totalVotes : 0;
+        if (ratio < 0.35) {
           return false;
         }
       }
@@ -1574,10 +1519,7 @@ export class HeuristicStrategy {
     const supportRatio = totalVotes > 0 ? projection.votesFor / totalVotes : 0;
 
     // Clear when we have decent support - will retry the vote.
-    // Be more aggressive when earth crisis is severe.
-    const earthSev = this.api.game.earthCrisisSeverity();
-    const clearThreshold = earthSev > 50 ? 0.3 : 0.4;
-    if (supportRatio < clearThreshold) return false;
+    if (supportRatio < 0.3) return false;
 
     for (const projectId of failedProposals) {
       this.api.ideology.clearFailedProposal(projectId);
