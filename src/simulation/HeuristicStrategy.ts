@@ -344,6 +344,11 @@ export class HeuristicStrategy {
       if (growthResult) return growthResult;
     }
 
+    // Resource shortage recovery: when all other handlers fall through,
+    // try to boost material production or acquire materials through expeditions.
+    const recoveryResult = this.handleResourceShortageWithResult();
+    if (recoveryResult) return recoveryResult;
+
     return { category: "idle", action: "none" };
   }
 
@@ -735,8 +740,15 @@ export class HeuristicStrategy {
       return { category: "survival", action: `build_${waterBuilding}` };
     }
 
+    // Don't build more food buildings if existing ones are understaffed
+    // (exception: critically low stockpile)
+    const foodUnderstaffed =
+      currentFood > 50 &&
+      (this.isResourceUnderstaffed(BuildingId.BASIC_FARM) ||
+        this.isResourceUnderstaffed(BuildingId.GREENHOUSE));
+
     // Critical food shortage - prefer greenhouse over basic farm
-    if (currentFood < 80 || foodFlow < 0) {
+    if ((currentFood < 80 || foodFlow < 0) && !foodUnderstaffed) {
       if (this.tryBuild(BuildingId.GREENHOUSE, "survival", false)) {
         return { category: "survival", action: "build_greenhouse" };
       }
@@ -748,7 +760,7 @@ export class HeuristicStrategy {
     // Maintain positive flow with buffer for food
     // Food needs buffer of 2 to handle population growth and events
     // This is proactive, so respect material reserve
-    if (foodFlow < 2) {
+    if (foodFlow < 2 && !foodUnderstaffed) {
       if (this.tryBuild(BuildingId.GREENHOUSE, "survival")) {
         return { category: "survival", action: "build_greenhouse" };
       }
@@ -783,7 +795,12 @@ export class HeuristicStrategy {
 
     // Don't build more water buildings if existing ones are understaffed
     // (exception: critically low stockpile)
-    if (currentWater > 20 && this.isResourceUnderstaffed(BuildingId.WATER_EXTRACTOR)) return null;
+    if (
+      currentWater > 20 &&
+      (this.isResourceUnderstaffed(BuildingId.WATER_EXTRACTOR) ||
+        this.isResourceUnderstaffed(BuildingId.WATER_RECLAIMER))
+    )
+      return null;
 
     // Prefer Water Reclaimer (+12/sol) if tech is available - no deposit needed
     if (this.tryBuild(BuildingId.WATER_RECLAIMER, "survival", false)) {
@@ -1707,5 +1724,243 @@ export class HeuristicStrategy {
     // Only return a policy if it has a positive score (actually helps close axis gaps)
     // If all policies score <= 0, axes are already in position - save materials
     return bestScore > 0 ? bestPolicy : null;
+  }
+
+  // ===========================================================================
+  // Resource Shortage Recovery
+  // ===========================================================================
+
+  /**
+   * Resource shortage recovery: activates when all other handlers fall through.
+   * Tries to recover materials and increase production through multiple strategies.
+   *
+   * Strategies in priority order:
+   * 1. Recycle excess buildings (frees workers AND recovers materials)
+   * 2. Build more material production (relax the normal 10/sol target)
+   * 3. Launch salvage expeditions for quick material gains
+   * 4. Prospect sites (reveal/develop) to enable deposit-requiring buildings
+   */
+  private handleResourceShortageWithResult(): TickResult | null {
+    // Strategy 1: Recycle excess resource buildings that produce large surpluses.
+    // This recovers ~40% of build cost in materials AND frees worker slots,
+    // addressing both material shortage and workforce constraints.
+    const recycleResult = this.tryRecycleExcessBuildings();
+    if (recycleResult) return recycleResult;
+
+    // Strategy 2: Build more material production beyond the normal 10/sol target.
+    // When all other priorities are satisfied but we can't afford new buildings,
+    // investing in more material production speeds up future actions.
+    const resources = this.api.resources.snapshot();
+    const materialsProd = resources.production.materials ?? 0;
+    if (materialsProd < 20 && !this.isResourceUnderstaffed(BuildingId.BASIC_MINE)) {
+      if (this.tryBuild(BuildingId.AUTOMATED_FACTORY, "infrastructure", false)) {
+        return { category: "infrastructure", action: "build_automated_factory" };
+      }
+      if (this.tryBuild(BuildingId.FABRICATOR_3D, "infrastructure", false)) {
+        return { category: "infrastructure", action: "build_fabricator_3d" };
+      }
+      if (this.tryBuild(BuildingId.BASIC_MINE, "infrastructure", false)) {
+        return { category: "infrastructure", action: "build_basic_mine" };
+      }
+    }
+
+    // Strategy 3: Launch salvage expeditions for quick material gains.
+    // Salvage: 30 materials cost, 3 crew, 15 sols, 65% success → 50-149 materials.
+    // Expected profit: ~35 materials per expedition.
+    const expeditionResult = this.tryLaunchSalvageExpedition();
+    if (expeditionResult) return expeditionResult;
+
+    // Strategy 4: Prospect new deposit sites for deposit-requiring buildings.
+    const prospectResult = this.tryProspectSites();
+    if (prospectResult) return prospectResult;
+
+    return null;
+  }
+
+  /**
+   * Recycle completely unstaffed resource buildings that produce nothing.
+   * Very conservative: only targets building types with 5+ unstaffed instances
+   * and throttles to one recycle every 15 sols to prevent build-recycle churn.
+   */
+  private lastRecycleSol = -15;
+  private tryRecycleExcessBuildings(): TickResult | null {
+    const currentSol = this.api.game.currentSol();
+
+    // Throttle: only recycle once every 15 sols to prevent churn
+    if (currentSol - this.lastRecycleSol < 15) return null;
+
+    const buildings = this.api.buildings.snapshot();
+    const defMap = new Map(buildings.definitions.map((d) => [d.id, d]));
+
+    // Count active and unstaffed instances per building type
+    const typeCounts = new Map<string, { total: number; unstaffed: number }>();
+    for (const b of buildings.active) {
+      if (b.status !== "active") continue;
+      const def = defMap.get(b.definitionId);
+      if (!def?.workerSlots || !def.production) continue;
+
+      const workers = b.assignedWorkers?.length ?? 0;
+      const counts = typeCounts.get(b.definitionId) ?? { total: 0, unstaffed: 0 };
+      counts.total++;
+      if (workers === 0) counts.unstaffed++;
+      typeCounts.set(b.definitionId, counts);
+    }
+
+    // Only recycle from types with 5+ completely unstaffed buildings
+    // This targets truly excessive overbuilding, not normal fluctuations
+    for (const b of buildings.active) {
+      if (b.status !== "active") continue;
+      if ((b.assignedWorkers?.length ?? 0) > 0) continue;
+
+      const def = defMap.get(b.definitionId);
+      if (!def?.workerSlots || !def.production) continue;
+
+      const counts = typeCounts.get(b.definitionId);
+      if (!counts || counts.unstaffed < 5) continue;
+
+      const canRecycle = this.api.buildings.canRecycle(b.id);
+      if (canRecycle.allowed) {
+        const result = this.api.buildings.recycle(b.id);
+        if (result.success) {
+          this.lastRecycleSol = currentSol;
+          return { category: "infrastructure", action: `recycle_${b.definitionId}` };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Try to launch a salvage expedition for quick material gains.
+   * Only launches when there are idle colonists available as crew.
+   */
+  private tryLaunchSalvageExpedition(): TickResult | null {
+    const ops = this.api.operations.snapshot();
+    const resources = this.api.resources.snapshot();
+
+    // Max 2 concurrent expeditions
+    if (ops.expeditions.length >= 2) return null;
+
+    // Need 30 materials for salvage expedition
+    if (resources.current.materials < 30) return null;
+
+    // Don't spend materials on expeditions if reserving for victory
+    if (this.committedFactionId) {
+      const reserve = this.getProjectMaterialsReserve();
+      if (resources.current.materials - 30 < reserve) return null;
+    }
+
+    // Find unassigned colonists for crew (salvage needs 3)
+    const crewIds = this.getAvailableCrewIds(3);
+    if (crewIds.length < 3) return null;
+
+    const result = this.api.operations.launchExpedition("salvage", crewIds);
+    if (result.success) {
+      return { category: "infrastructure", action: "launch_salvage_expedition" };
+    }
+
+    return null;
+  }
+
+  /**
+   * Try to reveal or develop prospecting sites for deposit-requiring buildings.
+   * Prioritizes material sites (for mines), then water sites.
+   */
+  private tryProspectSites(): TickResult | null {
+    const ops = this.api.operations.snapshot();
+    const resources = this.api.resources.snapshot();
+
+    // Priority 1: develop revealed material sites (enables mines)
+    for (const site of ops.sites) {
+      if (site.revealed && !site.developed && site.resourceType === "materials") {
+        const canDevelop = this.api.operations.canDevelopSite(site.id);
+        if (canDevelop.allowed) {
+          const result = this.api.operations.developSite(site.id);
+          if (result.success) {
+            return { category: "infrastructure", action: "develop_material_site" };
+          }
+        }
+      }
+    }
+
+    // Priority 2: develop revealed water sites
+    for (const site of ops.sites) {
+      if (site.revealed && !site.developed && site.resourceType === "water") {
+        const canDevelop = this.api.operations.canDevelopSite(site.id);
+        if (canDevelop.allowed) {
+          const result = this.api.operations.developSite(site.id);
+          if (result.success) {
+            return { category: "infrastructure", action: "develop_water_site" };
+          }
+        }
+      }
+    }
+
+    // Priority 3: reveal hidden sites (30 materials each)
+    if (resources.current.materials >= 30) {
+      for (const site of ops.sites) {
+        if (!site.revealed) {
+          const canReveal = this.api.operations.canRevealSite(site.id);
+          if (canReveal.allowed) {
+            const result = this.api.operations.revealSite(site.id);
+            if (result.success) {
+              return { category: "infrastructure", action: "reveal_site" };
+            }
+          }
+        }
+      }
+    }
+
+    // Priority 4: launch survey expedition to discover new sites
+    if (ops.expeditions.length < 2 && resources.current.materials >= 20) {
+      // Don't spend materials if reserving for victory
+      if (this.committedFactionId) {
+        const reserve = this.getProjectMaterialsReserve();
+        if (resources.current.materials - 20 < reserve) return null;
+      }
+
+      const crewIds = this.getAvailableCrewIds(2);
+      if (crewIds.length >= 2) {
+        const result = this.api.operations.launchExpedition("survey", crewIds);
+        if (result.success) {
+          return { category: "infrastructure", action: "launch_survey_expedition" };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Get IDs of colonists not assigned to any building or expedition.
+   * Returns up to `count` IDs.
+   */
+  private getAvailableCrewIds(count: number): string[] {
+    const buildings = this.api.buildings.snapshot();
+    const colony = this.api.colony.snapshot({ lightweight: true });
+    const ops = this.api.operations.snapshot();
+
+    const assignedIds = new Set<string>();
+    for (const building of buildings.active) {
+      for (const id of building.assignedWorkers) {
+        assignedIds.add(id);
+      }
+    }
+    for (const expedition of ops.expeditions) {
+      for (const id of expedition.assignedCrew) {
+        assignedIds.add(id);
+      }
+    }
+
+    const available: string[] = [];
+    for (const colonist of colony.colonists) {
+      if (!assignedIds.has(colonist.id)) {
+        available.push(colonist.id);
+        if (available.length >= count) break;
+      }
+    }
+
+    return available;
   }
 }
