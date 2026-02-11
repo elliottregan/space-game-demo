@@ -3,14 +3,15 @@
 
 import { BuildingId } from "../core/models/Building";
 import type { EventChoice } from "../core/models/GameEvent";
-import type { AxisPosition, NPCFaction, ProjectId } from "../core/models/NPCInfluence";
-import { GRANT_SOURCES } from "../core/data/grants";
-import { PROJECTS } from "../core/data/projects";
+import type { AxisPosition, NPCFaction } from "../core/models/NPCInfluence";
+import { getCapstoneGrants, getDistrictGrantTemplate } from "../core/data/districtGrants";
+import type { DistrictGrantId, DistrictGrantTemplate } from "../core/models/DistrictGrant";
 import { POLICIES } from "../core/data/policies";
 import { rng } from "../core/utils/random";
 import type { GameAPI } from "../facade/GameAPI";
 import type { FactionSnapshot, IdeologySnapshot } from "../facade/types/ideology";
 import type { AvailableGrantSnapshot } from "../facade/types/grants";
+import type { ResourceDelta } from "../core/models/Resources";
 import type { ActionCategory, BlockedDecision, EventOccurrence, ExecutedAction } from "./types";
 
 /**
@@ -50,7 +51,7 @@ export class HeuristicStrategy {
   private committedFactionId: string | null = null;
   private committedBaseId: string | null = null;
   // Target capstone -- selected at commitment time and pursued consistently
-  private targetCapstoneId: ProjectId | null = null;
+  private targetCapstoneId: DistrictGrantId | null = null;
   private readonly COMMITMENT_THRESHOLD = 0.4; // 40% council support to commit
   private commitmentMinSol: number; // Set randomly in constructor for variety
   private readonly COMMITMENT_FALLBACK_SOL = 50; // If no faction has threshold by this sol, commit to leader
@@ -58,6 +59,10 @@ export class HeuristicStrategy {
 
   // District growth cap — set once at faction commitment and held steady
   private districtGrowthCapSet = false;
+
+  // Track last grant panel refresh to avoid churning every tick
+  private lastGrantRefreshSol = -1;
+  private readonly GRANT_REFRESH_COOLDOWN = 10; // Only refresh every 10 sols
 
   // Strategy options
   private readonly targetFaction: NPCFaction | null;
@@ -205,37 +210,46 @@ export class HeuristicStrategy {
   }
 
   /**
-   * Calculate materials to reserve for the next ideology project.
-   * Only reserves for projects on our committed faction's victory path
-   * (capstone prerequisites), not all projects in the game.
+   * Calculate materials to reserve for the next identity grant on the victory path.
+   * Only reserves for grants that are prerequisites of the target capstone
+   * and have not yet been completed.
    */
   private getProjectMaterialsReserve(): number {
     if (!this.committedFactionId || !this.targetCapstoneId) return 0;
 
-    const completedProjects = this.api.ideology.getCompletedProjects();
-    const pendingProposals = this.api.ideology.getPendingProposals();
-    const failedProposals = this.api.ideology.getFailedProposals();
-
-    // Only reserve for projects on our victory path, not all projects
-    const capstone = PROJECTS.find((p) => p.id === this.targetCapstoneId);
+    const capstone = getDistrictGrantTemplate(this.targetCapstoneId);
     if (!capstone) return 0;
 
+    const completedGrantIds = this.api.grants.snapshot().active.map((g) => g.templateId);
+    const completedGrants = new Set([...this.getCompletedGrantIds(), ...completedGrantIds]);
+
     const prereqIds = capstone.prerequisites ?? [];
-    const prerequisites = PROJECTS.filter((p) => prereqIds.includes(p.id));
 
     let minCost = 0;
-    for (const project of prerequisites) {
-      if (completedProjects.includes(project.id)) continue;
-      if (pendingProposals.some((p) => p.projectId === project.id)) continue;
-      if (failedProposals.includes(project.id)) continue;
+    for (const prereqId of prereqIds) {
+      if (completedGrants.has(prereqId)) continue;
 
-      const cost = project.proposalCost?.materials ?? 0;
+      const template = getDistrictGrantTemplate(prereqId);
+      const cost = template?.cost?.materials ?? 0;
       if (cost > 0 && (minCost === 0 || cost < minCost)) {
         minCost = cost;
       }
     }
 
     return minCost;
+  }
+
+  /**
+   * Get completed grant IDs from the grant manager snapshot.
+   */
+  private getCompletedGrantIds(): DistrictGrantId[] {
+    // Access completed grants via the axis progress as a proxy,
+    // or check active/completed status through the snapshot
+    const snapshot = this.api.grants.snapshot();
+    // The active grants are currently in progress; completed grants
+    // are tracked by the DistrictGrantManager internally.
+    // We use the available data to avoid proposing already-active grants.
+    return snapshot.active.map((g) => g.templateId);
   }
 
   /**
@@ -334,49 +348,51 @@ export class HeuristicStrategy {
   }
 
   /**
-   * Find the capstone project available for the committed faction's current axis position.
+   * Find the capstone grant for the committed faction's current axis position.
    * Returns the capstone and its megastructure building if found.
    */
-  private findCommittedCapstone(): { capstoneId: ProjectId; megastructureId: BuildingId } | null {
+  private findCommittedCapstone(): {
+    capstoneId: DistrictGrantId;
+    megastructureId: BuildingId;
+  } | null {
     if (!this.targetCapstoneId) return null;
 
-    const capstone = PROJECTS.find((p) => p.id === this.targetCapstoneId);
+    const capstone = getDistrictGrantTemplate(this.targetCapstoneId);
     if (!capstone) return null;
 
-    const megastructureId = capstone.effects?.unlockBuilding as BuildingId | undefined;
+    const megastructureId = capstone.effect?.unlockBuilding as BuildingId | undefined;
     if (!megastructureId) return null;
 
     return { capstoneId: capstone.id, megastructureId };
   }
 
   /**
-   * Select the best capstone to pursue based on the faction's current position.
+   * Select the best capstone grant to pursue based on the faction's current position.
    * Picks the capstone whose axis requirements are closest to already being met.
    */
-  private selectTargetCapstone(factionPosition: AxisPosition): ProjectId | null {
-    const capstones = PROJECTS.filter((p) => p.isCapstone && p.effects?.unlockBuilding);
+  private selectTargetCapstone(factionPosition: AxisPosition): DistrictGrantId | null {
+    const capstones = getCapstoneGrants();
     if (capstones.length === 0) return null;
 
-    let bestCapstone: (typeof capstones)[0] | null = null;
+    let bestCapstone: DistrictGrantTemplate | null = null;
     let bestDistance = Infinity;
 
     for (const capstone of capstones) {
       // Calculate total path difficulty: capstone + all prerequisites.
       // All distances measured from the COMMITTED faction's position because
-      // the faction that champions a project needs council majority to pass votes,
-      // and the AI rallies the committed faction for council control.
-      const allProjects = [capstone];
+      // the faction that champions a grant needs aligned ideology for assignment.
+      const allGrants: DistrictGrantTemplate[] = [capstone];
       if (capstone.prerequisites) {
         for (const prereqId of capstone.prerequisites) {
-          const prereq = PROJECTS.find((p) => p.id === prereqId);
-          if (prereq) allProjects.push(prereq);
+          const prereq = getDistrictGrantTemplate(prereqId);
+          if (prereq) allGrants.push(prereq);
         }
       }
 
       let totalPathDistance = 0;
-      for (const project of allProjects) {
-        if (!project.axisRequirements) continue;
-        for (const [axis, req] of Object.entries(project.axisRequirements)) {
+      for (const grant of allGrants) {
+        if (!grant.axisRequirements) continue;
+        for (const [axis, req] of Object.entries(grant.axisRequirements)) {
           const value = factionPosition[axis as keyof AxisPosition];
           if (req.min !== undefined && value < req.min) totalPathDistance += req.min - value;
           if (req.max !== undefined && value > req.max) totalPathDistance += value - req.max;
@@ -424,29 +440,34 @@ export class HeuristicStrategy {
     const capstoneInfo = this.findCommittedCapstone();
     if (!capstoneInfo) return false;
 
-    const completedProjects = this.api.ideology.getCompletedProjects();
-    if (!completedProjects.includes(capstoneInfo.capstoneId)) return false;
+    // Check if the capstone grant has been completed
+    const canBuild = this.api.buildings.canBuild(capstoneInfo.megastructureId);
+    if (!canBuild.allowed) return false;
 
     return this.tryBuildMegastructure(capstoneInfo.megastructureId);
   }
 
   /**
    * Check if we should reserve materials for the megastructure.
-   * Returns true when we're close to victory (2+ prerequisites done).
+   * Returns true when we're close to victory (axis progress is high).
    */
   private shouldReserveMaterials(): boolean {
     const capstoneInfo = this.findCommittedCapstone();
     if (!capstoneInfo) return false;
 
-    const completedProjects = this.api.ideology.getCompletedProjects();
-    const capstone = PROJECTS.find((p) => p.isCapstone && p.id === capstoneInfo.capstoneId);
-    const prereqIds = capstone?.prerequisites ?? [];
+    const capstone = getDistrictGrantTemplate(capstoneInfo.capstoneId);
+    if (!capstone) return false;
 
-    // Count completed prerequisites
-    const completedPrereqs = prereqIds.filter((id) => completedProjects.includes(id)).length;
+    // Check how many prerequisites are completed via the grant snapshot
+    const grantsSnapshot = this.api.grants.snapshot();
+    const activeTemplateIds = new Set(grantsSnapshot.active.map((g) => g.templateId));
+    const prereqIds = capstone.prerequisites ?? [];
 
-    // Reserve materials once we're close to victory (2+ prerequisites done)
-    if (completedPrereqs >= 2) {
+    // Count prerequisites that are at least in-progress or completed
+    const progressCount = prereqIds.filter((id) => activeTemplateIds.has(id)).length;
+
+    // Reserve materials once we're close to victory
+    if (progressCount >= 1 || prereqIds.length === 0) {
       const resources = this.api.resources.snapshot();
       return resources.current.materials < this.MEGASTRUCTURE_MATERIAL_RESERVE;
     }
@@ -520,19 +541,21 @@ export class HeuristicStrategy {
 
   /**
    * Manage district growth caps to prevent uncontrolled population growth.
-   * Caps districts at a target of 30 colonists — enough workers for a healthy
-   * economy but small enough to prevent refugee-driven resource drain.
+   * Sets caps early to prevent refugee-driven expansion from spiraling.
    */
   private manageDistrictGrowthCap(): void {
-    if (!this.committedFactionId) return;
+    const currentSol = this.api.game.currentSol();
+
+    // Set growth caps starting at sol 20 — early enough to catch refugee waves
+    if (currentSol < 20) return;
 
     const districts = this.api.districts.snapshot();
 
-    // Cap at 30 — prevents costly auto-expansion while maintaining enough
-    // worker capacity. Materials saved go toward project proposals & megastructure.
+    // Cap at 50 — allows population to grow enough for a robust economy
+    // while still saving materials for the victory path.
     for (const district of districts.districts) {
-      if (district.growthCap === null || district.growthCap > 30) {
-        this.api.districts.setGrowthCap(district.id, 30);
+      if (district.growthCap === null || district.growthCap > 50) {
+        this.api.districts.setGrowthCap(district.id, 50);
       }
     }
   }
@@ -543,7 +566,7 @@ export class HeuristicStrategy {
    * without research, the colony can never progress toward victory.
    */
   private getStaffingPriority(
-    def: { researchOutput?: number; production?: Record<string, number> } | undefined,
+    def: { researchOutput?: number; production?: ResourceDelta } | undefined,
   ): number {
     if (!def) return 0;
     if (def.researchOutput && def.researchOutput > 0) return 4; // Research is critical for victory
@@ -740,7 +763,7 @@ export class HeuristicStrategy {
   /**
    * Handle water production by building water extractors or reclaimers.
    * Water Extractor: +4/sol
-   * Water Reclaimer: +8/sol, requires WATER_RECYCLING tech
+   * Water Reclaimer: +12/sol, requires WATER_RECYCLING tech
    * @returns the building ID if built, null otherwise
    */
   private handleWaterProduction(
@@ -762,7 +785,7 @@ export class HeuristicStrategy {
     // (exception: critically low stockpile)
     if (currentWater > 20 && this.isResourceUnderstaffed(BuildingId.WATER_EXTRACTOR)) return null;
 
-    // Prefer Water Reclaimer (+8/sol) if tech is available - no deposit needed
+    // Prefer Water Reclaimer (+12/sol) if tech is available - no deposit needed
     if (this.tryBuild(BuildingId.WATER_RECLAIMER, "survival", false)) {
       return BuildingId.WATER_RECLAIMER;
     }
@@ -1103,8 +1126,8 @@ export class HeuristicStrategy {
     const colony = this.api.colony.snapshot({ lightweight: true });
     const resources = this.api.resources.snapshot();
 
-    // Only grow if population < 60 and morale > 60
-    if (colony.population >= 60 || colony.morale <= 60) return null;
+    // Only grow if population < 80 and morale > 60
+    if (colony.population >= 80 || colony.morale <= 60) return null;
 
     // Don't grow if water is tight - each new colonist needs food, and farms consume water
     const waterSurplus = (resources.production.water ?? 0) - (resources.consumption.water ?? 0);
@@ -1250,19 +1273,19 @@ export class HeuristicStrategy {
       // Calculate full path distance (capstone + prerequisites) for this faction
       let capstoneDistance = Infinity;
       if (capstoneId) {
-        const capstone = PROJECTS.find((p) => p.id === capstoneId);
+        const capstone = getDistrictGrantTemplate(capstoneId);
         if (capstone) {
           capstoneDistance = 0;
-          const allProjects = [capstone];
+          const allGrants: DistrictGrantTemplate[] = [capstone];
           if (capstone.prerequisites) {
             for (const prereqId of capstone.prerequisites) {
-              const prereq = PROJECTS.find((p) => p.id === prereqId);
-              if (prereq) allProjects.push(prereq);
+              const prereq = getDistrictGrantTemplate(prereqId);
+              if (prereq) allGrants.push(prereq);
             }
           }
-          for (const project of allProjects) {
-            if (!project.axisRequirements) continue;
-            for (const [axis, req] of Object.entries(project.axisRequirements)) {
+          for (const grant of allGrants) {
+            if (!grant.axisRequirements) continue;
+            for (const [axis, req] of Object.entries(grant.axisRequirements)) {
               const value = faction.position[axis as keyof AxisPosition];
               if (req.min !== undefined && value < req.min) capstoneDistance += req.min - value;
               if (req.max !== undefined && value > req.max) capstoneDistance += value - req.max;
@@ -1328,6 +1351,8 @@ export class HeuristicStrategy {
   /**
    * Advance faction victory with action result tracking.
    * Uses the fixed target capstone selected at commitment time.
+   * In the new district grants system, the AI picks grants from the available
+   * panel and assigns them to districts rather than proposing projects to council.
    * @returns TickResult if an action was taken, null otherwise
    */
   private advanceFactionVictoryWithResult(factionId: string): TickResult | null {
@@ -1336,33 +1361,20 @@ export class HeuristicStrategy {
 
     if (!this.targetCapstoneId) return null;
 
-    const capstone = PROJECTS.find((p) => p.id === this.targetCapstoneId);
+    const capstone = getDistrictGrantTemplate(this.targetCapstoneId);
     if (!capstone) return null;
 
-    const completedProjects = this.api.ideology.getCompletedProjects();
-    const failedProposals = this.api.ideology.getFailedProposals();
-    const pendingProposals = this.api.ideology.getPendingProposals();
+    const megastructureId = capstone.effect?.unlockBuilding as BuildingId | undefined;
 
-    const capstoneId = capstone.id;
-    const prereqIds = capstone.prerequisites ?? [];
-    const prerequisites = PROJECTS.filter((p) => prereqIds.includes(p.id));
-    const megastructureId = capstone.effects?.unlockBuilding as BuildingId | undefined;
-
-    // Step 0: If capstone is completed and unlocks a megastructure, build it to win!
-    if (completedProjects.includes(capstoneId) && megastructureId) {
-      if (this.tryBuildMegastructure(megastructureId)) {
-        return { category: "victory", action: `build_${megastructureId}` };
+    // Step 0: If capstone megastructure is buildable, build it to win!
+    if (megastructureId) {
+      const canBuild = this.api.buildings.canBuild(megastructureId);
+      if (canBuild.allowed) {
+        if (this.tryBuildMegastructure(megastructureId)) {
+          return { category: "victory", action: `build_${megastructureId}` };
+        }
       }
     }
-
-    // Check current council support for our faction
-    // councilFactionCounts is keyed by baseId, so use committedBaseId
-    const ideologySnapshot = this.api.ideology.snapshot();
-    const counts = ideologySnapshot.councilFactionCounts;
-    const totalSeats = ideologySnapshot.council.length;
-    const baseId = this.committedBaseId ?? faction.baseId;
-    const factionSeats = counts[baseId] ?? 0;
-    const supportRatio = totalSeats > 0 ? factionSeats / totalSeats : 0;
 
     // Step 1: Always keep a policy active to push axes and strengthen faction position.
     // Policies need 30 sols to take effect, so maintaining one continuously is critical.
@@ -1397,30 +1409,11 @@ export class HeuristicStrategy {
       }
     }
 
-    // Step 3: Clear failed proposals that now have favorable vote projection
-    if (this.clearRetryableProposals(baseId, failedProposals)) {
-      return { category: "victory", action: "clear_failed_proposal" };
-    }
-
-    // Step 4: Propose prerequisite projects when we have council support.
-    // Use an aggressive 30% threshold — failed votes can be retried and
-    // the rally mechanic steadily builds support over time.
-    const proposalThreshold = 0.3;
-    if (supportRatio >= proposalThreshold) {
-      for (const project of prerequisites) {
-        if (completedProjects.includes(project.id)) continue;
-        if (pendingProposals.some((p) => p.projectId === project.id)) continue;
-        if (failedProposals.includes(project.id)) continue;
-
-        if (this.tryProposeProject(project.id)) {
-          return { category: "victory", action: `propose_${project.id}` };
-        }
-      }
-    }
-
-    // Step 5: Propose capstone when prerequisites are complete and we have majority
-    if (this.tryProposeCapstone(capstoneId)) {
-      return { category: "victory", action: `propose_${capstoneId}` };
+    // Step 3: Try to assign a victory-path grant from the available panel.
+    // The grant panel shows 3 available grants; we pick one that advances the
+    // capstone prerequisites or the capstone itself.
+    if (this.tryAssignVictoryGrant(capstone)) {
+      return { category: "victory", action: "assign_victory_grant" };
     }
 
     return null;
@@ -1449,137 +1442,127 @@ export class HeuristicStrategy {
   }
 
   /**
-   * Attempt to propose a project.
-   * Proposes when the faction has a reasonable chance of passing the vote.
-   * Accepts some risk of failure since failed proposals can be retried.
-   * @returns true if proposal was submitted
+   * Try to assign a grant from the available panel that advances the victory path.
+   * Prefers grants that are prerequisites of the target capstone, then the capstone itself.
+   * If no victory-path grants are available, refreshes the panel (free action).
+   * @returns true if a grant was assigned
    */
-  private tryProposeProject(projectId: ProjectId): boolean {
-    const eligibility = this.api.ideology.canProposeProject(projectId);
-    if (!eligibility.canPropose) {
-      this.recordBlockedDecision(
-        "victory",
-        `propose_${projectId}`,
-        eligibility.reason ?? "unknown",
-      );
+  private tryAssignVictoryGrant(capstone: DistrictGrantTemplate): boolean {
+    const grantsSnapshot = this.api.grants.snapshot();
+    const currentSol = this.api.game.currentSol();
+
+    if (grantsSnapshot.available.length === 0) {
+      // Panel is empty, refresh it
+      if (currentSol - this.lastGrantRefreshSol >= this.GRANT_REFRESH_COOLDOWN) {
+        this.api.grants.refreshPanel();
+        this.lastGrantRefreshSol = currentSol;
+      }
       return false;
     }
 
-    // Check vote projection — skip proposals that would definitely fail.
-    // But if we've met the 30% council threshold, go ahead even without strict majority.
-    // Rally steadily builds support, so early proposals often pass on retry.
-    const baseId = this.committedBaseId;
-    if (baseId) {
-      const projection = this.api.ideology.getVoteProjection(baseId);
-      if (!projection.wouldPass) {
-        // Only block if support is very low — otherwise take the gamble
-        const totalVotes = projection.votesFor + projection.votesAgainst;
-        const ratio = totalVotes > 0 ? projection.votesFor / totalVotes : 0;
-        if (ratio < 0.35) {
-          return false;
+    const prereqIds = new Set(capstone.prerequisites ?? []);
+    const districts = this.api.districts.snapshot().districts;
+    if (districts.length === 0) return false;
+
+    // Pick the first district as the assignment target
+    const districtId = districts[0]!.id;
+
+    // First priority: look for prerequisite grants on the panel
+    for (const grant of grantsSnapshot.available) {
+      if (prereqIds.has(grant.templateId) || grant.templateId === capstone.id) {
+        const check = this.api.grants.canAssignGrant(grant.id, districtId);
+        if (check.canAssign) {
+          const result = this.api.grants.assignGrant(grant.id, districtId);
+          return result.success;
         }
       }
     }
 
-    const result = this.api.ideology.proposeProject(projectId);
-    return result.success;
-  }
-
-  /**
-   * Attempt to propose the capstone if all conditions are met.
-   * Capstones are expensive so require at least 45% support (close to majority).
-   */
-  private tryProposeCapstone(projectId: ProjectId): boolean {
-    const eligibility = this.api.ideology.canProposeProject(projectId);
-    if (!eligibility.canPropose) return false;
-
-    // Require majority for capstone proposals
-    const baseId = this.committedBaseId;
-    if (baseId) {
-      const projection = this.api.ideology.getVoteProjection(baseId);
-      if (!projection.wouldPass) return false;
+    // Second priority: look for any identity grant that aligns with the victory path
+    for (const grant of grantsSnapshot.available) {
+      if (grant.category === "identity") {
+        const check = this.api.grants.canAssignGrant(grant.id, districtId);
+        if (check.canAssign) {
+          const result = this.api.grants.assignGrant(grant.id, districtId);
+          return result.success;
+        }
+      }
     }
 
-    const result = this.api.ideology.proposeProject(projectId);
-    return result.success;
-  }
-
-  /**
-   * Clear failed proposals when the vote projection looks viable (40%+ support).
-   * @returns true if any proposal was cleared (action taken)
-   */
-  private clearRetryableProposals(
-    factionId: string,
-    failedProposals: readonly ProjectId[],
-  ): boolean {
-    if (failedProposals.length === 0) return false;
-
-    const projection = this.api.ideology.getVoteProjection(factionId);
-    const totalVotes = projection.votesFor + projection.votesAgainst;
-    const supportRatio = totalVotes > 0 ? projection.votesFor / totalVotes : 0;
-
-    // Clear when we have decent support - will retry the vote.
-    if (supportRatio < 0.3) return false;
-
-    for (const projectId of failedProposals) {
-      this.api.ideology.clearFailedProposal(projectId);
-      return true; // One action per tick
+    // No useful grants found — refresh the panel to get new ones (free action)
+    // Only refresh with cooldown to avoid churning and let infrastructure grants be picked up
+    if (currentSol - this.lastGrantRefreshSol >= this.GRANT_REFRESH_COOLDOWN) {
+      this.api.grants.refreshPanel();
+      this.lastGrantRefreshSol = currentSol;
     }
     return false;
   }
 
   /**
-   * Evaluate available grants and assign the best one.
-   * Scores grants by: colony resource needs vs ideology alignment with committed faction.
-   * Assigns to district "colony" (no district system yet, so colony-wide).
+   * Evaluate available grants and assign the best one (free action).
+   * Prioritizes victory-path identity grants, then infrastructure grants.
+   * Also refreshes the panel (with cooldown) when no useful grants are available.
    */
   private handleGrantEvaluation(): void {
     const grantsSnapshot = this.api.grants.snapshot();
-    if (grantsSnapshot.available.length === 0) return;
+    const currentSol = this.api.game.currentSol();
 
+    if (grantsSnapshot.available.length === 0) {
+      this.maybeRefreshPanel(currentSol);
+      return;
+    }
+
+    const districts = this.api.districts.snapshot().districts;
+    if (districts.length === 0) return;
+
+    const districtId = districts[0]!.id;
+
+    // Priority 1: Victory-path grants (identity grants for capstone prerequisites)
+    if (this.committedFactionId && this.targetCapstoneId) {
+      const capstone = getDistrictGrantTemplate(this.targetCapstoneId);
+      if (capstone) {
+        const prereqIds = new Set(capstone.prerequisites ?? []);
+        // Look for capstone or prerequisite grants
+        for (const grant of grantsSnapshot.available) {
+          if (prereqIds.has(grant.templateId) || grant.templateId === capstone.id) {
+            const check = this.api.grants.canAssignGrant(grant.id, districtId);
+            if (check.canAssign) {
+              this.api.grants.assignGrant(grant.id, districtId);
+              return;
+            }
+          }
+        }
+        // Look for any assignable identity grant
+        for (const grant of grantsSnapshot.available) {
+          if (grant.category === "identity") {
+            const check = this.api.grants.canAssignGrant(grant.id, districtId);
+            if (check.canAssign) {
+              this.api.grants.assignGrant(grant.id, districtId);
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    // Priority 2: Infrastructure grants
     const resources = this.api.resources.snapshot();
-
-    // Score each available grant
     let bestGrant: AvailableGrantSnapshot | null = null;
     let bestScore = -Infinity;
 
     for (const grant of grantsSnapshot.available) {
-      let score = 0;
+      if (grant.category === "identity") continue;
 
-      // Score by resource need
-      const source = GRANT_SOURCES.find((s) => s.id === grant.sourceId);
-      if (!source) continue;
-
-      // Check ideology alignment penalty when committed to a faction
-      if (this.committedBaseId) {
-        const faction = this.getFactionById(this.committedFactionId ?? "");
-        if (faction) {
-          // Calculate ideology distance between grant source and committed faction
-          const dist =
-            Math.abs(source.ideologyPosition.solidarity - faction.position.solidarity) +
-            Math.abs(source.ideologyPosition.sovereignty - faction.position.sovereignty) +
-            Math.abs(source.ideologyPosition.transformation - faction.position.transformation);
-          // Penalize grants that push away from committed faction
-          score -= dist * grant.ideologyMagnitude * 20;
-        }
-      }
-
-      // Score by resource value based on current needs
-      // Use the grant's effect description to estimate value
+      let score = 10;
       const foodFlow = (resources.production.food ?? 0) - (resources.consumption.food ?? 0);
       const waterFlow = (resources.production.water ?? 0) - (resources.consumption.water ?? 0);
 
-      // Instant resource grants are straightforward to value
-      if (grant.effectType === "instant") {
-        score += 15; // Base value for instant grants (immediate benefit)
-      } else {
-        score += 10; // Timed grants have sustained value
-      }
-
-      // Prioritize grants when colony is struggling
       if (foodFlow < 2) score += 10;
       if (waterFlow < 2) score += 10;
       if (resources.current.materials < 100) score += 10;
+
+      const materialCost = grant.cost?.materials ?? 0;
+      if (materialCost > 0 && resources.current.materials < materialCost) continue;
 
       if (score > bestScore) {
         bestScore = score;
@@ -1587,12 +1570,27 @@ export class HeuristicStrategy {
       }
     }
 
-    // Only assign if the score is positive (benefit outweighs ideology cost)
     if (bestGrant && bestScore > 0) {
-      const check = this.api.grants.canAssignGrant(bestGrant.id, "colony");
-      if (check.allowed) {
-        this.api.grants.assignGrant(bestGrant.id, "colony");
+      const check = this.api.grants.canAssignGrant(bestGrant.id, districtId);
+      if (check.canAssign) {
+        this.api.grants.assignGrant(bestGrant.id, districtId);
+        return;
       }
+    }
+
+    // No grants assigned — refresh the panel with cooldown
+    if (this.committedFactionId) {
+      this.maybeRefreshPanel(currentSol);
+    }
+  }
+
+  /**
+   * Refresh the grant panel if cooldown has elapsed.
+   */
+  private maybeRefreshPanel(currentSol: number): void {
+    if (currentSol - this.lastGrantRefreshSol >= this.GRANT_REFRESH_COOLDOWN) {
+      this.api.grants.refreshPanel();
+      this.lastGrantRefreshSol = currentSol;
     }
   }
 
@@ -1615,8 +1613,8 @@ export class HeuristicStrategy {
     if (foodSurplus < 0) return false;
 
     // Find the best policy for our victory path first, then check cost
-    const relevantProjects = this.getVictoryPathProjects();
-    const bestPolicy = this.findBestPolicyForProjects(faction.position, relevantProjects);
+    const relevantGrants = this.getVictoryPathGrants();
+    const bestPolicy = this.findBestPolicyForGrants(faction.position, relevantGrants);
     if (!bestPolicy) return false;
 
     // Check if we can afford the actual policy cost
@@ -1627,31 +1625,35 @@ export class HeuristicStrategy {
   }
 
   /**
-   * Get all projects on the victory path: the target capstone and its prerequisites.
+   * Get all grants on the victory path: the target capstone and its prerequisites.
    * If no target is set, returns all capstones to guide policy toward one.
    */
-  private getVictoryPathProjects(): typeof PROJECTS {
+  private getVictoryPathGrants(): readonly DistrictGrantTemplate[] {
     if (this.targetCapstoneId) {
-      const capstone = PROJECTS.find((p) => p.id === this.targetCapstoneId);
+      const capstone = getDistrictGrantTemplate(this.targetCapstoneId);
       if (capstone) {
         const prereqIds = capstone.prerequisites ?? [];
-        const prereqs = PROJECTS.filter((p) => prereqIds.includes(p.id));
+        const prereqs: DistrictGrantTemplate[] = [];
+        for (const id of prereqIds) {
+          const prereq = getDistrictGrantTemplate(id);
+          if (prereq) prereqs.push(prereq);
+        }
         return [capstone, ...prereqs];
       }
     }
 
     // No target capstone set -- return all capstones
-    return PROJECTS.filter((p) => p.isCapstone);
+    return getCapstoneGrants();
   }
 
   /**
    * Find the best policy to declare based on what axis movement is needed.
-   * Considers both meeting unmet project axis requirements and maintaining met ones.
+   * Considers both meeting unmet grant axis requirements and maintaining met ones.
    * Unmet requirements are weighted heavily; policies that endanger met requirements are penalized.
    */
-  private findBestPolicyForProjects(
+  private findBestPolicyForGrants(
     factionPosition: AxisPosition,
-    projects: typeof PROJECTS,
+    grants: readonly DistrictGrantTemplate[],
   ): (typeof POLICIES)[number] | null {
     let bestPolicy: (typeof POLICIES)[number] | null = null;
     let bestScore = -Infinity;
@@ -1660,12 +1662,12 @@ export class HeuristicStrategy {
       let score = 0;
       const movement = policy.direction * policy.strength;
 
-      for (const project of projects) {
-        if (!project.axisRequirements) continue;
-        const req = project.axisRequirements[policy.axis];
+      for (const grant of grants) {
+        if (!grant.axisRequirements) continue;
+        const req = grant.axisRequirements[policy.axis as keyof AxisPosition];
         if (!req) continue;
 
-        const currentValue = factionPosition[policy.axis];
+        const currentValue = factionPosition[policy.axis as keyof AxisPosition];
 
         if (req.min !== undefined) {
           const gap = req.min - currentValue;

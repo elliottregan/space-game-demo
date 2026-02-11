@@ -1,6 +1,6 @@
 import { type BuildingDefinition, BuildingId, BuildingPurpose } from "../models/Building";
 import { ColonistRole } from "../models/Colonist";
-import { ProjectId } from "../models/NPCInfluence";
+import { DistrictGrantId } from "../models/DistrictGrant";
 import { TechnologyId } from "../models/Technology";
 
 export const BUILDINGS: BuildingDefinition[] = [
@@ -36,7 +36,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     description: "Simple hydroponic food production",
     cost: { materials: 45 },
     constructionTime: 12,
-    production: { food: 10 },
+    production: { food: 15 },
     consumption: { water: 2 },
     powerConsumption: 4,
     workerSlots: 2,
@@ -77,7 +77,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     description: "Advanced food production facility",
     cost: { materials: 100 },
     constructionTime: 20,
-    production: { food: 25 },
+    production: { food: 35 },
     consumption: { water: 8 },
     powerConsumption: 5,
     workerSlots: 4,
@@ -91,7 +91,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     description: "Recycles water for efficiency",
     cost: { materials: 60 },
     constructionTime: 15,
-    production: { water: 8 },
+    production: { water: 12 },
     powerConsumption: 4,
     workerSlots: 2,
     workerRole: ColonistRole.ENGINEERING,
@@ -311,7 +311,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     cost: { materials: 600 },
     constructionTime: 80,
     purpose: BuildingPurpose.Industrial,
-    requiredProject: ProjectId.DEEP_SPACE_MINING_CHARTER,
+    requiredGrant: DistrictGrantId.DEEP_SPACE_MINING_CHARTER,
     isVictoryBuilding: true,
   },
   {
@@ -322,7 +322,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     cost: { materials: 550 },
     constructionTime: 75,
     purpose: BuildingPurpose.Industrial,
-    requiredProject: ProjectId.DECLARATION_OF_SOVEREIGNTY,
+    requiredGrant: DistrictGrantId.DECLARATION_OF_SOVEREIGNTY,
     isVictoryBuilding: true,
   },
   {
@@ -333,7 +333,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     cost: { materials: 500 },
     constructionTime: 70,
     purpose: BuildingPurpose.Industrial,
-    requiredProject: ProjectId.EARTH_RELIEF_COMPACT,
+    requiredGrant: DistrictGrantId.EARTH_RELIEF_COMPACT,
     isVictoryBuilding: true,
   },
   {
@@ -344,7 +344,7 @@ export const BUILDINGS: BuildingDefinition[] = [
     cost: { materials: 550 },
     constructionTime: 75,
     purpose: BuildingPurpose.Industrial,
-    requiredProject: ProjectId.GENESIS_VAULT,
+    requiredGrant: DistrictGrantId.GENESIS_VAULT,
     isVictoryBuilding: true,
   },
 ];

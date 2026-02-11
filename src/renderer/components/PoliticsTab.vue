@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import { CouncilPanel } from "./CouncilPanel";
+import { GrantsPanel } from "./GrantsPanel";
 import { PoliticsPanel } from "./PoliticsPanel";
-import { ProjectsPanel } from "./ProjectsPanel";
 import { VictoryProgressPanel } from "./VictoryProgressPanel";
 </script>
 
 <template>
   <div class="politics-tab">
     <VictoryProgressPanel />
+    <GrantsPanel />
     <div class="politics-grid">
       <div class="politics-col">
         <PoliticsPanel />
       </div>
       <div class="politics-col">
         <CouncilPanel />
-        <ProjectsPanel />
       </div>
     </div>
   </div>

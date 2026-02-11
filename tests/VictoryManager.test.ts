@@ -1,6 +1,6 @@
 import { describe, expect, test, beforeEach } from "bun:test";
 import { VictoryManager } from "../src/core/systems/VictoryManager";
-import { ProjectId } from "../src/core/models/NPCInfluence";
+import { DistrictGrantId } from "../src/core/models/DistrictGrant";
 import { BuildingId } from "../src/core/models/Building";
 
 describe("VictoryManager", () => {
@@ -10,9 +10,9 @@ describe("VictoryManager", () => {
     manager = new VictoryManager();
   });
 
-  describe("checkCapstoneVictory", () => {
+  describe("checkCapstoneGrant", () => {
     test("returns capstone_completed event for Earth Relief Compact capstone", () => {
-      const result = manager.checkCapstoneVictory(ProjectId.EARTH_RELIEF_COMPACT);
+      const result = manager.checkCapstoneGrant(DistrictGrantId.EARTH_RELIEF_COMPACT);
       expect(result).not.toBeNull();
       expect(result?.type).toBe("capstone_completed");
       expect(result?.message).toContain("Earth Relief Compact");
@@ -21,7 +21,7 @@ describe("VictoryManager", () => {
     });
 
     test("returns capstone_completed event for Declaration of Sovereignty capstone", () => {
-      const result = manager.checkCapstoneVictory(ProjectId.DECLARATION_OF_SOVEREIGNTY);
+      const result = manager.checkCapstoneGrant(DistrictGrantId.DECLARATION_OF_SOVEREIGNTY);
       expect(result).not.toBeNull();
       expect(result?.type).toBe("capstone_completed");
       expect(result?.message).toContain("Declaration of Sovereignty");
@@ -29,7 +29,7 @@ describe("VictoryManager", () => {
     });
 
     test("returns capstone_completed event for Deep Space Mining Charter capstone", () => {
-      const result = manager.checkCapstoneVictory(ProjectId.DEEP_SPACE_MINING_CHARTER);
+      const result = manager.checkCapstoneGrant(DistrictGrantId.DEEP_SPACE_MINING_CHARTER);
       expect(result).not.toBeNull();
       expect(result?.type).toBe("capstone_completed");
       expect(result?.message).toContain("Deep Space Mining Charter");
@@ -37,7 +37,7 @@ describe("VictoryManager", () => {
     });
 
     test("returns null for non-capstone project", () => {
-      const result = manager.checkCapstoneVictory(ProjectId.EARTH_MEMORIAL);
+      const result = manager.checkCapstoneGrant(DistrictGrantId.EARTH_MEMORIAL);
       expect(result).toBeNull();
     });
   });

@@ -1,37 +1,36 @@
-import type { GrantSourceId, GrantTemplateId } from "../../core/models/Grant";
-
-export interface GrantSourceSnapshot {
-  id: GrantSourceId;
-  name: string;
-  description: string;
-  ideologyPosition: { solidarity: number; sovereignty: number; transformation: number };
-}
+import type { DistrictGrantId, DistrictGrantCategory } from "../../core/models/DistrictGrant";
+import type { GrantSourceId } from "../../core/models/Grant";
 
 export interface AvailableGrantSnapshot {
   id: number;
-  templateId: GrantTemplateId;
-  sourceId: GrantSourceId;
-  sourceName: string;
+  templateId: DistrictGrantId;
   name: string;
   description: string;
-  effectType: "instant" | "timed";
-  ideologyMagnitude: number;
-  offeredSol: number;
+  category: DistrictGrantCategory;
+  cost: { food?: number; water?: number; materials?: number };
+  baseDuration: number;
+  identityTag: string;
+  sourceId?: GrantSourceId;
+  sourceName?: string;
+  isCapstone?: boolean;
 }
 
 export interface ActiveGrantSnapshot {
   id: number;
-  templateId: GrantTemplateId;
-  sourceId: GrantSourceId;
-  sourceName: string;
-  name: string;
+  templateId: DistrictGrantId;
   districtId: string;
+  name: string;
   assignedSol: number;
-  remainingSols?: number;
+  remainingSols: number;
+  totalDuration: number;
 }
 
-export interface GrantsSnapshot {
+export interface DistrictGrantsSnapshot {
   available: AvailableGrantSnapshot[];
   active: ActiveGrantSnapshot[];
-  nextRefreshSol: number;
+  axisProgress: Record<string, number>;
+  completedGrantIds: DistrictGrantId[];
 }
+
+// Keep old name for backwards compatibility with GameAPI imports
+export type GrantsSnapshot = DistrictGrantsSnapshot;

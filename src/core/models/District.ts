@@ -1,3 +1,5 @@
+import type { DistrictIdentity } from "./DistrictGrant";
+
 /**
  * A named population center within the colony.
  * Districts replace the building grid as the primary spatial unit.
@@ -9,6 +11,7 @@ export interface District {
   capacity: number;
   growthCap: number | null;
   buildingIds: string[];
+  identity: DistrictIdentity;
 }
 
 /**

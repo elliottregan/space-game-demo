@@ -6,18 +6,12 @@ import { FOUNDING_COLONISTS, FOUNDING_RELATIONSHIPS } from "./data/foundingColon
 import { TECHNOLOGIES } from "./data/technologies";
 import { BuildingId } from "./models/Building";
 import type { GameEvent } from "./models/GameEvent";
-import {
-  ProjectEffectType,
-  type ProductionModifierParams,
-  type Project,
-  type RecurringEventParams,
-} from "./models/NPCInfluence";
 import { LifeSupportManager } from "./systems/LifeSupportManager";
 import { BuildingManager } from "./systems/BuildingManager";
 import { ColonistMoraleManager } from "./systems/ColonistMoraleManager";
 import { ColonyManager } from "./systems/ColonyManager";
 import { EarthCrisisManager } from "./systems/EarthCrisisManager";
-import { GrantManager } from "./systems/GrantManager";
+import { DistrictGrantManager } from "./systems/DistrictGrantManager";
 import { DistrictManager } from "./systems/DistrictManager";
 import { EventManager } from "./systems/EventManager";
 import { IdeologyManager } from "./systems/IdeologyManager";
@@ -45,7 +39,7 @@ export class GameState {
   lifeSupport: LifeSupportManager;
   ideology: IdeologyManager;
   earthCrisis: EarthCrisisManager;
-  grants: GrantManager;
+  districtGrants: DistrictGrantManager;
   districts: DistrictManager;
   scheduler: RecurringEventScheduler;
 
@@ -89,10 +83,10 @@ export class GameState {
     this.lifeSupport = new LifeSupportManager();
     this.ideology = new IdeologyManager();
     this.earthCrisis = new EarthCrisisManager();
-    this.grants = new GrantManager();
+    this.districtGrants = new DistrictGrantManager();
     this.districts = new DistrictManager();
     this.scheduler = new RecurringEventScheduler();
-    this.buildings.setProjectQueries(this.ideology);
+    this.buildings.setGrantQueries(this.districtGrants);
     this.buildings.setVictoryManager(this.victory);
 
     // Initialize tick runner
@@ -197,40 +191,6 @@ export class GameState {
     }
   }
 
-  /**
-   * Process the onCompletionEffects of a project when it passes.
-   * This handles scheduling recurring events, production modifiers, and conviction boosts.
-   */
-  processProjectEffects(project: Project): void {
-    if (!project.onCompletionEffects) return;
-
-    for (const effect of project.onCompletionEffects) {
-      switch (effect.type) {
-        case ProjectEffectType.RECURRING_EVENT: {
-          const params = effect.params as RecurringEventParams;
-          this.scheduler.register(project.id, params, this.currentSol);
-          break;
-        }
-        case ProjectEffectType.PRODUCTION_MODIFIER: {
-          const params = effect.params as ProductionModifierParams;
-          // Power is handled by the grid system, not resource production
-          if (params.resource !== "power") {
-            this.resources.addProductionBonus(project.id, params.resource, params.amount);
-          }
-          break;
-        }
-        case ProjectEffectType.CONVICTION_BOOST: {
-          // No longer handled here - conviction is managed by the axis-based ideology system
-          break;
-        }
-        case ProjectEffectType.IMMIGRATION_IDEOLOGY_BIAS: {
-          // Handled elsewhere during immigration events
-          break;
-        }
-      }
-    }
-  }
-
   private createPreBuiltBuildings(buildingIds: BuildingId[]): void {
     for (const defId of buildingIds) {
       const def = this.buildings.getDefinition(defId);
@@ -304,7 +264,7 @@ export class GameState {
         ideology: this.ideology,
         lifeSupport: this.lifeSupport,
         earthCrisis: this.earthCrisis,
-        grants: this.grants,
+        districtGrants: this.districtGrants,
         districts: this.districts,
         scheduler: this.scheduler,
       },
@@ -374,7 +334,7 @@ export class GameState {
       lifeSupport: this.lifeSupport.toJSON(),
       ideology: this.ideology.toJSON(),
       earthCrisis: this.earthCrisis.toJSON(),
-      grants: this.grants.toJSON(),
+      districtGrants: this.districtGrants.toJSON(),
       districts: this.districts.toJSON(),
       scheduler: this.scheduler.toJSON(),
       autoAssignNewColonists: this.autoAssignNewColonists,
@@ -408,16 +368,16 @@ export class GameState {
 
     if (data.ideology) {
       state.ideology = IdeologyManager.fromJSON(data.ideology);
-      state.buildings.setProjectQueries(state.ideology);
     }
 
     if (data.earthCrisis) {
       state.earthCrisis = EarthCrisisManager.fromJSON(data.earthCrisis);
     }
 
-    if (data.grants) {
-      state.grants = GrantManager.fromJSON(data.grants);
+    if (data.districtGrants) {
+      state.districtGrants = DistrictGrantManager.fromJSON(data.districtGrants);
     }
+    state.buildings.setGrantQueries(state.districtGrants);
 
     if (data.districts) {
       state.districts = DistrictManager.fromJSON(data.districts);

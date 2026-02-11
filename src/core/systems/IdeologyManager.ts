@@ -1,25 +1,12 @@
 // src/core/systems/IdeologyManager.ts
 
 import type { Colonist, ColonistIdeology } from "../models/Colonist";
-import {
-  ProjectRequirementType,
-  type AxisPosition,
-  type FactionState,
-  type Project,
-  type ProjectId,
-  AXIS_KEYS,
-} from "../models/NPCInfluence";
-import type { TechnologyTree } from "./TechnologyTree";
-import type { BuildingManager } from "./BuildingManager";
-import type { ColonyManager } from "./ColonyManager";
-import type { ResourceManager } from "./ResourceManager";
+import { type AxisPosition, type FactionState, AXIS_KEYS } from "../models/NPCInfluence";
 import type { RelationshipManager } from "./RelationshipManager";
 import * as IdeologyBalance from "../balance/IdeologyBalance";
 import { DRIFT_TRIGGERS, type DriftContext } from "../data/factionDrift";
 import { getFactionName } from "../data/factionNames";
 import { type Policy, getPolicy } from "../data/policies";
-import { getProject } from "../data/projects";
-import type { ProjectQueries } from "../interfaces/Queries";
 import type { GameEvent } from "../models/GameEvent";
 
 /**
@@ -34,27 +21,6 @@ export interface CouncilMember {
   influence: number;
   /** Nearest faction id (or null if neutral) */
   factionId: string | null;
-}
-
-/**
- * A project proposal awaiting council vote.
- */
-export interface PendingProposal {
-  projectId: ProjectId;
-  factionId: string;
-  proposedSol: number;
-  voteSol: number;
-}
-
-/**
- * Result of a council vote on a project.
- */
-export interface VoteResult {
-  projectId: ProjectId;
-  passed: boolean;
-  votesFor: number;
-  votesAgainst: number;
-  totalVotes: number;
 }
 
 /**
@@ -91,13 +57,10 @@ function isNeutral(ideology: ColonistIdeology): boolean {
  * Manages colonist ideology, council selection, and faction support.
  * Ideology spreads through the social network similar to morale.
  */
-export class IdeologyManager implements ProjectQueries {
+export class IdeologyManager {
   private council: CouncilMember[] = [];
   private lastCouncilUpdateSol: number = -1;
   private lastSpreadSol: number = -1;
-  private completedProjects: Set<ProjectId> = new Set();
-  private pendingProposals: Map<ProjectId, PendingProposal> = new Map();
-  private failedProposals: Set<ProjectId> = new Set();
   private factions: FactionState[] = [];
   private activePolicy: { policy: Policy; startSol: number } | null = null;
 
@@ -934,276 +897,6 @@ export class IdeologyManager implements ProjectQueries {
     this.activePolicy = null;
   }
 
-  // ============ Projects ============
-
-  /**
-   * Check if a project has been completed.
-   */
-  isProjectCompleted(projectId: ProjectId): boolean {
-    return this.completedProjects.has(projectId);
-  }
-
-  /**
-   * Mark a project as completed.
-   * Returns a PROJECT_COMPLETED event.
-   */
-  completeProject(projectId: ProjectId): GameEvent[] {
-    this.completedProjects.add(projectId);
-    const project = getProject(projectId);
-    return [
-      {
-        type: "PROJECT_COMPLETED",
-        projectId,
-        projectName: project?.name ?? projectId,
-        severity: "info",
-        message: `Project completed: ${project?.name ?? projectId}`,
-      },
-    ];
-  }
-
-  /**
-   * Get list of completed project IDs.
-   */
-  getCompletedProjects(): readonly ProjectId[] {
-    return [...this.completedProjects];
-  }
-
-  /**
-   * Submit a project proposal for council vote.
-   */
-  submitProposal(projectId: ProjectId, factionId: string, currentSol: number): boolean {
-    if (
-      this.pendingProposals.has(projectId) ||
-      this.completedProjects.has(projectId) ||
-      this.failedProposals.has(projectId)
-    ) {
-      return false;
-    }
-
-    this.pendingProposals.set(projectId, {
-      projectId,
-      factionId,
-      proposedSol: currentSol,
-      voteSol: currentSol + IdeologyBalance.PROJECT_VOTING_PERIOD,
-    });
-
-    return true;
-  }
-
-  /**
-   * Check if a project is pending vote.
-   */
-  isPendingProposal(projectId: ProjectId): boolean {
-    return this.pendingProposals.has(projectId);
-  }
-
-  /**
-   * Check if a project has failed a vote.
-   */
-  isFailedProposal(projectId: ProjectId): boolean {
-    return this.failedProposals.has(projectId);
-  }
-
-  /**
-   * Get all pending proposals.
-   */
-  getPendingProposals(): readonly PendingProposal[] {
-    return [...this.pendingProposals.values()];
-  }
-
-  /**
-   * Get a specific pending proposal.
-   */
-  getPendingProposal(projectId: ProjectId): PendingProposal | undefined {
-    return this.pendingProposals.get(projectId);
-  }
-
-  /**
-   * Preview what the vote outcome would be for a faction.
-   * Counts council members whose nearest faction matches the given factionId.
-   */
-  getVoteProjection(factionId: string): {
-    votesFor: number;
-    votesAgainst: number;
-    wouldPass: boolean;
-  } {
-    const counts = this.getCouncilFactionCounts();
-    const votesFor = counts[factionId] ?? 0;
-    const totalVotes = this.council.length;
-    const votesAgainst = totalVotes - votesFor;
-    const wouldPass = votesFor > votesAgainst;
-
-    return { votesFor, votesAgainst, wouldPass };
-  }
-
-  /**
-   * Process votes for proposals that have reached their vote sol.
-   */
-  processVotes(currentSol: number): VoteResult[] {
-    const results: VoteResult[] = [];
-
-    for (const [projectId, proposal] of this.pendingProposals) {
-      if (currentSol >= proposal.voteSol) {
-        const projection = this.getVoteProjection(proposal.factionId);
-
-        const result: VoteResult = {
-          projectId,
-          passed: projection.wouldPass,
-          votesFor: projection.votesFor,
-          votesAgainst: projection.votesAgainst,
-          totalVotes: this.council.length,
-        };
-
-        results.push(result);
-        this.pendingProposals.delete(projectId);
-
-        if (result.passed) {
-          this.completedProjects.add(projectId);
-        } else {
-          this.failedProposals.add(projectId);
-        }
-      }
-    }
-
-    return results;
-  }
-
-  /**
-   * Clear a failed proposal so it can be proposed again.
-   */
-  clearFailedProposal(projectId: ProjectId): void {
-    this.failedProposals.delete(projectId);
-  }
-
-  /**
-   * Get list of failed project IDs.
-   */
-  getFailedProposals(): readonly ProjectId[] {
-    return [...this.failedProposals];
-  }
-
-  /**
-   * Check if a project can be proposed based on its requirements and axis gating.
-   */
-  canProposeProject(
-    project: Project,
-    factionId: string,
-    context: {
-      technology?: TechnologyTree;
-      buildings?: BuildingManager;
-      colony?: ColonyManager;
-      resources?: ResourceManager;
-    },
-  ): { canPropose: boolean; reason?: string } {
-    if (this.completedProjects.has(project.id)) {
-      return { canPropose: false, reason: "Project already completed" };
-    }
-    if (this.pendingProposals.has(project.id)) {
-      return { canPropose: false, reason: "Project already pending vote" };
-    }
-    if (this.failedProposals.has(project.id)) {
-      return { canPropose: false, reason: "Project previously failed (must clear first)" };
-    }
-
-    // Check axis requirements against proposing faction's position
-    if (project.axisRequirements) {
-      const faction = this.getFaction(factionId);
-      if (!faction) {
-        return { canPropose: false, reason: "Faction not found" };
-      }
-
-      for (const [axis, req] of Object.entries(project.axisRequirements)) {
-        const value = faction.position[axis as keyof AxisPosition];
-        if (req.min !== undefined && value < req.min) {
-          return {
-            canPropose: false,
-            reason: `${axis} position too low (${value.toFixed(2)} < ${req.min})`,
-          };
-        }
-        if (req.max !== undefined && value > req.max) {
-          return {
-            canPropose: false,
-            reason: `${axis} position too high (${value.toFixed(2)} > ${req.max})`,
-          };
-        }
-      }
-    }
-
-    const prerequisites = project.prerequisites ?? [];
-    for (const prereq of prerequisites) {
-      if (!this.completedProjects.has(prereq)) {
-        return { canPropose: false, reason: `Prerequisite project not completed: ${prereq}` };
-      }
-    }
-
-    const requirements = project.requirements ?? [];
-    for (const req of requirements) {
-      switch (req.type) {
-        case ProjectRequirementType.TECHNOLOGY: {
-          if (!context.technology) {
-            return { canPropose: false, reason: "Cannot verify technology requirements" };
-          }
-          if (!context.technology.isResearched(req.techId)) {
-            return { canPropose: false, reason: `Technology not researched: ${req.techId}` };
-          }
-          break;
-        }
-        case ProjectRequirementType.BUILDING: {
-          if (!context.buildings) {
-            return { canPropose: false, reason: "Cannot verify building requirements" };
-          }
-          const buildingCount = context.buildings.getBuildingsByDefinition(req.buildingId).length;
-          const requiredCount = req.count ?? 1;
-          if (buildingCount < requiredCount) {
-            return {
-              canPropose: false,
-              reason: `Insufficient buildings: need ${requiredCount} ${req.buildingId}, have ${buildingCount}`,
-            };
-          }
-          break;
-        }
-        case ProjectRequirementType.POPULATION: {
-          if (!context.colony) {
-            return { canPropose: false, reason: "Cannot verify population requirements" };
-          }
-          const population = context.colony.getPopulation();
-          if (population < req.min) {
-            return {
-              canPropose: false,
-              reason: `Insufficient population: need ${req.min}, have ${population}`,
-            };
-          }
-          break;
-        }
-        case ProjectRequirementType.RESOURCE: {
-          if (!context.resources) {
-            return { canPropose: false, reason: "Cannot verify resource requirements" };
-          }
-          const resourceAmount = context.resources.getResources()[req.resource];
-          if (resourceAmount < req.min) {
-            return {
-              canPropose: false,
-              reason: `Insufficient ${req.resource}: need ${req.min}, have ${resourceAmount}`,
-            };
-          }
-          break;
-        }
-      }
-    }
-
-    return { canPropose: true };
-  }
-
-  // ============ Capstone Projects ============
-
-  /**
-   * Check if a project is a capstone victory project.
-   */
-  isCapstoneProject(projectId: ProjectId): boolean {
-    const project = getProject(projectId);
-    return project?.isCapstone === true;
-  }
-
   // ============ Faction Dynamics ============
 
   /**
@@ -1403,9 +1096,6 @@ export class IdeologyManager implements ProjectQueries {
     council: CouncilMember[];
     lastCouncilUpdateSol: number;
     lastSpreadSol: number;
-    completedProjects: ProjectId[];
-    pendingProposals: PendingProposal[];
-    failedProposals: ProjectId[];
     factions: FactionState[];
     activePolicy: { policy: Policy; startSol: number } | null;
   } {
@@ -1413,9 +1103,6 @@ export class IdeologyManager implements ProjectQueries {
       council: this.council,
       lastCouncilUpdateSol: this.lastCouncilUpdateSol,
       lastSpreadSol: this.lastSpreadSol,
-      completedProjects: [...this.completedProjects],
-      pendingProposals: [...this.pendingProposals.values()],
-      failedProposals: [...this.failedProposals],
       factions: this.factions,
       activePolicy: this.activePolicy,
     };
@@ -1427,15 +1114,6 @@ export class IdeologyManager implements ProjectQueries {
     if (data.lastCouncilUpdateSol !== undefined)
       manager.lastCouncilUpdateSol = data.lastCouncilUpdateSol;
     if (data.lastSpreadSol !== undefined) manager.lastSpreadSol = data.lastSpreadSol;
-    if (data.completedProjects) {
-      manager.completedProjects = new Set(data.completedProjects);
-    }
-    if (data.pendingProposals) {
-      manager.pendingProposals = new Map(data.pendingProposals.map((p) => [p.projectId, p]));
-    }
-    if (data.failedProposals) {
-      manager.failedProposals = new Set(data.failedProposals);
-    }
     if (data.factions) {
       manager.factions = data.factions;
     }

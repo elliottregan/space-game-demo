@@ -15,7 +15,6 @@ import {
   type FactionStatus,
   GameAPI,
   type GameEvent,
-  ProjectId,
   type ProspectingSite,
   type RandomEventDefinition,
   type ResourceDelta,
@@ -117,9 +116,6 @@ interface GameUIState {
     councilFactionCounts: Record<string, number>;
     factionSupport: Record<string, number>;
     factions: FactionSnapshot[];
-    completedProjects: ProjectId[];
-    pendingProposals: Array<{ projectId: ProjectId; voteSol: number }>;
-    failedProposals: ProjectId[];
   };
   earthCrisis: {
     severity: number;
@@ -128,19 +124,27 @@ interface GameUIState {
   grants: {
     available: Array<{
       id: number;
-      sourceName: string;
+      templateId: string;
       name: string;
       description: string;
-      effectType: "instant" | "timed";
+      category: string;
+      identityTag: string;
+      cost: { food?: number; water?: number; materials?: number };
+      baseDuration: number;
+      sourceName?: string;
+      isCapstone?: boolean;
     }>;
     active: Array<{
       id: number;
-      sourceName: string;
+      templateId: string;
       name: string;
       districtId: string;
-      remainingSols?: number;
+      assignedSol: number;
+      remainingSols: number;
+      totalDuration: number;
     }>;
-    nextRefreshSol: number;
+    axisProgress: Record<string, number>;
+    completedGrantIds: string[];
   };
 }
 
@@ -254,9 +258,6 @@ class GameService {
         councilFactionCounts: {},
         factionSupport: {},
         factions: [],
-        completedProjects: [],
-        pendingProposals: [],
-        failedProposals: [],
       },
       earthCrisis: {
         severity: 0,
@@ -265,7 +266,8 @@ class GameService {
       grants: {
         available: [],
         active: [],
-        nextRefreshSol: 0,
+        axisProgress: {},
+        completedGrantIds: [],
       },
     };
   }
@@ -392,18 +394,11 @@ class GameService {
 
     // Ideology
     const ideologyData = this.facade.ideology.snapshot();
-    const pendingProposals = this.facade.ideology.getPendingProposals();
     this.state.ideology = {
       council: [...ideologyData.council],
       councilFactionCounts: { ...ideologyData.councilFactionCounts },
       factionSupport: { ...ideologyData.factionSupport },
       factions: [...ideologyData.factions],
-      completedProjects: [...this.facade.ideology.getCompletedProjects()],
-      pendingProposals: pendingProposals.map((p) => ({
-        projectId: p.projectId,
-        voteSol: p.voteSol,
-      })),
-      failedProposals: [...this.facade.ideology.getFailedProposals()],
     };
 
     // Earth Crisis
@@ -417,19 +412,27 @@ class GameService {
     this.state.grants = {
       available: grantsData.available.map((g) => ({
         id: g.id,
-        sourceName: g.sourceName,
+        templateId: g.templateId,
         name: g.name,
         description: g.description,
-        effectType: g.effectType,
+        category: g.category,
+        identityTag: g.identityTag,
+        cost: g.cost,
+        baseDuration: g.baseDuration,
+        sourceName: g.sourceName,
+        isCapstone: g.isCapstone,
       })),
       active: grantsData.active.map((g) => ({
         id: g.id,
-        sourceName: g.sourceName,
+        templateId: g.templateId,
         name: g.name,
         districtId: g.districtId,
+        assignedSol: g.assignedSol,
         remainingSols: g.remainingSols,
+        totalDuration: g.totalDuration,
       })),
-      nextRefreshSol: grantsData.nextRefreshSol,
+      axisProgress: grantsData.axisProgress,
+      completedGrantIds: grantsData.completedGrantIds as string[],
     };
   }
 
@@ -522,15 +525,6 @@ class GameService {
 
   setBuildingMode(buildingId: string, mode: BuildingMode): boolean {
     return this.facade.buildings.setMode(buildingId, mode).success;
-  }
-
-  // Project methods
-  proposeProject(projectId: ProjectId): boolean {
-    const result = this.facade.ideology.proposeProject(projectId);
-    if (result.success) {
-      this.syncState();
-    }
-    return result.success;
   }
 
   // Deposit methods

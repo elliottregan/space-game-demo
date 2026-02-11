@@ -17,8 +17,8 @@ const state = gameService.getState();
       />
     </div>
     <p class="hint">
-      Shift faction axes toward capstone requirements &rarr; Pass prerequisites &rarr; Secure 65%
-      council seats &rarr; Pass capstone &rarr; Build megastructure to win!
+      Fund identity grants in districts &rarr; Build axis progress &rarr; Complete prerequisites
+      &rarr; Unlock capstone &rarr; Build megastructure to win!
     </p>
   </GPanel>
 </template>

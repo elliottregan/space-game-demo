@@ -29,9 +29,9 @@ import {
 // Technology phases
 import { processResearch } from "./technology";
 // Ideology phases
-import { propagateIdeology, processProjectVotes } from "./ideology";
-// Grants phases
-import { processGrants } from "./grants";
+import { propagateIdeology } from "./ideology";
+// District Grants phases
+import { processDistrictGrants } from "./grants";
 // Operations phases
 import { processOperations } from "./operations";
 // Earth Crisis phases
@@ -63,8 +63,8 @@ export {
   assignToDistrict,
 } from "./colony";
 export { processResearch } from "./technology";
-export { propagateIdeology, processProjectVotes } from "./ideology";
-export { processGrants } from "./grants";
+export { propagateIdeology } from "./ideology";
+export { processDistrictGrants } from "./grants";
 export { processOperations } from "./operations";
 export { processEarthCrisis } from "./earthCrisis";
 export { processRandomEvents } from "./events";
@@ -81,9 +81,10 @@ export { checkVictoryConditions } from "./victory";
  * 5. Colony: Social cohesion, tick, auto-assign, housing
  * 6. Technology: Research progress
  * 7. Ideology: Ideology propagation
- * 8. Operations: Operations, deposit extraction
- * 9. Events: Random events
- * 10. Victory: Check conditions
+ * 8. District Grants: Panel fill, tick, completion effects
+ * 9. Operations: Operations, deposit extraction
+ * 10. Events: Random events
+ * 11. Victory: Check conditions
  */
 export function createStandardTickRunner(): TickRunner {
   const runner = new TickRunner();
@@ -119,21 +120,20 @@ export function createStandardTickRunner(): TickRunner {
 
   // 7. Ideology phases
   runner.register(propagateIdeology);
-  runner.register(processProjectVotes);
 
-  // 7b. Grants phases (after ideology, before operations)
-  runner.register(processGrants);
+  // 8. District Grants phases (after ideology, before operations)
+  runner.register(processDistrictGrants);
 
-  // 8. Operations phases
+  // 9. Operations phases
   runner.register(processOperations);
 
-  // 8b. Earth Crisis phases
+  // 9b. Earth Crisis phases
   runner.register(processEarthCrisis);
 
-  // 9. Events phases
+  // 10. Events phases
   runner.register(processRandomEvents);
 
-  // 10. Victory phases
+  // 11. Victory phases
   runner.register(checkVictoryConditions);
 
   runner.recomputeOrder();

@@ -1,12 +1,12 @@
 import type { GameEvent } from "../models/GameEvent";
-import { ProjectId } from "../models/NPCInfluence";
 import { BuildingId } from "../models/Building";
-import { getProject, meetsAxisRequirements } from "../data/projects";
+import { DistrictGrantId, type DistrictGrantTemplate } from "../models/DistrictGrant";
+import { getDistrictGrantTemplate, getCapstoneGrants } from "../data/districtGrants";
 import { BUILDINGS } from "../data/buildings";
 import type { ColonyManager } from "./ColonyManager";
 import type { ResourceManager } from "./ResourceManager";
 import type { TechnologyTree } from "./TechnologyTree";
-import type { IdeologyManager } from "./IdeologyManager";
+import type { DistrictGrantManager } from "./DistrictGrantManager";
 
 export type GameStatus = "playing" | "victory" | "defeat";
 
@@ -58,105 +58,47 @@ export class VictoryManager {
   }
 
   /**
-   * Check if a passed project is a capstone.
-   * Returns a milestone event if the project is a capstone, null otherwise.
-   * NOTE: Capstones no longer trigger victory - they unlock megastructure buildings.
+   * Check if a completed grant is a capstone.
+   * Returns a milestone event if the grant is a capstone, null otherwise.
+   * NOTE: Capstones unlock megastructure buildings but don't win the game.
    * Victory is achieved by building the megastructure (checked in checkBuildingVictory).
    */
-  checkCapstoneVictory(projectId: ProjectId): GameEvent | null {
-    const project = getProject(projectId);
-    if (!project?.isCapstone) {
+  checkCapstoneGrant(grantId: DistrictGrantId): GameEvent | null {
+    const template = getDistrictGrantTemplate(grantId);
+    if (!template?.isCapstone) {
       return null;
     }
 
-    // Don't set victory status - capstones unlock megastructures but don't win the game
     return {
       type: "capstone_completed",
-      reason: `${project.name} achieved! ${project.description}`,
+      reason: `${template.name} achieved! ${template.description}`,
       severity: "info",
-      message: `${project.name} achieved! You can now build your faction's megastructure to win.`,
+      message: `${template.name} achieved! You can now build your faction's megastructure to win.`,
     };
   }
 
   /**
-   * Check if any faction can propose any capstone project.
-   * Returns information about proposable capstones.
+   * Check which capstone grants are available to be assigned.
+   * A capstone is available when its prerequisites are completed
+   * and the colony has sufficient axis progress.
    */
-  checkCapstoneProposability(ideologyManager: IdeologyManager): {
-    canProposeAny: boolean;
-    proposableCapstones: Array<{
-      projectId: ProjectId;
-      factionId: string;
-      factionName: string;
-    }>;
+  checkCapstoneAvailability(grantManager: DistrictGrantManager): {
+    availableCapstones: DistrictGrantId[];
   } {
-    const factions = ideologyManager.getFactions();
-    const councilCounts = ideologyManager.getCouncilFactionCounts();
-    const totalCouncilSeats = ideologyManager.getCouncil().length;
-    const proposableCapstones: Array<{
-      projectId: ProjectId;
-      factionId: string;
-      factionName: string;
-    }> = [];
+    const capstones = getCapstoneGrants();
+    const availableCapstones: DistrictGrantId[] = [];
 
-    // Get all capstone projects
-    const capstoneProjects = [
-      ProjectId.DECLARATION_OF_SOVEREIGNTY,
-      ProjectId.EARTH_RELIEF_COMPACT,
-      ProjectId.DEEP_SPACE_MINING_CHARTER,
-      ProjectId.GENESIS_VAULT,
-    ];
-
-    for (const projectId of capstoneProjects) {
-      // Skip already completed capstones
-      if (ideologyManager.isProjectCompleted(projectId)) {
+    for (const capstone of capstones) {
+      if (grantManager.isGrantCompleted(capstone.id)) {
         continue;
       }
 
-      const project = getProject(projectId);
-      if (!project?.isCapstone) {
-        continue;
-      }
-
-      // Check if any faction meets the axis requirements
-      for (const faction of factions) {
-        // Check axis requirements
-        if (!meetsAxisRequirements(faction.position, project)) {
-          continue;
-        }
-
-        // Check council support
-        const factionCouncilSeats = councilCounts[faction.baseId] ?? 0;
-        const requiredSupport = project.requiredCouncilSupport ?? 0.5;
-        const factionSupport = totalCouncilSeats > 0 ? factionCouncilSeats / totalCouncilSeats : 0;
-
-        if (factionSupport < requiredSupport) {
-          continue;
-        }
-
-        // Check prerequisites
-        const prerequisites = project.prerequisites ?? [];
-        const allPrereqsMet = prerequisites.every((prereq) =>
-          ideologyManager.isProjectCompleted(prereq),
-        );
-
-        if (!allPrereqsMet) {
-          continue;
-        }
-
-        // This faction can propose this capstone
-        proposableCapstones.push({
-          projectId,
-          factionId: faction.id,
-          factionName: faction.name,
-        });
+      if (grantManager.isCapstoneUnlocked(capstone.id)) {
+        availableCapstones.push(capstone.id);
       }
     }
 
-    return {
-      canProposeAny: proposableCapstones.length > 0,
-      proposableCapstones,
-    };
+    return { availableCapstones };
   }
 
   /**
