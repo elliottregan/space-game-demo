@@ -27,20 +27,20 @@ bun run simulate [options]
 
 ## Options
 
-| Flag | Description |
-|------|-------------|
-| `--runs N, -r N` | Number of simulation runs (default: 100) |
-| `--seed N, -s N` | Starting seed for reproducibility (default: 1) |
-| `--log LEVEL, -l` | Output level: `silent`, `default`, `verbose` |
-| `--help, -h` | Show help message |
+| Flag              | Description                                    |
+| ----------------- | ---------------------------------------------- |
+| `--runs N, -r N`  | Number of simulation runs (default: 100)       |
+| `--seed N, -s N`  | Starting seed for reproducibility (default: 1) |
+| `--log LEVEL, -l` | Output level: `silent`, `default`, `verbose`   |
+| `--help, -h`      | Show help message                              |
 
 ### Log Levels
 
-| Level | Console | TXT File | JSON File |
-|-------|---------|----------|-----------|
-| `silent` | Yes | No | No |
-| `default` | Yes | Yes | No |
-| `verbose` | Yes | Yes | Yes (large) |
+| Level     | Console | TXT File | JSON File   |
+| --------- | ------- | -------- | ----------- |
+| `silent`  | Yes     | No       | No          |
+| `default` | Yes     | Yes      | No          |
+| `verbose` | Yes     | Yes      | Yes (large) |
 
 ## Common Invocations
 
@@ -80,23 +80,24 @@ bun run simulate --runs 500 --seed 42
 
 ### Healthy Balance Indicators
 
-| Metric | Healthy Range |
-|--------|---------------|
-| Win Rate | 80-95% |
-| Median Victory | 500-1000 sols |
-| Fastest Win | ~487 sols (theoretical minimum) |
-| P90 Victory Time | <700 sols |
+| Metric           | Healthy Range                        |
+| ---------------- | ------------------------------------ |
+| Win Rate         | 80-95%                               |
+| Median Victory   | 500-1000 sols                        |
+| Fastest Win      | ~487 sols (theoretical minimum)      |
+| P90 Victory Time | <700 sols                            |
+| Ideology Pockets | 3+, Fewer = ideology too homogeneous |
 
 ### Warning Signs
 
-| Issue | Possible Cause |
-|-------|----------------|
-| Win rate <70% | Early game too harsh, resource rates too low |
-| Win rate 100% | Game too easy, needs more challenge |
-| Avg time >1000 sols | Victory conditions too difficult |
-| Many starvation defeats | Food production insufficient |
-| Many suffocation defeats | Oxygen production insufficient |
-| High variance in times | Random events too impactful |
+| Issue                    | Possible Cause                               |
+| ------------------------ | -------------------------------------------- |
+| Win rate <70%            | Early game too harsh, resource rates too low |
+| Win rate 100%            | Game too easy, needs more challenge          |
+| Avg time >1000 sols      | Victory conditions too difficult             |
+| Many starvation defeats  | Food production insufficient                 |
+| Many suffocation defeats | Oxygen production insufficient               |
+| High variance in times   | Random events too impactful                  |
 
 ## Example Workflow
 

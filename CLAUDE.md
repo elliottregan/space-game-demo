@@ -134,6 +134,7 @@ Results saved to `logs/simulations/` as `.txt` (always with default/verbose) and
 | Median Victory | 500-1000 sols | Faster = too easy, slower = tedious |
 | Bottleneck % | <50% per category | High % = balance issue |
 | Crisis Frequency | Occasional | Constant crises = resource balance off |
+| Ideology Pockets | 3+ | Fewer = ideology too homogeneous |
 
 ## Documentation
 
