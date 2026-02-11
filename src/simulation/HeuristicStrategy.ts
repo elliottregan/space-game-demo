@@ -582,6 +582,42 @@ export class HeuristicStrategy {
   }
 
   /**
+   * Get the fully-staffed production capacity for a resource across all active
+   * buildings that produce it. This answers: "if every building were fully
+   * staffed, how much of this resource would we produce?"
+   *
+   * Used to prevent over-building when the real problem is understaffing,
+   * not insufficient infrastructure.
+   */
+  private getResourceCapacity(resource: "water" | "food" | "materials"): number {
+    const buildings = this.api.buildings.snapshot();
+    const defMap = new Map(buildings.definitions.map((d) => [d.id, d]));
+    let capacity = 0;
+
+    for (const b of buildings.active) {
+      if (b.status !== "active") continue;
+      const def = defMap.get(b.definitionId);
+      if (!def?.production) continue;
+      const prod = def.production[resource];
+      if (prod && prod > 0) {
+        capacity += prod;
+      }
+    }
+
+    // Also count buildings under construction
+    for (const b of buildings.constructionQueue ?? []) {
+      const def = defMap.get(b.definitionId);
+      if (!def?.production) continue;
+      const prod = def.production[resource];
+      if (prod && prod > 0) {
+        capacity += prod;
+      }
+    }
+
+    return capacity;
+  }
+
+  /**
    * Check if resource buildings of a given type are understaffed.
    * Returns true if more than half of worker slots are unfilled.
    */
@@ -740,15 +776,14 @@ export class HeuristicStrategy {
       return { category: "survival", action: `build_${waterBuilding}` };
     }
 
-    // Don't build more food buildings if existing ones are understaffed
-    // (exception: critically low stockpile)
-    const foodUnderstaffed =
-      currentFood > 50 &&
-      (this.isResourceUnderstaffed(BuildingId.BASIC_FARM) ||
-        this.isResourceUnderstaffed(BuildingId.GREENHOUSE));
+    // Check food capacity vs demand — if fully-staffed capacity exceeds
+    // consumption by +3/sol, we have enough buildings, just need workers
+    const foodCapacity = this.getResourceCapacity("food");
+    const foodHeadroom = foodCapacity - foodConsumption;
+    const foodHasCapacity = foodHeadroom >= 3 && currentFood > 30;
 
     // Critical food shortage - prefer greenhouse over basic farm
-    if ((currentFood < 80 || foodFlow < 0) && !foodUnderstaffed) {
+    if ((currentFood < 80 || foodFlow < 0) && !foodHasCapacity) {
       if (this.tryBuild(BuildingId.GREENHOUSE, "survival", false)) {
         return { category: "survival", action: "build_greenhouse" };
       }
@@ -758,9 +793,7 @@ export class HeuristicStrategy {
     }
 
     // Maintain positive flow with buffer for food
-    // Food needs buffer of 2 to handle population growth and events
-    // This is proactive, so respect material reserve
-    if (foodFlow < 2 && !foodUnderstaffed) {
+    if (foodFlow < 2 && !foodHasCapacity) {
       if (this.tryBuild(BuildingId.GREENHOUSE, "survival")) {
         return { category: "survival", action: "build_greenhouse" };
       }
@@ -785,22 +818,22 @@ export class HeuristicStrategy {
   ): BuildingId | null {
     const waterFlow = waterProduction - waterConsumption;
 
-    // Maintain water buffer of +2 flow to handle population growth and events
-    // Also ensure stockpile doesn't drop too low
     const WATER_BUFFER = 2;
     const MIN_WATER_STOCKPILE = 40;
 
     // Water is fine - no action needed
     if (waterFlow >= WATER_BUFFER && currentWater > MIN_WATER_STOCKPILE) return null;
 
-    // Don't build more water buildings if existing ones are understaffed
-    // (exception: critically low stockpile)
-    if (
-      currentWater > 20 &&
-      (this.isResourceUnderstaffed(BuildingId.WATER_EXTRACTOR) ||
-        this.isResourceUnderstaffed(BuildingId.WATER_RECLAIMER))
-    )
-      return null;
+    // Check fully-staffed capacity vs consumption.
+    // If capacity already exceeds demand, the problem is worker assignment,
+    // not missing buildings. Building more won't help if existing ones are unstaffed.
+    const waterCapacity = this.getResourceCapacity("water");
+    const capacityHeadroom = waterCapacity - waterConsumption;
+
+    // If fully-staffed capacity gives us +4/sol headroom, we have enough buildings.
+    // Even with low stockpile, if capacity is 3x+ consumption, building more
+    // is pure waste — the problem is staffing, not infrastructure.
+    if (capacityHeadroom >= 4) return null;
 
     // Prefer Water Reclaimer (+12/sol) if tech is available - no deposit needed
     if (this.tryBuild(BuildingId.WATER_RECLAIMER, "survival", false)) {
