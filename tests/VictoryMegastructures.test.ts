@@ -1,16 +1,16 @@
 import { describe, it, expect } from "bun:test";
 import { GameState } from "../src/core/GameState";
 import { BuildingId } from "../src/core/models/Building";
-import { ProjectId } from "../src/core/models/NPCInfluence";
+import { DistrictGrantId } from "../src/core/models/DistrictGrant";
 
 describe("Victory Megastructures Integration", () => {
-  it("should not allow building megastructure without capstone project", () => {
+  it("should not allow building megastructure without capstone grant", () => {
     const state = new GameState();
 
     // Give plenty of resources
     state.resources.add({ materials: 1000 });
 
-    // Try to build Asteroid Mining Platform without completing project
+    // Try to build Asteroid Mining Platform without completing grant
     const canBuild = state.buildings.canBuild(
       BuildingId.ASTEROID_MINING_PLATFORM,
       state.resources,
@@ -20,15 +20,15 @@ describe("Victory Megastructures Integration", () => {
     expect(canBuild).toBe(false);
   });
 
-  it("should allow building megastructure after capstone project completed", () => {
+  it("should allow building megastructure after capstone grant completed", () => {
     const state = new GameState();
 
     // Give plenty of resources
     state.resources.add({ materials: 1000 });
 
-    // Complete the capstone project
-    // Asteroid Mining Platform is unlocked by Corporate Interests' DEEP_SPACE_MINING_CHARTER
-    state.ideology.completeProject(ProjectId.DEEP_SPACE_MINING_CHARTER);
+    // Complete the capstone grant
+    // Asteroid Mining Platform is unlocked by DEEP_SPACE_MINING_CHARTER
+    state.districtGrants.addCompletedGrant("district-1", DistrictGrantId.DEEP_SPACE_MINING_CHARTER);
 
     // Now should be able to build
     const canBuild = state.buildings.canBuild(
@@ -43,9 +43,8 @@ describe("Victory Megastructures Integration", () => {
   it("should trigger victory when megastructure completes", () => {
     const state = new GameState();
 
-    // Setup: complete project and give resources
-    // Asteroid Mining Platform is unlocked by Corporate Interests' DEEP_SPACE_MINING_CHARTER
-    state.ideology.completeProject(ProjectId.DEEP_SPACE_MINING_CHARTER);
+    // Setup: complete grant and give resources
+    state.districtGrants.addCompletedGrant("district-1", DistrictGrantId.DEEP_SPACE_MINING_CHARTER);
     state.resources.add({ materials: 1000 });
 
     // Start building
@@ -76,8 +75,8 @@ describe("Victory Megastructures Integration", () => {
     const state = new GameState();
 
     // Setup for Space Elevator
-    // Space Elevator is unlocked by Earth Loyalists' EARTH_RELIEF_COMPACT
-    state.ideology.completeProject(ProjectId.EARTH_RELIEF_COMPACT);
+    // Space Elevator is unlocked by EARTH_RELIEF_COMPACT
+    state.districtGrants.addCompletedGrant("district-1", DistrictGrantId.EARTH_RELIEF_COMPACT);
     state.resources.add({ materials: 500 });
 
     // Start building

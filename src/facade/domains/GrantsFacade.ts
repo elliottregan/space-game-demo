@@ -1,9 +1,17 @@
 import type { GameState } from "../../core/GameState";
-import { getGrantSource, getGrantTemplate } from "../../core/data/grants";
-import { GrantManager } from "../../core/systems/GrantManager";
-import type { CanDoResult, Result } from "../types/common";
+import { getDistrictGrantTemplate } from "../../core/data/districtGrants";
+import { getGrantSource } from "../../core/data/grants";
+import { GRANT_REFRESH_COST } from "../../core/balance/DistrictGrantBalance";
+import { DistrictGrantCategory, type GrantEligibility } from "../../core/models/DistrictGrant";
+import type { AxisPosition } from "../../core/models/NPCInfluence";
+import { rng } from "../../core/utils/random";
+import type { Result } from "../types/common";
 import { err, ok } from "../types/common";
-import type { ActiveGrantSnapshot, AvailableGrantSnapshot, GrantsSnapshot } from "../types/grants";
+import type {
+  ActiveGrantSnapshot,
+  AvailableGrantSnapshot,
+  DistrictGrantsSnapshot,
+} from "../types/grants";
 
 type CommandExecutor = <T>(fn: () => Result<T>) => Result<T>;
 
@@ -13,62 +21,65 @@ export class GrantsFacade {
     private executeCommand?: CommandExecutor,
   ) {}
 
-  snapshot(): GrantsSnapshot {
-    const gm = this.gameState.grants;
+  snapshot(): DistrictGrantsSnapshot {
+    const dgm = this.gameState.districtGrants;
 
-    const available: AvailableGrantSnapshot[] = gm.getAvailableGrants().map((g) => {
-      const source = getGrantSource(g.sourceId);
-      const template = getGrantTemplate(g.templateId);
+    const available: AvailableGrantSnapshot[] = dgm.getAvailableGrants().map((g) => {
+      const template = getDistrictGrantTemplate(g.templateId);
+      const source = template?.sourceId ? getGrantSource(template.sourceId) : undefined;
       return {
         id: g.id,
         templateId: g.templateId,
-        sourceId: g.sourceId,
-        sourceName: source?.name ?? g.sourceId,
         name: template?.name ?? g.templateId,
         description: template?.description ?? "",
-        effectType: template?.effect.type ?? "instant",
-        ideologyMagnitude: template?.ideologyMagnitude ?? 0,
-        offeredSol: g.offeredSol,
+        category: template?.category ?? DistrictGrantCategory.INFRASTRUCTURE,
+        cost: template?.cost ?? {},
+        baseDuration: template?.baseDuration ?? 0,
+        identityTag: template?.identityTag ?? "",
+        sourceId: template?.sourceId,
+        sourceName: source?.name,
+        isCapstone: template?.isCapstone,
       };
     });
 
-    const active: ActiveGrantSnapshot[] = gm.getActiveGrants().map((g) => {
-      const source = getGrantSource(g.sourceId);
-      const template = getGrantTemplate(g.templateId);
+    const active: ActiveGrantSnapshot[] = dgm.getActiveGrants().map((g) => {
+      const template = getDistrictGrantTemplate(g.templateId);
       return {
         id: g.id,
         templateId: g.templateId,
-        sourceId: g.sourceId,
-        sourceName: source?.name ?? g.sourceId,
-        name: template?.name ?? g.templateId,
         districtId: g.districtId,
+        name: template?.name ?? g.templateId,
         assignedSol: g.assignedSol,
         remainingSols: g.remainingSols,
+        totalDuration: g.totalDuration,
       };
     });
 
     return {
       available,
       active,
-      nextRefreshSol: gm.getNextRefreshSol(),
+      axisProgress: dgm.getAxisProgress(),
+      completedGrantIds: [...dgm.getCompletedGrantIds()],
     };
   }
 
-  canAssignGrant(grantId: number, districtId: string): CanDoResult {
-    return this.gameState.grants.canAssignGrant(grantId, districtId);
+  /**
+   * Check if a grant can be assigned to a district.
+   */
+  canAssignGrant(grantId: number, districtId: string): GrantEligibility {
+    const districtIdeology = this.getDistrictIdeology(districtId);
+    return this.gameState.districtGrants.canAssignGrant(grantId, districtId, districtIdeology);
   }
 
-  assignGrant(
-    grantId: number,
-    districtId: string,
-  ): Result<{ grantId: number; affectedColonists: number }> {
-    const exec =
-      this.executeCommand ??
-      ((fn: () => Result<{ grantId: number; affectedColonists: number }>) => fn());
+  /**
+   * Assign a grant to a district.
+   */
+  assignGrant(grantId: number, districtId: string): Result<{ grantId: number }> {
+    const exec = this.executeCommand ?? ((fn: () => Result<{ grantId: number }>) => fn());
 
     return exec(() => {
       const check = this.canAssignGrant(grantId, districtId);
-      if (!check.allowed) {
+      if (!check.canAssign) {
         return err({
           type: "INVALID_TARGET" as const,
           target: `grant_${grantId}`,
@@ -76,73 +87,80 @@ export class GrantsFacade {
         });
       }
 
-      const currentSol = this.gameState.currentSol;
-      const activeGrant = this.gameState.grants.assignGrant(grantId, districtId, currentSol);
-      if (!activeGrant) {
-        return err({
-          type: "NOT_FOUND" as const,
-          entity: "grant" as const,
-          id: String(grantId),
-        });
-      }
-
-      const template = getGrantTemplate(activeGrant.templateId);
-      const source = getGrantSource(activeGrant.sourceId);
-      if (!template || !source) {
-        return ok({ grantId: activeGrant.id, affectedColonists: 0 });
-      }
-
-      const effect = template.effect;
-
-      // Apply instant resource effects
-      if (effect.resources) {
-        this.gameState.resources.add(effect.resources);
-      }
-
-      // Apply instant population effects
-      if (effect.population && effect.population > 0) {
-        for (let i = 0; i < effect.population; i++) {
-          this.gameState.colony.addColonist();
+      // Check and deduct cost
+      const template = getDistrictGrantTemplate(
+        this.gameState.districtGrants.getAvailableGrants().find((g) => g.id === grantId)
+          ?.templateId ?? ("" as any),
+      );
+      if (template?.cost) {
+        if (!this.gameState.resources.canAfford(template.cost)) {
+          return err({
+            type: "INVALID_STATE" as const,
+            current: "insufficient_resources",
+            expected: "affordable",
+            reason: "Cannot afford grant cost",
+          });
         }
+        this.gameState.resources.deduct(template.cost);
       }
 
-      // Apply capacity boost (add housing to colony resources as materials equivalent)
-      // capacityBoost increases the district's ability to house colonists
-      // Since there's no DistrictManager yet, we model this as direct housing capacity
-      // via the colony's habitat system - we just give the resources equivalent
-      if (effect.capacityBoost) {
-        // Represented as materials to build housing capacity
-        this.gameState.resources.add({ materials: effect.capacityBoost * 5 });
-      }
-
-      // Register timed production bonuses
-      if (effect.type === "timed" && effect.productionBonus) {
-        this.gameState.resources.addProductionBonus(
-          `grant_${activeGrant.id}`,
-          effect.productionBonus.resource,
-          effect.productionBonus.multiplier,
-        );
-      }
-
-      // Register timed research bonuses as materials production
-      // (approximation since there's no direct research bonus mechanism)
-      if (effect.type === "timed" && effect.researchBonus) {
-        // Research bonus is modeled as boosting the research output rate
-        // We don't have a direct research bonus in ResourceManager, so skip
-        // The effect will be visible through TechnologyTree speed
-      }
-
-      // Apply ideology shift to colonists
-      // In the full district system, this would target colonists in the district.
-      // For now, apply to all colonists (colony-wide effect).
-      const colonists = this.gameState.colony.getColonists();
-      const affectedColonists = GrantManager.applyIdeologyShift(
-        colonists,
-        source.ideologyPosition,
-        template.ideologyMagnitude,
+      const districtIdeology = this.getDistrictIdeology(districtId);
+      const activeGrant = this.gameState.districtGrants.assignGrant(
+        grantId,
+        districtId,
+        this.gameState.currentSol,
+        districtIdeology,
       );
 
-      return ok({ grantId: activeGrant.id, affectedColonists });
+      // Auto-fill the empty slot
+      this.gameState.districtGrants.fillEmptySlots(this.gameState.currentSol, rng);
+
+      return ok({ grantId: activeGrant.id });
     });
+  }
+
+  /**
+   * Refresh all panel cards for a cost.
+   */
+  refreshPanel(): Result<void> {
+    const cost = { materials: GRANT_REFRESH_COST };
+    if (!this.gameState.resources.canAfford(cost)) {
+      return err({
+        type: "INSUFFICIENT_RESOURCES" as const,
+        required: { materials: GRANT_REFRESH_COST },
+        available: { materials: this.gameState.resources.getResources().materials },
+      });
+    }
+
+    this.gameState.resources.deduct(cost);
+    this.gameState.districtGrants.refreshPanel(this.gameState.currentSol, rng);
+    return ok(undefined);
+  }
+
+  /**
+   * Get district ideology (average of colonist ideologies in that district).
+   */
+  private getDistrictIdeology(districtId: string): AxisPosition {
+    const colonistIds = this.gameState.districts.getDistrictColonistIds(districtId);
+    const colonists = this.gameState.colony.getColonists();
+    const districtColonists = colonists.filter((c) => colonistIds.includes(c.id));
+
+    if (districtColonists.length === 0) {
+      return { solidarity: 0, sovereignty: 0, transformation: 0 };
+    }
+
+    const avg: AxisPosition = { solidarity: 0, sovereignty: 0, transformation: 0 };
+    for (const c of districtColonists) {
+      if (c.ideology) {
+        avg.solidarity += c.ideology.solidarity;
+        avg.sovereignty += c.ideology.sovereignty;
+        avg.transformation += c.ideology.transformation;
+      }
+    }
+    avg.solidarity /= districtColonists.length;
+    avg.sovereignty /= districtColonists.length;
+    avg.transformation /= districtColonists.length;
+
+    return avg;
   }
 }

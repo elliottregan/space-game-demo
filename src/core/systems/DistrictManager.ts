@@ -1,5 +1,6 @@
 import type { District } from "../models/District";
 import { PowerStatus } from "../models/District";
+import type { DistrictIdentity } from "../models/DistrictGrant";
 import {
   DISTRICT_INITIAL_CAPACITY,
   DISTRICT_GROWTH_TRIGGER,
@@ -28,6 +29,7 @@ export class DistrictManager {
       capacity: DISTRICT_INITIAL_CAPACITY,
       growthCap: null,
       buildingIds: [],
+      identity: { completedGrantIds: [], tags: [], title: null },
     };
     this.districts.set(id, district);
     this.districtColonists.set(id, []);
@@ -227,13 +229,18 @@ export class DistrictManager {
         capacity: d.capacity,
         growthCap: d.growthCap,
         buildingIds: d.buildingIds,
+        identity: ((d as Record<string, unknown>).identity as DistrictIdentity) ?? {
+          completedGrantIds: [],
+          tags: [],
+          title: null,
+        },
       };
       dm.districts.set(d.id, district);
       dm.districtColonists.set(d.id, []);
       for (const bid of d.buildingIds) dm.buildingToDistrict.set(bid, d.id);
       for (const cid of d.colonistIds) {
         dm.colonistToDistrict.set(cid, d.id);
-        dm.districtColonists.get(d.id)!.push(cid);
+        dm.districtColonists.get(d.id)?.push(cid);
       }
     }
     for (const { buildingId, output } of data.powerSources) dm.powerSources.set(buildingId, output);

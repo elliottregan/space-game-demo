@@ -1,5 +1,5 @@
 import type { ColonistRole } from "./Colonist";
-import type { ProjectId } from "./NPCInfluence";
+import type { DistrictGrantId } from "./DistrictGrant";
 import type { ResourceDelta } from "./Resources";
 import type { TechnologyId } from "./Technology";
 
@@ -66,7 +66,7 @@ export interface BuildingDefinition {
   lifeSupportLoad?: number; // Life support load imposed (industrial buildings)
   purpose?: BuildingPurpose;
   bondingStrength?: number; // Multiplier for relationship growth rate (default 1.0)
-  requiredProject?: ProjectId; // Project that must be passed to unlock
+  requiredGrant?: DistrictGrantId; // District grant that must be completed to unlock
   isVictoryBuilding?: boolean; // Completing this building wins the game
   /** Research output per sol when active (for research buildings) */
   researchOutput?: number;

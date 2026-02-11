@@ -24,7 +24,7 @@ import type { VictoryManager } from "./VictoryManager";
 import type {
   ColonistQueries,
   DistrictQueries,
-  ProjectQueries,
+  GrantCompletionQueries,
   WorkforceQueries,
 } from "../interfaces/Queries";
 
@@ -55,7 +55,7 @@ export class BuildingManager {
   // Query interfaces for read-only access
   private colonistQueries: ColonistQueries | null = null;
   private workforceQueries: WorkforceQueries | null = null;
-  private projectQueries: ProjectQueries | null = null;
+  private grantQueries: GrantCompletionQueries | null = null;
   private districtQueries: DistrictQueries | null = null;
 
   setTechnologyTree(tech: TechnologyTree): void {
@@ -79,8 +79,8 @@ export class BuildingManager {
     this.workforceQueries = queries;
   }
 
-  setProjectQueries(queries: ProjectQueries): void {
-    this.projectQueries = queries;
+  setGrantQueries(queries: GrantCompletionQueries): void {
+    this.grantQueries = queries;
   }
 
   setDistrictQueries(queries: DistrictQueries): void {
@@ -439,9 +439,9 @@ export class BuildingManager {
       return false;
     }
 
-    // Check project requirements for victory buildings
-    if (def.requiredProject) {
-      if (!this.projectQueries || !this.projectQueries.isProjectCompleted(def.requiredProject)) {
+    // Check grant requirements for victory buildings
+    if (def.requiredGrant) {
+      if (!this.grantQueries || !this.grantQueries.isGrantCompleted(def.requiredGrant)) {
         return false;
       }
     }

@@ -1,13 +1,12 @@
 <!-- src/renderer/components/VictoryProgressPanel/FactionTrack.vue -->
 <script setup lang="ts">
 import { computed } from "vue";
-import type { AxisPosition, AxisRequirement, Project } from "../../../core/models/NPCInfluence";
-import { AXIS_KEYS, ProjectId } from "../../../core/models/NPCInfluence";
-import { PROJECTS, meetsAxisRequirements } from "../../../core/data/projects";
+import { AXIS_KEYS } from "../../../core/models/NPCInfluence";
+import { getCapstoneGrants, getDistrictGrantTemplate } from "../../../core/data/districtGrants";
 import { BUILDINGS } from "../../../core/data/buildings";
+import { CAPSTONE_UNLOCK_THRESHOLD } from "../../../core/balance/DistrictGrantBalance";
 import { gameService } from "../../services/GameService";
 import type { FactionSnapshot } from "../../../facade/types/ideology";
-import { GBadge } from "../../ui";
 
 const FACTION_COLORS: Record<string, string> = {
   earth_loyalists: "var(--g-color-info)",
@@ -25,23 +24,22 @@ const factionColor = computed((): string => {
   return FACTION_COLORS[props.faction.baseId] ?? "var(--color-muted)";
 });
 
-// All capstone projects
-const capstoneProjects = computed((): Project[] => {
-  return PROJECTS.filter((p) => p.isCapstone);
+// All capstone grants
+const capstoneGrants = computed(() => {
+  return getCapstoneGrants();
 });
 
-// For each capstone, compute how close this faction is to meeting its axis requirements
+// For each capstone, compute progress toward axis thresholds and prerequisites
 interface CapstoneProgress {
-  project: Project;
-  meetsRequirements: boolean;
+  id: string;
+  name: string;
   isCompleted: boolean;
-  isPending: boolean;
+  isUnlocked: boolean;
   megastructureBuildingId: string | undefined;
   axisProgress: Array<{
-    axis: keyof AxisPosition;
+    axis: string;
     current: number;
     required: number;
-    direction: "min" | "max";
     met: boolean;
     percent: number;
   }>;
@@ -49,65 +47,43 @@ interface CapstoneProgress {
   prerequisitesTotal: number;
 }
 
-function computeAxisProgress(
-  position: AxisPosition,
-  axis: keyof AxisPosition,
-  req: AxisRequirement,
-): { current: number; required: number; direction: "min" | "max"; met: boolean; percent: number } {
-  const value = position[axis];
-
-  if (req.min !== undefined) {
-    const met = value >= req.min;
-    // Progress from 0 toward the required minimum
-    // If the value is negative and min is positive, start from 0%
-    const percent =
-      req.min === 0 ? (met ? 100 : 0) : Math.max(0, Math.min(100, (value / req.min) * 100));
-    return { current: value, required: req.min, direction: "min", met, percent };
-  }
-
-  if (req.max !== undefined) {
-    const met = value <= req.max;
-    // Progress toward the required maximum (lower/more negative)
-    // e.g., if max is -0.6 and value is -0.3, progress is -0.3/-0.6 = 50%
-    const percent =
-      req.max === 0 ? (met ? 100 : 0) : Math.max(0, Math.min(100, (value / req.max) * 100));
-    return { current: value, required: req.max, direction: "max", met, percent };
-  }
-
-  return { current: value, required: 0, direction: "min", met: true, percent: 100 };
-}
-
 const capstoneProgressList = computed((): CapstoneProgress[] => {
-  const position = props.faction.position;
-  const completed = state.ideology.completedProjects;
-  const pending = state.ideology.pendingProposals;
+  const axisProgress = state.grants.axisProgress;
+  const completedSet = new Set(state.grants.completedGrantIds);
 
-  return capstoneProjects.value.map((project) => {
-    const axisProgress: CapstoneProgress["axisProgress"] = [];
+  return capstoneGrants.value.map((capstone) => {
+    const axisEntries: CapstoneProgress["axisProgress"] = [];
 
-    if (project.axisRequirements) {
-      for (const [axis, req] of Object.entries(project.axisRequirements)) {
-        const progress = computeAxisProgress(position, axis as keyof AxisPosition, req);
-        axisProgress.push({ axis: axis as keyof AxisPosition, ...progress });
+    if (capstone.axisRequirements) {
+      for (const axis of Object.keys(capstone.axisRequirements)) {
+        const current = axisProgress[axis] ?? 0;
+        const required = CAPSTONE_UNLOCK_THRESHOLD;
+        const met = current >= required;
+        const percent = required > 0 ? Math.min(100, (current / required) * 100) : 100;
+        axisEntries.push({ axis, current, required, met, percent });
       }
     }
 
-    const prerequisiteIds = project.prerequisites ?? [];
-    const prerequisitesPassed = prerequisiteIds.filter((id) => completed.includes(id)).length;
+    const prerequisiteIds = capstone.prerequisites ?? [];
+    const prerequisitesPassed = prerequisiteIds.filter((id) => completedSet.has(id)).length;
 
-    // Find the building this capstone unlocks
+    // A capstone is unlocked when all prereqs are done and axis thresholds are met
+    const allPrereqsMet = prerequisitesPassed === prerequisiteIds.length;
+    const allAxesMet = axisEntries.every((a) => a.met);
+    const isUnlocked = allPrereqsMet && allAxesMet;
+
     const megastructureBuildingId =
-      typeof project.effects?.unlockBuilding === "string"
-        ? project.effects.unlockBuilding
+      typeof capstone.effect?.unlockBuilding === "string"
+        ? capstone.effect.unlockBuilding
         : undefined;
 
     return {
-      project,
-      meetsRequirements: meetsAxisRequirements(position, project),
-      isCompleted: completed.includes(project.id),
-      isPending: pending.some((p) => p.projectId === project.id),
+      id: capstone.id,
+      name: capstone.name,
+      isCompleted: completedSet.has(capstone.id),
+      isUnlocked,
       megastructureBuildingId,
-      axisProgress,
+      axisProgress: axisEntries,
       prerequisitesPassed,
       prerequisitesTotal: prerequisiteIds.length,
     };
@@ -118,15 +94,28 @@ const capstoneProgressList = computed((): CapstoneProgress[] => {
 const bestCapstone = computed((): CapstoneProgress | null => {
   if (capstoneProgressList.value.length === 0) return null;
 
+  // Match faction position to capstone axis requirements
   let best: CapstoneProgress | null = null;
   let bestScore = -Infinity;
 
   for (const cp of capstoneProgressList.value) {
     if (cp.axisProgress.length === 0) continue;
+
+    // Score based on alignment of faction position with capstone axes
+    let alignmentScore = 0;
+    for (const ap of cp.axisProgress) {
+      const factionValue = props.faction.position[ap.axis as keyof typeof props.faction.position];
+      // Higher faction value on the capstone's relevant axis = more aligned
+      alignmentScore += factionValue ?? 0;
+    }
+
+    // Also factor in progress
     const avgPercent =
       cp.axisProgress.reduce((sum, a) => sum + a.percent, 0) / cp.axisProgress.length;
-    if (avgPercent > bestScore) {
-      bestScore = avgPercent;
+    const score = alignmentScore * 100 + avgPercent;
+
+    if (score > bestScore) {
+      bestScore = score;
       best = cp;
     }
   }
@@ -141,15 +130,6 @@ const councilSeats = computed((): number => {
 
 const totalSeats = computed((): number => {
   return state.ideology.council.length;
-});
-
-const seatsNeeded = computed((): number => {
-  const threshold = Math.ceil(totalSeats.value * 0.65);
-  return Math.max(0, threshold - councilSeats.value);
-});
-
-const hasCouncilMajority = computed((): boolean => {
-  return seatsNeeded.value === 0 && totalSeats.value > 0;
 });
 
 // Megastructure state for best capstone
@@ -182,27 +162,23 @@ const megastructureProgress = computed(() => {
   };
 });
 
-// Project status helper
-type ProjectStatus = "passed" | "pending" | "locked";
-
-// oxlint-disable-next-line no-unused-vars
-function getProjectStatus(projectId: ProjectId): ProjectStatus {
-  if (state.ideology.completedProjects.includes(projectId)) return "passed";
-  if (state.ideology.pendingProposals.some((p) => p.projectId === projectId)) return "pending";
-  return "locked";
-}
-
-// oxlint-disable-next-line no-unused-vars
-function getPendingVoteSols(projectId: ProjectId): number | null {
-  const pending = state.ideology.pendingProposals.find((p) => p.projectId === projectId);
-  if (!pending) return null;
-  return pending.voteSol - state.currentSol;
-}
-
 // oxlint-disable-next-line no-unused-vars
 function formatAxisValue(value: number): string {
-  const sign = value >= 0 ? "+" : "";
-  return `${sign}${(value * 100).toFixed(0)}`;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value.toFixed(0);
+  }
+  return "0";
+}
+
+// oxlint-disable-next-line no-unused-vars
+function getPrereqName(prereqId: string): string {
+  const template = getDistrictGrantTemplate(prereqId as any);
+  return template?.name ?? prereqId;
+}
+
+// oxlint-disable-next-line no-unused-vars
+function isPrereqCompleted(prereqId: string): boolean {
+  return state.grants.completedGrantIds.includes(prereqId);
 }
 
 // Next step logic
@@ -233,32 +209,15 @@ const nextStep = computed(() => {
     return { action: `Build ${megaDef.name} to win!`, type: "ready" as const };
   }
 
-  // Capstone pending vote
-  if (capstone.isPending) {
-    const pending = state.ideology.pendingProposals.find(
-      (p) => p.projectId === capstone.project.id,
-    );
-    if (pending) {
-      const sols = pending.voteSol - state.currentSol;
-      return {
-        action: `${capstone.project.name} vote in ${sols} sols`,
-        type: "pending" as const,
-      };
-    }
-  }
-
-  // Check axis alignment
-  if (!capstone.meetsRequirements) {
-    const unmetAxes = capstone.axisProgress.filter((a) => !a.met);
-    if (unmetAxes.length > 0) {
-      const first = unmetAxes[0];
-      const dirLabel = first.direction === "min" ? "Increase" : "Decrease";
-      return {
-        action: `${dirLabel} ${first.axis} to reach ${capstone.project.name}`,
-        detail: `(${formatAxisValue(first.current)} / need ${formatAxisValue(first.required)})`,
-        type: "locked" as const,
-      };
-    }
+  // Check axis progress
+  const unmetAxes = capstone.axisProgress.filter((a) => !a.met);
+  if (unmetAxes.length > 0) {
+    const first = unmetAxes[0];
+    return {
+      action: `Build more ${first.axis} grants`,
+      detail: `(${formatAxisValue(first.current)}/${first.required} progress)`,
+      type: "locked" as const,
+    };
   }
 
   // Check prerequisites
@@ -267,25 +226,17 @@ const nextStep = computed(() => {
     capstone.prerequisitesPassed < capstone.prerequisitesTotal
   ) {
     return {
-      action: `Pass ${capstone.prerequisitesTotal - capstone.prerequisitesPassed} more prerequisite(s)`,
+      action: `Complete ${capstone.prerequisitesTotal - capstone.prerequisitesPassed} more prerequisite grant(s)`,
       type: "locked" as const,
     };
   }
 
-  // Check council majority
-  if (!hasCouncilMajority.value) {
-    return {
-      action: `Gain ${seatsNeeded.value} more council seat${seatsNeeded.value !== 1 ? "s" : ""}`,
-      type: "seats" as const,
-    };
+  // Capstone is unlocked - assign it to a district
+  if (capstone.isUnlocked && !capstone.isCompleted) {
+    return { action: `Assign ${capstone.name} to a district`, type: "ready" as const };
   }
 
-  // Ready to propose capstone
-  if (capstone.meetsRequirements && !capstone.isCompleted) {
-    return { action: `Propose ${capstone.project.name}`, type: "ready" as const };
-  }
-
-  return { action: "Victory path complete", type: "ready" as const };
+  return { action: "Victory path in progress", type: "locked" as const };
 });
 </script>
 
@@ -316,7 +267,7 @@ const nextStep = computed(() => {
             />
           </div>
         </div>
-        <span class="axis-value">{{ formatAxisValue(faction.position[axis]) }}</span>
+        <span class="axis-value">{{ (faction.position[axis] * 100).toFixed(0) }}</span>
       </div>
     </div>
 
@@ -325,17 +276,17 @@ const nextStep = computed(() => {
       <div class="section-label">Nearest Capstone</div>
       <div
         class="capstone-row"
-        :class="{ met: bestCapstone.meetsRequirements, passed: bestCapstone.isCompleted }"
+        :class="{ met: bestCapstone.isUnlocked, passed: bestCapstone.isCompleted }"
       >
         <span class="project-icon">
           <template v-if="bestCapstone.isCompleted">&#x2713;</template>
-          <template v-else-if="bestCapstone.meetsRequirements">&#x25CF;</template>
+          <template v-else-if="bestCapstone.isUnlocked">&#x25CF;</template>
           <template v-else>&#x25CB;</template>
         </span>
-        <span class="capstone-name">{{ bestCapstone.project.name }}</span>
+        <span class="capstone-name">{{ bestCapstone.name }}</span>
       </div>
 
-      <!-- Axis requirement progress bars -->
+      <!-- Axis progress bars (colony-wide grant progress toward threshold) -->
       <div class="axis-reqs">
         <div v-for="ap in bestCapstone.axisProgress" :key="ap.axis" class="axis-req-row">
           <span class="axis-req-label">{{ ap.axis }}</span>
@@ -347,7 +298,7 @@ const nextStep = computed(() => {
             />
           </div>
           <span class="axis-req-value" :class="{ met: ap.met }">
-            {{ formatAxisValue(ap.current) }}/{{ formatAxisValue(ap.required) }}
+            {{ formatAxisValue(ap.current) }}/{{ ap.required }}
           </span>
         </div>
       </div>
@@ -360,22 +311,17 @@ const nextStep = computed(() => {
           }})
         </div>
         <div
-          v-for="prereqId in bestCapstone.project.prerequisites"
+          v-for="prereqId in capstoneGrants.find((c) => c.id === bestCapstone!.id)?.prerequisites ??
+          []"
           :key="prereqId"
           class="project-row"
-          :class="getProjectStatus(prereqId)"
+          :class="isPrereqCompleted(prereqId) ? 'passed' : 'locked'"
         >
           <span class="project-icon">
-            <template v-if="getProjectStatus(prereqId) === 'passed'">&#x2713;</template>
-            <template v-else-if="getProjectStatus(prereqId) === 'pending'">&#x25D0;</template>
+            <template v-if="isPrereqCompleted(prereqId)">&#x2713;</template>
             <template v-else>&#x25CB;</template>
           </span>
-          <span class="project-name">{{
-            PROJECTS.find((p) => p.id === prereqId)?.name ?? prereqId
-          }}</span>
-          <GBadge v-if="getProjectStatus(prereqId) === 'pending'" variant="info" size="sm">
-            {{ getPendingVoteSols(prereqId) }} sols
-          </GBadge>
+          <span class="project-name">{{ getPrereqName(prereqId) }}</span>
         </div>
       </div>
 
@@ -424,14 +370,9 @@ const nextStep = computed(() => {
           class="council-fill"
           :style="{ width: totalSeats > 0 ? `${(councilSeats / totalSeats) * 100}%` : '0%' }"
         />
-        <div class="council-threshold" />
       </div>
       <div class="council-stats">
         <span class="council-count">{{ councilSeats }}/{{ totalSeats }}</span>
-        <span v-if="hasCouncilMajority" class="council-status majority">
-          Majority secured &#x2713;
-        </span>
-        <span v-else class="council-status needed"> Need {{ seatsNeeded }} more </span>
       </div>
     </div>
 
@@ -602,7 +543,7 @@ const nextStep = computed(() => {
   color: var(--color-positive);
 }
 
-/* Projects */
+/* Projects / Prerequisites */
 .prereqs-section {
   margin-top: var(--g-space-sm);
 }
@@ -632,10 +573,6 @@ const nextStep = computed(() => {
 .project-row.passed .project-name {
   text-decoration: line-through;
   opacity: 0.7;
-}
-
-.project-row.pending {
-  color: var(--color-info);
 }
 
 .project-row.locked {
@@ -752,15 +689,6 @@ const nextStep = computed(() => {
   transition: width 0.3s;
 }
 
-.council-threshold {
-  position: absolute;
-  left: 65%;
-  top: -2px;
-  width: 2px;
-  height: 12px;
-  background: var(--g-color-text);
-}
-
 .council-stats {
   display: flex;
   justify-content: space-between;
@@ -771,14 +699,6 @@ const nextStep = computed(() => {
 
 .council-count {
   color: var(--g-color-text);
-}
-
-.council-status.majority {
-  color: var(--color-positive);
-}
-
-.council-status.needed {
-  color: var(--g-color-text-muted);
 }
 
 /* Next Step */

@@ -1,7 +1,7 @@
 import { describe, expect, test, beforeEach } from "bun:test";
 import { IdeologyManager } from "../src/core/systems/IdeologyManager";
 import { RelationshipManager } from "../src/core/systems/RelationshipManager";
-import { NPCFaction, ProjectId } from "../src/core/models/NPCInfluence";
+import { NPCFaction } from "../src/core/models/NPCInfluence";
 import type { ColonistIdeology, Colonist } from "../src/core/models/Colonist";
 import { ColonistRole, MasteryLevel } from "../src/core/models/Colonist";
 import * as IdeologyBalance from "../src/core/balance/IdeologyBalance";
@@ -371,15 +371,12 @@ describe("IdeologyManager", () => {
       relationshipManager.recalculateCentrality(0);
 
       manager.selectCouncil(colonists, relationshipManager, 50);
-      manager.completeProject(ProjectId.EARTH_MEMORIAL);
 
       const json = manager.toJSON();
       const restored = IdeologyManager.fromJSON(json);
 
       expect(restored.getCouncil()).toEqual(manager.getCouncil());
       expect(restored.getFactions()).toEqual(manager.getFactions());
-      expect(restored.isProjectCompleted(ProjectId.EARTH_MEMORIAL)).toBe(true);
-      expect(restored.getCompletedProjects()).toEqual(manager.getCompletedProjects());
     });
 
     test("fromJSON preserves factions", () => {
@@ -592,165 +589,6 @@ describe("IdeologyManager", () => {
       expect(newColonist.ideology!.solidarity).toBeLessThanOrEqual(1);
       expect(newColonist.ideology!.sovereignty).toBeLessThanOrEqual(1);
       expect(newColonist.ideology!.transformation).toBeLessThanOrEqual(1);
-    });
-  });
-
-  describe("project proposals", () => {
-    let manager: IdeologyManager;
-    let relationshipManager: RelationshipManager;
-
-    beforeEach(() => {
-      manager = new IdeologyManager();
-      relationshipManager = new RelationshipManager();
-    });
-
-    test("can submit and process proposals", () => {
-      // Set up council with Earth Loyalists majority
-      const colonists = [
-        createTestColonist("c1", "EL1", {
-          solidarity: 0.0,
-          sovereignty: -0.7,
-          transformation: -0.3,
-          conviction: 0.8,
-        }),
-        createTestColonist("c2", "EL2", {
-          solidarity: 0.1,
-          sovereignty: -0.6,
-          transformation: -0.2,
-          conviction: 0.7,
-        }),
-        createTestColonist("c3", "MI1", {
-          solidarity: 0.3,
-          sovereignty: 0.7,
-          transformation: 0.3,
-          conviction: 0.6,
-        }),
-      ];
-
-      relationshipManager.recalculateCentrality(0);
-      manager.selectCouncil(colonists, relationshipManager, 0);
-
-      // Submit proposal
-      const submitted = manager.submitProposal(
-        ProjectId.EARTH_MEMORIAL,
-        NPCFaction.EarthLoyalists,
-        0,
-      );
-      expect(submitted).toBe(true);
-      expect(manager.isPendingProposal(ProjectId.EARTH_MEMORIAL)).toBe(true);
-
-      // Process votes after voting period
-      const results = manager.processVotes(IdeologyBalance.PROJECT_VOTING_PERIOD);
-      expect(results.length).toBe(1);
-      expect(results[0]!.projectId).toBe(ProjectId.EARTH_MEMORIAL);
-      // With 2 EL and 1 MI, should pass
-      expect(results[0]!.passed).toBe(true);
-    });
-
-    test("vote projection counts factionId matches", () => {
-      const colonists = [
-        createTestColonist("c1", "EL1", {
-          solidarity: 0.0,
-          sovereignty: -0.7,
-          transformation: -0.3,
-          conviction: 0.8,
-        }),
-        createTestColonist("c2", "EL2", {
-          solidarity: 0.1,
-          sovereignty: -0.6,
-          transformation: -0.2,
-          conviction: 0.7,
-        }),
-        createTestColonist("c3", "MI1", {
-          solidarity: 0.3,
-          sovereignty: 0.7,
-          transformation: 0.3,
-          conviction: 0.6,
-        }),
-      ];
-
-      relationshipManager.recalculateCentrality(0);
-      manager.selectCouncil(colonists, relationshipManager, 0);
-
-      const projection = manager.getVoteProjection(NPCFaction.EarthLoyalists);
-      expect(projection.votesFor).toBe(2);
-      expect(projection.votesAgainst).toBe(1);
-      expect(projection.wouldPass).toBe(true);
-
-      const marsProjection = manager.getVoteProjection(NPCFaction.MarsIndependence);
-      expect(marsProjection.votesFor).toBe(1);
-      expect(marsProjection.votesAgainst).toBe(2);
-      expect(marsProjection.wouldPass).toBe(false);
-    });
-
-    test("cannot submit duplicate proposal", () => {
-      const submitted1 = manager.submitProposal(
-        ProjectId.EARTH_MEMORIAL,
-        NPCFaction.EarthLoyalists,
-        0,
-      );
-      const submitted2 = manager.submitProposal(
-        ProjectId.EARTH_MEMORIAL,
-        NPCFaction.EarthLoyalists,
-        0,
-      );
-      expect(submitted1).toBe(true);
-      expect(submitted2).toBe(false);
-    });
-
-    test("cannot submit completed project", () => {
-      manager.completeProject(ProjectId.EARTH_MEMORIAL);
-      const submitted = manager.submitProposal(
-        ProjectId.EARTH_MEMORIAL,
-        NPCFaction.EarthLoyalists,
-        0,
-      );
-      expect(submitted).toBe(false);
-    });
-
-    test("clearFailedProposal allows re-proposal", () => {
-      // Submit and force a failed vote
-      const colonists = [
-        createTestColonist("c1", "MI1", {
-          solidarity: 0.3,
-          sovereignty: 0.7,
-          transformation: 0.3,
-          conviction: 0.8,
-        }),
-      ];
-      relationshipManager.recalculateCentrality(0);
-      manager.selectCouncil(colonists, relationshipManager, 0);
-
-      manager.submitProposal(ProjectId.EARTH_MEMORIAL, NPCFaction.EarthLoyalists, 0);
-      manager.processVotes(IdeologyBalance.PROJECT_VOTING_PERIOD);
-
-      expect(manager.isFailedProposal(ProjectId.EARTH_MEMORIAL)).toBe(true);
-
-      // Cannot re-submit while failed
-      expect(manager.submitProposal(ProjectId.EARTH_MEMORIAL, NPCFaction.EarthLoyalists, 100)).toBe(
-        false,
-      );
-
-      // Clear and re-submit
-      manager.clearFailedProposal(ProjectId.EARTH_MEMORIAL);
-      expect(manager.submitProposal(ProjectId.EARTH_MEMORIAL, NPCFaction.EarthLoyalists, 100)).toBe(
-        true,
-      );
-    });
-  });
-
-  describe("isCapstoneProject", () => {
-    test("returns true for capstone projects", () => {
-      const manager = new IdeologyManager();
-      expect(manager.isCapstoneProject(ProjectId.EARTH_RELIEF_COMPACT)).toBe(true);
-      expect(manager.isCapstoneProject(ProjectId.DECLARATION_OF_SOVEREIGNTY)).toBe(true);
-      expect(manager.isCapstoneProject(ProjectId.DEEP_SPACE_MINING_CHARTER)).toBe(true);
-    });
-
-    test("returns false for regular projects", () => {
-      const manager = new IdeologyManager();
-      expect(manager.isCapstoneProject(ProjectId.EARTH_MEMORIAL)).toBe(false);
-      expect(manager.isCapstoneProject(ProjectId.UNIVERSAL_HOUSING)).toBe(false);
     });
   });
 

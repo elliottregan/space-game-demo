@@ -1,353 +1,124 @@
 import { describe, expect, test, beforeEach } from "bun:test";
 import { VictoryManager } from "../src/core/systems/VictoryManager";
-import { IdeologyManager, type CouncilMember } from "../src/core/systems/IdeologyManager";
-import { ProjectId, NPCFaction } from "../src/core/models/NPCInfluence";
-import type { Colonist } from "../src/core/models/Colonist";
+import { DistrictGrantManager } from "../src/core/systems/DistrictGrantManager";
+import { DistrictGrantId } from "../src/core/models/DistrictGrant";
 
+/**
+ * Capstone unlock requires:
+ * 1. All prerequisite grants completed (via completedGrantIds set)
+ * 2. Axis progress >= CAPSTONE_UNLOCK_THRESHOLD (8) for each axis in the capstone's axisRequirements
+ *
+ * Axis progress accumulates from completed identity grants: each grant adds its victoryProgress
+ * to every axis in its own axisRequirements.
+ */
 describe("Axis-gated victory", () => {
   let victoryManager: VictoryManager;
-  let ideologyManager: IdeologyManager;
+  let grantManager: DistrictGrantManager;
 
   beforeEach(() => {
     victoryManager = new VictoryManager();
-    ideologyManager = new IdeologyManager();
+    grantManager = new DistrictGrantManager();
   });
 
-  test("capstone proposable when faction meets axis requirements and council support", () => {
-    // Get the Earth Loyalists faction and move it to meet Earth Relief Compact requirements
-    // Requirements: sovereignty <= -0.6, solidarity >= +0.5
-    const factions = ideologyManager.getFactions();
-    const earthLoyalists = factions.find((f) => f.baseId === NPCFaction.EarthLoyalists);
-    expect(earthLoyalists).toBeDefined();
+  /** Complete grants that accumulate sovereignty axis progress to >= 8. */
+  function fillSovereigntyProgress(): void {
+    // IMMIGRATION_PROGRAM(2) + MARS_NATIONALISM_CHARTER(2) + TRANSHUMAN_RESEARCH_INITIATIVE(2) = 6
+    // Need a second district's IMMIGRATION_PROGRAM(2) to reach 8
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.IMMIGRATION_PROGRAM);
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.MARS_NATIONALISM_CHARTER);
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.TRANSHUMAN_RESEARCH_INITIATIVE);
+    grantManager.addCompletedGrant("district-2", DistrictGrantId.IMMIGRATION_PROGRAM);
+  }
 
-    if (earthLoyalists) {
-      earthLoyalists.position.sovereignty = -0.7;
-      earthLoyalists.position.solidarity = 0.6;
-    }
+  /** Complete grants that accumulate solidarity axis progress to >= 8. */
+  function fillSolidarityProgress(): void {
+    // UNIVERSAL_HOUSING(2) + HEALTHCARE_EXPANSION(2) + DEMOCRATIC_ASSEMBLY(2) = 6
+    // VENTURE_CAPITAL_INITIATIVE(1) + PRIVATE_MINING_CONTRACTS(1) = 2 => total 8
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.UNIVERSAL_HOUSING);
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.HEALTHCARE_EXPANSION);
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.DEMOCRATIC_ASSEMBLY);
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.VENTURE_CAPITAL_INITIATIVE);
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.PRIVATE_MINING_CONTRACTS);
+  }
 
-    // Complete all prerequisites for Earth Relief Compact
-    ideologyManager.completeProject(ProjectId.EARTH_MEMORIAL);
-    ideologyManager.completeProject(ProjectId.HERITAGE_ARCHIVE);
-    ideologyManager.completeProject(ProjectId.IMMIGRATION_PROGRAM);
+  /** Complete grants that accumulate transformation axis progress to >= 8. */
+  function fillTransformationProgress(): void {
+    // HERITAGE_ARCHIVE(2) + EARTH_MEMORIAL(1) + GENETIC_ADAPTATION_PROGRAM(2)
+    // + MARS_NATIONALISM_CHARTER(2) + TRANSHUMAN_RESEARCH_INITIATIVE(2) = 9
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.HERITAGE_ARCHIVE);
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.EARTH_MEMORIAL);
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.GENETIC_ADAPTATION_PROGRAM);
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.MARS_NATIONALISM_CHARTER);
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.TRANSHUMAN_RESEARCH_INITIATIVE);
+  }
 
-    // Create a council with 65%+ Earth Loyalists support
-    const mockCouncil: CouncilMember[] = [
-      {
-        colonistId: "1",
-        name: "Colonist 1",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.EarthLoyalists,
-      },
-      {
-        colonistId: "2",
-        name: "Colonist 2",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.EarthLoyalists,
-      },
-      {
-        colonistId: "3",
-        name: "Colonist 3",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.EarthLoyalists,
-      },
-      {
-        colonistId: "4",
-        name: "Colonist 4",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.MarsIndependence,
-      },
-    ];
+  test("capstone available when prerequisites met and axis progress sufficient", () => {
+    // Earth Relief Compact prerequisites
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.EARTH_MEMORIAL);
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.HERITAGE_ARCHIVE);
 
-    // Set council using fromJSON to inject mock council
-    const managerData = ideologyManager.toJSON();
-    managerData.council = mockCouncil;
-    ideologyManager = IdeologyManager.fromJSON(managerData);
+    // Earth Relief Compact needs sovereignty + solidarity axes >= 8 each
+    fillSovereigntyProgress();
+    fillSolidarityProgress();
 
-    // Check if capstone is proposable
-    const result = victoryManager.checkCapstoneProposability(ideologyManager);
-
-    expect(result.canProposeAny).toBe(true);
-    expect(result.proposableCapstones.length).toBeGreaterThan(0);
-    expect(result.proposableCapstones.some((c) => c.projectId === ProjectId.EARTH_RELIEF_COMPACT))
-      .toBe(true);
+    const result = victoryManager.checkCapstoneAvailability(grantManager);
+    expect(result.availableCapstones).toContain(DistrictGrantId.EARTH_RELIEF_COMPACT);
   });
 
-  test("capstone not proposable when axis requirements not met", () => {
-    // Get the Earth Loyalists faction but keep it at starting position
-    // It won't meet sovereignty <= -0.6 or solidarity >= +0.5
-    const factions = ideologyManager.getFactions();
-    const earthLoyalists = factions.find((f) => f.baseId === NPCFaction.EarthLoyalists);
-    expect(earthLoyalists).toBeDefined();
+  test("capstone not available when prerequisites not met", () => {
+    // Only complete one of two prerequisites for Earth Relief Compact
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.EARTH_MEMORIAL);
+    // Missing: HERITAGE_ARCHIVE
 
-    // Complete all prerequisites
-    ideologyManager.completeProject(ProjectId.EARTH_MEMORIAL);
-    ideologyManager.completeProject(ProjectId.HERITAGE_ARCHIVE);
-    ideologyManager.completeProject(ProjectId.IMMIGRATION_PROGRAM);
+    fillSovereigntyProgress();
+    fillSolidarityProgress();
 
-    // Create a council with 100% Earth Loyalists support
-    const mockCouncil: CouncilMember[] = [
-      {
-        colonistId: "1",
-        name: "Colonist 1",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.EarthLoyalists,
-      },
-      {
-        colonistId: "2",
-        name: "Colonist 2",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.EarthLoyalists,
-      },
-    ];
-
-    const managerData = ideologyManager.toJSON();
-    managerData.council = mockCouncil;
-    ideologyManager = IdeologyManager.fromJSON(managerData);
-
-    // Check if capstone is proposable
-    const result = victoryManager.checkCapstoneProposability(ideologyManager);
-
-    // Should not be proposable because axis requirements are not met
-    expect(
-      result.proposableCapstones.some((c) => c.projectId === ProjectId.EARTH_RELIEF_COMPACT),
-    ).toBe(false);
+    const result = victoryManager.checkCapstoneAvailability(grantManager);
+    expect(result.availableCapstones).not.toContain(DistrictGrantId.EARTH_RELIEF_COMPACT);
   });
 
-  test("capstone not proposable when council support insufficient", () => {
-    // Get the Earth Loyalists faction and set it to meet axis requirements
-    const factions = ideologyManager.getFactions();
-    const earthLoyalists = factions.find((f) => f.baseId === NPCFaction.EarthLoyalists);
-    expect(earthLoyalists).toBeDefined();
+  test("capstone not available when axis progress insufficient", () => {
+    // Complete prerequisites for Earth Relief Compact
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.EARTH_MEMORIAL);
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.HERITAGE_ARCHIVE);
 
-    if (earthLoyalists) {
-      earthLoyalists.position.sovereignty = -0.7;
-      earthLoyalists.position.solidarity = 0.6;
-    }
+    // Only partial progress on each axis (far below threshold of 8)
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.IMMIGRATION_PROGRAM);
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.UNIVERSAL_HOUSING);
 
-    // Complete all prerequisites
-    ideologyManager.completeProject(ProjectId.EARTH_MEMORIAL);
-    ideologyManager.completeProject(ProjectId.HERITAGE_ARCHIVE);
-    ideologyManager.completeProject(ProjectId.IMMIGRATION_PROGRAM);
-
-    // Create a council with only 50% Earth Loyalists support (below 65% requirement)
-    const mockCouncil: CouncilMember[] = [
-      {
-        colonistId: "1",
-        name: "Colonist 1",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.EarthLoyalists,
-      },
-      {
-        colonistId: "2",
-        name: "Colonist 2",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.MarsIndependence,
-      },
-    ];
-
-    const managerData = ideologyManager.toJSON();
-    managerData.council = mockCouncil;
-    ideologyManager = IdeologyManager.fromJSON(managerData);
-
-    // Check if capstone is proposable
-    const result = victoryManager.checkCapstoneProposability(ideologyManager);
-
-    // Should not be proposable because council support is insufficient
-    expect(
-      result.proposableCapstones.some((c) => c.projectId === ProjectId.EARTH_RELIEF_COMPACT),
-    ).toBe(false);
+    const result = victoryManager.checkCapstoneAvailability(grantManager);
+    expect(result.availableCapstones).not.toContain(DistrictGrantId.EARTH_RELIEF_COMPACT);
   });
 
-  test("capstone not proposable when prerequisites not met", () => {
-    // Get the Earth Loyalists faction and set it to meet axis requirements
-    const factions = ideologyManager.getFactions();
-    const earthLoyalists = factions.find((f) => f.baseId === NPCFaction.EarthLoyalists);
-    expect(earthLoyalists).toBeDefined();
+  test("Declaration of Sovereignty capstone requires sovereignty axis progress", () => {
+    // Prerequisites: UNIVERSAL_HOUSING, DEMOCRATIC_ASSEMBLY
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.UNIVERSAL_HOUSING);
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.DEMOCRATIC_ASSEMBLY);
 
-    if (earthLoyalists) {
-      earthLoyalists.position.sovereignty = -0.7;
-      earthLoyalists.position.solidarity = 0.6;
-    }
+    // Sovereignty axis progress >= 8
+    fillSovereigntyProgress();
 
-    // Only complete some prerequisites (not all)
-    ideologyManager.completeProject(ProjectId.EARTH_MEMORIAL);
-    // Missing: HERITAGE_ARCHIVE and IMMIGRATION_PROGRAM
-
-    // Create a council with 100% Earth Loyalists support
-    const mockCouncil: CouncilMember[] = [
-      {
-        colonistId: "1",
-        name: "Colonist 1",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.EarthLoyalists,
-      },
-      {
-        colonistId: "2",
-        name: "Colonist 2",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.EarthLoyalists,
-      },
-    ];
-
-    const managerData = ideologyManager.toJSON();
-    managerData.council = mockCouncil;
-    ideologyManager = IdeologyManager.fromJSON(managerData);
-
-    // Check if capstone is proposable
-    const result = victoryManager.checkCapstoneProposability(ideologyManager);
-
-    // Should not be proposable because prerequisites are not met
-    expect(
-      result.proposableCapstones.some((c) => c.projectId === ProjectId.EARTH_RELIEF_COMPACT),
-    ).toBe(false);
+    const result = victoryManager.checkCapstoneAvailability(grantManager);
+    expect(result.availableCapstones).toContain(DistrictGrantId.DECLARATION_OF_SOVEREIGNTY);
   });
 
-  test("Declaration of Sovereignty capstone requires correct axis position", () => {
-    // Declaration of Sovereignty requires: sovereignty >= +0.5
-    const factions = ideologyManager.getFactions();
-    const marsFirst = factions.find((f) => f.baseId === NPCFaction.MarsIndependence);
-    expect(marsFirst).toBeDefined();
+  test("Deep Space Mining Charter requires multi-axis progress", () => {
+    // Prerequisites: ORBITAL_INFRASTRUCTURE, ASTEROID_SURVEY_PROGRAM
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.ORBITAL_INFRASTRUCTURE);
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.ASTEROID_SURVEY_PROGRAM);
 
-    if (marsFirst) {
-      marsFirst.position.sovereignty = 0.6;
-    }
+    // Needs solidarity + transformation axes >= 8 each
+    fillSolidarityProgress();
+    fillTransformationProgress();
 
-    // Complete all prerequisites
-    ideologyManager.completeProject(ProjectId.UNIVERSAL_HOUSING);
-    ideologyManager.completeProject(ProjectId.HEALTHCARE_EXPANSION);
-    ideologyManager.completeProject(ProjectId.DEMOCRATIC_ASSEMBLY);
-
-    // Create a council with 70% Mars First support
-    const mockCouncil: CouncilMember[] = [
-      {
-        colonistId: "1",
-        name: "Colonist 1",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.MarsIndependence,
-      },
-      {
-        colonistId: "2",
-        name: "Colonist 2",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.MarsIndependence,
-      },
-      {
-        colonistId: "3",
-        name: "Colonist 3",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.MarsIndependence,
-      },
-      {
-        colonistId: "4",
-        name: "Colonist 4",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.EarthLoyalists,
-      },
-    ];
-
-    const managerData = ideologyManager.toJSON();
-    managerData.council = mockCouncil;
-    ideologyManager = IdeologyManager.fromJSON(managerData);
-
-    // Check if capstone is proposable
-    const result = victoryManager.checkCapstoneProposability(ideologyManager);
-
-    expect(result.canProposeAny).toBe(true);
-    expect(
-      result.proposableCapstones.some((c) => c.projectId === ProjectId.DECLARATION_OF_SOVEREIGNTY),
-    ).toBe(true);
+    const result = victoryManager.checkCapstoneAvailability(grantManager);
+    expect(result.availableCapstones).toContain(DistrictGrantId.DEEP_SPACE_MINING_CHARTER);
   });
 
-  test("Deep Space Mining Charter requires multi-axis position", () => {
-    // Deep Space Mining Charter requires: solidarity <= -0.5, transformation >= +0.5
-    const factions = ideologyManager.getFactions();
-    const corporatists = factions.find((f) => f.baseId === NPCFaction.CorporateInterests);
-    expect(corporatists).toBeDefined();
+  test("completed capstone is not listed as available", () => {
+    grantManager.addCompletedGrant("district-1", DistrictGrantId.EARTH_RELIEF_COMPACT);
 
-    if (corporatists) {
-      corporatists.position.solidarity = -0.6;
-      corporatists.position.transformation = 0.6;
-    }
-
-    // Complete all prerequisites
-    ideologyManager.completeProject(ProjectId.VENTURE_CAPITAL_INITIATIVE);
-    ideologyManager.completeProject(ProjectId.ORBITAL_INFRASTRUCTURE);
-    ideologyManager.completeProject(ProjectId.ASTEROID_SURVEY_PROGRAM);
-
-    // Create a council with 70% Corporatists support
-    const mockCouncil: CouncilMember[] = [
-      {
-        colonistId: "1",
-        name: "Colonist 1",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.CorporateInterests,
-      },
-      {
-        colonistId: "2",
-        name: "Colonist 2",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.CorporateInterests,
-      },
-      {
-        colonistId: "3",
-        name: "Colonist 3",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.CorporateInterests,
-      },
-      {
-        colonistId: "4",
-        name: "Colonist 4",
-        centrality: 0.5,
-        conviction: 0.8,
-        influence: 0.4,
-        factionId: NPCFaction.MarsIndependence,
-      },
-    ];
-
-    const managerData = ideologyManager.toJSON();
-    managerData.council = mockCouncil;
-    ideologyManager = IdeologyManager.fromJSON(managerData);
-
-    // Check if capstone is proposable
-    const result = victoryManager.checkCapstoneProposability(ideologyManager);
-
-    expect(result.canProposeAny).toBe(true);
-    expect(
-      result.proposableCapstones.some((c) => c.projectId === ProjectId.DEEP_SPACE_MINING_CHARTER),
-    ).toBe(true);
+    const result = victoryManager.checkCapstoneAvailability(grantManager);
+    expect(result.availableCapstones).not.toContain(DistrictGrantId.EARTH_RELIEF_COMPACT);
   });
 });

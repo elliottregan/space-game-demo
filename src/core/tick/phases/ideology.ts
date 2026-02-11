@@ -1,14 +1,6 @@
 import type { Colonist, ColonistIdeology } from "../../models/Colonist";
-import { getProject } from "../../data/projects";
 import type { GameEvent } from "../../models/GameEvent";
-import {
-  ProjectEffectType,
-  AXIS_KEYS,
-  type ProductionModifierParams,
-  type Project,
-  type ProjectId,
-  type RecurringEventParams,
-} from "../../models/NPCInfluence";
+import { AXIS_KEYS } from "../../models/NPCInfluence";
 import { definePhase } from "../TickPhase";
 import { IdeologyManager } from "../../systems/IdeologyManager";
 import * as IdeologyBalance from "../../balance/IdeologyBalance";
@@ -27,55 +19,6 @@ function isNeutralIdeology(colonist: { ideology?: ColonistIdeology }): boolean {
   );
 
   return allAxesNearZero && ideology.conviction <= IdeologyBalance.NEW_COLONIST_IDEOLOGY.conviction;
-}
-
-/**
- * Process onCompletionEffects for a project.
- * This handles recurring events and production modifiers.
- */
-function processProjectOnCompletionEffects(
-  project: Project,
-  ctx: {
-    scheduler: {
-      register: (projectId: ProjectId, params: RecurringEventParams, currentSol: number) => void;
-    };
-    resources: {
-      addProductionBonus: (
-        sourceId: string,
-        resource: "food" | "water" | "materials",
-        amount: number,
-      ) => void;
-    };
-    currentSol: number;
-  },
-): void {
-  if (!project.onCompletionEffects) return;
-
-  for (const effect of project.onCompletionEffects) {
-    switch (effect.type) {
-      case ProjectEffectType.RECURRING_EVENT: {
-        const params = effect.params as RecurringEventParams;
-        ctx.scheduler.register(project.id, params, ctx.currentSol);
-        break;
-      }
-      case ProjectEffectType.PRODUCTION_MODIFIER: {
-        const params = effect.params as ProductionModifierParams;
-        // Power is handled by the grid system, not resource production
-        if (params.resource !== "power") {
-          ctx.resources.addProductionBonus(project.id, params.resource, params.amount);
-        }
-        break;
-      }
-      case ProjectEffectType.CONVICTION_BOOST: {
-        // No longer handled here - conviction is managed by the axis-based ideology system
-        break;
-      }
-      case ProjectEffectType.IMMIGRATION_IDEOLOGY_BIAS: {
-        // Handled elsewhere during immigration events
-        break;
-      }
-    }
-  }
 }
 
 /**
@@ -155,87 +98,6 @@ export const propagateIdeology = definePhase({
 
     // Check for faction collapses (insufficient support)
     events.push(...ctx.ideology.checkFactionCollapse(colonists));
-
-    return events;
-  },
-});
-
-/**
- * Process Project Votes Phase
- *
- * Processes any pending project proposals that have reached their vote date.
- * The council votes based on faction alignment - projects pass if their
- * faction has more council votes than all other factions combined.
- */
-export const processProjectVotes = definePhase({
-  id: "ideology:processProjectVotes",
-  name: "Process Project Votes",
-  reads: ["ideology", "colony", "workforce", "currentSol", "victory", "scheduler"],
-  writes: ["ideology", "victory", "scheduler"],
-  execute(ctx) {
-    const events: GameEvent[] = [];
-
-    // Process any votes that are due
-    const voteResults = ctx.ideology.processVotes(ctx.currentSol);
-
-    for (const result of voteResults) {
-      const project = getProject(result.projectId);
-      if (!project) continue;
-
-      if (result.passed) {
-        // Check for capstone completion (unlocks megastructure building)
-        const capstoneEvent = ctx.victory.checkCapstoneVictory(result.projectId);
-        if (capstoneEvent) {
-          events.push(capstoneEvent);
-          // Don't return - capstones unlock megastructures but don't win the game
-        }
-
-        // Apply colony-wide morale boost if specified
-        if (project.effects?.colonyMoraleBoost) {
-          ctx.colonistMorale.adjustAllColonistsMorale(project.effects.colonyMoraleBoost);
-        }
-
-        // Apply population bonus if specified
-        if (project.effects?.populationBonus && project.effects.populationBonus > 0) {
-          for (let i = 0; i < project.effects.populationBonus; i++) {
-            ctx.colony.addColonist();
-          }
-        }
-
-        // Apply resource production bonuses if specified
-        if (project.effects?.foodBonus) {
-          ctx.resources.addProduction({ food: project.effects.foodBonus });
-        }
-        if (project.effects?.materialsBonus) {
-          ctx.resources.addProduction({ materials: project.effects.materialsBonus });
-        }
-
-        // Process onCompletionEffects (recurring events, production modifiers, etc.)
-        processProjectOnCompletionEffects(project, ctx);
-
-        events.push({
-          type: "project_passed",
-          severity: "info",
-          message: `Project "${project.name}" passed the council vote (${result.votesFor}-${result.votesAgainst})`,
-          details: {
-            projectId: result.projectId,
-            votesFor: result.votesFor,
-            votesAgainst: result.votesAgainst,
-          },
-        });
-      } else {
-        events.push({
-          type: "project_failed",
-          severity: "info",
-          message: `Project "${project.name}" failed the council vote (${result.votesFor}-${result.votesAgainst})`,
-          details: {
-            projectId: result.projectId,
-            votesFor: result.votesFor,
-            votesAgainst: result.votesAgainst,
-          },
-        });
-      }
-    }
 
     return events;
   },

@@ -103,11 +103,11 @@ export class BuildingsFacade
       };
     }
 
-    // Check project requirements (for victory buildings)
-    if (def.requiredProject && !this.gameState.ideology.isProjectCompleted(def.requiredProject)) {
+    // Check grant requirements (for victory buildings)
+    if (def.requiredGrant && !this.gameState.districtGrants.isGrantCompleted(def.requiredGrant)) {
       return {
         allowed: false,
-        reason: `Requires capstone project to be passed first`,
+        reason: `Requires capstone grant to be completed first`,
       };
     }
 

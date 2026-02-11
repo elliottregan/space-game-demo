@@ -94,6 +94,6 @@ export { SpecialUnlockId, TechnologyId } from "./technology";
 export type {
   ActiveGrantSnapshot,
   AvailableGrantSnapshot,
-  GrantSourceSnapshot,
+  DistrictGrantsSnapshot,
   GrantsSnapshot,
 } from "./grants";

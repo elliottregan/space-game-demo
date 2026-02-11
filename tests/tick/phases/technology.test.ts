@@ -28,7 +28,7 @@ describe("technology:processResearch", () => {
         ideology: state.ideology,
         lifeSupport: state.lifeSupport,
         earthCrisis: state.earthCrisis,
-        grants: state.grants,
+        districtGrants: state.districtGrants,
         districts: state.districts,
         scheduler: state.scheduler,
       },

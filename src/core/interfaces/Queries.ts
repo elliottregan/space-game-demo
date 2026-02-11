@@ -5,7 +5,7 @@
  */
 
 import type { Colonist } from "../models/Colonist";
-import type { ProjectId } from "../models/NPCInfluence";
+import type { DistrictGrantId } from "../models/DistrictGrant";
 
 /**
  * Query interface for colonist data.
@@ -25,11 +25,11 @@ export interface WorkforceQueries {
 }
 
 /**
- * Query interface for project completion status.
- * Implemented by IdeologyManager.
+ * Query interface for grant completion status.
+ * Implemented by DistrictGrantManager.
  */
-export interface ProjectQueries {
-  isProjectCompleted(projectId: ProjectId): boolean;
+export interface GrantCompletionQueries {
+  isGrantCompleted(grantId: DistrictGrantId): boolean;
 }
 
 /**
