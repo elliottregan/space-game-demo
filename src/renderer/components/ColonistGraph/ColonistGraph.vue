@@ -4,6 +4,7 @@ import type { Colonist } from "../../../core/models/Colonist";
 import type { Guild } from "../../../core/models/Guild";
 import { WEAK_TIE_THRESHOLD } from "../../../core/balance/WorkforceBalance";
 import type { CoworkerRelationship } from "../../../core/systems/WorkforceManager";
+import { assignIdeologyPockets } from "../../../simulation/types";
 import { ColonistSimulationManager } from "../../utils/ColonistSimulationManager";
 import {
   type ColonistGraphData,
@@ -41,6 +42,7 @@ const svgRef = ref<SVGSVGElement | null>(null);
 
 // Display options
 const showWeakTies = ref(false);
+const showPockets = ref(true);
 
 // Reactive dimensions from container
 const dimensions = ref({ width: 600, height: 400 });
@@ -198,6 +200,9 @@ const guildMembership = computed(() => {
   return membership;
 });
 
+// Ideology pocket assignments via DBSCAN
+const pocketAssignments = computed(() => assignIdeologyPockets(props.colonists));
+
 // Check if two colonists share a guild
 function getSharedGuildIds(id1: string, id2: string): string[] {
   const guilds1 = guildMembership.value.get(id1) ?? [];
@@ -283,6 +288,8 @@ function render() {
     selectedId: props.selectedColonistId,
     onNodeClick: (id) => emit("select", id),
     showWeakTies: showWeakTies.value,
+    pocketAssignments: pocketAssignments.value,
+    showPockets: showPockets.value,
   });
 }
 
@@ -336,7 +343,7 @@ onUnmounted(() => {
 });
 
 watch([() => props.colonists, relationshipStrengths], updateSimulation, { deep: true });
-watch([graphData, () => props.selectedColonistId, showWeakTies], render);
+watch([graphData, () => props.selectedColonistId, showWeakTies, showPockets], render);
 watch(dimensions, render);
 </script>
 
@@ -388,6 +395,11 @@ watch(dimensions, render);
           <input v-model="showWeakTies" type="checkbox" />
           <span class="legend-line weak" />
           <span>Weak Ties</span>
+        </label>
+        <label class="legend-item legend-checkbox">
+          <input v-model="showPockets" type="checkbox" />
+          <span class="legend-hull" />
+          <span>Pockets</span>
         </label>
       </div>
       <div class="legend-divider" />
@@ -602,5 +614,14 @@ watch(dimensions, render);
   height: 12px;
   margin: 0;
   cursor: pointer;
+}
+
+.legend-hull {
+  width: 16px;
+  height: 10px;
+  border-radius: 4px;
+  background: var(--g-color-text-muted);
+  opacity: 0.2;
+  border: 1px solid var(--g-color-text-muted);
 }
 </style>

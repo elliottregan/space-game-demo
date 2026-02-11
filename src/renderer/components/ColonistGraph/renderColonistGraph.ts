@@ -1,9 +1,11 @@
+import { polygonHull } from "d3-polygon";
 import { select } from "d3-selection";
 import type { Colonist, ColonistIdeology } from "../../../core/models/Colonist";
 import type { PositionedColonist } from "../../utils/ColonistSimulationManager";
 import {
   getIdeologyColorForGraph,
   getAxisColorFromTheme,
+  getDominantAxisHexColor,
   type AxisId,
 } from "../../utils/ideologyDisplay";
 
@@ -47,6 +49,8 @@ export interface ColonistRenderOptions {
   onNodeClick: (colonistId: string | null) => void;
   showWeakTies?: boolean;
   showPressureArrows?: boolean;
+  pocketAssignments?: Map<string, number>;
+  showPockets?: boolean;
 }
 
 const NODE_RADIUS = 18;
@@ -149,6 +153,8 @@ export function renderColonistGraph(
     onNodeClick,
     showWeakTies = false,
     showPressureArrows = true,
+    pocketAssignments,
+    showPockets = false,
   } = options;
   const svg = select(container);
   const colors = getThemeColors();
@@ -257,6 +263,136 @@ export function renderColonistGraph(
       .attr("stroke-opacity", opacity)
       .attr("stroke-width", strokeWidth)
       .attr("stroke-dasharray", dashArray);
+  }
+
+  // Render ideology pocket hulls
+  if (showPockets && pocketAssignments && pocketAssignments.size > 0) {
+    const pocketsGroup = svg.append("g").attr("class", "pockets");
+
+    // Group nodes by pocket ID, skip -1 (noise)
+    const pocketGroups = new Map<number, ColonistGraphNode[]>();
+    for (const node of data.nodes) {
+      const pocketId = pocketAssignments.get(node.id);
+      if (pocketId === undefined || pocketId === -1) continue;
+      if (!pocketGroups.has(pocketId)) pocketGroups.set(pocketId, []);
+      pocketGroups.get(pocketId)!.push(node);
+    }
+
+    const HULL_PADDING = NODE_RADIUS + 8;
+
+    for (const [, members] of pocketGroups) {
+      // Compute centroid of pocket ideology for color
+      let sumS = 0,
+        sumSov = 0,
+        sumT = 0;
+      for (const m of members) {
+        if (m.colonist.ideology) {
+          sumS += m.colonist.ideology.solidarity;
+          sumSov += m.colonist.ideology.sovereignty;
+          sumT += m.colonist.ideology.transformation;
+        }
+      }
+      const n = members.length;
+      const centroidIdeology = {
+        solidarity: sumS / n,
+        sovereignty: sumSov / n,
+        transformation: sumT / n,
+      };
+      const hullColor = getDominantAxisHexColor(centroidIdeology);
+
+      if (members.length >= 3) {
+        // Convex hull
+        const screenPoints: [number, number][] = members.map((m) => [m.x, m.y]);
+        const hull = polygonHull(screenPoints);
+        if (hull) {
+          // Compute hull centroid for padding offset
+          let cx = 0,
+            cy = 0;
+          for (const [hx, hy] of hull) {
+            cx += hx;
+            cy += hy;
+          }
+          cx /= hull.length;
+          cy /= hull.length;
+
+          // Offset each hull point outward from centroid
+          const padded = hull.map(([hx, hy]): [number, number] => {
+            const dx = hx - cx;
+            const dy = hy - cy;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 1) return [hx, hy];
+            return [hx + (dx / dist) * HULL_PADDING, hy + (dy / dist) * HULL_PADDING];
+          });
+
+          // Build a smooth closed path using cubic bezier curves for rounded corners
+          const pathParts: string[] = [];
+          const len = padded.length;
+          for (let i = 0; i < len; i++) {
+            const p0 = padded[(i - 1 + len) % len]!;
+            const p1 = padded[i]!;
+            const p2 = padded[(i + 1) % len]!;
+
+            // Midpoints
+            const m1x = (p0[0] + p1[0]) / 2;
+            const m1y = (p0[1] + p1[1]) / 2;
+            const m2x = (p1[0] + p2[0]) / 2;
+            const m2y = (p1[1] + p2[1]) / 2;
+
+            if (i === 0) {
+              pathParts.push(`M ${m1x} ${m1y}`);
+            }
+            pathParts.push(`Q ${p1[0]} ${p1[1]} ${m2x} ${m2y}`);
+          }
+          pathParts.push("Z");
+
+          pocketsGroup
+            .append("path")
+            .attr("d", pathParts.join(" "))
+            .attr("fill", hullColor)
+            .attr("fill-opacity", 0.08)
+            .attr("stroke", hullColor)
+            .attr("stroke-opacity", 0.25)
+            .attr("stroke-width", 1.5);
+        }
+      } else if (members.length === 2) {
+        // Capsule between two nodes
+        const [a, b] = members;
+        const mx = (a!.x + b!.x) / 2;
+        const my = (a!.y + b!.y) / 2;
+        const dx = b!.x - a!.x;
+        const dy = b!.y - a!.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const rx = dist / 2 + HULL_PADDING;
+        const ry = HULL_PADDING;
+        const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+
+        pocketsGroup
+          .append("ellipse")
+          .attr("cx", mx)
+          .attr("cy", my)
+          .attr("rx", rx)
+          .attr("ry", ry)
+          .attr("transform", `rotate(${angle}, ${mx}, ${my})`)
+          .attr("fill", hullColor)
+          .attr("fill-opacity", 0.08)
+          .attr("stroke", hullColor)
+          .attr("stroke-opacity", 0.25)
+          .attr("stroke-width", 1.5);
+      } else {
+        // Single node - circle around it
+        const node = members[0]!;
+        pocketsGroup
+          .append("circle")
+          .attr("cx", node.x)
+          .attr("cy", node.y)
+          .attr("r", HULL_PADDING)
+          .attr("fill", hullColor)
+          .attr("fill-opacity", 0.08)
+          .attr("stroke", hullColor)
+          .attr("stroke-opacity", 0.25)
+          .attr("stroke-width", 1.5);
+      }
+    }
   }
 
   // Render ideology pressure arrows (between connected nodes)
