@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { X, Recycle } from "lucide-vue-next";
 import {
   DISTRICT_BUILDING_SLOTS,
   DISTRICT_GROWTH_TRIGGER,
 } from "../../../core/balance/DistrictBalance";
+import { BuildingPurpose } from "../../../core/models/Building";
 import type { Building, BuildingDefinition } from "../../../facade";
+import type { ResourceDelta } from "../../../core/models/Resources";
 import { clearHighlights, highlightResources } from "../../directives/ResourceHighlight";
 import { gameService } from "../../services/GameService";
-import { GCardGrid, GProgress } from "../../ui";
+import { GButton, GCardGrid, GProgress, GTabGroup } from "../../ui";
+import type { Tab } from "../../ui";
 import { calculateHighlightInfo } from "../../utils/formatters";
 import BuildingCard from "../BuildingPanel/BuildingCard.vue";
 
@@ -31,6 +35,8 @@ const state = gameService.getState();
 const api = gameService.api;
 
 const showBuildPanel = ref(false);
+const selectedSlotId = ref<string | null>(null);
+const buildCategory = ref<string>("all");
 
 const occupancyPercent = computed(() =>
   props.district.capacity > 0 ? (props.district.population / props.district.capacity) * 100 : 0,
@@ -58,14 +64,28 @@ const districtBuildings = computed(() => {
   return props.buildings.filter((b) => idSet.has(b.id));
 });
 
+type OccupiedSlot = {
+  occupied: true;
+  name: string;
+  buildingId: string;
+  status: string;
+  definitionId: string;
+};
+type EmptySlot = { occupied: false };
+
 // oxlint-disable-next-line no-unused-vars
-const slots = computed(() => {
-  const result: Array<{ occupied: true; name: string; buildingId: string } | { occupied: false }> =
-    [];
+const slots = computed<Array<OccupiedSlot | EmptySlot>>(() => {
+  const result: Array<OccupiedSlot | EmptySlot> = [];
 
   for (const b of districtBuildings.value) {
     const def = props.buildingDefinitions.find((d) => d.id === b.definitionId);
-    result.push({ occupied: true, name: def?.name ?? b.definitionId, buildingId: b.id });
+    result.push({
+      occupied: true,
+      name: def?.name ?? b.definitionId,
+      buildingId: b.id,
+      status: b.status,
+      definitionId: b.definitionId,
+    });
   }
 
   while (result.length < DISTRICT_BUILDING_SLOTS) {
@@ -80,7 +100,45 @@ const slotsFull = computed(() => districtBuildings.value.length >= DISTRICT_BUIL
 
 // oxlint-disable-next-line no-unused-vars
 const filteredDefinitions = computed(() => {
-  return state.buildingDefinitions.filter(() => true);
+  return state.buildingDefinitions.filter((def) => {
+    if (def.isVictoryBuilding) return false;
+    if (buildCategory.value === "all") return true;
+    return def.purpose === buildCategory.value;
+  });
+});
+
+// oxlint-disable-next-line no-unused-vars
+const categoryTabs = computed<Tab[]>(() => {
+  const defs = state.buildingDefinitions.filter((d) => !d.isVictoryBuilding);
+  const industrialCount = defs.filter((d) => d.purpose === BuildingPurpose.Industrial).length;
+  const socialCount = defs.filter((d) => d.purpose === BuildingPurpose.Social).length;
+  return [
+    { id: "all", label: "All", badge: defs.length },
+    { id: BuildingPurpose.Industrial, label: "Industrial", badge: industrialCount },
+    { id: BuildingPurpose.Social, label: "Social", badge: socialCount },
+  ];
+});
+
+// oxlint-disable-next-line no-unused-vars
+const selectedBuilding = computed(() => {
+  if (!selectedSlotId.value) return null;
+  const building = props.buildings.find((b) => b.id === selectedSlotId.value);
+  if (!building) return null;
+  const def = props.buildingDefinitions.find((d) => d.id === building.definitionId);
+  if (!def) return null;
+  return { building, definition: def };
+});
+
+// oxlint-disable-next-line no-unused-vars
+const selectedRecycleValue = computed<ResourceDelta | undefined>(() => {
+  if (!selectedSlotId.value) return undefined;
+  return api.buildings.getRecycleValue(selectedSlotId.value);
+});
+
+// oxlint-disable-next-line no-unused-vars
+const canRecycleSelected = computed(() => {
+  if (!selectedSlotId.value) return false;
+  return api.buildings.canRecycle(selectedSlotId.value).allowed;
 });
 
 // oxlint-disable-next-line no-unused-vars
@@ -96,7 +154,7 @@ function getBuildReason(defId: string): string | undefined {
 
 // oxlint-disable-next-line no-unused-vars
 function build(defId: string): void {
-  const result = api.buildings.build(defId);
+  const result = api.buildings.build(defId, props.district.id);
   if (!result.success) {
     console.warn(`Build failed: ${result.error.type}`, result.error);
     return;
@@ -147,13 +205,51 @@ function onLeave(): void {
 // oxlint-disable-next-line no-unused-vars
 function toggleBuildPanel(): void {
   showBuildPanel.value = !showBuildPanel.value;
+  selectedSlotId.value = null;
+  buildCategory.value = "all";
+}
+
+// oxlint-disable-next-line no-unused-vars
+function closeBuildPanel(): void {
+  showBuildPanel.value = false;
+}
+
+// oxlint-disable-next-line no-unused-vars
+function selectSlot(buildingId: string): void {
+  selectedSlotId.value = selectedSlotId.value === buildingId ? null : buildingId;
+  showBuildPanel.value = false;
+}
+
+// oxlint-disable-next-line no-unused-vars
+function recycleSelected(): void {
+  if (!selectedSlotId.value) return;
+  api.buildings.recycle(selectedSlotId.value);
+  selectedSlotId.value = null;
+}
+
+// oxlint-disable-next-line no-unused-vars
+function getSlotTitle(slot: OccupiedSlot): string {
+  return `${slot.name} (${slot.status})`;
+}
+
+// oxlint-disable-next-line no-unused-vars
+function formatRecycleValue(delta: ResourceDelta): string {
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(delta)) {
+    if (value && value > 0) {
+      parts.push(`+${value} ${key}`);
+    }
+  }
+  return parts.join(", ");
 }
 </script>
 
 <template>
   <div class="district-card">
     <div class="district-header">
-      <span class="district-name">{{ district.name }}</span>
+      <span class="district-name" :title="`Founded: Sol ${district.foundedAt}`">
+        {{ district.name }}
+      </span>
       <span class="district-status" :class="`status--${growthStatus.variant}`">
         {{ growthStatus.label }}
       </span>
@@ -186,8 +282,12 @@ function toggleBuildPanel(): void {
           :class="{
             'slot--occupied': slot.occupied,
             'slot--empty': !slot.occupied,
+            'slot--selected': slot.occupied && slot.buildingId === selectedSlotId,
+            'slot--pending': slot.occupied && slot.status === 'pending',
+            'slot--recycling': slot.occupied && slot.status === 'recycling',
           }"
-          @click="!slot.occupied && toggleBuildPanel()"
+          :title="slot.occupied ? getSlotTitle(slot) : undefined"
+          @click="slot.occupied && selectSlot(slot.buildingId)"
         >
           <template v-if="slot.occupied">
             {{ slot.name }}
@@ -196,7 +296,41 @@ function toggleBuildPanel(): void {
         </div>
       </div>
 
+      <GButton v-if="!slotsFull" size="sm" variant="ghost" @click="toggleBuildPanel()">
+        {{ showBuildPanel ? "Cancel" : "Build" }}
+      </GButton>
+
+      <div v-if="selectedBuilding" class="selected-detail">
+        <div class="selected-info">
+          <span class="selected-name">{{ selectedBuilding.definition.name }}</span>
+          <span class="selected-status" :class="`status--${selectedBuilding.building.status}`">
+            {{ selectedBuilding.building.status }}
+          </span>
+        </div>
+        <div class="selected-actions">
+          <span v-if="selectedRecycleValue" class="recycle-value">
+            {{ formatRecycleValue(selectedRecycleValue) }}
+          </span>
+          <GButton
+            size="sm"
+            variant="danger"
+            :disabled="!canRecycleSelected"
+            @click="recycleSelected()"
+          >
+            <Recycle :size="14" />
+            Recycle
+          </GButton>
+        </div>
+      </div>
+
       <div v-if="showBuildPanel && !slotsFull" class="build-panel">
+        <div class="build-panel-header">
+          <span class="build-panel-title">Build in {{ district.name }}</span>
+          <button class="build-panel-close" @click="closeBuildPanel()">
+            <X :size="16" />
+          </button>
+        </div>
+        <GTabGroup v-model="buildCategory" :tabs="categoryTabs" />
         <GCardGrid>
           <BuildingCard
             v-for="def in filteredDefinitions"
@@ -214,10 +348,6 @@ function toggleBuildPanel(): void {
           />
         </GCardGrid>
       </div>
-    </div>
-
-    <div class="district-meta">
-      <span>Founded: Sol {{ district.foundedAt }}</span>
     </div>
   </div>
 </template>
@@ -328,20 +458,125 @@ function toggleBuildPanel(): void {
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--g-color-text, #ccc);
   padding: 0 4px;
+  cursor: pointer;
+}
+
+.slot--occupied:hover {
+  border-color: var(--g-color-info);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .slot--empty {
   border: 1px dashed rgba(255, 255, 255, 0.2);
   color: var(--g-color-text-muted);
-  cursor: pointer;
   font-size: 1em;
   font-weight: bold;
 }
 
-.slot--empty:hover {
+.slot--selected {
   border-color: var(--g-color-info);
-  color: var(--g-color-info);
-  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 0 6px rgba(var(--g-color-info-rgb, 100, 180, 255), 0.3);
+}
+
+.slot--pending {
+  border: 1px dashed var(--g-color-warning);
+  animation: pulse-pending 2s ease-in-out infinite;
+}
+
+.slot--recycling {
+  opacity: 0.5;
+  border-color: var(--g-color-danger);
+  animation: fade-recycling 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-pending {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes fade-recycling {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.selected-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--g-space-xs) var(--g-space-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  gap: var(--g-space-sm);
+}
+
+.selected-info {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-xs);
+  min-width: 0;
+}
+
+.selected-name {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-sm);
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.selected-status {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  text-transform: uppercase;
+  padding: 1px 4px;
+  border: 1px solid var(--g-color-border);
+  white-space: nowrap;
+}
+
+.status--active {
+  color: var(--g-color-positive);
+  border-color: var(--g-color-positive);
+}
+
+.status--pending {
+  color: var(--g-color-warning);
+  border-color: var(--g-color-warning);
+}
+
+.status--recycling {
+  color: var(--g-color-danger);
+  border-color: var(--g-color-danger);
+}
+
+.status--disabled,
+.status--idle {
+  color: var(--g-color-text-muted);
+}
+
+.selected-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-xs);
+  flex-shrink: 0;
+}
+
+.recycle-value {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-positive);
+  white-space: nowrap;
 }
 
 .build-panel {
@@ -349,11 +584,35 @@ function toggleBuildPanel(): void {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.district-meta {
+.build-panel-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--g-space-sm);
+}
+
+.build-panel-title {
   font-family: var(--g-font-mono);
-  font-size: var(--g-font-size-xs);
+  font-size: var(--g-font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: var(--g-color-text-muted);
+}
+
+.build-panel-close {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--g-color-text-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+}
+
+.build-panel-close:hover {
+  color: var(--g-color-text);
+  border-color: var(--g-color-text-muted);
 }
 </style>
