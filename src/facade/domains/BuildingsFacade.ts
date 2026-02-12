@@ -3,6 +3,7 @@
 
 import type { GameState } from "../../core/GameState";
 import { BuildingId } from "../../core/models/Building";
+import type { NPCFaction } from "../../core/models/NPCInfluence";
 import type {
   ActionChecker,
   Building,
@@ -617,6 +618,52 @@ export class BuildingsFacade
         });
       }
 
+      return ok(undefined);
+    });
+  }
+
+  /**
+   * Sponsor a building with a faction.
+   * Sponsored buildings prefer ideologically aligned colonists during auto-assignment
+   * and nudge workers' ideology toward the sponsor faction.
+   */
+  sponsorBuilding(buildingId: string, factionBaseId: NPCFaction): Result<void> {
+    return this.executeCommand(() => {
+      const building = this.gameState.buildings.getBuilding(buildingId);
+      if (!building) {
+        return err({ type: "NOT_FOUND", entity: "building", id: buildingId });
+      }
+      if (building.status !== "active") {
+        return err({
+          type: "INVALID_STATE",
+          current: building.status,
+          expected: "active",
+          reason: "Building must be active to sponsor",
+        });
+      }
+
+      const success = this.gameState.buildings.sponsorBuilding(buildingId, factionBaseId);
+      if (!success) {
+        return err({ type: "INVALID_TARGET", target: buildingId, reason: "Sponsor failed" });
+      }
+      return ok(undefined);
+    });
+  }
+
+  /**
+   * Remove faction sponsorship from a building.
+   */
+  unsponsorBuilding(buildingId: string): Result<void> {
+    return this.executeCommand(() => {
+      const building = this.gameState.buildings.getBuilding(buildingId);
+      if (!building) {
+        return err({ type: "NOT_FOUND", entity: "building", id: buildingId });
+      }
+
+      const success = this.gameState.buildings.unsponsorBuilding(buildingId);
+      if (!success) {
+        return err({ type: "INVALID_TARGET", target: buildingId, reason: "Unsponsor failed" });
+      }
       return ok(undefined);
     });
   }

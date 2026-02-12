@@ -1,8 +1,15 @@
 // src/core/systems/IdeologyManager.ts
 
 import type { Colonist, ColonistIdeology } from "../models/Colonist";
-import { type AxisPosition, type FactionState, AXIS_KEYS } from "../models/NPCInfluence";
+import {
+  type AxisPosition,
+  type FactionState,
+  type NPCFaction,
+  AXIS_KEYS,
+} from "../models/NPCInfluence";
 import type { RelationshipManager } from "./RelationshipManager";
+import type { BuildingManager } from "./BuildingManager";
+import type { IdeologyQueries } from "../interfaces/Queries";
 import * as IdeologyBalance from "../balance/IdeologyBalance";
 import { rng } from "../utils/random";
 import { DRIFT_TRIGGERS, type DriftContext } from "../data/factionDrift";
@@ -58,7 +65,7 @@ function isNeutral(ideology: ColonistIdeology): boolean {
  * Manages colonist ideology, council selection, and faction support.
  * Ideology spreads through the social network similar to morale.
  */
-export class IdeologyManager {
+export class IdeologyManager implements IdeologyQueries {
   private council: CouncilMember[] = [];
   private lastCouncilUpdateSol: number = -1;
   private lastSpreadSol: number = -1;
@@ -182,6 +189,14 @@ export class IdeologyManager {
    */
   getFaction(id: string): FactionState | undefined {
     return this.factions.find((f) => f.id === id);
+  }
+
+  /**
+   * Get faction position by stable baseId.
+   * Implements IdeologyQueries interface.
+   */
+  getFactionByBaseId(baseId: NPCFaction): { position: AxisPosition } | undefined {
+    return this.factions.find((f) => f.baseId === baseId);
   }
 
   // ============ Faction Drift ============
@@ -1170,6 +1185,39 @@ export class IdeologyManager {
     }
 
     return bestPosition;
+  }
+
+  // ============ Sponsorship Nudge ============
+
+  /**
+   * Nudge workers at sponsored buildings toward the sponsor faction's ideology.
+   * High-conviction colonists resist the nudge more.
+   */
+  applySponsorshipNudge(buildings: BuildingManager, colonists: Colonist[]): void {
+    const colonistMap = new Map(colonists.map((c) => [c.id, c]));
+
+    for (const building of buildings.getActiveBuildings()) {
+      if (!building.sponsorFactionBaseId) continue;
+
+      const faction = this.factions.find((f) => f.baseId === building.sponsorFactionBaseId);
+      if (!faction) continue;
+
+      for (const workerId of building.assignedWorkers) {
+        const colonist = colonistMap.get(workerId);
+        if (!colonist?.ideology) continue;
+
+        const conviction = colonist.ideology.conviction;
+        const effectiveRate =
+          IdeologyBalance.SPONSORSHIP_NUDGE_RATE *
+          (1 - conviction * IdeologyBalance.SPONSORSHIP_NUDGE_CONVICTION_RESISTANCE);
+
+        for (const axis of AXIS_KEYS) {
+          colonist.ideology[axis] +=
+            (faction.position[axis] - colonist.ideology[axis]) * effectiveRate;
+          colonist.ideology[axis] = Math.max(-1, Math.min(1, colonist.ideology[axis]));
+        }
+      }
+    }
   }
 
   // ============ Serialization ============

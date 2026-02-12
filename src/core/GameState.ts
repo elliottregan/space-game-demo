@@ -88,6 +88,7 @@ export class GameState {
     this.scheduler = new RecurringEventScheduler();
     this.buildings.setGrantQueries(this.districtGrants);
     this.buildings.setVictoryManager(this.victory);
+    this.buildings.setIdeologyQueries(this.ideology);
 
     // Initialize tick runner
     this.tickRunner = createStandardTickRunner();
@@ -390,6 +391,7 @@ export class GameState {
     state.buildings.setWorkforceQueries(state.workforce);
 
     state.buildings.setVictoryManager(state.victory);
+    state.buildings.setIdeologyQueries(state.ideology);
 
     if (data.autoAssignNewColonists !== undefined) {
       state.autoAssignNewColonists = data.autoAssignNewColonists;

@@ -25,8 +25,11 @@ import type {
   ColonistQueries,
   DistrictQueries,
   GrantCompletionQueries,
+  IdeologyQueries,
   WorkforceQueries,
 } from "../interfaces/Queries";
+import type { NPCFaction } from "../models/NPCInfluence";
+import { SPONSORSHIP_AFFINITY_WEIGHT } from "../balance/IdeologyBalance";
 
 export class BuildingManager {
   private definitions: Map<BuildingId, BuildingDefinition> = new Map();
@@ -57,6 +60,7 @@ export class BuildingManager {
   private workforceQueries: WorkforceQueries | null = null;
   private grantQueries: GrantCompletionQueries | null = null;
   private districtQueries: DistrictQueries | null = null;
+  private ideologyQueries: IdeologyQueries | null = null;
 
   setTechnologyTree(tech: TechnologyTree): void {
     this.technologyTree = tech;
@@ -85,6 +89,10 @@ export class BuildingManager {
 
   setDistrictQueries(queries: DistrictQueries): void {
     this.districtQueries = queries;
+  }
+
+  setIdeologyQueries(queries: IdeologyQueries): void {
+    this.ideologyQueries = queries;
   }
 
   constructor(defs: BuildingDefinition[]) {
@@ -241,16 +249,32 @@ export class BuildingManager {
 
     if (availableColonists.length === 0) return;
 
+    // Look up sponsor faction position if building is sponsored
+    const factionPosition =
+      building.sponsorFactionBaseId && this.ideologyQueries
+        ? this.ideologyQueries.getFactionByBaseId(building.sponsorFactionBaseId)?.position
+        : undefined;
+
     // Score colonists by skill affinity, with same-district colonists preferred
-    const scoredColonists = availableColonists.map((colonist) => ({
-      colonist,
-      score:
+    const scoredColonists = availableColonists.map((colonist) => {
+      let score =
         this.scoreColonistForBuilding(colonist, def) +
         (buildingDistrictId &&
         this.districtQueries?.getColonistDistrictId(colonist.id) === buildingDistrictId
           ? 1
-          : 0),
-    }));
+          : 0);
+
+      // Ideology affinity scoring for sponsored buildings
+      if (factionPosition && colonist.ideology) {
+        const ds = colonist.ideology.solidarity - factionPosition.solidarity;
+        const dv = colonist.ideology.sovereignty - factionPosition.sovereignty;
+        const dt = colonist.ideology.transformation - factionPosition.transformation;
+        const dist = Math.sqrt(ds * ds + dv * dv + dt * dt);
+        score += Math.max(0, SPONSORSHIP_AFFINITY_WEIGHT * (1 - dist));
+      }
+
+      return { colonist, score };
+    });
 
     scoredColonists.sort((a, b) => b.score - a.score);
 
@@ -315,17 +339,33 @@ export class BuildingManager {
       const buildingDistrictId = this.districtQueries?.getBuildingDistrictId(building.id);
       const slotsNeeded = (def.workerSlots ?? 0) - building.assignedWorkers.length;
 
+      // Look up sponsor faction position if building is sponsored
+      const factionPosition =
+        building.sponsorFactionBaseId && this.ideologyQueries
+          ? this.ideologyQueries.getFactionByBaseId(building.sponsorFactionBaseId)?.position
+          : undefined;
+
       const scored = unassigned
         .filter((c: Colonist) => !assignedIds.has(c.id))
-        .map((c: Colonist) => ({
-          colonist: c,
-          score:
+        .map((c: Colonist) => {
+          let score =
             this.scoreColonistForBuilding(c, def) +
             (buildingDistrictId &&
             this.districtQueries?.getColonistDistrictId(c.id) === buildingDistrictId
               ? 1
-              : 0),
-        }))
+              : 0);
+
+          // Ideology affinity scoring for sponsored buildings
+          if (factionPosition && c.ideology) {
+            const ds = c.ideology.solidarity - factionPosition.solidarity;
+            const dv = c.ideology.sovereignty - factionPosition.sovereignty;
+            const dt = c.ideology.transformation - factionPosition.transformation;
+            const dist = Math.sqrt(ds * ds + dv * dv + dt * dt);
+            score += Math.max(0, SPONSORSHIP_AFFINITY_WEIGHT * (1 - dist));
+          }
+
+          return { colonist: c, score };
+        })
         .sort(
           (a: { colonist: Colonist; score: number }, b: { colonist: Colonist; score: number }) =>
             b.score - a.score,
@@ -486,6 +526,20 @@ export class BuildingManager {
     };
     this.buildings.set(building.id, building);
     return building;
+  }
+
+  sponsorBuilding(buildingId: string, baseId: NPCFaction): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building || building.status !== "active") return false;
+    building.sponsorFactionBaseId = baseId;
+    return true;
+  }
+
+  unsponsorBuilding(buildingId: string): boolean {
+    const building = this.buildings.get(buildingId);
+    if (!building) return false;
+    building.sponsorFactionBaseId = undefined;
+    return true;
   }
 
   getBuilding(id: string): Building | undefined {
@@ -1093,6 +1147,7 @@ export class BuildingManager {
         repurposeFromDefId: b.repurposeFromDefId,
         upgradeProgress: b.upgradeProgress,
         upgradeTargetDefId: b.upgradeTargetDefId,
+        sponsorFactionBaseId: b.sponsorFactionBaseId,
       };
       manager.buildings.set(building.id, building);
     });

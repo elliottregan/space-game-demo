@@ -6,6 +6,8 @@
 
 import type { Colonist } from "../models/Colonist";
 import type { DistrictGrantId } from "../models/DistrictGrant";
+import type { AxisPosition } from "../models/NPCInfluence";
+import type { NPCFaction } from "../models/NPCInfluence";
 
 /**
  * Query interface for colonist data.
@@ -39,4 +41,12 @@ export interface GrantCompletionQueries {
 export interface DistrictQueries {
   getBuildingDistrictId(buildingId: string): string | undefined;
   getColonistDistrictId(colonistId: string): string | undefined;
+}
+
+/**
+ * Query interface for ideology/faction data.
+ * Implemented by IdeologyManager.
+ */
+export interface IdeologyQueries {
+  getFactionByBaseId(baseId: NPCFaction): { position: AxisPosition } | undefined;
 }

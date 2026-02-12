@@ -66,6 +66,9 @@ export const propagateIdeology = definePhase({
     // Propagate ideology through social network
     ctx.ideology.propagateIdeology(colonists, relationshipManager, ctx.currentSol);
 
+    // Apply sponsorship nudge to workers at sponsored buildings
+    ctx.ideology.applySponsorshipNudge(ctx.buildings, colonists);
+
     // Update council if stale
     ctx.ideology.updateCouncilIfStale(colonists, relationshipManager, ctx.currentSol);
 

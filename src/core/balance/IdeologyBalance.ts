@@ -176,6 +176,19 @@ export const NEUTRAL_AXIS_THRESHOLD = 0.3;
 
 // ============ Conviction Support Detection ============
 
+// ============ Sponsorship ============
+
+/** Score bonus for ideology-aligned colonists during auto-assign */
+export const SPONSORSHIP_AFFINITY_WEIGHT = 2;
+
+/** Per-sol ideology nudge toward sponsor faction position */
+export const SPONSORSHIP_NUDGE_RATE = 0.008;
+
+/** How much conviction resists nudge (0-1) */
+export const SPONSORSHIP_NUDGE_CONVICTION_RESISTANCE = 0.6;
+
+// ============ Conviction Support Detection ============
+
 /** Max axis-space distance for neighbors to be considered "supporting" (conviction growth) */
 export const CONVICTION_SUPPORT_DISTANCE = 0.5;
 

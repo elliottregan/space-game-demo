@@ -1,5 +1,6 @@
 import type { ColonistRole } from "./Colonist";
 import type { DistrictGrantId } from "./DistrictGrant";
+import type { NPCFaction } from "./NPCInfluence";
 import type { ResourceDelta } from "./Resources";
 import type { TechnologyId } from "./Technology";
 
@@ -88,6 +89,7 @@ export interface Building {
   repurposeFromDefId?: BuildingId; // Set when repurposing, cleared when complete
   upgradeProgress?: number;
   upgradeTargetDefId?: BuildingId;
+  sponsorFactionBaseId?: NPCFaction;
 }
 
 /**
