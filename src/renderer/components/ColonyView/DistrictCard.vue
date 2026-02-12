@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { X, Recycle } from "lucide-vue-next";
+import { X, Recycle, Flag } from "lucide-vue-next";
 import IdeologyRadar from "../IdeologyRadar/IdeologyRadar.vue";
 import {
   DISTRICT_BUILDING_SLOTS,
@@ -10,10 +10,11 @@ import { ColonistRole, ROLE_DISPLAY_NAMES } from "../../../core/models/Colonist"
 import { AXIS_HEX_COLORS, type AxisId } from "../../utils/ideologyDisplay";
 import { BuildingPurpose } from "../../../core/models/Building";
 import type { Building, BuildingDefinition } from "../../../facade";
+import type { NPCFaction } from "../../../core/models/NPCInfluence";
 import type { ResourceDelta } from "../../../core/models/Resources";
 import { clearHighlights, highlightResources } from "../../directives/ResourceHighlight";
 import { gameService } from "../../services/GameService";
-import { GButton, GCardGrid, GProgress, GTabGroup } from "../../ui";
+import { GButton, GCardGrid, GProgress, GSelect, GTabGroup } from "../../ui";
 import type { Tab } from "../../ui";
 import { calculateHighlightInfo } from "../../utils/formatters";
 import BuildingCard from "../BuildingPanel/BuildingCard.vue";
@@ -145,6 +146,7 @@ type OccupiedSlot = {
   buildingId: string;
   status: string;
   definitionId: string;
+  sponsorBaseId?: string;
 };
 type EmptySlot = { occupied: false };
 
@@ -160,6 +162,7 @@ const slots = computed<Array<OccupiedSlot | EmptySlot>>(() => {
       buildingId: b.id,
       status: b.status,
       definitionId: b.definitionId,
+      sponsorBaseId: b.sponsorFactionBaseId,
     });
   }
 
@@ -215,6 +218,59 @@ const canRecycleSelected = computed(() => {
   if (!selectedSlotId.value) return false;
   return api.buildings.canRecycle(selectedSlotId.value).allowed;
 });
+
+const FACTION_COLORS: Record<string, string> = {
+  earth_loyalists: "var(--color-info)",
+  mars_independence: "var(--color-positive)",
+  corporate_interests: "var(--color-warning)",
+};
+
+// oxlint-disable-next-line no-unused-vars
+const sponsorOptions = computed(() => {
+  const none = { value: "", label: "No Sponsor" };
+  const factionOpts = state.ideology.factions.map((f) => ({
+    value: f.baseId,
+    label: f.name,
+  }));
+  return [none, ...factionOpts];
+});
+
+// oxlint-disable-next-line no-unused-vars
+const selectedSponsor = computed(() => {
+  if (!selectedSlotId.value) return "";
+  const building = props.buildings.find((b) => b.id === selectedSlotId.value);
+  return building?.sponsorFactionBaseId ?? "";
+});
+
+// oxlint-disable-next-line no-unused-vars
+const selectedSponsorName = computed(() => {
+  const baseId = selectedSponsor.value;
+  if (!baseId) return null;
+  const faction = state.ideology.factions.find((f) => f.baseId === baseId);
+  return faction?.name ?? null;
+});
+
+// oxlint-disable-next-line no-unused-vars
+const selectedSponsorColor = computed(() => {
+  const baseId = selectedSponsor.value;
+  return baseId ? (FACTION_COLORS[baseId] ?? "var(--g-color-text-muted)") : "";
+});
+
+// oxlint-disable-next-line no-unused-vars
+const canSponsorSelected = computed(() => {
+  if (!selectedBuilding.value) return false;
+  return selectedBuilding.value.building.status === "active";
+});
+
+// oxlint-disable-next-line no-unused-vars
+function setSponsor(value: string | number): void {
+  if (!selectedSlotId.value) return;
+  if (value === "" || value === undefined) {
+    api.buildings.unsponsorBuilding(selectedSlotId.value);
+  } else {
+    api.buildings.sponsorBuilding(selectedSlotId.value, value as NPCFaction);
+  }
+}
 
 // oxlint-disable-next-line no-unused-vars
 function canBuild(defId: string): boolean {
@@ -419,6 +475,11 @@ function formatRecycleValue(delta: ResourceDelta): string {
             'slot--recycling': slot.occupied && slot.status === 'recycling',
           }"
           :title="slot.occupied ? getSlotTitle(slot) : undefined"
+          :style="
+            slot.occupied && slot.sponsorBaseId
+              ? { borderLeftColor: FACTION_COLORS[slot.sponsorBaseId], borderLeftWidth: '3px' }
+              : undefined
+          "
           @click="slot.occupied && selectSlot(slot.buildingId)"
         >
           <template v-if="slot.occupied">
@@ -438,8 +499,24 @@ function formatRecycleValue(delta: ResourceDelta): string {
           <span class="selected-status" :class="`status--${selectedBuilding.building.status}`">
             {{ selectedBuilding.building.status }}
           </span>
+          <span
+            v-if="selectedSponsorName"
+            class="sponsor-badge"
+            :style="{ borderColor: selectedSponsorColor, color: selectedSponsorColor }"
+          >
+            <Flag :size="10" />
+            {{ selectedSponsorName }}
+          </span>
         </div>
         <div class="selected-actions">
+          <GSelect
+            v-if="canSponsorSelected"
+            :model-value="selectedSponsor"
+            :options="sponsorOptions"
+            size="sm"
+            variant="ghost"
+            @update:model-value="setSponsor"
+          />
           <span v-if="selectedRecycleValue" class="recycle-value">
             {{ formatRecycleValue(selectedRecycleValue) }}
           </span>
@@ -796,6 +873,18 @@ function formatRecycleValue(delta: ResourceDelta): string {
 .status--disabled,
 .status--idle {
   color: var(--g-color-text-muted);
+}
+
+.sponsor-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  padding: 1px 5px;
+  border: 1px solid;
+  border-radius: 2px;
+  white-space: nowrap;
 }
 
 .selected-actions {
