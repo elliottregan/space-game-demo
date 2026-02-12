@@ -200,8 +200,84 @@ const guildMembership = computed(() => {
   return membership;
 });
 
-// Ideology pocket assignments via DBSCAN
-const pocketAssignments = computed(() => assignIdeologyPockets(props.colonists));
+// Ideology pocket assignments via DBSCAN, then split by social connectivity
+// so ideologically similar but socially disconnected colonists don't form one giant hull
+const pocketAssignments = computed(() => {
+  const raw = assignIdeologyPockets(props.colonists);
+
+  // Build adjacency list from non-weak-tie relationships
+  const adj = new Map<string, Set<string>>();
+  for (const [key, rel] of props.relationships) {
+    if (rel.strength < WEAK_TIE_THRESHOLD) continue;
+    const [id1, id2] = key.split(":");
+    if (!id1 || !id2) continue;
+    if (!adj.has(id1)) adj.set(id1, new Set());
+    if (!adj.has(id2)) adj.set(id2, new Set());
+    adj.get(id1)!.add(id2);
+    adj.get(id2)!.add(id1);
+  }
+
+  // Group colonists by raw pocket ID
+  const pocketMembers = new Map<number, string[]>();
+  for (const [id, pocket] of raw) {
+    if (pocket === -1) continue;
+    if (!pocketMembers.has(pocket)) pocketMembers.set(pocket, []);
+    pocketMembers.get(pocket)!.push(id);
+  }
+
+  // Split each pocket into connected components via BFS on social edges
+  const result = new Map<string, number>();
+  let nextPocket = 0;
+
+  for (const [, members] of pocketMembers) {
+    const memberSet = new Set(members);
+    const visited = new Set<string>();
+
+    for (const start of members) {
+      if (visited.has(start)) continue;
+
+      // BFS within this pocket's members
+      const component: string[] = [];
+      const queue = [start];
+      visited.add(start);
+
+      while (queue.length > 0) {
+        const current = queue.shift()!;
+        component.push(current);
+
+        const neighbors = adj.get(current);
+        if (!neighbors) continue;
+        for (const neighbor of neighbors) {
+          if (memberSet.has(neighbor) && !visited.has(neighbor)) {
+            visited.add(neighbor);
+            queue.push(neighbor);
+          }
+        }
+      }
+
+      // Only keep components with 3+ members
+      if (component.length >= 3) {
+        for (const id of component) {
+          result.set(id, nextPocket);
+        }
+        nextPocket++;
+      } else {
+        for (const id of component) {
+          result.set(id, -1);
+        }
+      }
+    }
+  }
+
+  // Carry over noise assignments
+  for (const [id, pocket] of raw) {
+    if (pocket === -1 && !result.has(id)) {
+      result.set(id, -1);
+    }
+  }
+
+  return result;
+});
 
 // Check if two colonists share a guild
 function getSharedGuildIds(id1: string, id2: string): string[] {
