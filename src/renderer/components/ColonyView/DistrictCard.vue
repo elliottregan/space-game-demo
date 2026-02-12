@@ -14,7 +14,7 @@ import type { NPCFaction } from "../../../core/models/NPCInfluence";
 import type { ResourceDelta } from "../../../core/models/Resources";
 import { clearHighlights, highlightResources } from "../../directives/ResourceHighlight";
 import { gameService } from "../../services/GameService";
-import { GButton, GCardGrid, GProgress, GSelect, GTabGroup } from "../../ui";
+import { GBadge, GButton, GCardGrid, GProgress, GSelect, GTabGroup } from "../../ui";
 import type { Tab } from "../../ui";
 import { calculateHighlightInfo } from "../../utils/formatters";
 import BuildingCard from "../BuildingPanel/BuildingCard.vue";
@@ -373,6 +373,53 @@ function formatRecycleValue(delta: ResourceDelta): string {
   }
   return parts.join(", ");
 }
+
+// --- Tab state ---
+const activeTab = ref<string>("buildings");
+
+// oxlint-disable-next-line no-unused-vars
+const mainTabs = computed<Tab[]>(() => [
+  { id: "buildings", label: "Buildings" },
+  { id: "grants", label: "Grants" },
+]);
+
+// --- Grants ---
+// oxlint-disable-next-line no-unused-vars
+const availableGrants = computed(() => state.grants.available);
+
+// oxlint-disable-next-line no-unused-vars
+const activeGrants = computed(() =>
+  state.grants.active.filter((g) => g.districtId === props.district.id),
+);
+
+// oxlint-disable-next-line no-unused-vars
+function canAssignGrant(grantId: number): boolean {
+  return api.grants.canAssignGrant(grantId, props.district.id).canAssign;
+}
+
+// oxlint-disable-next-line no-unused-vars
+function assignGrant(grantId: number): void {
+  api.grants.assignGrant(grantId, props.district.id);
+}
+
+// oxlint-disable-next-line no-unused-vars
+function refreshGrants(): void {
+  api.grants.refreshPanel();
+}
+
+// oxlint-disable-next-line no-unused-vars
+function formatGrantCost(cost: { food?: number; water?: number; materials?: number }): string {
+  const parts = Object.entries(cost)
+    .filter(([, v]) => v && v > 0)
+    .map(([k, v]) => `${v} ${k}`);
+  return parts.length ? parts.join(", ") : "Free";
+}
+
+// oxlint-disable-next-line no-unused-vars
+function grantProgress(grant: (typeof state.grants.active)[number]): number {
+  if (!grant.totalDuration || grant.totalDuration === 0) return 100;
+  return Math.round(((grant.totalDuration - grant.remainingSols) / grant.totalDuration) * 100);
+}
 </script>
 
 <template>
@@ -454,7 +501,9 @@ function formatRecycleValue(delta: ResourceDelta): string {
       </div>
     </div>
 
-    <div class="district-buildings">
+    <GTabGroup v-model="activeTab" :tabs="mainTabs" />
+
+    <div v-if="activeTab === 'buildings'" class="district-buildings">
       <div class="buildings-header">
         <span class="buildings-label">Buildings</span>
         <span class="slot-count">
@@ -556,6 +605,68 @@ function formatRecycleValue(delta: ResourceDelta): string {
             @leave="onLeave"
           />
         </GCardGrid>
+      </div>
+    </div>
+
+    <div v-if="activeTab === 'grants'" class="district-grants">
+      <div class="grants-section">
+        <span class="section-label">Available Grants</span>
+        <div v-if="availableGrants.length === 0" class="grants-empty">
+          No grants available. Wait for the next refresh or spend materials to refresh now.
+        </div>
+        <div v-else class="grants-list">
+          <div
+            v-for="grant in availableGrants"
+            :key="grant.id"
+            class="grant-card"
+            :class="{ 'grant-disabled': !canAssignGrant(grant.id) }"
+          >
+            <div class="grant-header">
+              <span class="grant-name">{{ grant.name }}</span>
+              <div class="grant-badges">
+                <GBadge :variant="grant.category === 'identity' ? 'warning' : 'info'" size="sm">
+                  {{ grant.category === "identity" ? "Identity" : "Infrastructure" }}
+                </GBadge>
+                <GBadge v-if="grant.isCapstone" variant="positive" size="sm"> Capstone </GBadge>
+              </div>
+            </div>
+            <p v-if="grant.sourceName" class="grant-source">{{ grant.sourceName }}</p>
+            <p class="grant-description">{{ grant.description }}</p>
+            <div class="grant-meta">
+              <span class="grant-cost">Cost: {{ formatGrantCost(grant.cost) }}</span>
+              <span class="grant-duration">{{ grant.baseDuration }} sols</span>
+            </div>
+            <div class="grant-actions">
+              <GButton
+                size="sm"
+                :disabled="!canAssignGrant(grant.id)"
+                @click="assignGrant(grant.id)"
+              >
+                Assign
+              </GButton>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="activeGrants.length > 0" class="grants-section">
+        <span class="section-label">Active Grants</span>
+        <div v-for="grant in activeGrants" :key="grant.id" class="active-grant">
+          <div class="active-grant-header">
+            <span class="active-grant-name">{{ grant.name }}</span>
+            <span class="active-grant-remaining">{{ grant.remainingSols }} sols left</span>
+          </div>
+          <GProgress
+            :percent="grantProgress(grant)"
+            variant="positive"
+            show-label
+            :label="`${grantProgress(grant)}%`"
+          />
+        </div>
+      </div>
+
+      <div class="grants-footer">
+        <GButton size="sm" variant="ghost" @click="refreshGrants()"> Refresh Grants </GButton>
       </div>
     </div>
   </div>
@@ -936,5 +1047,117 @@ function formatRecycleValue(delta: ResourceDelta): string {
 .build-panel-close:hover {
   color: var(--g-color-text);
   border-color: var(--g-color-text-muted);
+}
+
+.district-grants {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-sm);
+}
+
+.grants-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-xs);
+}
+
+.grants-empty {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  padding: var(--g-space-sm) 0;
+}
+
+.grants-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-sm);
+}
+
+.grant-card {
+  padding: var(--g-space-sm);
+  background: var(--g-color-bg-elevated);
+  border-left: 3px solid var(--g-color-border);
+}
+
+.grant-card.grant-disabled {
+  opacity: 0.5;
+}
+
+.grant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--g-space-sm);
+  margin-bottom: var(--g-space-xs);
+}
+
+.grant-badges {
+  display: flex;
+  gap: var(--g-space-xs);
+}
+
+.grant-name {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-sm);
+  font-weight: bold;
+  color: var(--g-color-text);
+}
+
+.grant-source {
+  margin: 0 0 var(--g-space-xs);
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  font-style: italic;
+}
+
+.grant-description {
+  margin: 0 0 var(--g-space-xs);
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+}
+
+.grant-meta {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+  margin-bottom: var(--g-space-sm);
+}
+
+.grant-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.active-grant {
+  padding: var(--g-space-xs) 0;
+}
+
+.active-grant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--g-space-xs);
+}
+
+.active-grant-name {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text);
+}
+
+.active-grant-remaining {
+  font-family: var(--g-font-mono);
+  font-size: var(--g-font-size-xs);
+  color: var(--g-color-text-muted);
+}
+
+.grants-footer {
+  display: flex;
+  justify-content: flex-end;
 }
 </style>
