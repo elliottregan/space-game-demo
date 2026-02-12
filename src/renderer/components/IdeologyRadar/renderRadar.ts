@@ -1,5 +1,5 @@
 import { select } from "d3-selection";
-import { lineRadial, curveLinearClosed } from "d3-shape";
+import { line, lineRadial, curveLinearClosed } from "d3-shape";
 
 export interface RadarData {
   solidarity: number; // -1 to +1
@@ -69,15 +69,14 @@ export function renderRadar(
 
     for (let i = 1; i <= GRID_RINGS; i++) {
       const r = (i / GRID_RINGS) * radius;
-      const isNeutralRing = i === Math.ceil(GRID_RINGS / 2); // middle ring = 0-value
 
       g.append("path")
         .datum(AXES.map(() => r))
         .attr("d", ringLine as never)
         .attr("fill", "none")
         .attr("stroke", colors.border)
-        .attr("stroke-width", isNeutralRing ? 1.2 : 0.5)
-        .attr("stroke-opacity", isNeutralRing ? 0.7 : 0.3);
+        .attr("stroke-width", 0.5)
+        .attr("stroke-opacity", 0.3);
     }
   }
 
@@ -96,32 +95,40 @@ export function renderRadar(
       .attr("stroke-opacity", 0.5);
   }
 
-  // Data polygon
-  const dataRadii = AXES.map((axis) => {
+  // Center dot (neutral origin)
+  g.append("circle")
+    .attr("cx", 0)
+    .attr("cy", 0)
+    .attr("r", 1.5)
+    .attr("fill", colors.border)
+    .attr("fill-opacity", 0.5);
+
+  // Data polygon — center = 0, positive extends outward, negative flips direction
+  const dataPoints: [number, number][] = AXES.map((axis) => {
     const value = data[axis.key];
-    return ((value + 1) / 2) * radius;
+    return [Math.cos(axis.angle) * value * radius, Math.sin(axis.angle) * value * radius];
   });
 
-  const dataLine = lineRadial<number>()
-    .angle((_d, i) => AXES[i]!.angle)
-    .radius((d) => d)
+  const dataLine = line<[number, number]>()
+    .x((d) => d[0])
+    .y((d) => d[1])
     .curve(curveLinearClosed);
 
   g.append("path")
-    .datum(dataRadii)
-    .attr("d", dataLine as never)
+    .datum(dataPoints)
+    .attr("d", dataLine)
     .attr("fill", fillColor)
     .attr("fill-opacity", fillOpacity)
     .attr("stroke", strokeColor)
     .attr("stroke-width", 1.5);
 
   // Data dots at vertices
-  for (let i = 0; i < AXES.length; i++) {
-    const r = dataRadii[i]!;
-    const x = Math.cos(AXES[i]!.angle) * r;
-    const y = Math.sin(AXES[i]!.angle) * r;
-
-    g.append("circle").attr("cx", x).attr("cy", y).attr("r", 2.5).attr("fill", strokeColor);
+  for (const point of dataPoints) {
+    g.append("circle")
+      .attr("cx", point[0])
+      .attr("cy", point[1])
+      .attr("r", 2.5)
+      .attr("fill", strokeColor);
   }
 
   // Labels at axis endpoints
