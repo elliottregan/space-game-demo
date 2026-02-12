@@ -91,14 +91,15 @@ describe("Job Assignment", () => {
         gameState.buildings.tick(gameState.resources);
       }
 
-      // Remove auto-assigned workers, then assign just 1 of 2 (50% staffing)
+      // Remove auto-assigned workers, then assign just 2 of 4 (50% staffing)
       const building = gameState.buildings.getBuilding(farm!.id)!;
       for (const workerId of [...building.assignedWorkers]) {
         gameState.buildings.removeWorker(farm!.id, workerId);
       }
 
-      const colonist = gameState.colony.getColonists()[0]!;
-      gameState.buildings.assignWorker(farm!.id, colonist.id);
+      const colonists = gameState.colony.getColonists();
+      gameState.buildings.assignWorker(farm!.id, colonists[0]!.id);
+      gameState.buildings.assignWorker(farm!.id, colonists[1]!.id);
 
       const efficiency = gameState.buildings.getStaffingEfficiency(farm!.id);
       // Formula: 1 - (1 - 0.5)^1.5 ≈ 0.646

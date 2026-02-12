@@ -67,10 +67,16 @@ describe("Research Buildings", () => {
       // Skills add random bonuses (0-0.2), so expect range 0.7 to 0.9
       const c1 = colony.addColonist();
       const c2 = colony.addColonist();
+      const c3 = colony.addColonist();
+      const c4 = colony.addColonist();
       c1.role = ColonistRole.RESEARCH;
       c2.role = ColonistRole.RESEARCH;
+      c3.role = ColonistRole.RESEARCH;
+      c4.role = ColonistRole.RESEARCH;
       buildings.assignWorker(id, c1.id);
       buildings.assignWorker(id, c2.id);
+      buildings.assignWorker(id, c3.id);
+      buildings.assignWorker(id, c4.id);
 
       // Fully staffed Science Station with novice RESEARCH workers:
       // Base: researchOutput (1.0) * staffing (1.0) * noviceMastery (0.7)

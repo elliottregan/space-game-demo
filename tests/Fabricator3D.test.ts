@@ -63,10 +63,10 @@ describe("3D Fabricator", () => {
       expect(def?.constructionTime).toBe(15);
     });
 
-    it("requires 2 engineering workers", () => {
+    it("requires 4 engineering workers", () => {
       const def = api.buildings.getDefinition(BuildingId.FABRICATOR_3D);
       expect(def).toBeDefined();
-      expect(def?.workerSlots).toBe(2);
+      expect(def?.workerSlots).toBe(4);
       expect(def?.workerRole).toBe(ColonistRole.ENGINEERING);
     });
 
