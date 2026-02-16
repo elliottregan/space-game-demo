@@ -14,6 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `bun run format:check` - Check formatting with oxfmt
 - `bun test` - Run all tests
 - `bun test tests/ResourceManager.test.ts` - Run single test file
+- `bun run typecheck` - Run all TypeScript type checks
 - `bun run simulate` - Run game simulation (use `--help` for options)
 - `bun run visualize` - Start visualization server for simulation analysis
 
@@ -39,9 +40,10 @@ The game uses a strict separation between game logic and UI:
   - `directives/` - Custom Vue directives (e.g., `v-resource-glow`)
   - `ui/` - Reusable UI components
 
-- **`src/facade/`** - Domain-driven API layer
-  - `GameAPI.ts` - Main facade exposing domain-specific APIs
-  - `domains/` - Domain facades (Buildings, Colony, Operations, etc.)
+- **`src/facade/`** - Domain-driven API layer between core and renderer
+  - `GameAPI.ts` - Creates `GameState`, composes all domain facades, provides `executeCommand` (wraps mutations with state change notifications) and `checkAffordability` helpers
+  - `domains/` - Domain facades (Buildings, Colony, Operations, Ideology, Districts, Grants, etc.)
+  - All commands return `Result<T>` for type-safe error handling; all queries return immutable snapshots
 
 - **`src/simulation/`** - Headless game simulation for testing balance
   - `SimulationRunner.ts` - Runs automated game sessions
@@ -66,6 +68,18 @@ Buildings have three resource-related properties:
 - `production?: ResourceDelta` - Ongoing production per sol
 - `consumption?: ResourceDelta` - Ongoing consumption per sol
 
+### Ideology & Factions
+
+Three-axis ideology system (solidarity, sovereignty, transformation) with factions positioned in this space. Key mechanics:
+- **IdeologyManager** - Council selection, ideology spread through social networks, faction drift
+- **Sponsorship** - Buildings sponsor colonists with ideology nudges and affinity weighting
+- **Districts** - Colonists assigned to districts with growth caps; district-level ideology aggregation
+- Balance constants in `src/core/balance/IdeologyBalance.ts`
+
+### Serialization
+
+Manager classes implement `toJSON()` / static `fromJSON()`. When adding new managers, update both `GameState.toJSON()` and `GameState.fromJSON()`, and wire up any cross-manager dependencies (e.g., `buildings.setGrantQueries()`).
+
 ## Vue Patterns
 
 - When updating `reactive()` object properties, modify in-place (delete then assign) rather than replacing the entire nested object for reliable reactivity
@@ -75,11 +89,18 @@ Buildings have three resource-related properties:
 
 ## Testing
 
-Tests are in the `tests/` directory using Bun's test runner. Test files cover:
-- Core systems (ResourceManager, WorkforceManager, TechnologyTree)
-- Facades (GameFacade, BuildingsFacade, ColonyFacade, OperationsFacade)
-- Game mechanics (building maintenance, recycling, deposits, expeditions)
-- Political systems (policies, NPC influence, pressure)
+Tests are in the `tests/` directory using Bun's test runner. Test setup pattern:
+
+```typescript
+import { GameAPI } from "../src/facade";
+let api: GameAPI;
+beforeEach(() => { api = new GameAPI(); });
+```
+
+Common test helpers (defined locally in test files):
+- `buildAndComplete(defId)` - Build and advance sols through construction
+- `unassignAllWorkers(buildingId)` - Clear worker assignments
+- `researchTech(techId)` - Research a technology to completion
 
 ## Simulation & Balance Testing
 
