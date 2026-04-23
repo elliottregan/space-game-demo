@@ -20,10 +20,16 @@ import {
 import { createRng, type RNG } from "../core/rng.ts";
 import { getSetting } from "../core/settings.ts";
 import {
-  loadSavedState,
-  writeSavedState,
-  clearSavedState,
+  addNewSlot,
+  deleteSlot as deleteSlotInStore,
+  getActiveSlot,
+  loadStore,
+  switchSlot,
+  upsertActiveSlot,
+  writeStore,
+  type SaveSlot,
   type SavedState,
+  type SaveStore,
 } from "./persistence.ts";
 import type { Campaign, Card, Epoch, IdeologyVector, Setting, TableauSlot } from "../core/types.ts";
 import { checkAlignment, demonym, demonymName } from "../core/ideology.ts";
@@ -66,8 +72,10 @@ export class GameAPI {
   private endOfEpoch: EndOfEpochState | null = null;
 
   constructor(seed = 1, opts: { skipLoad?: boolean } = {}) {
-    const saved = opts.skipLoad ? null : loadSavedState();
-    if (saved) {
+    const store = opts.skipLoad ? null : loadStore();
+    const active = store ? getActiveSlot(store) : null;
+    if (active) {
+      const saved = active.state;
       this.campaign = saved.campaign;
       this.setting = getSetting(saved.settingId);
       this.epoch = saved.epoch;
@@ -94,7 +102,73 @@ export class GameAPI {
   }
 
   persist(): void {
-    writeSavedState(this.exportState());
+    const store = loadStore();
+    const next = upsertActiveSlot(store, this.exportState());
+    writeStore(next);
+  }
+
+  /** List all save slots (newest last). */
+  listSlots(): SaveSlot[] {
+    return loadStore().slots;
+  }
+
+  /** Id of the currently active save slot, if any. */
+  activeSlotId(): string | null {
+    return loadStore().activeSlotId;
+  }
+
+  /** Switch to a different saved slot and load its state. Returns true on success. */
+  switchSlot(slotId: string): boolean {
+    // Persist current state to current slot first.
+    this.persist();
+    const store = loadStore();
+    if (!store.slots.some((s) => s.id === slotId)) return false;
+    const updated = switchSlot(store, slotId);
+    writeStore(updated);
+    const slot = getActiveSlot(updated)!;
+    this.loadFromState(slot.state);
+    return true;
+  }
+
+  /** Create a new campaign in a new slot and make it active. */
+  newCampaignSlot(seed = Date.now()): void {
+    // Persist current state first so nothing is lost.
+    this.persist();
+    this.campaign = createCampaign(seed);
+    this.setting = getSetting(this.campaign.currentSettingId);
+    this.rng = createRng(seed);
+    this.epoch = createEpoch(this.setting, this.campaign, this.rng, 1);
+    this.endOfEpoch = null;
+    const store = loadStore();
+    const updated = addNewSlot(store, this.exportState());
+    writeStore(updated);
+  }
+
+  deleteSlot(slotId: string): void {
+    const store = loadStore();
+    const updated = deleteSlotInStore(store, slotId);
+    writeStore(updated);
+    // If the active slot was deleted, reload from (new) active slot or start fresh.
+    if (store.activeSlotId === slotId) {
+      const active = getActiveSlot(updated);
+      if (active) {
+        this.loadFromState(active.state);
+      } else {
+        this.campaign = createCampaign(Date.now());
+        this.setting = getSetting(this.campaign.currentSettingId);
+        this.rng = createRng(this.campaign.seed);
+        this.epoch = createEpoch(this.setting, this.campaign, this.rng, 1);
+        this.endOfEpoch = null;
+      }
+    }
+  }
+
+  private loadFromState(state: SavedState): void {
+    this.campaign = state.campaign;
+    this.setting = getSetting(state.settingId);
+    this.epoch = state.epoch;
+    this.endOfEpoch = state.endOfEpoch;
+    this.rng = createRng(state.seed);
   }
 
   // -----------------------------------------------------------------------
@@ -264,13 +338,14 @@ export class GameAPI {
     return { ok: true, value: "next" };
   }
 
+  /** Replace the active slot with a fresh campaign (keeps other slots). */
   resetCampaign(seed = Date.now()): void {
-    clearSavedState();
     this.campaign = createCampaign(seed);
     this.setting = getSetting(this.campaign.currentSettingId);
     this.rng = createRng(seed);
     this.epoch = createEpoch(this.setting, this.campaign, this.rng, 1);
     this.endOfEpoch = null;
+    this.persist();
   }
 }
 

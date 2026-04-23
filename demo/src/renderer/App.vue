@@ -6,6 +6,14 @@
         Throwaway prototype · {{ demonymLabel }}
       </span>
       <div class="spacer"></div>
+      <SaveSlotMenu
+        :slots="slots"
+        :active-slot-id="activeSlotId"
+        :max-slots="MAX_SLOTS"
+        @switch-slot="onSwitchSlot"
+        @new-slot="onNewSlot"
+        @delete-slot="onDeleteSlot"
+      />
       <TurnBar
         :epoch-number="epoch.epochNumber"
         :setting-name="setting.name"
@@ -116,8 +124,10 @@ import CampaignEnd from "./components/CampaignEnd.vue";
 import DeckDiscardPanel from "./components/DeckDiscardPanel.vue";
 import CardListModal from "./components/CardListModal.vue";
 import MarketModal from "./components/MarketModal.vue";
+import SaveSlotMenu from "./components/SaveSlotMenu.vue";
 import type { Card } from "../core/types.ts";
 import { SETTING_BY_ID } from "../core/settings.ts";
+import { MAX_SLOTS } from "../facade/persistence.ts";
 
 const game = getGameService();
 
@@ -131,6 +141,8 @@ const epoch = computed(() => snapshot.value.epoch);
 const eoe = computed(() => game.endOfEpoch.value);
 const lastError = computed(() => game.lastError.value);
 const demonymLabel = computed(() => snapshot.value.demonymLabel);
+const slots = computed(() => game.slots.value);
+const activeSlotId = computed(() => game.activeSlotId.value);
 
 const landProduction = computed(() => {
   let total = 0;
@@ -222,5 +234,18 @@ function onRestart(): void {
 }
 function onViewPile(which: "deck" | "discard"): void {
   pileView.value = which;
+}
+
+function onSwitchSlot(id: string): void {
+  game.switchSlot(id);
+  selectedIndex.value = null;
+}
+function onNewSlot(): void {
+  game.newCampaignSlot();
+  selectedIndex.value = null;
+}
+function onDeleteSlot(id: string): void {
+  game.deleteSlot(id);
+  selectedIndex.value = null;
 }
 </script>

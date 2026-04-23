@@ -271,6 +271,140 @@ button.primary:hover:not(:disabled) {
   border-style: dashed;
 }
 
+/* -------------------- Save Slot Menu -------------------- */
+
+.save-slot-menu {
+  position: relative;
+}
+.slot-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 240px;
+  padding: 6px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  color: var(--fg);
+  font-size: 12px;
+  cursor: pointer;
+}
+.slot-trigger:hover {
+  background: var(--bg-card-hover);
+}
+.slot-label {
+  flex: 1;
+  text-align: left;
+}
+.slot-caret {
+  color: var(--fg-dim);
+  font-size: 10px;
+}
+
+.slot-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 320px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+  z-index: 20;
+  overflow: hidden;
+}
+.slot-header {
+  padding: 8px 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-dim);
+  border-bottom: 1px solid var(--border);
+}
+.slot-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 320px;
+  overflow: auto;
+}
+.slot-row {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.slot-row:last-child {
+  border-bottom: 0;
+}
+.slot-row.empty {
+  padding: 12px;
+  color: var(--fg-muted);
+  font-size: 12px;
+  justify-content: center;
+}
+.slot-row.active {
+  background: rgba(233, 196, 106, 0.08);
+}
+.slot-switch {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.slot-switch:hover {
+  background: var(--bg-card-hover);
+}
+.slot-row.active .slot-switch {
+  color: var(--accent);
+  font-weight: 600;
+}
+.slot-row-label {
+  flex: 1;
+}
+.slot-row-time {
+  color: var(--fg-muted);
+  font-size: 10px;
+  margin-left: 8px;
+}
+.slot-delete {
+  background: transparent;
+  border: none;
+  color: var(--fg-muted);
+  font-size: 16px;
+  line-height: 1;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.slot-delete:hover:not(:disabled) {
+  color: var(--negative);
+}
+.slot-delete:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.slot-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+.slot-footer button.primary {
+  flex: 1;
+}
+.slot-hint {
+  font-size: 10px;
+  color: var(--fg-muted);
+}
+
 /* -------------------- Hand -------------------- */
 
 .hand-row {
