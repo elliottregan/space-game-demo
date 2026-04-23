@@ -56,22 +56,25 @@
         <div class="hand-row">
           <HandPanel
             :hand="epoch.hand"
-            :selected-index="selectedIndex"
+            :selected-ids="selectedIds"
             :influence="epoch.influence"
-            :valid-slots="validSlotsForSelected"
             :discard-gain="setting.rules.discardMaterialGain"
             :get-effective-cost="getEffectiveCost"
             :get-alignment="getAlignment"
-            @select-card="onSelectCard"
-            @play-card="onPlayCard"
-            @discard-for-material="onDiscardForMaterial"
+            :valid-slots-for="validSlotsFor"
+            @toggle-select="onToggleSelect"
+            @clear-selection="onClearSelection"
+            @play-to-slot="onPlayToSlot"
+            @discard-selection="onDiscardSelection"
           />
           <DeckDiscardPanel
             :draw-count="epoch.draw.length"
             :discard-count="epoch.discard.length"
             :dissent-count="snapshot.deckCounts.dissent"
+            :ended="epoch.status.kind !== 'in-progress'"
             @view="onViewPile"
             @open-market="marketOpen = true"
+            @end-turn="onEndTurn"
           />
         </div>
 
@@ -131,7 +134,7 @@ import { MAX_SLOTS } from "../facade/persistence.ts";
 
 const game = getGameService();
 
-const selectedIndex = ref<number | null>(null);
+const selectedIds = ref<string[]>([]);
 const pileView = ref<"deck" | "discard" | null>(null);
 const marketOpen = ref(false);
 
@@ -175,13 +178,6 @@ const nextSettingName = computed(() => {
   return SETTING_BY_ID[id]?.name ?? id;
 });
 
-const validSlotsForSelected = computed(() => {
-  if (selectedIndex.value === null) return [];
-  const card = epoch.value.hand[selectedIndex.value];
-  if (!card) return [];
-  return game.validSlots(card.id);
-});
-
 function getEffectiveCost(card: Card): number {
   return game.getEffectiveCost(card);
 }
@@ -194,36 +190,46 @@ function canRetrieve(slotIndex: number): boolean {
 function retrieveCost(slotIndex: number): { inf: number; mat: number } | null {
   return game.retrieveCost(slotIndex);
 }
-
-function onSelectCard(index: number): void {
-  selectedIndex.value = selectedIndex.value === index ? null : index;
+function validSlotsFor(cardId: string): number[] {
+  return game.validSlots(cardId);
 }
-function onPlayCard(handIndex: number, slotIndex: number): void {
-  const card = epoch.value.hand[handIndex];
-  if (!card) return;
-  game.playCard(card.id, slotIndex);
-  selectedIndex.value = null;
+
+function onToggleSelect(id: string): void {
+  const i = selectedIds.value.indexOf(id);
+  if (i >= 0) selectedIds.value = selectedIds.value.filter((x) => x !== id);
+  else selectedIds.value = [...selectedIds.value, id];
+}
+function onClearSelection(): void {
+  selectedIds.value = [];
+}
+function onPlayToSlot(ids: string[], slotIndex: number): void {
+  for (const id of ids) {
+    // Re-check validity before each play: a prior placement can change the
+    // slot state (e.g., stack size). Skip cards that no longer fit.
+    if (game.validSlots(id).includes(slotIndex)) {
+      game.playCard(id, slotIndex);
+    }
+  }
+  selectedIds.value = [];
+}
+function onDiscardSelection(ids: string[]): void {
+  for (const id of ids) game.discardForMaterial(id);
+  selectedIds.value = [];
 }
 function onRetrieve(slotIndex: number): void {
   game.retrieve(slotIndex);
 }
-function onDiscardForMaterial(handIndex: number): void {
-  const card = epoch.value.hand[handIndex];
-  if (!card) return;
-  game.discardForMaterial(card.id);
-  selectedIndex.value = null;
-}
 function onPlayMegaStructure(projectId: string): void {
   game.playMegaStructure(projectId);
-  selectedIndex.value = null;
+  selectedIds.value = [];
 }
 function onEndTurn(): void {
   game.endTurn();
-  selectedIndex.value = null;
+  selectedIds.value = [];
 }
 function onAdvance(choices: Record<string, "potency" | "pliability" | "persistence">): void {
   game.advanceEpoch(choices);
-  selectedIndex.value = null;
+  selectedIds.value = [];
 }
 function onViewPile(which: "deck" | "discard"): void {
   pileView.value = which;
@@ -231,14 +237,14 @@ function onViewPile(which: "deck" | "discard"): void {
 
 function onSwitchSlot(id: string): void {
   game.switchSlot(id);
-  selectedIndex.value = null;
+  selectedIds.value = [];
 }
 function onNewSlot(): void {
   game.newCampaignSlot();
-  selectedIndex.value = null;
+  selectedIds.value = [];
 }
 function onDeleteSlot(id: string): void {
   game.deleteSlot(id);
-  selectedIndex.value = null;
+  selectedIds.value = [];
 }
 </script>

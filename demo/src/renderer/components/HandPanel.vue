@@ -1,60 +1,70 @@
 <template>
   <section class="section hand-panel">
-    <h2>Hand ({{ hand.length }})</h2>
+    <div class="hand-header">
+      <h2>Hand ({{ hand.length }})</h2>
+      <div v-if="selectedIds.length > 0" class="selection-meta">
+        {{ selectedIds.length }} selected
+        <button class="linklike" @click="$emit('clearSelection')">clear</button>
+      </div>
+    </div>
     <div class="hand-cards">
       <Card
-        v-for="(card, idx) in hand"
-        :key="card.id + idx"
+        v-for="card in hand"
+        :key="card.id"
         :card="card"
-        :selectable="!isDissent(card)"
-        :selected="selectedIndex === idx"
+        :selectable="!isDissent(card) || true"
+        :selected="selectedIds.includes(card.id)"
         :unaffordable="!canPlay(card)"
         :influence-cost-override="getEffectiveCost(card)"
         :alignment="getAlignment(card)"
-        @select="$emit('selectCard', idx)"
+        @select="$emit('toggleSelect', card.id)"
       />
       <div v-if="hand.length === 0" style="color: var(--fg-muted); padding: 40px">Empty hand</div>
     </div>
 
     <div class="hand-actions">
-      <template v-if="selectedCard && !isDissent(selectedCard)">
-        <template v-if="validSlots.length > 0">
+      <template v-if="selectedCards.length === 0">
+        <span style="color: var(--fg-muted)"
+          >Click cards to select. Actions apply to all selected.</span
+        >
+      </template>
+
+      <template v-else>
+        <!-- Play: only when every selected card is playable AND has a common slot -->
+        <template
+          v-if="playableSelection.length === selectedCards.length && validSharedSlots.length > 0"
+        >
           <button
-            v-for="idx in validSlots"
+            v-for="idx in validSharedSlots"
             :key="idx"
             class="primary"
-            :disabled="!canPlay(selectedCard)"
-            @click="$emit('playCard', selectedIndex!, idx)"
+            :disabled="!allAffordable"
+            @click="$emit('playToSlot', selectedIds, idx)"
           >
-            {{ selectedCard.kind === "land" ? "Place" : "Play" }} → Slot {{ idx + 1 }}
+            {{ playVerb }} {{ selectedCards.length }} → Slot {{ idx + 1 }}
           </button>
         </template>
-        <span v-else style="color: var(--fg-dim)">
-          {{
-            selectedCard.kind === "land"
-              ? "No valid slot (sealed or rank mismatch)."
-              : "No improved slot available — stack a matching-rank Land first."
-          }}
+        <span
+          v-else-if="
+            playableSelection.length === selectedCards.length && validSharedSlots.length === 0
+          "
+          style="color: var(--fg-dim)"
+        >
+          No slot fits all selected cards.
         </span>
+        <span v-else-if="playableSelection.length > 0" style="color: var(--fg-dim)">
+          Selection mixes playable and un-playable cards — Play disabled.
+        </span>
+        <span v-else style="color: var(--fg-dim)">Selection has no playable cards.</span>
+
         <button
           class="secondary"
-          :title="`Discard for +${discardGain} Mat`"
-          @click="$emit('discardForMaterial', selectedIndex!)"
+          :title="`Discard ${selectedIds.length} card(s) for +${totalDiscardGain} Mat`"
+          @click="$emit('discardSelection', selectedIds)"
         >
-          Discard (+{{ discardGain }} Mat)
+          Discard {{ selectedIds.length }} (+{{ totalDiscardGain }} Mat)
         </button>
       </template>
-      <template v-else-if="selectedCard && isDissent(selectedCard)">
-        <span style="color: var(--fg-dim)">Dissent cannot be played.</span>
-        <button
-          class="secondary"
-          :title="`Discard for +${discardGain} Mat`"
-          @click="$emit('discardForMaterial', selectedIndex!)"
-        >
-          Discard (+{{ discardGain }} Mat)
-        </button>
-      </template>
-      <span v-else style="color: var(--fg-muted)">Select a card to see valid slots.</span>
     </div>
   </section>
 </template>
@@ -66,23 +76,57 @@ import Card from "./Card.vue";
 
 const props = defineProps<{
   hand: CardT[];
-  selectedIndex: number | null;
+  selectedIds: string[];
   influence: number;
-  validSlots: number[]; // valid slot indices for the currently selected card
   discardGain: number;
   getEffectiveCost: (card: CardT) => number;
   getAlignment: (card: CardT) => "aligned" | "opposed" | "neutral";
+  validSlotsFor: (cardId: string) => number[];
 }>();
 
 defineEmits<{
-  selectCard: [index: number];
-  playCard: [handIndex: number, slotIndex: number];
-  discardForMaterial: [handIndex: number];
+  toggleSelect: [cardId: string];
+  clearSelection: [];
+  playToSlot: [cardIds: string[], slotIndex: number];
+  discardSelection: [cardIds: string[]];
 }>();
 
-const selectedCard = computed(() =>
-  props.selectedIndex !== null ? (props.hand[props.selectedIndex] ?? null) : null,
+const selectedCards = computed(() =>
+  props.selectedIds.map((id) => props.hand.find((c) => c.id === id)!).filter(Boolean),
 );
+
+const playableSelection = computed(() => selectedCards.value.filter((c) => !isDissent(c)));
+
+/** Slots where EVERY playable selected card can be played. */
+const validSharedSlots = computed(() => {
+  const cards = playableSelection.value;
+  if (cards.length === 0) return [];
+  const slotSets = cards.map((c) => new Set(props.validSlotsFor(c.id)));
+  const first = slotSets[0];
+  if (!first) return [];
+  const intersection: number[] = [];
+  for (const s of first) {
+    if (slotSets.every((set) => set.has(s))) intersection.push(s);
+  }
+  return intersection.sort((a, b) => a - b);
+});
+
+const allAffordable = computed(() => {
+  // Lands are free; Roles/Keystones cost Influence. Sum non-Land costs.
+  let total = 0;
+  for (const c of playableSelection.value) {
+    if (c.kind !== "land") total += props.getEffectiveCost(c);
+  }
+  return props.influence >= total;
+});
+
+const playVerb = computed(() => {
+  const kinds = new Set(playableSelection.value.map((c) => c.kind));
+  if (kinds.size === 1 && kinds.has("land")) return "Place";
+  return "Play";
+});
+
+const totalDiscardGain = computed(() => props.discardGain * props.selectedIds.length);
 
 function isDissent(card: CardT): boolean {
   return card.tags.includes("dissent");

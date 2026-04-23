@@ -429,6 +429,31 @@ button.primary:hover:not(:disabled) {
 }
 .hand-panel {
 }
+.hand-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.hand-header h2 {
+  margin: 0 0 8px 0;
+}
+.selection-meta {
+  font-size: 11px;
+  color: var(--fg-dim);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.linklike {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-size: 11px;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
 .hand-cards {
   display: flex;
   gap: 6px;
@@ -528,6 +553,15 @@ button.primary:hover:not(:disabled) {
 .market-button {
   margin-top: 8px;
   width: 100%;
+}
+.end-turn-big {
+  margin-top: 8px;
+  width: 100%;
+  padding: 14px 12px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 /* -------------------- Card list modal -------------------- */

@@ -23,6 +23,9 @@
     </div>
     <div v-if="dissentCount > 0" class="dissent-note">Includes {{ dissentCount }} Dissent.</div>
     <button class="market-button" @click="$emit('openMarket')">Market</button>
+    <button class="end-turn-big primary" :disabled="ended" @click="$emit('endTurn')">
+      End Turn
+    </button>
   </section>
 </template>
 
@@ -31,10 +34,12 @@ defineProps<{
   drawCount: number;
   discardCount: number;
   dissentCount: number;
+  ended: boolean;
 }>();
 
 defineEmits<{
   view: [which: "deck" | "discard"];
   openMarket: [];
+  endTurn: [];
 }>();
 </script>
