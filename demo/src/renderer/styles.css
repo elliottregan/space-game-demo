@@ -725,6 +725,11 @@ button.primary:hover:not(:disabled) {
   gap: 4px;
   flex-wrap: wrap;
   justify-content: center;
+  margin-top: auto;
+  align-self: stretch;
+}
+.tableau-slot .slot-actions button {
+  flex: 1;
 }
 
 /* -------------------- Market -------------------- */
