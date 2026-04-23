@@ -6,7 +6,7 @@ This document **supersedes** the existing simulation-based game design captured 
 
 **What persists from the old game (themes only):**
 - Four-ideology framing (Solidarity, Sovereignty, Transformation) plus a new fourth: **Heritage**
-- Factions as political actors with alignment and drift
+- Ideology demonyms (The Collective, The Dominion, The Ascendancy, The Keepers) as narrative flavor
 - Mega-projects (Ark, Commune, Reactor, Cathedral) as late-game objectives
 - Mars-to-generation-ship narrative arc
 
@@ -25,15 +25,15 @@ The new game is a **deck-building roguelike strategy game** with a persistent br
 
 ## 2. Vision
 
-**Pitch.** You lead a civilization on a hostile world. Each Epoch is one run (~20 min) where you play cards to build a society, commit to factions, and race to complete one of several Mega-Projects. Every card has two lives: *play it* for an immediate effect, or *slot it* into a Mega-Project where it contributes to completion by its role and ideology. The planet remembers — your victories leave Monuments, your failures leave scars, and both shape the next Epoch's starting conditions.
+**Pitch.** You lead a civilization on a hostile world. Each Epoch is one run (~20 min) where you play cards to build a society, commit to an ideological direction, and race to complete one of several Mega-Projects. Every card has two lives: *play it* for an immediate effect, or *slot it* into a Mega-Project where it contributes to completion by its role and ideology. The planet remembers — your victories leave Monuments, your failures leave scars, and both shape the next Epoch's starting conditions.
 
 **Position.** Card-play rhythm is closer to Dominion/Ascension than combat-focused deck-builders. The slotting mechanic takes from the *patterns as objectives* lineage (Ascension constructs, Wingspan bonuses). Meta-progression is Hades-like: every run authors the next. The dual-classification cards (Role × Ideology, like rank × suit) are the distinctive core — a card is a jack of diamonds, usable in a four-of-a-kind or a flush.
 
 **Three design pillars:**
 
 1. **Jack-of-diamonds cards.** No dead cards. Every card has two tags (Role/Rank + Ideology) and contributes to multiple patterns. The strategic question is never "is this card good" but "where is it best spent right now."
-2. **Ideology-as-vector.** The three factions and a fourth unaligned suit span an ideology space. Cards cost less when aligned, more when opposed. Deckbuilding is steering a vector; committing is costly.
-3. **Planet-as-memoir.** Each Epoch leaves lasting traces — Monuments, Legacy Cards, ideology terrain, faction lineages. Reading a save file means reading the planet's history. Failure seeds a next Epoch as richly as success.
+2. **Ideology on the table, not behind it.** Your ideology is a rank-sum differential of cards currently in tableau + slotted in projects — always visible, always countable, no hidden drift values. Cards cost less when aligned, more when opposed. Deckbuilding is shaping the board's ideological center of mass.
+3. **Planet-as-memoir.** Each Epoch leaves lasting traces — Monuments, Legacy Cards, ideology terrain. Reading a save file means reading the planet's history. Failure seeds a next Epoch as richly as success.
 
 ---
 
@@ -42,11 +42,16 @@ The new game is a **deck-building roguelike strategy game** with a persistent br
 | Term | Definition |
 |---|---|
 | **Campaign** | One planet's history. A tree of Settings traversed across many Epochs until a terminal state is reached. |
-| **Setting** | A configured scenario (Homeworld, Generation Ship, Ruined Homeworld, etc.). Defines rules, starting deck, market pool, Mega-Projects, factions, and transitions. |
-| **Epoch** | One run within a Setting. ~20 minutes, 12–18 turns. Ends in a win (Mega-Project completed) or loss (Dissent overflow / faction coup / turn limit). |
+| **Setting** | A configured scenario (Homeworld, Generation Ship, Ruined Homeworld, etc.). Defines rules, starting deck, market pool, Mega-Projects, and transitions. |
+| **Epoch** | One run within a Setting. ~20 minutes, 12–18 turns. Ends in a win (Mega-Project completed) or loss (Dissent overflow / turn limit). |
 | **Turn** | One player cycle: draw → play → upkeep → acquire → end. Thematically a "Sol" (kept from old game flavor). |
-| **Ideology** | A suit. Four exist: Solidarity, Sovereignty, Transformation, Heritage. Heritage is unaligned by default. |
+| **Ideology** | A suit. Four exist: Solidarity, Sovereignty, Transformation, Heritage. They form two opposing-pair axes: Solidarity↔Sovereignty and Heritage↔Transformation. |
 | **Suit** | Ideology, when referring to cards. |
+| **Axis** | One of the two ideology axes (organization or time). An integer value equal to the rank-sum differential between opposing suits. |
+| **Ideology Vector** | The 2D state `(axis1, axis2)` derived from cards currently on the board (tableau + slotted). Always computable, never hidden. |
+| **Active Axis** | An axis where \|value\| ≥ 3. Only active axes confer alignment or opposition. |
+| **Demonym** | Flavor label for a dominant ideology state (The Collective = Solidarity-dominant; The Dominion = Sovereignty; The Ascendancy = Transformation; The Keepers = Heritage). Narrative only; no entity state. |
+| **Terrain** | The persistent cross-Epoch offset applied to axis values at Epoch start. Positive = settled for dominant side; negative = scarred. |
 | **Role** | A card's face-card identity: Agitator (10), Scholar (J), Preacher (Q), Engineer (K), Architect (A). |
 | **Rank** | A card's numeric value, 2–9 for Lands, 10–A for Roles, 15 for Keystones (Jokers). |
 | **Land** | A numbered card (2–9). Generates Materials when in tableau. Contributes a suit pip when slotted. |
@@ -57,11 +62,8 @@ The new game is a **deck-building roguelike strategy game** with a persistent br
 | **Influence** | Turn-local currency. 2 baseline + card-granted. Spent to play cards. |
 | **Materials** | Persistent Epoch currency. Earned from Lands and tasks. Spent at market. |
 | **Dissent** | Dead cards that clog the deck. Three variants. Generated by opposed slotting and specific card effects. |
-| **Pact** | A faction alignment agreement unlocking exclusive cards and Keystones. |
-| **Faction** | A political actor with a lifecycle state (Nascent → Active → Ascended/Dormant/Revanchist → Forgotten → Extinct). |
 | **Legacy Card** | A card minted at Epoch end, carrying forward into future Epochs. Upgraded along one of three paths. |
-| **Monument** | The residue of a completed Mega-Project. Shapes ideology terrain across Epochs. |
-| **Terrain** | The 4-axis ideology "scar/settled" map. Modifies cost to move or align in future Epochs. |
+| **Monument** | The residue of a completed Mega-Project. Applies a terrain offset across Epochs. |
 
 ---
 
@@ -70,9 +72,10 @@ The new game is a **deck-building roguelike strategy game** with a persistent br
 1. **No dead cards.** Every card is always contributable somewhere. Even weak starter Lands have a suit and a rank, so they can fill a flush or a low-value slot. The "play or save" decision replaces the "is this card useful" question.
 2. **Failure is authorship.** A lost Epoch shunts to a themed loss-branch Setting *and* mints 1–2 consolation Legacy Cards flavored by *how* you failed. The campaign narrative is as rich in loss as in win.
 3. **Dual-use tension.** Every turn asks: spend this card for its effect now, or save it to slot into a Mega-Project later? Influence scarcity and limited hand size make this a real question every turn, not just at the end.
-4. **Snowball brakes via terrain.** Same-ideology win streaks push terrain hard in one direction, making that direction *more expensive* to maintain. The game rewards divergence, keeping the strategy space open across long campaigns.
-5. **Configurable Settings.** All scenario variation lives in data. A Setting is a config object, not a hardcoded path. New Settings can be authored without engine changes.
-6. **Abstract world UI.** No map. The planet's state fits in a sidebar: Monuments, Factions, Terrain, Legacy Cards.
+4. **Snowball brakes via terrain.** Same-ideology win streaks push terrain hard in one direction, pre-loading the starting axis value. This means future Epochs start already near threshold — so further same-axis plays are less impactful, and the market becomes choked with opposed-suit Backlash. The game nudges toward divergence.
+5. **Math lives on the board.** Ideology, alignment, Mega-Project progress, and task progress are all derivable by counting cards visible in play. No hidden timers or accumulated drift values.
+6. **Configurable Settings.** All scenario variation lives in data. A Setting is a config object, not a hardcoded path. New Settings can be authored without engine changes.
+7. **Abstract world UI.** No map. The planet's state fits in a sidebar: Monuments, ideology state, Terrain, Legacy Cards.
 
 ---
 
@@ -81,11 +84,20 @@ The new game is a **deck-building roguelike strategy game** with a persistent br
 ### Turn structure (6 steps)
 
 1. **Draw** up to hand size (default 5).
-2. **Main phase.** Play cards by paying Influence. Apply effects. Optionally slot cards into Mega-Project zones.
+2. **Main phase.** Play cards by paying Influence. Apply immediate effects. Optionally slot cards into Mega-Project zones.
 3. **Tableau upkeep.** Each Land produces Materials. Structures trigger ongoing effects. Slotted-card passives resolve.
 4. **Acquire.** Spend Materials at the market river to add 1 card to discard pile.
-5. **End phase.** Discard hand. Ideology vector drifts by a tiny amount toward dominant suit played. Check win/loss.
+5. **End phase.** Resolve queued end-of-turn effects (see below). Discard hand. Check win/loss.
 6. **Refresh.** Market refills. Influence resets.
+
+### Effect timing
+
+Card effects split into two classes:
+
+- **Immediate** (resolve on play): `gainInfluence`, `gainMaterials`, `draw`, `discardSelection`. You can spend gained Influence on further plays this turn; drawn cards are playable this turn.
+- **End-of-turn** (queue during main phase, resolve all at once at step 5 in play order): ideology board-state updates (re-compute vector from cards currently placed), Dissent generation, Monument/terrain updates, axis-threshold unlock checks.
+
+Rationale: splits "does this combo work *now*?" from "what happens because of this turn's plays?" and avoids order-of-operations edge cases during the main phase. The board recomputes its ideology vector at end phase, so mid-turn alignment costs use the *start-of-turn* vector — predictable and countable.
 
 ### Epoch flow
 
@@ -94,7 +106,7 @@ Setting config loaded
   │
   ▼
 Setup:
-  - Inherit Legacy state (cards, terrain, faction states, Monuments)
+  - Inherit Legacy state (cards, terrain, Monuments)
   - Build starting deck (Setting's starterDeck + Legacy Cards)
   - Place starting tableau
   - Reveal 3 Mega-Projects, 3–5 short-term tasks, initial market
@@ -105,7 +117,7 @@ Turn loop (12–18 turns typically)
   ▼
 End condition hit:
   - Win:  one Mega-Project completed
-  - Loss: Dissent >50% OR faction coup OR soft turn limit reached
+  - Loss: Dissent >50% OR soft turn limit reached
   │
   ▼
 Legacy minting:
@@ -157,9 +169,9 @@ Every card has these fields:
 
 | Rank | Role | Archetype | Representative effects |
 |---|---|---|---|
-| 10 | **Agitator** | Disruptor | +Influence, shift ideology, add Dissent to opponent factions |
+| 10 | **Agitator** | Disruptor | +Influence, shift ideology, add Dissent of opposed suits |
 | J | **Scholar** | Draw/research | Draw cards, peek market, reduce next acquire cost |
-| Q | **Preacher** | Ideology shifter | Strong ideology drift, convert Dissent, enable pacts |
+| Q | **Preacher** | Ideology shifter | Add rank contribution to an axis when slotted; convert Dissent; unlock exclusive cards |
 | K | **Engineer** | Economy multiplier | +Materials, discount Structure costs, duplicate Land output |
 | A | **Architect** | Tableau power | Duplicate a tableau trigger, slot a card at reduced cost, mint bonus Legacy |
 
@@ -195,6 +207,17 @@ Lands are economy engines. Rank = economy tier. Each suit has flavored names at 
 - **6–7 (mid-high):** +2 Materials/turn + minor recurring effect (e.g., draw +1 on turn X). 1 pip slot.
 - **8–9 (high):** +3 Materials/turn + strong passive (e.g., all aligned cards cost −1 Influence). 1 pip slot.
 
+### Land stacking
+
+A tableau slot holds a **stack** of up to **3 Lands**:
+
+- Each Land in the stack produces its own Materials per turn (additive economy).
+- Only the **top Land's passive effect** is active. Lower Lands provide economy only.
+- Playing a Land from hand when the target slot is occupied pushes the new Land on top of the stack.
+- The stack contributes to ideology (all Lands in the stack count toward their suit's rank-sum).
+- **Slotting into a Mega-Project demolishes the entire stack of one slot**, contributing every Land in the stack simultaneously. This is the primary path for Lands to enter project zones, and it rewards focused stack-building.
+- If all 4 slots are full with 3-card stacks (12 Lands total), further Lands played from hand must either replace the top of an existing stack (the displaced Land goes to discard) or be held in hand until a slot is available.
+
 ### Keystones (Jokers)
 
 Two unique wild cards per Setting. Examples for Homeworld:
@@ -226,7 +249,10 @@ Two currencies with different time scales.
 - **Baseline:** 2 per turn, reset at end phase.
 - **Card-granted:** some cards produce Influence on play (e.g., Agitator cards typically yield +1 Influence; low-rank Lands played from hand give +0 but their tableau presence reduces costs).
 - **Spent on:** paying a card's `influenceCost` to play it.
-- **Alignment modifier:** playing a card whose ideology is aligned with your current vector costs −1 Influence (min 0). Opposed costs +1.
+- **Alignment modifier:** evaluated against the **start-of-turn ideology vector** (board-derived, see §8).
+  - Card suit matches the dominant side of any active axis → **aligned**, cost −1 Influence (min 0)
+  - Card suit matches the inferior side of any active axis → **opposed**, cost +1 Influence
+  - Otherwise → neutral, cost unchanged
 
 ### Materials (persistent within an Epoch)
 
@@ -264,129 +290,129 @@ A Setting may include special market slots beyond the river:
 
 - **Keystone slot** — shows the Setting's 2 Keystones, unlocked by ideology threshold or task.
 - **Purge slot** — sells a specialized Dissent-purge card for 5 Materials.
-- **Pact slot** — revealed when you cross a faction alignment threshold; offers a pact-exclusive card for Materials.
+- **Exclusive slot** — revealed when you cross an axis alignment threshold (e.g., `|axis1| >= 6`); offers an axis-exclusive card for Materials.
 
 ---
 
 ## 8. Ideology System
 
-### The four ideologies
+### The four ideologies as two axes
 
-| Suit | Temperament | Example thematic concerns |
-|---|---|---|
-| **Solidarity** | Communal, egalitarian, present-facing | Housing, shared resources, civic life |
-| **Sovereignty** | Hierarchical, ordered, present-facing | Authority, defense, infrastructure |
-| **Transformation** | Progressive, scientific, future-facing | Research, escape, change |
-| **Heritage** | Ancestral, continuity, past-facing | Memory, lineage, preservation |
+Ideology is a 2D space with two opposing-pair axes:
 
-### Ideology vector
+- **Axis 1 (organization):** Solidarity ↔ Sovereignty (communal vs. hierarchical)
+- **Axis 2 (time):** Heritage ↔ Transformation (ancestral vs. progressive)
 
-The player has a 4-axis vector `{solidarity, sovereignty, transformation, heritage}`, each in range `[0, 1]`. Values sum to 1 conceptually (normalized) but are tracked as absolute weights.
+```
+                Transformation (+y)
+                       |
+                       |
+   Solidarity (-x) ----+---- Sovereignty (+x)
+                       |
+                       |
+                  Heritage (-y)
+```
 
-### Alignment-based cost
+Each suit sits at a cardinal position. Every card belongs to exactly one suit.
 
-When a card is played, its ideology is compared to the vector:
+| Suit | Axis position | Temperament | Example concerns |
+|---|---|---|---|
+| **Solidarity** | (-1, 0) | Communal, egalitarian | Housing, shared resources, civic life |
+| **Sovereignty** | (+1, 0) | Hierarchical, ordered | Authority, defense, infrastructure |
+| **Transformation** | (0, +1) | Progressive, scientific | Research, escape, change |
+| **Heritage** | (0, -1) | Ancestral, preserving | Memory, lineage, restoration |
 
-- **Aligned** (card's ideology is the highest axis, OR within 10% of it): `influenceCost - 1` (min 0)
-- **Neutral** (card's ideology is mid-rank): unchanged
-- **Opposed** (card's ideology is the *lowest* axis): `influenceCost + 1`
+### Ideology vector — card-counted, not drifted
 
-Heritage cards are **always neutral** unless the Heritage axis is explicitly dominant (rare); this reflects Heritage's "commons" role.
+The ideology vector is **derived** from cards currently on the board, never stored as an accumulating float:
 
-### Ideology drift
+```
+board = tableau (all stacked Lands) ∪ slotted cards (all Mega-Project zones)
 
-At end of each turn, the vector drifts by a small amount (e.g., +0.05) toward the ideology of the most-played suit this turn. This means repeated plays shape your vector, and occasional plays don't swing it wildly.
+axis1 = rankSum(Sovereignty cards on board) - rankSum(Solidarity cards on board)
+axis2 = rankSum(Transformation cards on board) - rankSum(Heritage cards on board)
+```
+
+Both are **integers**, computed from what's visible in play. `axis1` positive = tilted Sovereignty; negative = Solidarity. Same for axis2 (Transformation vs. Heritage). Hand cards do not count; discard does not count; only the board.
+
+Starting axis values are seeded by **terrain** (see §13) — a persistent cross-Epoch offset — so an Epoch on a world scarred against Solidarity begins with axis1 pre-loaded toward Sovereignty.
+
+**Example.** Tableau slot A holds a stack `[Land·Solidarity·2, Land·Solidarity·3]`; slot B holds `Land·Transformation·5`. No cards slotted. Terrain offset = 0.
+- `axis1 = 0 - (2+3) = -5` (Solidarity tilt)
+- `axis2 = 5 - 0 = +5` (Transformation tilt)
+
+### Active axis and alignment
+
+An axis is **active** when `|axis| >= 3`. Only active axes confer alignment or opposition.
+
+Alignment check for a played card:
+- If card's suit matches the **dominant side** of any active axis → **aligned** (-1 Influence)
+- If card's suit matches the **inferior side** of any active axis → **opposed** (+1 Influence)
+- Otherwise → neutral
+
+If both axes are active and give conflicting verdicts for different axes, alignment wins by the larger absolute axis magnitude.
+
+Alignment is checked against the **start-of-turn vector** (see §5). Plays mid-turn don't re-cost each other.
 
 ### Threshold gates
 
-Certain cards, Keystones, and Mega-Projects require an ideology threshold on a specific axis:
+Cards, Keystones, and Mega-Projects can require a rank-differential threshold:
 
-- `threshold: { solidarity: 0.4 }` — you must have at least 40% Solidarity weight to play/purchase/unlock.
-- Mega-Project Keystones typically gate at 0.3–0.5 on the project's primary suit.
-- Pact offerings gate at 0.35+ on the offering faction's suit.
+- `gate: { side: 'solidarity', min: 8 }` → `axis1 <= -8` (8+ more Solidarity rank than Sovereignty rank)
+- Mega-Project Keystones typically gate at `8–12` on the project's primary suit
+- Exclusive flavor cards unlock at `6+` on their suit
+
+Players can count the gate by eye: "I have 4 Solidarity Lands on board, ranks 2+3+4+5=14. One Sovereignty Land, rank 3. axis1 = 3 - 14 = -11. I'm past the Solidarity-8 threshold."
 
 ### Heritage as Commons
 
-Heritage's unique role:
+Heritage's axis often runs lower because Heritage cards tend to preserve rather than actively push. Heritage's distinctive role:
 
-- **Unaligned** — no starting faction "owns" it. Heritage cards are treated as neutral by the three starting factions.
-- **Preserver** — Heritage cards disproportionately interact with Legacy: slotting Heritage cards contributes to Monument strength, some Heritage cards nominate slotted cards as Legacy candidates, and Heritage plays are the main route to purge Dissent.
-- **Emergence trigger** — if the Heritage axis crosses a high threshold (e.g., 0.5) during an Epoch and ends the Epoch still dominant, a new faction **The Keepers** emerges in the Campaign (Nascent state at next Epoch).
+- **Preserver** — Heritage cards disproportionately interact with Legacy. Slotting Heritage cards contributes to Monument strength; several Heritage cards nominate slotted cards as Legacy candidates; Heritage plays are the main way to purge Dissent.
+- **Keepers unlock** — if `axis2 <= -8` (Heritage-dominant) at Epoch end, a **Keepers-themed card pool** unlocks in the next Setting's market (a small set of exclusive Heritage cards). This replaces the old faction-emergence mechanic with a purely ideology-driven flavor unlock.
 
 ---
 
-## 9. Factions
+## 9. Ideology States & Demonyms
 
-### Three starting factions
+There are no faction entities. What would have been "factions" is derived from the ideology vector plus terrain, and given narrative labels for flavor only.
 
-Each Campaign begins (Homeworld) with three factions, one per non-Heritage ideology:
+### The four demonyms
 
-| Faction | Aligned ideology | Character |
+| Dominant axis state | Demonym | Era flavor |
 |---|---|---|
-| **The Collective** | Solidarity | Organized workers, communal; rewards Solidarity play, punishes authoritarian lurches |
-| **The Dominion** | Sovereignty | Hierarchical authority; rewards Sovereignty play, punishes egalitarian lurches |
-| **The Ascendancy** | Transformation | Techno-progressive; rewards Transformation play, punishes conservatism |
+| `axis1 <= -6` (Solidarity strong) | **The Collective** | Era of shared labor and public space |
+| `axis1 >= +6` (Sovereignty strong) | **The Dominion** | Era of authority and ordered hierarchy |
+| `axis2 >= +6` (Transformation strong) | **The Ascendancy** | Era of escape and transformation |
+| `axis2 <= -6` (Heritage strong) | **The Keepers** | Era of memory and preservation |
 
-### Faction state lifecycle
+These labels render in the sidebar and flavor text. They have **no mechanical state** — they are pure views of the ideology vector.
 
-```
-            ┌─────────┐
-            │ Nascent │ ← emerges from ideology threshold or event
-            └────┬────┘
-                 ▼
-            ┌─────────┐
-   ┌────────│ Active  │────────┐
-   │        └────┬────┘        │
-   ▼             ▼             ▼
-┌────────┐   ┌─────────┐   ┌──────────────┐
-│Dormant │   │Ascended │   │ Revanchist   │
-└───┬────┘   └────┬────┘   │ (hostile)    │
-    │             │         └──────┬───────┘
-    ▼             ▼                ▼
-┌─────────┐   (persists          ┌────────┐
-│Forgotten│   across Epochs      │ Purged │
-└────┬────┘   with stronger      └────┬───┘
-     │         exclusive cards)      │
-     ▼                               ▼
-┌─────────┐                     ┌─────────┐
-│  Echo   │◀───────seed─────────│ Extinct │
-└─────────┘                     └─────────┘
-  (next                          (gone for
-  emergence                      campaign)
-  candidate)
-```
+### What was "factions" becomes
 
-### State transitions (summary)
+| Old concept | New mechanic |
+|---|---|
+| Faction Active | Your axis leans their way |
+| Pact offered | Axis reaches gate threshold → exclusive cards unlocked |
+| Ascended faction | Completing a Mega-Project of their suit → terrain offset tilts their way, harder to unseat |
+| Revanchist | The opposite axis's terrain is **scarred** (negative offset pushing against you) → generates Backlash Dissent at Epoch start and may block market slots of the scarred suit |
+| Extinct | Terrain is so scarred against a suit across multiple Epochs that its market pool is temporarily excluded in the current Setting |
+| Emergence | Crossing a high axis threshold unlocks the Keepers (or other emergent) card pool in the next Setting |
 
-- **Nascent → Active:** after one Epoch of existence.
-- **Active → Ascended:** you complete a Pact and then complete a Mega-Project aligned with that faction.
-- **Active → Dormant:** you ignore the faction for 2+ Epochs (no alignment activity).
-- **Active → Revanchist:** you actively oppose them (cross their ideological opposite repeatedly, or complete a Mega-Project they oppose).
-- **Dormant → Forgotten:** another Epoch without interaction.
-- **Forgotten → Echo:** another Epoch without interaction.
-- **Revanchist → Purged:** you complete a Mega-Project that directly suppresses them (e.g., the Reactor suppresses Solidarity factions).
-- **Purged → Extinct:** a subsequent Epoch where they fail to return to Revanchist.
-- **Echo → Nascent:** a future Epoch that surfaces their ideology above threshold can re-birth them.
+All derivable from two integers + a terrain record. No separate state machine.
 
-### Pacts
+### Scarred-terrain consequences (Revanchist equivalent)
 
-When your ideology vector crosses a faction's alignment threshold (primary ideology >= 0.35 AND not opposing), the faction offers a **pact**:
+At Epoch start, for each suit whose terrain offset is **scarred** (see §13 — a negative value pushing against the dominant direction):
 
-- Adds 1–2 faction-exclusive cards to market (not in base pool).
-- Unlocks that faction's **Keystone variant** in the Keystone slot.
-- Mid-Epoch gates close: you cannot pact with a faction whose ideology opposes the one you've pacted with.
+- Add 1 **Ideological Backlash · [scarred suit]** Dissent card per 2 points of scarring (min 1, max 3 per suit).
+- Market slot filtering: scarred-suit cards still appear in the river, but have a 50% chance of being **blocked** (visible, unpurchasable) each turn they sit — simulating popular resistance.
 
-Completing a Pact + Mega-Project alignment advances the faction to **Ascended**.
+No named entity does this. The planet's history *is* the opposition.
 
-### Emergence
+### Pact equivalents
 
-Beyond Heritage → The Keepers, new factions can emerge via:
-- Event triggers (deferred to data-design phase)
-- Echo revival (prior Extinct factions cannot re-emerge, but their Echo can seed a *new* faction sharing the ideology)
-
-### Retaliation
-
-Revanchist factions generate **Ideological Backlash · [their suit]** Dissent cards at Epoch start (1–2 per Epoch they remain Revanchist). They also sometimes block market slots (a "blocked" card still occupies the river but cannot be purchased until they're pacified).
+"Pacts" are now just threshold-gated card unlocks. Reaching `|axis| >= 6` on an axis for the first time this Epoch reveals a small set of **exclusive cards** in the market (defined per Setting). Reaching `|axis| >= 10` reveals a Keystone variant in the Keystone slot. No agreement ceremony, no exclusivity between factions — though ideology opposition naturally prevents you from unlocking both sides of the same axis.
 
 ---
 
@@ -434,12 +460,20 @@ Each slotted card contributes points by rank on completion:
 
 A slotted card isn't inert — it whispers a small ongoing effect. Examples:
 
-- Slotted **Preacher · Solidarity** → +1 Solidarity drift each upkeep
-- Slotted **Engineer · any** → Structures cost −1 Influence to play
-- Slotted **Land · Heritage · 6+** → -1 Dissent added per turn
-- Slotted **Architect · [suit]** → one other slotted card in the same project gains a bonus pip
+- Slotted **Preacher · Solidarity** → all Solidarity cards played cost −1 Influence
+- Slotted **Engineer · any** → Lands produce +1 Material when played
+- Slotted **Land · Heritage · 6+** → at end phase, remove 1 Dissent card from discard
+- Slotted **Architect · [suit]** → one other slotted card in the same project counts as +1 rank for scoring
+
+Since ideology is board-state-derived, slotted cards also **add their rank to their suit's axis count** — slotting a Heritage Q pushes axis2 toward Heritage by 12. This means Mega-Project construction itself reshapes ideology.
 
 This makes a half-built project feel like a growing engine.
+
+### Pattern matching
+
+- A slotted card contributes to **every pattern in its project** simultaneously. A Preacher · Solidarity in The Commune counts toward the Solidarity flush AND any Preacher-based short-term task AND any `axis1 <= −X` gate.
+- A slotted card is **locked to its project** — it does not count toward any *other* project's patterns.
+- **Short-term tasks (§11) span projects**: a pair slotted across two different projects counts for the "First Pair" task.
 
 ### Commitment rules
 
@@ -452,7 +486,7 @@ This makes a half-built project feel like a growing engine.
 Keystones are gated to prevent rushing:
 
 - Materials-only purchase (typically 12 Materials).
-- May require an ideology threshold matching the project's primary suit.
+- May require an ideology-axis gate matching the project's primary suit (e.g., `axis1 <= −8` for a Solidarity-keyed Keystone).
 - May require a short-term task to be completed first (e.g., "First Pair" unlocks the Keystone market slot).
 
 ---
@@ -480,7 +514,7 @@ Tasks are the mid-layer between "play a card" and "complete a Mega-Project." The
 | **Commission** | Acquire a rank-8+ Land | +2 Materials/turn permanently |
 | **Recruitment** | Acquire 2 Role cards from market | Draw +1 next turn |
 | **Purification** | Purge 2 Dissent cards | Gain 1 Heritage threshold boost (+0.1 vector) |
-| **Manifesto** | Reach 0.35+ on any non-Heritage suit | Reveal a Pact offer from matching faction |
+| **Manifesto** | Reach `\|axis\| >= 6` on any non-Heritage axis | Reveal an exclusive card in the market |
 
 ### Rank-scaled bonuses
 
@@ -501,19 +535,19 @@ Dissent is the pressure mechanic. It clogs the deck and can end an Epoch.
 | Card | Influence cost | Effect | Slot value |
 |---|---|---|---|
 | **Quiet Dissent** | unplayable | Occupies hand slot. No effect. | None |
-| **Ideological Backlash · [Suit]** | unplayable | Occupies hand slot. While in hand at end of turn, −0.02 drift on that suit. | None |
+| **Ideological Backlash · [Suit]** | unplayable | Occupies hand slot. While in hand at end of turn, adds +1 rank to the opposing suit's axis count (pushing ideology against the player). | None |
 | **Unrest** | unplayable | When drawn, shuffle 1 Quiet Dissent into deck. | None |
 
 Dissent cards cannot be played, slotted, or banished by normal means.
 
 ### Generation sources
 
-1. **Opposed slotting.** Slotting a card whose ideology is the *lowest* axis of your vector into a Mega-Project whose primary ideology is the *dominant* axis generates 1 **Ideological Backlash** of the slotted card's suit. Rationale: you're using outsiders' labor for an in-group project; the outsiders notice.
+1. **Opposed slotting.** Slotting a card into a Mega-Project generates 1 **Ideological Backlash · [opposite of slotted card's suit]** if, at the moment of slotting, the card's suit is on the *inferior* side of an active axis. The rule is countable: if axis1 = +7 (Sovereignty dominant, active) and you slot a Solidarity card, it generates 1 Backlash · Sovereignty.
 2. **Card-specific effects.** Some powerful cards trade raw power for Dissent:
-   - *The Zealot* (variant of Preacher · Transformation): +3 drift on play, adds 1 Quiet Dissent.
-   - *The Demagogue* (Agitator · Sovereignty): +2 Influence, adds 1 Ideological Backlash · Solidarity.
+   - *The Zealot* (variant of Preacher · Transformation): +1 extra rank contribution to axis2 when played, adds 1 Quiet Dissent to deck.
+   - *The Demagogue* (Agitator · Sovereignty): +2 Influence on play, adds 1 Ideological Backlash · Solidarity.
    - *The Apostle* (Keystone): see §6.
-3. **Revanchist retaliation.** Each Revanchist faction adds 1 Ideological Backlash · [their suit] at Epoch start.
+3. **Scarred-terrain retaliation.** At Epoch start, each scarred suit (terrain offset pushing against its side) adds 1 Ideological Backlash · [scarred suit] per 2 points of scarring (min 1, max 3). See §9.
 4. **Unslot cost.** Per §10, unslotting a card adds 1 Quiet Dissent.
 
 ### Purging
@@ -524,7 +558,7 @@ Dissent cards cannot be played, slotted, or banished by normal means.
 
 ### Loss trigger
 
-When Dissent cards make up **more than 50% of the current deck** (hand + draw + discard), the player faces a **faction coup**: the Epoch ends immediately in loss. The loss mode is reported as *"The Populace Turned"* for flavor.
+When Dissent cards make up **more than 50% of the current deck** (hand + draw + discard), the Epoch ends immediately in loss. The loss mode is reported as *"The Populace Turned"* for flavor.
 
 ---
 
@@ -541,7 +575,6 @@ Legacy is the meta-progression layer. Every Epoch ends with the player minting L
 **On loss:**
 - **1–2 Consolation Legacies** — candidates are pulled from a pool themed by your loss mode:
   - *Populace Turned* (Dissent overflow) → Heretic/Iconoclast-themed cards
-  - *Faction Coup* → Underground/Revolutionary-themed cards
   - *Starved Out* (soft turn limit, no completion) → Scarcity/Rationing-themed cards
 
 ### Upgrade paths
@@ -550,7 +583,7 @@ For **each** minted Legacy Card, the player chooses **1 of 3 upgrade paths** bef
 
 | Path | Effect |
 |---|---|
-| **Potency** | The card's primary effect is strengthened (e.g., draw +1 → draw +2; drift +1 → drift +2). |
+| **Potency** | The card's primary effect is strengthened (e.g., draw +1 → draw +2; +1 Influence → +2 Influence). |
 | **Pliability** | Influence cost reduced by 1, OR the card gains a **wild pip** that counts as any suit when slotted. |
 | **Persistence** | Adds a passive effect active while in hand or in the starting tableau (e.g., "+1 Material/turn while this is in your opening hand"). |
 
@@ -567,43 +600,42 @@ A completed Mega-Project leaves a **Monument** on the Campaign. Monuments:
 
 ### Ideology terrain
 
-A 4-axis data structure (`terrain: { solidarity, sovereignty, transformation, heritage }`) persisted on the Campaign, each in `[-1, +1]`.
+A 2-axis data structure (`terrain: { axis1, axis2 }`) persisted on the Campaign, each an integer. Matches the shape of the ideology vector itself.
 
-- **Positive values** = **settled** terrain. Cards of that suit are −1 Material to acquire in future Epochs (cheaper).
-- **Negative values** = **scarred** terrain. Cards of that suit are +1 Material to acquire; ideological drift toward that suit is halved; starting Dissent of that suit may appear.
-- **Monuments apply modifiers:** A Monument of primary suit `X` adds +0.2 to `X` terrain and −0.1 to opposed suits.
-- **Losses apply modifiers:** A loss mode "Populace Turned" during Solidarity dominance adds −0.15 to Solidarity terrain (the commoners are wounded).
+- **Terrain is a pre-load**: next Epoch's starting `axis1` and `axis2` begin at the terrain values (before any cards are placed). A terrain of `{ axis1: -5, axis2: 0 }` means Solidarity is already halfway to its gate threshold at start.
+- **Settled vs. scarred** is defined per side:
+  - A terrain pushing an axis toward a *preferred* side is **settled** for that side. Cards of that side cost −1 Material in market (historically dominant ideology is cheap).
+  - A terrain pushing against a side is **scarred** for that side. Scarred-side cards may cost +1 Material, and at Epoch start scarred-terrain generates Backlash Dissent (see §9 and §12).
+- **Monuments apply offsets**: a Gold-tier Monument of primary suit `X` adds a signed offset of ±5 to the appropriate axis (magnitude scales with completion tier). A Solidarity Gold Monument → axis1 terrain += −5 (pushing Solidarity further).
+- **Losses apply offsets**: *Populace Turned* during Solidarity dominance adds +3 to axis1 terrain (scarred for Solidarity — the commoners are wounded).
+- **Eviction**: when Monuments exceed the cap (3–4 per Campaign), the oldest is evicted but its terrain offset persists (permanent scar).
 
-This is the **snowball brake**: repeated same-ideology wins drag terrain toward that suit, eventually making further same-suit plays more expensive (because the axis is already so settled that further Monuments evict older ones) and pushing the player toward divergence.
+This is the **snowball brake**: repeated same-side wins accumulate terrain in that direction, meaning future Epochs start with that axis already near gate threshold. The market choking on opposed Backlash and the scarcity of opposed suits make continued same-side play **less interesting**, incentivizing divergence to experience new flavor.
 
 ### Legacy sidebar (UI)
 
 Layout sketch:
 
 ```
-┌──────────────────────────────┐
-│  MONUMENTS (3/4)             │
-│  ─ The Ark (Gold) · Ep 3     │
-│  ─ The Commune (Silver) · Ep5│
-│  ─ The Cathedral (Bronze) ·8 │
-├──────────────────────────────┤
-│  FACTIONS                    │
-│  ─ The Collective · Ascended │
-│  ─ The Dominion   · Dormant  │
-│  ─ The Ascendancy · Revanch. │
-│  ─ The Keepers    · Nascent  │
-├──────────────────────────────┤
-│  TERRAIN                     │
-│   ◼ Solidarity    +0.3       │
-│   ◼ Sovereignty   -0.1       │
-│   ◼ Transformation +0.5      │
-│   ◼ Heritage       +0.1      │
-├──────────────────────────────┤
-│  LEGACY CARDS (7)            │
-│  ─ Navigator's Logbook (Ep3) │
-│  ─ The Mediator+ (Ep5)       │
-│  ─ ...                       │
-└──────────────────────────────┘
+┌───────────────────────────────┐
+│  IDEOLOGY (this Epoch)        │
+│   axis1: −7  (The Collective) │
+│   axis2: +3  (drifting Asc.)  │
+├───────────────────────────────┤
+│  MONUMENTS (3/4)              │
+│  ─ The Ark (Gold) · Ep 3      │
+│  ─ The Commune (Silver) · Ep5 │
+│  ─ The Cathedral (Bronze) · 8 │
+├───────────────────────────────┤
+│  TERRAIN (offset at Epoch st) │
+│   axis1: −5  (Sol. settled)   │
+│   axis2: +2                   │
+├───────────────────────────────┤
+│  LEGACY CARDS (7)             │
+│  ─ Navigator's Logbook (Ep3)  │
+│  ─ The Mediator+ (Ep5)        │
+│  ─ ...                        │
+└───────────────────────────────┘
 ```
 
 Abstract; no map required. Fits in a right-panel sidebar during play and expands to a full page between Epochs.
@@ -641,7 +673,10 @@ interface Setting {
 
   megaProjects: MegaProject[];        // exactly 3
   shortTermTasks: TaskDef[];          // pool of 5–8, 3–5 selected per Epoch
-  factions: FactionRef[];             // which factions are active
+  exclusiveCardPools?: {              // unlocked by axis threshold
+    [thresholdKey: string]: CardRef[];
+    // key format: "axis1<=-6", "axis2>=+10", etc.
+  };
 
   transitions: {
     onWin: { [megaProjectId: string]: SettingRef | 'campaign-end' };
@@ -658,8 +693,8 @@ Homeworld's values are the reference point. Every other Setting is defined as a 
 |---|---|
 | **Generation Ship** | `handSize: 4, tableauSlots: 2, landAcquisitionAllowed: false, softTurnLimit: 14` |
 | **Ruined Homeworld** (loss branch) | `dissentLossThreshold: 0.4, startingTableau: [ruined lands + 1 Dissent], softTurnLimit: 15` |
-| **Flourishing Commune** (win branch) | `tableauSlots: 5, factions: [Collective+Keepers+new], softTurnLimit: 20` |
-| **Industrial Dominion** (win branch) | `influenceBaseline: 3, factions: [Dominion strong, Collective Revanchist]` |
+| **Flourishing Commune** (win branch) | `tableauSlots: 5, exclusiveCardPools: { 'axis1<=-6': [Keepers cards], 'axis2<=-6': [Keepers cards] }, softTurnLimit: 20` |
+| **Industrial Dominion** (win branch) | `influenceBaseline: 3, terrain preload forces axis1 start at +3` |
 
 ### Market filtering
 
@@ -707,7 +742,7 @@ Between Epochs, the Campaign holds:
 - Current Setting reference
 - Legacy Cards collection
 - Monuments list (with FIFO eviction and Echoes)
-- Faction roster with states
+- Terrain offsets (axis1, axis2)
 - Ideology terrain
 - Epoch history (for audit trail / narrative retrospective)
 - Seed (for deterministic replays)
@@ -745,14 +780,14 @@ landAcquisitionAllowed: true
 | 2 | Land · Sovereignty · 2 (Outpost) | 0 | Tableau: +1 Material/turn. |
 | 3 | Land · Transformation · 2 (Lab) | 0 | Tableau: +1 Material/turn. |
 | 4 | Land · Heritage · 2 (Shrine) | 0 | Tableau: +1 Material/turn; remove 1 Dissent every 4 turns. |
-| 5 | Land · Solidarity · 3 (Hearth) | 0 | Tableau: +1 Material/turn; +1 Solidarity drift on turn start. |
+| 5 | Land · Solidarity · 3 (Hearth) | 0 | Tableau: +1 Material/turn. Plays into Solidarity stack. |
 | 6 | Land · Sovereignty · 3 (Watchtower) | 0 | Tableau: +1 Material/turn; first Dissent added per turn is suppressed. |
 | 7 | Land · Transformation · 3 (Workshop) | 0 | Tableau: +1 Material/turn; Engineer cards cost -1 Influence. |
 | 8 | Land · Heritage · 3 (Chapel) | 0 | Tableau: +1 Material/turn; Heritage cards cost -1 Influence. |
-| 9 | Agitator · Solidarity · 10 (The Organizer) | 1 | +1 Influence, +0.05 Solidarity drift. |
-| 10 | Agitator · Sovereignty · 10 (The Demagogue) | 1 | +2 Influence, +0.05 Sovereignty drift, +1 Ideological Backlash · Solidarity. |
+| 9 | Agitator · Solidarity · 10 (The Organizer) | 1 | +1 Influence on play. |
+| 10 | Agitator · Sovereignty · 10 (The Demagogue) | 1 | +2 Influence on play; adds 1 Ideological Backlash · Solidarity. |
 
-Players can cast Lands from hand to place in tableau when slots are open; otherwise Lands are unplayable but can be slotted into projects.
+Lands played from hand go onto a tableau stack (new stack if a slot is free; else top of an existing stack, max 3 per stack — see §6). Ideology drift happens automatically as Lands settle on the board — no per-card drift value needed.
 
 ### Starter tableau (2 Lands pre-placed)
 
@@ -763,43 +798,41 @@ Players can cast Lands from hand to place in tableau when slots are open; otherw
 
 **2 tableau slots remain open.**
 
-### Factions (starting roster)
+### Ideology at Epoch start
 
-| Faction | Ideology | Starting state |
-|---|---|---|
-| The Collective | Solidarity | Active |
-| The Dominion | Sovereignty | Active |
-| The Ascendancy | Transformation | Active |
+No terrain inheritance for a fresh Campaign: `axis1 = 0, axis2 = 0` before cards are placed. After placing the starter tableau (Founding Stone · Heritage · 4 + The Commons · Solidarity · 4), the starting vector is:
+- `axis1 = 0 − 4 = −4` (Solidarity leaning; active)
+- `axis2 = 0 − 4 = −4` (Heritage leaning; active)
 
-No Heritage faction exists yet; The Keepers may emerge via Heritage dominance.
+Demonym display: dual-active, leaning **The Collective** + **The Keepers** at start. Early plays will push it further one way or the other.
 
 ### Mega-Projects (3)
 
 #### The Ark (Transformation straight-flush + Keystone)
 
 - **Slot pattern:** Scholar + Engineer + Architect, all Transformation + 2 Lands · Transformation (any rank) + **The Navigator's Compass** (Keystone).
-- **Keystone gate:** Transformation axis ≥ 0.4, 12 Materials.
-- **Monument effect:** +0.25 Transformation terrain; unlocks Generation Ship Setting.
+- **Keystone gate:** `axis2 >= +8`, 12 Materials.
+- **Monument effect:** terrain `axis2 += +5` (Gold = +7); unlocks Generation Ship Setting.
 - **Transition:** `onWin → generation-ship`.
 
 #### The Commune (Solidarity flush + Keystone)
 
 - **Slot pattern:** 5 Solidarity cards (any role/rank mix, including Lands) + **The Founding Charter** (Keystone).
-- **Keystone gate:** Solidarity axis ≥ 0.4, 12 Materials.
-- **Monument effect:** +0.25 Solidarity terrain; unlocks Flourishing Commune Setting.
+- **Keystone gate:** `axis1 <= −8`, 12 Materials.
+- **Monument effect:** terrain `axis1 += −5` (Gold = −7); unlocks Flourishing Commune Setting.
 - **Transition:** `onWin → flourishing-commune`.
 
 #### The Reactor (Sovereignty mixed + Keystone)
 
 - **Slot pattern:** 3 Engineers (any suit, at least 2 Sovereignty) + 2 Lands · Sovereignty (rank 5+) + **Critical Mass** (Keystone).
-- **Keystone gate:** Sovereignty axis ≥ 0.4, 12 Materials.
-- **Monument effect:** +0.25 Sovereignty terrain; may Purge Collective if already Revanchist; unlocks Industrial Dominion Setting.
+- **Keystone gate:** `axis1 >= +8`, 12 Materials.
+- **Monument effect:** terrain `axis1 += +5` (scarring Solidarity); unlocks Industrial Dominion Setting.
 - **Transition:** `onWin → industrial-dominion`.
 
-### Keystones (2)
+### Keystones (2, available via the Keystone market slot)
 
-- **The Pioneer** — wild role, wild suit. InfCost 3. On play: draw 2. On slot: counts as any role + any suit. No Dissent.
-- **The Apostle** — wild role, wild suit. InfCost 2. On play: +2 drift toward dominant suit. On slot: counts as any role + any suit. Adds 1 Unrest to deck.
+- **The Pioneer** — wild role, wild suit. InfCost 3. On play: draw 2. On slot: counts as any role + any suit (no ideology rank contribution — it's a wild). No Dissent.
+- **The Apostle** — wild role, wild suit. InfCost 2. On play: +2 Influence. On slot: counts as any role + any suit AND adds +3 rank to whichever side's axis is currently dominant. Adds 1 Unrest to deck.
 
 Neither is a Mega-Project-specific Keystone (those are separate cards above). These two live in the general Keystone market slot.
 
@@ -854,23 +887,24 @@ interface Card {
   tags: CardTag[];
 }
 
-type CardTag = 'dissent' | 'keystone' | 'legacy' | 'exclusive' | 'pact' | 'purge';
+type CardTag = 'dissent' | 'keystone' | 'legacy' | 'exclusive' | 'purge';
 
-// --- Ideology vector ---
+// --- Ideology vector (derived, not stored) ---
 
 interface IdeologyVector {
-  solidarity: number;    // 0..1
-  sovereignty: number;
-  transformation: number;
-  heritage: number;
+  axis1: number;   // integer: positive = Sovereignty, negative = Solidarity
+  axis2: number;   // integer: positive = Transformation, negative = Heritage
 }
 
 interface IdeologyTerrain {
-  solidarity: number;    // -1..+1
-  sovereignty: number;
-  transformation: number;
-  heritage: number;
+  axis1: number;   // integer offset pre-loaded at Epoch start
+  axis2: number;
 }
+
+// Derivation helper:
+//   axis1 = rankSum(Sovereignty on board) - rankSum(Solidarity on board) + terrain.axis1
+//   axis2 = rankSum(Transformation on board) - rankSum(Heritage on board) + terrain.axis2
+// `board` = all Lands in tableau stacks + all slotted cards across projects.
 
 // --- Mega-Projects ---
 
@@ -884,50 +918,55 @@ type SlotPattern =
 
 interface SlotRequirement {
   description: string;
-  predicate: (card: Card) => boolean;  // or a serializable equivalent
+  predicate: SerializablePredicate;
   count: number;
 }
+
+type SerializablePredicate =
+  | { kind: 'suit'; ideology: Ideology }
+  | { kind: 'role'; role: Role }
+  | { kind: 'rank'; min?: number; max?: number }
+  | { kind: 'land' }
+  | { kind: 'and'; predicates: SerializablePredicate[] }
+  | { kind: 'or'; predicates: SerializablePredicate[] };
+
+type KeystoneGate =
+  | { axis: 'axis1' | 'axis2'; direction: 'positive' | 'negative'; min: number }   // |axis| >= min in direction
+  | { task: string };                                                                // short-term task completed
 
 interface MegaProject {
   id: string;
   name: string;
   description: string;
-  primaryIdeology: Ideology;
+  primaryAxis: 'axis1' | 'axis2';
+  primaryDirection: 'positive' | 'negative';
   patterns: SlotPattern[];              // ALL must be satisfied to complete
   keystoneId?: string;                  // optional Keystone requirement
-  keystoneGate?: { ideology: Ideology; min: number };
-  monumentEffect: { terrain: Partial<IdeologyTerrain>; factionChanges?: FactionStateChange[] };
+  keystoneGates?: KeystoneGate[];       // AND'd together
+  monumentEffect: { terrainDelta: Partial<IdeologyTerrain> };
   slottedPassives: EffectSpec[];        // applied per slotted card matching tag
 }
 
 // --- Short-term tasks ---
 
+type TaskPredicate =
+  | { kind: 'slot-pair' }                           // 2 same-rank
+  | { kind: 'slot-three-of-a-kind' }
+  | { kind: 'slot-two-pair' }
+  | { kind: 'slot-flush'; ideology?: Ideology; count: number }
+  | { kind: 'slot-total'; count: number }
+  | { kind: 'acquire-rank'; min: number }
+  | { kind: 'acquire-role'; count: number }
+  | { kind: 'axis-reach'; axis: 'axis1' | 'axis2'; min: number }
+  | { kind: 'purge-dissent'; count: number };
+
 interface TaskDef {
   id: string;
   name: string;
   description: string;
-  predicate: TaskPredicate;             // "slot 2 same-rank" etc.
+  predicate: TaskPredicate;
   reward: EffectSpec;
   rankScaling?: 'doubled' | 'bonusOnHigh';
-}
-
-// --- Factions ---
-
-type FactionState = 'nascent' | 'active' | 'ascended' | 'dormant'
-                  | 'forgotten' | 'revanchist' | 'purged' | 'extinct' | 'echo';
-
-interface Faction {
-  id: string;
-  name: string;
-  alignedIdeology: Ideology;
-  state: FactionState;
-  pactActive?: boolean;
-  exclusiveCards: CardRef[];
-}
-
-interface FactionStateChange {
-  factionId: string;
-  to: FactionState;
 }
 
 // --- Settings ---
@@ -946,7 +985,10 @@ interface Setting {
 
   megaProjects: MegaProject[];
   shortTermTasks: TaskDef[];
-  factions: FactionRef[];
+  exclusiveCardPools?: Array<{
+    gate: KeystoneGate;
+    cards: CardRef[];
+  }>;
 
   transitions: {
     onWin: Record<string, SettingRef | 'campaign-end'>;
@@ -973,14 +1015,15 @@ interface Epoch {
   hand: Card[];
   draw: Card[];
   discard: Card[];
-  tableau: Card[];
+  tableauStacks: Card[][];                       // array of stacks; length = tableauSlots, each up to 3 Lands
   projectSlots: Record<string, SlottedCard[]>;   // by megaProjectId
   market: MarketState;
   influence: number;
   materials: number;
-  ideologyVector: IdeologyVector;
-  factionStates: Record<string, Faction>;
+  // ideologyVector is DERIVED per tick from tableauStacks + projectSlots + campaign.terrain
+  // not stored on Epoch
   taskProgress: Record<string, TaskProgressState>;
+  endOfTurnQueue: EffectSpec[];                  // effects deferred to end phase
 }
 
 interface SlottedCard {
@@ -1003,8 +1046,7 @@ interface Campaign {
   currentSettingId: string;
   legacyCards: LegacyCard[];
   monuments: Monument[];                // max 3–4 active, plus Echoes
-  factionRoster: Faction[];
-  terrain: IdeologyTerrain;
+  terrain: IdeologyTerrain;             // axis1, axis2 integer offsets
   epochHistory: EpochResult[];
 }
 
@@ -1030,21 +1072,22 @@ interface EpochResult {
   outcome: 'win' | 'loss';
   completedProjectId?: string;
   completionTier?: 'bronze' | 'silver' | 'gold' | 'platinum';
-  lossMode?: 'populace-turned' | 'faction-coup' | 'starved-out';
+  lossMode?: 'populace-turned' | 'starved-out';
   mintedLegacyIds: string[];
+  finalIdeology: IdeologyVector;
 }
 
 // --- Effects (serializable DSL) ---
+// Timing is fixed per effect kind: immediate (resolve on play) vs. end-of-turn (queue, resolve at step 5).
 
 type EffectSpec =
-  | { kind: 'gainInfluence'; amount: number }
-  | { kind: 'gainMaterials'; amount: number }
-  | { kind: 'draw'; count: number }
-  | { kind: 'drift'; ideology: Ideology; amount: number }
-  | { kind: 'addDissent'; variant: 'quiet' | 'backlash' | 'unrest'; ideology?: Ideology; amount: number }
-  | { kind: 'removeDissent'; amount: number }
-  | { kind: 'slotAnyInto'; projectId: string; costReduction?: number }
-  | { kind: 'discount'; cardPredicate: string; amount: number }
+  | { kind: 'gainInfluence'; amount: number; timing: 'immediate' }
+  | { kind: 'gainMaterials'; amount: number; timing: 'immediate' }
+  | { kind: 'draw'; count: number; timing: 'immediate' }
+  | { kind: 'addDissent'; variant: 'quiet' | 'backlash' | 'unrest'; ideology?: Ideology; amount: number; timing: 'end-of-turn' }
+  | { kind: 'removeDissent'; amount: number; timing: 'immediate' }
+  | { kind: 'slotAnyInto'; projectId: string; costReduction?: number; timing: 'immediate' }
+  | { kind: 'discount'; predicate: SerializablePredicate; amount: number; timing: 'end-of-turn' }
   | { kind: 'compound'; effects: EffectSpec[] };
 ```
 
@@ -1053,7 +1096,6 @@ Helper refs:
 ```ts
 type CardRef = string;         // Card.id
 type SettingRef = string;      // Setting.id
-type FactionRef = string;      // Faction.id
 type KeystoneRef = CardRef;
 ```
 
@@ -1068,11 +1110,10 @@ type KeystoneRef = CardRef;
 
 ### Epoch loss
 
-Three loss modes, checked in this order at each end phase:
+Two loss modes, checked at each end phase:
 
 1. **Populace Turned** — Dissent cards exceed `dissentLossThreshold` (default 0.5) of total deck. Loss mode tagged for consolation Legacy theming.
-2. **Faction Coup** — a Revanchist faction reaches a triggered state (currently: 3 consecutive Epochs Revanchist + this Epoch has no completion by turn N). Planned but deferred — for MVP, conflated with Populace Turned.
-3. **Starved Out** — `softTurnLimit` reached without any Mega-Project completion. Not a hard game-over: player may optionally play 2 more turns at a penalty (+1 Dissent per turn) before being force-ended.
+2. **Starved Out** — `softTurnLimit` reached without any Mega-Project completion. Not a hard game-over: player may optionally play 2 more turns at a penalty (+1 Dissent per turn) before being force-ended.
 
 ### Campaign end
 
@@ -1088,7 +1129,7 @@ The spec codifies design. The following are explicitly deferred to prototyping o
 
 ### Deferred to prototyping
 
-- **Specific balance numbers** — most costs, thresholds, drift rates are starting anchors. Real values emerge from playtesting.
+- **Specific balance numbers** — most costs, axis thresholds, and Monument terrain offsets are starting anchors. Real values emerge from playtesting.
 - **Full effect text for all 54 cards** — representative effects are specified; full enumeration is a data task post-P1.
 - **Market shuffle variance** — how much is too much? (may need caps on rare-card frequency)
 - **AI behavior** — we're abandoning the Monte Carlo harness. Playtesting is human-driven; a much simpler deterministic scripted runner may aid balance but is not a core system.
@@ -1096,7 +1137,7 @@ The spec codifies design. The following are explicitly deferred to prototyping o
 ### Deferred to later design
 
 - **Full Setting catalog** — only Homeworld is fully specified. Generation Ship, Ruined Homeworld, Flourishing Commune, and Industrial Dominion are stubbed and need equivalent detail.
-- **Faction coup mechanic** — the "coup" state transition is conflated with Dissent overflow for MVP. Standalone coup triggers (e.g., 3 Epochs of Revanchist status) need later definition.
+- **Named emergent pools** — beyond Keepers, other axis-threshold-triggered exclusive card pools (e.g., a "Zealots" pool at extreme Transformation) are possible but not yet defined.
 - **Procedural Setting generation** — configurable schema supports static only; generator is a stretch goal.
 - **Multiplayer / asymmetric AI opponents** — single-player only. Potentially reconsider once solo loop is validated.
 - **Card upgrade outside of Legacy** — no mid-Epoch upgrades yet. Deferred.
@@ -1155,12 +1196,11 @@ Goal: a typed, inspectable representation of a Homeworld Epoch.
 - Purge mechanisms (Heritage, purge slot, task)
 - Loss condition: >50% Dissent
 
-### P5 — Short-term tasks + factions
+### P5 — Short-term tasks + axis exclusives + terrain
 
 - Task definitions, predicates, reward resolution
-- Faction state lifecycle (initial states, simple transitions)
-- Pact offers and exclusive cards
-- Basic Revanchist retaliation (Dissent generation)
+- Axis threshold unlocks for exclusive market cards and Keystone variants
+- Terrain offset application at Epoch start (Backlash Dissent generation, market blocking for scarred suits)
 
 ### P6 — Settings + single-branch transition
 
