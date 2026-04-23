@@ -9,8 +9,8 @@
     @click="$emit('select')"
   >
     <div class="card-header">
-      <span class="card-rank">{{ rankLabel }}</span>
-      <span class="card-suit-chip">{{ suitLabel }}</span>
+      <span class="card-rank">{{ rankLabel(card.rank) }}</span>
+      <span class="card-suit-chip">{{ suitLabel(card.ideology) }}</span>
     </div>
     <div class="card-name">{{ card.name }}</div>
     <ul v-if="!compact && effectLines.length > 0" class="card-effect-list">
@@ -33,6 +33,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Card } from "../../core/types.ts";
+import { flattenEffect, describeEffectSpec } from "../util/effects.ts";
+import { rankLabel, suitLabel, landMaterialPerTurn } from "../util/labels.ts";
 
 const props = withDefaults(
   defineProps<{
@@ -60,46 +62,21 @@ const props = withDefaults(
 
 defineEmits<{ select: [] }>();
 
-const rankLabel = computed(() => {
-  const r = props.card.rank;
-  if (r === 11) return "J";
-  if (r === 12) return "Q";
-  if (r === 13) return "K";
-  if (r === 14) return "A";
-  if (r === 15) return "★";
-  return String(r);
-});
-
-const suitLabel = computed(() => {
-  switch (props.card.ideology) {
-    case "solidarity":
-      return "Sol";
-    case "sovereignty":
-      return "Sov";
-    case "transformation":
-      return "Trn";
-    case "heritage":
-      return "Her";
-    case "wild":
-      return "Wild";
-  }
-});
-
 const displayedInfluenceCost = computed(() =>
   props.influenceCostOverride !== undefined
     ? props.influenceCostOverride
     : props.card.influenceCost,
 );
 
-const effectLines = computed(() => describeEffectLines(props.card));
+const effectLines = computed(() => describeCard(props.card));
 
-function describeEffectLines(card: Card): string[] {
+function describeCard(card: Card): string[] {
   if (card.kind === "dissent") {
     const txt = card.flavor ?? "Unplayable.";
     return txt ? [txt] : [];
   }
   if (card.kind === "land") {
-    const lines: string[] = [`+${landMat(card.rank)} Mat/turn`];
+    const lines: string[] = [`+${landMaterialPerTurn(card.rank)} Mat/turn`];
     if (card.slotPassive) {
       const p = describeEffectSpec(card.slotPassive);
       if (p) lines.push(`${p} (when top)`);
@@ -112,54 +89,5 @@ function describeEffectLines(card: Card): string[] {
     if (p) lines.push(`On slot: ${p}`);
   }
   return lines;
-}
-
-function flattenEffect(effect: any): string[] {
-  if (effect.kind === "compound") {
-    return effect.effects.flatMap(flattenEffect).filter((s: string) => s.length > 0);
-  }
-  const s = describeEffectSpec(effect);
-  return s ? [s] : [];
-}
-
-function landMat(rank: number): number {
-  if (rank <= 5) return 1;
-  if (rank <= 7) return 2;
-  return 3;
-}
-
-function describeEffectSpec(effect: any): string {
-  switch (effect.kind) {
-    case "noop":
-      return "";
-    case "gainInfluence":
-      return `+${effect.amount} Influence`;
-    case "gainMaterials":
-      return `+${effect.amount} Materials`;
-    case "draw":
-      return `Draw ${effect.count}`;
-    case "addDissent":
-      if (effect.variant === "backlash")
-        return `+${effect.amount} Backlash · ${capitalize(effect.ideology ?? "")}`;
-      if (effect.variant === "unrest") return `+${effect.amount} Unrest`;
-      return `+${effect.amount} Quiet Dissent`;
-    case "removeDissent":
-      return `Purge ${effect.amount} Dissent`;
-    case "shiftIdeology":
-      return `Shift ${effect.axis} ${effect.amount > 0 ? "+" : ""}${effect.amount}`;
-    case "peekMarket":
-      return `Peek ${effect.count}`;
-    case "nextAcquireDiscount":
-      return `Next acquire −${effect.amount}`;
-    case "discount":
-      return `Discount ${effect.amount}`;
-    case "compound":
-      return effect.effects.map(describeEffectSpec).filter(Boolean).join(", ");
-  }
-  return "";
-}
-
-function capitalize(s: string): string {
-  return s ? s[0]!.toUpperCase() + s.slice(1) : "";
 }
 </script>

@@ -1,9 +1,7 @@
 <template>
   <div class="save-slot-menu" :class="{ open }">
     <button class="slot-trigger" @click="open = !open">
-      <span class="slot-label">
-        {{ activeSlot ? activeSlot.label : "No save" }}
-      </span>
+      <span class="slot-label">{{ activeSlot ? activeSlot.label : "No save" }}</span>
       <span class="slot-caret">▾</span>
     </button>
     <div v-if="open" class="slot-dropdown" @click.self="open = false">
@@ -48,6 +46,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onBeforeUnmount } from "vue";
 import type { SaveSlot } from "../../facade/persistence.ts";
+import { formatDate, formatRelative } from "../util/time.ts";
 
 const props = defineProps<{
   slots: SaveSlot[];
@@ -84,21 +83,6 @@ function onDelete(id: string): void {
   if (confirm("Delete this save? This cannot be undone.")) {
     emit("deleteSlot", id);
   }
-}
-
-function formatDate(ts: number): string {
-  return new Date(ts).toLocaleString();
-}
-
-function formatRelative(ts: number): string {
-  const diffMs = Date.now() - ts;
-  const m = Math.floor(diffMs / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  return `${d}d ago`;
 }
 
 function onClickOutside(e: MouseEvent): void {
