@@ -411,6 +411,36 @@ button.primary:hover:not(:disabled) {
 .card.wild {
   border-style: dashed;
 }
+.card.dragging {
+  opacity: 0.35;
+}
+.card[draggable="true"] {
+  cursor: grab;
+}
+.card[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+/* Drop targets */
+.tableau-slot.drop-target {
+  outline: 1px dashed var(--accent);
+  outline-offset: -1px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.tableau-slot.drag-over {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.pile-stack.drop-target {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.pile-stack.drag-over {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-card));
+}
 
 /* -------------------- Save Slot Menu -------------------- */
 

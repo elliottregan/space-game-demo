@@ -51,7 +51,9 @@
           :production="landProduction"
           :retrieve-cost="retrieveCost"
           :can-retrieve="canRetrieve"
+          :valid-slots-for="validSlotsFor"
           @retrieve="onRetrieve"
+          @drop-card="onDropCardToSlot"
         />
 
         <HandPanel
@@ -78,6 +80,7 @@
           @open-market="marketOpen = true"
           @end-turn="onEndTurn"
           @discard-and-end-turn="onDiscardAndEndTurn"
+          @drop-card="onDropCardToDiscard"
         />
 
         <div v-if="lastError" class="error-bar">{{ lastError }}</div>
@@ -221,6 +224,14 @@ function onDiscardSelection(ids: string[]): void {
 }
 function onRetrieve(slotIndex: number): void {
   game.retrieve(slotIndex);
+}
+function onDropCardToSlot(cardId: string, slotIndex: number): void {
+  game.playCard(cardId, slotIndex);
+  selectedIds.value = selectedIds.value.filter((id) => id !== cardId);
+}
+function onDropCardToDiscard(cardId: string): void {
+  game.discardForMaterial(cardId);
+  selectedIds.value = selectedIds.value.filter((id) => id !== cardId);
 }
 function onPlayMegaStructure(projectId: string): void {
   game.playMegaStructure(projectId);

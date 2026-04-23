@@ -1,5 +1,14 @@
 <template>
-  <div :class="['tableau-slot', { improved: isImproved }]">
+  <div
+    :class="[
+      'tableau-slot',
+      { improved: isImproved, 'drop-target': isValidDropTarget, 'drag-over': isDragOver },
+    ]"
+    @dragenter.prevent="onDragEnter"
+    @dragover.prevent="onDragOver"
+    @dragleave="onDragLeave"
+    @drop.prevent="onDrop"
+  >
     <div class="slot-header">
       Slot {{ index + 1 }}
       <span v-if="slot.lands.length > 0" :class="['slot-status', { improved: isImproved }]">
@@ -30,20 +39,50 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import type { TableauSlot } from "../../core/types.ts";
 import Card from "./Card.vue";
+import { dragging, endDrag, readDragPayload } from "../util/dragState.ts";
 
 const props = defineProps<{
   slot: TableauSlot;
   index: number;
   canRetrieve: boolean;
   retrieveCost: { inf: number; mat: number } | null;
+  validSlotsForDrag: number[];
 }>();
 
-defineEmits<{ retrieve: [] }>();
+const emit = defineEmits<{
+  retrieve: [];
+  dropCard: [cardId: string];
+}>();
 
 const isImproved = computed(() => props.slot.lands.length >= 2);
+
+const isValidDropTarget = computed(
+  () => dragging.value !== null && props.validSlotsForDrag.includes(props.index),
+);
+
+const isDragOver = ref(false);
+
+function onDragEnter(): void {
+  if (isValidDropTarget.value) isDragOver.value = true;
+}
+function onDragOver(e: DragEvent): void {
+  if (!isValidDropTarget.value) return;
+  if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+}
+function onDragLeave(): void {
+  isDragOver.value = false;
+}
+function onDrop(e: DragEvent): void {
+  isDragOver.value = false;
+  if (!isValidDropTarget.value) return;
+  const payload = readDragPayload(e);
+  if (!payload) return;
+  emit("dropCard", payload.cardId);
+  endDrag();
+}
 
 const statusLabel = computed(() => {
   const rank = props.slot.lands[0]?.rank;

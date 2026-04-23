@@ -17,7 +17,11 @@
         :unaffordable="!canPlay(card)"
         :influence-cost-override="getEffectiveCost(card)"
         :alignment="getAlignment(card)"
+        :draggable="true"
+        :is-dragging="dragging?.cardId === card.id"
         @select="$emit('toggleSelect', card.id)"
+        @dragstart="onCardDragStart(card, $event)"
+        @dragend="onCardDragEnd"
       />
       <div v-if="hand.length === 0" style="color: var(--text-subtle); padding: 40px">Empty hand</div>
     </div>
@@ -73,6 +77,7 @@
 import { computed } from "vue";
 import type { Card as CardT } from "../../core/types.ts";
 import Card from "./Card.vue";
+import { beginDrag, endDrag, dragging } from "../util/dragState.ts";
 
 const props = defineProps<{
   hand: CardT[];
@@ -136,5 +141,18 @@ function canPlay(card: CardT): boolean {
   if (isDissent(card)) return false;
   if (card.kind === "land") return true;
   return props.influence >= props.getEffectiveCost(card);
+}
+
+function onCardDragStart(card: CardT, e: DragEvent): void {
+  if (!e.dataTransfer) return;
+  const payload = { cardId: card.id, source: "hand" as const };
+  e.dataTransfer.setData("application/json", JSON.stringify(payload));
+  e.dataTransfer.setData("text/plain", card.name);
+  e.dataTransfer.effectAllowed = "move";
+  beginDrag(payload);
+}
+
+function onCardDragEnd(): void {
+  endDrag();
 }
 </script>

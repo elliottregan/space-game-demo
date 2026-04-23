@@ -4,9 +4,12 @@
       'card',
       `suit-${card.ideology}`,
       `kind-${card.kind}`,
-      { selectable, selected, unaffordable, wild: card.ideology === 'wild', compact },
+      { selectable, selected, unaffordable, wild: card.ideology === 'wild', compact, dragging: isDragging },
     ]"
+    :draggable="draggable"
     @click="$emit('select')"
+    @dragstart="$emit('dragstart', $event)"
+    @dragend="$emit('dragend', $event)"
   >
     <div class="card-header">
       <span class="card-rank">{{ rankLabel(card.rank) }}</span>
@@ -47,6 +50,8 @@ const props = withDefaults(
     influenceCostOverride?: number;
     alignment?: "aligned" | "opposed" | "neutral";
     compact?: boolean;
+    draggable?: boolean;
+    isDragging?: boolean;
   }>(),
   {
     selectable: false,
@@ -57,10 +62,16 @@ const props = withDefaults(
     influenceCostOverride: undefined,
     alignment: "neutral",
     compact: false,
+    draggable: false,
+    isDragging: false,
   },
 );
 
-defineEmits<{ select: [] }>();
+defineEmits<{
+  select: [];
+  dragstart: [event: DragEvent];
+  dragend: [event: DragEvent];
+}>();
 
 const displayedInfluenceCost = computed(() =>
   props.influenceCostOverride !== undefined
