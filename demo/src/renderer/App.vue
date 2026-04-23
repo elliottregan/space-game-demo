@@ -53,30 +53,28 @@
           @retrieve="onRetrieve"
         />
 
-        <div class="hand-row">
-          <HandPanel
-            :hand="epoch.hand"
-            :selected-ids="selectedIds"
-            :influence="epoch.influence"
-            :discard-gain="setting.rules.discardMaterialGain"
-            :get-effective-cost="getEffectiveCost"
-            :get-alignment="getAlignment"
-            :valid-slots-for="validSlotsFor"
-            @toggle-select="onToggleSelect"
-            @clear-selection="onClearSelection"
-            @play-to-slot="onPlayToSlot"
-            @discard-selection="onDiscardSelection"
-          />
-          <DeckDiscardPanel
-            :draw-count="epoch.draw.length"
-            :discard-count="epoch.discard.length"
-            :dissent-count="snapshot.deckCounts.dissent"
-            :ended="epoch.status.kind !== 'in-progress'"
-            @view="onViewPile"
-            @open-market="marketOpen = true"
-            @end-turn="onEndTurn"
-          />
-        </div>
+        <HandPanel
+          :hand="epoch.hand"
+          :selected-ids="selectedIds"
+          :influence="epoch.influence"
+          :discard-gain="setting.rules.discardMaterialGain"
+          :get-effective-cost="getEffectiveCost"
+          :get-alignment="getAlignment"
+          :valid-slots-for="validSlotsFor"
+          @toggle-select="onToggleSelect"
+          @clear-selection="onClearSelection"
+          @play-to-slot="onPlayToSlot"
+          @discard-selection="onDiscardSelection"
+        />
+        <DeckDiscardPanel
+          :draw-count="epoch.draw.length"
+          :discard-count="epoch.discard.length"
+          :dissent-count="snapshot.deckCounts.dissent"
+          :ended="epoch.status.kind !== 'in-progress'"
+          @view="onViewPile"
+          @open-market="marketOpen = true"
+          @end-turn="onEndTurn"
+        />
 
         <div v-if="lastError" class="error-bar">{{ lastError }}</div>
       </div>
