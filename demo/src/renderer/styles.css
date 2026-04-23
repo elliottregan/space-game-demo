@@ -632,10 +632,16 @@ button.primary:hover:not(:disabled) {
 
 .tableau-panel {
 }
+.tableau-panel {
+  min-width: 0;
+}
 .tableau-slots {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
 }
 .tableau-slot {
   border: 1px dashed var(--border-strong);
