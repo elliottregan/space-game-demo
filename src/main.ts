@@ -1,24 +1,5 @@
 import { createApp } from "vue";
 import App from "./renderer/App.vue";
-import { initTheme } from "./renderer/composables/useTheme";
-import { resourceHighlightStyles, vResourceGlow } from "./renderer/directives/ResourceHighlight";
-import router from "./renderer/router";
-import "./renderer/ui/tokens/theme.css";
+import "./renderer/styles.css";
 
-// Inject resource highlight styles
-const styleEl = document.createElement("style");
-styleEl.textContent = resourceHighlightStyles;
-document.head.appendChild(styleEl);
-
-const app = createApp(App);
-
-// Register the resource glow directive globally
-app.directive("resource-glow", vResourceGlow);
-
-// Use router
-app.use(router);
-
-// Initialize theme from localStorage
-initTheme();
-
-app.mount("#app");
+createApp(App).mount("#app");

@@ -1,14 +1,37 @@
 {
-  "project": {
-    "name": "space-game-demo",
-    "repo": "elliottregan/space-game-demo",
-    "prefix": "sp"
-  },
   "advisors": {
     "decision-maker": {
       "baseBranch": "main",
       "effort": "max",
       "model": "claude-opus-4-7"
     }
+  },
+  "agent": {
+    "issue_label": "ready"
+  },
+  "claude": {
+    "effort": "",
+    "model": "opus[1m]"
+  },
+  "container": {
+    "environment": {},
+    "packages": [],
+    "ports": {}
+  },
+  "firewall": {
+    "domains": [],
+    "enabled": true
+  },
+  "mcpServers": {},
+  "post_setup": "",
+  "project": {
+    "name": "space-game-demo",
+    "prefix": "sp",
+    "repo": "elliottregan/space-game-demo"
+  },
+  "services": "",
+  "verify": {
+    "all": "",
+    "e2e": ""
   }
 }

@@ -2,171 +2,76 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## The project
+
+A deck-building roguelike strategy game. Vue 3 + TypeScript + Vite + Bun. The design spec is in `docs/specs/DECK-BUILDING-REDESIGN.md` — read it when in doubt about mechanics.
+
+Each run (an "Epoch") is a single card-play session on a `Setting` (Homeworld, Generation Ship, …). Players build a tableau of Lands + Role/Keystone toppers, then assemble a winning hand (poker pattern + project keystone) to complete a Mega-Structure. Monuments, Legacy Cards, and ideology terrain carry across Epochs into a branching campaign.
+
 ## Commands
 
-- `bun install` - Install dependencies
-- `bun run dev` - Start Vite dev server with HMR
-- `bun run build` - Production build
-- `bun run preview` - Preview production build
-- `bun run lint` - Lint with oxlint
-- `bun run lint:fix` - Lint and auto-fix with oxlint
-- `bun run format` - Format with oxfmt
-- `bun run format:check` - Check formatting with oxfmt
-- `bun test` - Run all tests
-- `bun test tests/ResourceManager.test.ts` - Run single test file
-- `bun run typecheck` - Run all TypeScript type checks
-- `bun run simulate` - Run game simulation (use `--help` for options)
-- `bun run visualize` - Start visualization server for simulation analysis
+- `bun install` — install dependencies
+- `bun run dev` — Vite dev server, http://localhost:5174
+- `bun run build` — production build
+- `bun run preview` — preview production build
+- `bun run typecheck` — `tsc --noEmit`
+- `bun test` / `bun test tests/patterns.test.ts` — Bun test runner
+- `bun run scripts/analyze-paths.ts [runsPerPath]` — greedy-heuristic win-path simulation
 
 ## Architecture
 
-### Core/Renderer Separation
+Strict three-layer separation. No layer imports from the layer above it.
 
-The game uses a strict separation between game logic and UI:
+### `src/core/` — pure TypeScript game logic (no Vue)
 
-- **`src/core/`** - Pure TypeScript game logic, no Vue dependencies
-  - `GameState.ts` - Central orchestrator that owns all system managers
-  - `systems/` - Manager classes (ResourceManager, BuildingManager, TechnologyTree, etc.)
-  - `models/` - Type definitions and interfaces
-  - `data/` - Static game data (buildings, technologies, events, factions)
-  - `balance/` - Game balance constants
-  - `utils/` - Core utility functions
-  - `events/` - Event system
+- `types.ts` — shared types (`Card`, `Epoch`, `Campaign`, `MegaProject`, effect DSL, etc.)
+- `cards.ts` — the 57-card pool: 20 Roles × 4 Ideologies + 32 Lands × 8 ranks + 2 base Keystones + 3 project Keystones. Builders + id helpers + `makeDissent()` for generated cards.
+- `homeworld.ts`, `generationShip.ts`, `ruinedHomeworld.ts` — `Setting` definitions. Each holds rules, starting deck, starting tableau, mega-projects (via `requiredHand`), tasks, and transitions.
+- `settings.ts` — the Setting registry.
+- `ideology.ts` — `deriveVector(tableau, terrain)` returns the 2-axis ideology vector from card ranks. `checkAlignment` and `demonym` too.
+- `patterns.ts` — `evaluateMegaStructure(project, hand)` decides whether a hand can play a given mega-structure (poker hand + keystone). Also scoring + completion tiers.
+- `tableau.ts` — slot placement rules: Lands stack only with matching rank; a slot is **improved** at 2+ Lands; Roles/Keystones become the topper on improved slots.
+- `effects.ts` — `applyEffect` (immediate) + `resolveEndOfTurn` (queued) + helpers: `drawToHandSize`, `purgeDissent`, `countDissentInDeck`.
+- `epoch.ts` — turn state machine + commands: `playCard`, `retrieveFromTableau`, `playMegaStructure`, `endTurn`, `discardForMaterial`. Owns the Epoch lifecycle.
+- `legacy.ts` — Legacy Card minting on win/loss, upgrade-path application, Monument creation, terrain scarring.
+- `campaign.ts` — `createCampaign`, `prepareEndOfEpoch`, `finalizeEpoch` (transitions to the next Setting).
+- `rng.ts` — seedable mulberry32 PRNG with `shuffle`.
 
-- **`src/renderer/`** - Vue 3 frontend
-  - `services/GameService.ts` - Singleton bridge between core and Vue, exposes reactive `GameUIState`
-  - `components/` - Vue SFCs for each game panel
-  - `composables/` - Vue composables for shared logic
-  - `directives/` - Custom Vue directives (e.g., `v-resource-glow`)
-  - `ui/` - Reusable UI components
+### `src/facade/` — command/query API between core and renderer
 
-- **`src/facade/`** - Domain-driven API layer between core and renderer
-  - `GameAPI.ts` - Creates `GameState`, composes all domain facades, provides `executeCommand` (wraps mutations with state change notifications) and `checkAffordability` helpers
-  - `domains/` - Domain facades (Buildings, Colony, Operations, Ideology, Districts, Grants, etc.)
-  - All commands return `Result<T>` for type-safe error handling; all queries return immutable snapshots
+- `GameAPI.ts` — a class that owns `Campaign` + `Setting` + `Epoch` + `RNG`. Commands (`playCard`, `retrieveFromTableau`, `playMegaStructure`, `discardForMaterial`, `endTurn`, `advanceEpoch`) return `CommandResult<T>`; queries (`snapshot`, `validSlots`, `getEffectiveCost`, …) return immutable-shaped views. **`snapshot()` deep-clones mutable collections** so consumers (shallow-reactive Vue refs) see new references after every mutation.
+- `persistence.ts` — 10-slot save store in `localStorage` (key `deck-demo-saves-v2`). `loadStore`, `upsertActiveSlot`, `addNewSlot`, `switchSlot`, `deleteSlot`, `clearStore`. Auto-migrates a legacy v1 single-save into slot 1 on first load.
 
-- **`src/simulation/`** - Headless game simulation for testing balance
-  - `SimulationRunner.ts` - Runs automated game sessions
-  - `HeuristicStrategy.ts` - AI decision-making for simulations
-  - `MetricsCollector.ts` - Collects game metrics for analysis
+### `src/renderer/` — Vue 3 UI
 
-### Game Loop
+- `App.vue` — root layout using CSS grid template-areas: projects, ideology, tableau (horizontal scroll), hand + piles side-by-side, errors.
+- `GameService.ts` — reactive bridge. Holds `shallowRef<Snapshot>`, `shallowRef<SaveSlot[]>`, `ref<string | null>` for errors. Every command calls `api.persist()` so saves are always fresh.
+- `components/` — one SFC per panel (`HandPanel`, `TableauPanel`, `ProjectZonesPanel`, `IdeologyDisplay`, `LegacySidebar`, `SaveSlotMenu`, `DeckDiscardPanel`, `Card`, `EndOfEpochScreen`, `CampaignEnd`, `CardListModal`, `MarketModal`, `TurnBar`).
 
-`GameState.tick()` executes systems in order: Resources → Buildings → Workforce → Colony → Technology → Politics → Operations → Events → Victory. Each system returns `GameEvent[]` for the event log.
+### Scripts
 
-### Data Flow
+- `scripts/analyze-paths.ts` — plays N epochs per target mega-structure with a greedy heuristic. Reports win rates, turns-to-win, completion tiers, final ideology, tableau state. Useful when rebalancing.
 
-1. Core `GameState` holds authoritative game state in manager classes
-2. `GameService.syncState()` copies core state into Vue `reactive()` object
-3. Components read from `gameService.getState()` (readonly)
-4. User actions call `GameService` methods which mutate core state and re-sync
+## Invariants worth remembering
 
-### Building Model
-
-Buildings have three resource-related properties:
-- `cost: ResourceDelta` - One-time construction cost
-- `production?: ResourceDelta` - Ongoing production per sol
-- `consumption?: ResourceDelta` - Ongoing consumption per sol
-
-### Ideology & Factions
-
-Three-axis ideology system (solidarity, sovereignty, transformation) with factions positioned in this space. Key mechanics:
-- **IdeologyManager** - Council selection, ideology spread through social networks, faction drift
-- **Sponsorship** - Buildings sponsor colonists with ideology nudges and affinity weighting
-- **Districts** - Colonists assigned to districts with growth caps; district-level ideology aggregation
-- Balance constants in `src/core/balance/IdeologyBalance.ts`
-
-### Serialization
-
-Manager classes implement `toJSON()` / static `fromJSON()`. When adding new managers, update both `GameState.toJSON()` and `GameState.fromJSON()`, and wire up any cross-manager dependencies (e.g., `buildings.setGrantQueries()`).
-
-## Vue Patterns
-
-- When updating `reactive()` object properties, modify in-place (delete then assign) rather than replacing the entire nested object for reliable reactivity
-- Semantic CSS variables defined in `App.vue` `:root`: `--color-positive`, `--color-negative`, `--color-danger`, `--color-warning`, `--color-info`, `--color-muted`
-- Use `// oxlint-disable-next-line no-unused-vars` for template-only functions
-- Icons: use `lucide-vue-next` - import individually like `import { Camera, Heart } from 'lucide-vue-next'`
+- **Cards leave hand by being played to the tableau or discarded**, not by slotting into projects. Mega-structures complete from the hand, atomically.
+- **Ideology is derived**, never stored as a drifting float. `deriveVector` sums `card.rank` over the tableau and adds the persisted terrain offset.
+- **A slot is improved at 2+ matching-rank Lands.** Only improved slots accept a Role/Keystone topper.
+- **Retrieving a Land costs Influence + Material and adds one Quiet Dissent to the top of the deck.** Retrieving a topper is just Influence.
+- **Hand persists across turns.** `drawToHandSize` tops the hand up to `rules.handSize` at turn start; no forced discard.
+- **Vue reactivity** is driven via `shallowRef` + `GameAPI.snapshot()` returning fresh array/object references each call. Do **not** mutate nested state and expect Vue to notice — rebuild the snapshot.
 
 ## Testing
 
-Tests are in the `tests/` directory using Bun's test runner. Test setup pattern:
+Bun test runner, tests in `tests/`:
 
-```typescript
-import { GameAPI } from "../src/facade";
-let api: GameAPI;
-beforeEach(() => { api = new GameAPI(); });
-```
+- `ideology.test.ts` — derivation, alignment, demonym
+- `patterns.test.ts` — hand-based mega-structure evaluation + scoring/tiers
+- `winflow.test.ts` — force a win, verify Monument + terrain + transition
+- `smoke.test.ts` — end-to-end via `GameAPI`
 
-Common test helpers (defined locally in test files):
-- `buildAndComplete(defId)` - Build and advance sols through construction
-- `unassignAllWorkers(buildingId)` - Clear worker assignments
-- `researchTech(techId)` - Research a technology to completion
+Run a single file with `bun test tests/<name>.test.ts`.
 
-## Simulation & Balance Testing
+## Git workflow
 
-Monte Carlo simulations test game balance by running automated playthroughs with AI decision-making.
-
-### Running Simulations
-
-```bash
-# Default: 100 runs, saves txt report to logs/simulations/
-bun run simulate
-
-# Fast iteration (5 runs, no files)
-bun run simulate --runs 5 --log silent
-
-# Quick test (no files written)
-bun run simulate --runs 50 --log silent
-
-# Full analysis with json output for visualization
-bun run simulate --runs 200 --log verbose
-
-# Start visualization server for results
-bun run visualize
-```
-
-### Simulation Options
-
-- `--runs N, -r N` - Number of simulation runs (default: 100)
-- `--seed N, -s N` - Starting seed for reproducibility (default: 1)
-- `--log LEVEL, -l` - Output level:
-  - `silent` - Console only, no files
-  - `default` - Console + txt file
-  - `verbose` - Console + txt + json (large files for visualization)
-
-### Analysis Output
-
-The simulation produces reports including:
-- **Victory Time Distribution** - Min/median/mean/P90/max sols to win
-- **Peak Population Analysis** - Population growth statistics
-- **Technology Research Frequency** - Which techs get researched
-- **Building Construction** - Average buildings built per game
-- **Bottleneck Analysis** - What blocks the AI most often
-- **Event Impact Analysis** - Event frequency and effect on outcomes
-- **Crisis Timeline** - When resource/morale crises occur
-
-Results saved to `logs/simulations/` as `.txt` (always with default/verbose) and `.json` (verbose only).
-
-### Key Metrics to Watch
-
-| Metric | Healthy Range | Concern |
-|--------|---------------|---------|
-| Win Rate | 80-95% | Too easy if 100%, too hard if <70% |
-| Median Victory | 500-1000 sols | Faster = too easy, slower = tedious |
-| Bottleneck % | <50% per category | High % = balance issue |
-| Crisis Frequency | Occasional | Constant crises = resource balance off |
-| Ideology Pockets | 3+ | Fewer = ideology too homogeneous |
-
-## Documentation
-
-- **`MANUAL.md`** - Player-facing game manual with mechanics, strategy guide, and quick reference
-- **`docs/specs/`** - Technical specifications for game systems
-- **`docs/plans/`** - Implementation plans for features
-
-## Development Workflow
-
-### Feature Work
-For significant features, use git worktrees to isolate work from the main branch. When finishing worktree-based work, always create a pull request (option 2) rather than merging locally. This ensures code review and maintains a clear history of changes.
-
-### Subagent-Driven Development
-When executing implementation plans, use `superpowers:subagent-driven-development` to parallelize independent tasks.
+Feature branches; PRs against `main`. Pre-commit hooks run format + lint automatically. Never push `--force` to `main`.

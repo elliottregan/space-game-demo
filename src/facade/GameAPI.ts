@@ -1,363 +1,344 @@
-// src/facade/GameAPI.ts
-// Main orchestrator that composes all domain facades
+// Facade between core and renderer. Redesigned for tableau-based play.
 
-import { GameState } from "../core/GameState";
-import { RESOURCE_KEYS } from "../core/models/Resources";
 import {
-  LifeSupportFacade,
-  BuildingsFacade,
-  ColonyFacade,
-  DistrictFacade,
-  EventsFacade,
-  GameFlowFacade,
-  GrantsFacade,
-  IdeologyFacade,
-  OperationsFacade,
-  PoliticsFacade,
-  ResourcesFacade,
-  TechnologyFacade,
-} from "./domains";
-import type { CanDoResult, GameEvent, ResourceDelta, Result } from "./types";
+  createCampaign,
+  prepareEndOfEpoch,
+  finalizeEpoch,
+  type EndOfEpochState,
+} from "../core/campaign.ts";
+import {
+  createEpoch,
+  currentVector,
+  discardForMaterial as discardForMaterialCore,
+  effectiveInfluenceCost,
+  endTurn as endTurnCore,
+  playCard as playCardCore,
+  playMegaStructure as playMegaStructureCore,
+  retrieveFromTableau as retrieveCore,
+} from "../core/epoch.ts";
+import { createRng, type RNG } from "../core/rng.ts";
+import { getSetting } from "../core/settings.ts";
+import {
+  addNewSlot,
+  deleteSlot as deleteSlotInStore,
+  getActiveSlot,
+  loadStore,
+  switchSlot,
+  upsertActiveSlot,
+  writeStore,
+  type SaveSlot,
+  type SavedState,
+  type SaveStore,
+} from "./persistence.ts";
+import type { Campaign, Card, Epoch, IdeologyVector, Setting, TableauSlot } from "../core/types.ts";
+import { checkAlignment, demonym, demonymName } from "../core/ideology.ts";
+import {
+  describeRequirement,
+  evaluateMegaStructure,
+  type MegaStructureEval,
+} from "../core/patterns.ts";
+import {
+  canPlaceLand,
+  canPlaceTopper,
+  isImproved,
+  validSlotsForCard as validSlotsForCardCore,
+} from "../core/tableau.ts";
+import { landMaterialProduction } from "../core/cards.ts";
 
-/**
- * State change listener callback type.
- */
-export type StateChangeListener = () => void;
+export interface ProjectProgress {
+  projectId: string;
+  evaluation: MegaStructureEval;
+}
 
-/**
- * GameAPI composes all domain facades and provides a unified API surface.
- *
- * Access domains via:
- * - api.resources - Resource queries
- * - api.buildings - Building queries and commands
- * - api.technology - Technology queries and commands
- * - api.colony - Colony queries and workforce commands
- * - api.politics - Politics queries and decision commands
- * - api.operations - Operations queries and commands
- * - api.events - Event queries and resolve command
- * - api.game - Game flow (advanceSol, save, load, newGame)
- * - api.ideology - Ideology, council, and lobbying
- *
- * Key features:
- * - All queries return immutable snapshots
- * - All commands return Result<T> for type-safe error handling
- * - Automatic state change notifications after commands
- * - Centralized validation with detailed error messages
- */
+export interface Snapshot {
+  campaign: Campaign;
+  setting: Setting;
+  epoch: Epoch;
+  vector: IdeologyVector;
+  demonymLabel: string;
+  projectProgress: ProjectProgress[];
+  deckCounts: { hand: number; draw: number; discard: number; dissent: number };
+}
+
+export type CommandResult<T = void> = { ok: true; value: T } | { ok: false; error: string };
+
 export class GameAPI {
-  private gameState: GameState;
-  private stateListeners: Set<StateChangeListener> = new Set();
-  private lastEvents: GameEvent[] = [];
+  private campaign: Campaign;
+  private setting: Setting;
+  private epoch: Epoch;
+  private rng: RNG;
 
-  // Domain facades (lazily initialized)
-  private _resources: ResourcesFacade | null = null;
-  private _buildings: BuildingsFacade | null = null;
-  private _technology: TechnologyFacade | null = null;
-  private _colony: ColonyFacade | null = null;
-  private _politics: PoliticsFacade | null = null;
-  private _operations: OperationsFacade | null = null;
-  private _events: EventsFacade | null = null;
-  private _game: GameFlowFacade | null = null;
-  private _lifeSupport: LifeSupportFacade | null = null;
-  private _districts: DistrictFacade | null = null;
-  private _ideology: IdeologyFacade | null = null;
-  private _grants: GrantsFacade | null = null;
+  private endOfEpoch: EndOfEpochState | null = null;
 
-  constructor() {
-    this.gameState = new GameState();
-    this.initializeFacades();
-  }
-
-  private initializeFacades(): void {
-    // Clear cached facades
-    this._resources = null;
-    this._buildings = null;
-    this._technology = null;
-    this._colony = null;
-    this._politics = null;
-    this._operations = null;
-    this._events = null;
-    this._game = null;
-    this._lifeSupport = null;
-    this._districts = null;
-    this._ideology = null;
-    this._grants = null;
-  }
-
-  // ==========================================================================
-  // State Change Subscription
-  // ==========================================================================
-
-  /**
-   * Subscribe to state changes.
-   * Returns an unsubscribe function.
-   */
-  onStateChange(listener: StateChangeListener): () => void {
-    this.stateListeners.add(listener);
-    return () => {
-      this.stateListeners.delete(listener);
-    };
-  }
-
-  /**
-   * Notify all listeners of a state change.
-   */
-  private notifyStateChange(): void {
-    for (const listener of this.stateListeners) {
-      listener();
+  constructor(seed = 1, opts: { skipLoad?: boolean } = {}) {
+    const store = opts.skipLoad ? null : loadStore();
+    const active = store ? getActiveSlot(store) : null;
+    if (active) {
+      const saved = active.state;
+      this.campaign = saved.campaign;
+      this.setting = getSetting(saved.settingId);
+      this.epoch = saved.epoch;
+      this.endOfEpoch = saved.endOfEpoch;
+      this.rng = createRng(saved.seed);
+    } else {
+      this.campaign = createCampaign(seed);
+      this.setting = getSetting(this.campaign.currentSettingId);
+      this.rng = createRng(seed);
+      this.epoch = createEpoch(this.setting, this.campaign, this.rng, 1);
     }
   }
 
-  /**
-   * Execute a command and notify listeners on completion.
-   */
-  private executeCommand = <T>(fn: () => Result<T>): Result<T> => {
-    const result = fn();
-    this.notifyStateChange();
-    return result;
-  };
+  /** Serialize current state for persistence. */
+  exportState(): SavedState {
+    return {
+      version: 1,
+      campaign: this.campaign,
+      settingId: this.setting.id,
+      epoch: this.epoch,
+      endOfEpoch: this.endOfEpoch,
+      seed: this.campaign.seed,
+    };
+  }
 
-  /**
-   * Check if resources can afford a cost.
-   */
-  private checkAffordability = (cost: ResourceDelta): CanDoResult => {
-    const current = this.gameState.resources.getResources();
-    const missing: ResourceDelta = {};
-    let canAfford = true;
+  persist(): void {
+    const store = loadStore();
+    const next = upsertActiveSlot(store, this.exportState());
+    writeStore(next);
+  }
 
-    for (const key of RESOURCE_KEYS) {
-      const required = cost[key] ?? 0;
-      const available = current[key];
-      if (required > available) {
-        canAfford = false;
-        missing[key] = required - available;
+  /** List all save slots (newest last). */
+  listSlots(): SaveSlot[] {
+    return loadStore().slots;
+  }
+
+  /** Id of the currently active save slot, if any. */
+  activeSlotId(): string | null {
+    return loadStore().activeSlotId;
+  }
+
+  /** Switch to a different saved slot and load its state. Returns true on success. */
+  switchSlot(slotId: string): boolean {
+    // Persist current state to current slot first.
+    this.persist();
+    const store = loadStore();
+    if (!store.slots.some((s) => s.id === slotId)) return false;
+    const updated = switchSlot(store, slotId);
+    writeStore(updated);
+    const slot = getActiveSlot(updated)!;
+    this.loadFromState(slot.state);
+    return true;
+  }
+
+  /** Create a new campaign in a new slot and make it active. */
+  newCampaignSlot(seed = Date.now()): void {
+    // Persist current state first so nothing is lost.
+    this.persist();
+    this.campaign = createCampaign(seed);
+    this.setting = getSetting(this.campaign.currentSettingId);
+    this.rng = createRng(seed);
+    this.epoch = createEpoch(this.setting, this.campaign, this.rng, 1);
+    this.endOfEpoch = null;
+    const store = loadStore();
+    const updated = addNewSlot(store, this.exportState());
+    writeStore(updated);
+  }
+
+  deleteSlot(slotId: string): void {
+    const store = loadStore();
+    const updated = deleteSlotInStore(store, slotId);
+    writeStore(updated);
+    // If the active slot was deleted, reload from (new) active slot or start fresh.
+    if (store.activeSlotId === slotId) {
+      const active = getActiveSlot(updated);
+      if (active) {
+        this.loadFromState(active.state);
+      } else {
+        this.campaign = createCampaign(Date.now());
+        this.setting = getSetting(this.campaign.currentSettingId);
+        this.rng = createRng(this.campaign.seed);
+        this.epoch = createEpoch(this.setting, this.campaign, this.rng, 1);
+        this.endOfEpoch = null;
       }
     }
+  }
 
-    if (canAfford) {
-      return { allowed: true };
-    }
+  private loadFromState(state: SavedState): void {
+    this.campaign = state.campaign;
+    this.setting = getSetting(state.settingId);
+    this.epoch = state.epoch;
+    this.endOfEpoch = state.endOfEpoch;
+    this.rng = createRng(state.seed);
+  }
 
-    return {
-      allowed: false,
-      reason: "Insufficient resources",
-      missingResources: missing as Record<string, number>,
+  // -----------------------------------------------------------------------
+
+  snapshot(): Snapshot {
+    const vector = currentVector(this.epoch, this.campaign);
+    const dis = this.epoch.hand
+      .concat(this.epoch.draw, this.epoch.discard)
+      .filter((c) => c.tags.includes("dissent")).length;
+    const projectProgress = this.setting.megaProjects.map((p) => ({
+      projectId: p.id,
+      evaluation: evaluateMegaStructure(p, this.epoch.hand),
+    }));
+    const epochView: Epoch = {
+      ...this.epoch,
+      hand: [...this.epoch.hand],
+      draw: this.epoch.draw,
+      discard: [...this.epoch.discard],
+      tableau: this.epoch.tableau.map((s) => ({ lands: [...s.lands], topper: s.topper })),
+      taskProgress: { ...this.epoch.taskProgress },
+      tasksRevealed: [...this.epoch.tasksRevealed],
+      eventLog: [...this.epoch.eventLog],
+      endOfTurnQueue: [...this.epoch.endOfTurnQueue],
     };
-  };
+    const campaignView = {
+      ...this.campaign,
+      monuments: [...this.campaign.monuments],
+      legacyCards: [...this.campaign.legacyCards],
+      terrain: { ...this.campaign.terrain },
+      epochHistory: [...this.campaign.epochHistory],
+    };
+    return {
+      campaign: campaignView,
+      setting: this.setting,
+      epoch: epochView,
+      vector,
+      demonymLabel: demonymName(demonym(vector)),
+      projectProgress,
+      deckCounts: {
+        hand: this.epoch.hand.length,
+        draw: this.epoch.draw.length,
+        discard: this.epoch.discard.length,
+        dissent: dis,
+      },
+    };
+  }
 
-  /**
-   * Add events to the history.
-   */
-  private addEvents = (events: GameEvent[]): void => {
-    this.lastEvents.push(...events);
-  };
+  // -----------------------------------------------------------------------
+  // Queries
+  // -----------------------------------------------------------------------
 
-  /**
-   * Get last events.
-   */
-  private getLastEvents = (): GameEvent[] => {
-    return this.lastEvents;
-  };
+  getEffectiveCost(card: Card): number {
+    const vector = currentVector(this.epoch, this.campaign);
+    return effectiveInfluenceCost(card, vector);
+  }
 
-  /**
-   * Get the current game state (for facades).
-   */
-  private getGameState = (): GameState => {
-    return this.gameState;
-  };
+  getAlignment(card: Card): "aligned" | "opposed" | "neutral" {
+    const vector = currentVector(this.epoch, this.campaign);
+    return checkAlignment(card, vector);
+  }
 
-  /**
-   * Reset game state for new game.
-   * @param startingConditionId - Optional starting condition ID
-   */
-  private resetGameState = (startingConditionId?: string): void => {
-    this.gameState = new GameState(startingConditionId);
-    this.lastEvents = [];
-    this.initializeFacades();
-    this.notifyStateChange();
-  };
+  /** Return valid tableau slot indices for a given card in hand. */
+  validSlots(cardId: string): number[] {
+    const card = this.epoch.hand.find((c) => c.id === cardId);
+    if (!card) return [];
+    return validSlotsForCardCore(this.epoch, card).map((s) => s.index);
+  }
 
-  // ==========================================================================
-  // Domain Accessors
-  // ==========================================================================
+  canRetrieve(slotIndex: number): boolean {
+    const slot = this.epoch.tableau[slotIndex];
+    if (!slot) return false;
+    return slot.topper !== null || slot.lands.length > 0;
+  }
 
-  /**
-   * Resource queries (read-only - resources are modified through other domains).
-   */
-  get resources(): ResourcesFacade {
-    if (!this._resources) {
-      this._resources = new ResourcesFacade(this.gameState);
+  landProductionPerTurn(): number {
+    let total = 0;
+    for (const slot of this.epoch.tableau) {
+      for (const l of slot.lands) total += landMaterialProduction(l.rank);
     }
-    return this._resources;
+    return total;
   }
 
-  /**
-   * Building queries and commands.
-   */
-  get buildings(): BuildingsFacade {
-    if (!this._buildings) {
-      this._buildings = new BuildingsFacade(
-        this.gameState,
-        this.executeCommand,
-        this.checkAffordability,
-      );
+  endOfEpochState(): EndOfEpochState | null {
+    return this.endOfEpoch;
+  }
+
+  // -----------------------------------------------------------------------
+  // Commands
+  // -----------------------------------------------------------------------
+
+  playCard(cardId: string, slotIndex: number): CommandResult<Card> {
+    if (this.epoch.status.kind !== "in-progress") {
+      return { ok: false, error: "Epoch ended." };
     }
-    return this._buildings;
+    const r = playCardCore(this.epoch, this.campaign, this.setting, cardId, slotIndex, this.rng);
+    if (!r.ok) return r;
+    return { ok: true, value: r.card };
   }
 
-  /**
-   * Technology queries and commands.
-   */
-  get technology(): TechnologyFacade {
-    if (!this._technology) {
-      this._technology = new TechnologyFacade(
-        this.gameState,
-        this.executeCommand,
-        this.checkAffordability,
-      );
-    }
-    return this._technology;
+  retrieveFromTableau(slotIndex: number): CommandResult<Card> {
+    const r = retrieveCore(this.epoch, this.setting, slotIndex);
+    if (!r.ok) return r;
+    return { ok: true, value: r.card };
   }
 
-  /**
-   * Colony and workforce queries and commands.
-   */
-  get colony(): ColonyFacade {
-    if (!this._colony) {
-      this._colony = new ColonyFacade(this.gameState, this.executeCommand);
-    }
-    return this._colony;
+  /** Cost to retrieve the topmost card of a slot (for UI display). */
+  retrieveCost(slotIndex: number): { inf: number; mat: number } | null {
+    const slot = this.epoch.tableau[slotIndex];
+    if (!slot || (slot.topper === null && slot.lands.length === 0)) return null;
+    const topmost = slot.topper ?? slot.lands[slot.lands.length - 1]!;
+    const isLand = topmost.kind === "land";
+    return {
+      inf: this.setting.rules.retrieveInfluenceCost,
+      mat: isLand ? this.setting.rules.retrieveLandMaterialCost : 0,
+    };
   }
 
-  /**
-   * Politics queries and decision commands.
-   */
-  get politics(): PoliticsFacade {
-    if (!this._politics) {
-      this._politics = new PoliticsFacade(this.gameState);
-    }
-    return this._politics;
+  discardForMaterial(cardId: string): CommandResult<{ gained: number }> {
+    const r = discardForMaterialCore(this.epoch, this.setting, cardId);
+    if (!r.ok) return r;
+    return { ok: true, value: { gained: r.gained } };
   }
 
-  /**
-   * Operations queries and commands (policies, expeditions, sites).
-   */
-  get operations(): OperationsFacade {
-    if (!this._operations) {
-      this._operations = new OperationsFacade(this.gameState, this.executeCommand);
-    }
-    return this._operations;
+  playMegaStructure(projectId: string): CommandResult<{ tier: string; score: number }> {
+    const r = playMegaStructureCore(this.epoch, this.setting, projectId);
+    if (!r.ok) return r;
+    this.maybeEndEpoch();
+    return { ok: true, value: { tier: r.tier, score: r.score } };
   }
 
-  /**
-   * Event queries and resolve command.
-   */
-  get events(): EventsFacade {
-    if (!this._events) {
-      this._events = new EventsFacade(
-        this.gameState,
-        this.executeCommand,
-        this.getLastEvents,
-        this.addEvents,
-      );
-    }
-    return this._events;
+  endTurn(): CommandResult {
+    endTurnCore(this.epoch, this.campaign, this.setting, this.rng);
+    this.maybeEndEpoch();
+    return { ok: true, value: undefined };
   }
 
-  /**
-   * Game flow commands (advanceSol, save, load, newGame).
-   */
-  get game(): GameFlowFacade {
-    if (!this._game) {
-      this._game = new GameFlowFacade(
-        this.getGameState,
-        this.executeCommand,
-        this.resetGameState,
-        this.addEvents,
-      );
-    }
-    return this._game;
-  }
+  // -----------------------------------------------------------------------
 
-  /**
-   * Life support queries (read-only).
-   */
-  get lifeSupport(): LifeSupportFacade {
-    if (!this._lifeSupport) {
-      this._lifeSupport = new LifeSupportFacade(this.gameState);
-    }
-    return this._lifeSupport;
-  }
-
-  /**
-   * District queries (population, buildings, power).
-   */
-  get districts(): DistrictFacade {
-    if (!this._districts) {
-      this._districts = new DistrictFacade(this.gameState, this.executeCommand);
-    }
-    return this._districts;
-  }
-
-  /**
-   * Ideology queries (council, faction support, project eligibility).
-   */
-  get ideology(): IdeologyFacade {
-    if (!this._ideology) {
-      this._ideology = new IdeologyFacade(this.gameState);
-    }
-    return this._ideology;
-  }
-
-  /**
-   * Grants queries and commands (available grants, assign to districts).
-   */
-  get grants(): GrantsFacade {
-    if (!this._grants) {
-      this._grants = new GrantsFacade(this.gameState, this.executeCommand);
-    }
-    return this._grants;
-  }
-
-  // ==========================================================================
-  // Persistence (direct methods for convenience)
-  // ==========================================================================
-
-  /**
-   * Save the current game state to a string.
-   */
-  save(): string {
-    return this.game.save();
-  }
-
-  /**
-   * Load game state from a saved string.
-   */
-  load(saveData: string): Result<void> {
-    try {
-      const data = JSON.parse(saveData);
-      this.gameState = GameState.fromJSON(data);
-      this.lastEvents = [];
-      this.initializeFacades();
-      this.notifyStateChange();
-      return { success: true, data: undefined };
-    } catch (e) {
-      return {
-        success: false,
-        error: {
-          type: "INVALID_TARGET",
-          target: "save data",
-          reason: e instanceof Error ? e.message : "Invalid save data",
-        },
-      };
+  private maybeEndEpoch(): void {
+    if (this.epoch.status.kind !== "in-progress" && this.endOfEpoch === null) {
+      this.endOfEpoch = prepareEndOfEpoch(this.epoch, this.setting, this.campaign);
     }
   }
 
-  /**
-   * Start a new game.
-   * @param startingConditionId - Optional starting condition ID
-   */
-  newGame(startingConditionId?: string): void {
-    this.resetGameState(startingConditionId);
+  advanceEpoch(
+    upgradeChoices: Record<string, "potency" | "pliability" | "persistence">,
+  ): CommandResult<"next" | "campaign-end"> {
+    if (!this.endOfEpoch) return { ok: false, error: "Epoch is still in progress." };
+    const result = finalizeEpoch(
+      this.epoch,
+      this.setting,
+      this.campaign,
+      this.endOfEpoch,
+      upgradeChoices,
+    );
+    this.endOfEpoch = null;
+    if (result.kind === "campaign-end") return { ok: true, value: "campaign-end" };
+    this.epoch = result.epoch;
+    this.setting = result.setting;
+    return { ok: true, value: "next" };
+  }
+
+  /** Replace the active slot with a fresh campaign (keeps other slots). */
+  resetCampaign(seed = Date.now()): void {
+    this.campaign = createCampaign(seed);
+    this.setting = getSetting(this.campaign.currentSettingId);
+    this.rng = createRng(seed);
+    this.epoch = createEpoch(this.setting, this.campaign, this.rng, 1);
+    this.endOfEpoch = null;
+    this.persist();
   }
 }
+
+export { checkAlignment, describeRequirement, canPlaceLand, canPlaceTopper, isImproved };
