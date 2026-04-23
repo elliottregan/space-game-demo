@@ -434,6 +434,7 @@ button.primary:hover:not(:disabled) {
 }
 .tableau-slots {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 .tableau-slot {

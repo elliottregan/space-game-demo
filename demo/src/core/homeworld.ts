@@ -61,7 +61,7 @@ export const HOMEWORLD: Setting = {
     "Mars under a dome. The first generation debates what comes next: to dig in, to lift off, or to build something neither.",
   rules: {
     handSize: 7,
-    tableauSlots: 4,
+    tableauSlots: 7,
     influenceBaseline: 3,
     materialsPerLandBase: 1,
     deckStartMinSize: 10,

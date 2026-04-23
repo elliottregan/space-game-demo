@@ -10,7 +10,7 @@ describe("GameAPI smoke", () => {
     expect(s.setting.id).toBe("homeworld");
     expect(s.epoch.epochNumber).toBe(1);
     expect(s.epoch.hand.length).toBe(7);
-    expect(s.epoch.tableau.length).toBe(4);
+    expect(s.epoch.tableau.length).toBe(s.setting.rules.tableauSlots);
     expect(s.epoch.tableau.every((slot) => slot.lands.length === 0 && slot.topper === null)).toBe(
       true,
     );
