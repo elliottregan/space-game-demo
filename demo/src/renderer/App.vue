@@ -14,6 +14,9 @@
         @new-slot="onNewSlot"
         @delete-slot="onDeleteSlot"
       />
+    </header>
+
+    <div class="stats-bar">
       <TurnBar
         :epoch-number="epoch.epochNumber"
         :setting-name="setting.name"
@@ -23,13 +26,10 @@
         :materials="epoch.materials"
         :dissent-count="snapshot.deckCounts.dissent"
         :dissent-fraction="dissentFraction"
-        :can-purge="true"
         :ended="epoch.status.kind !== 'in-progress'"
         @end-turn="onEndTurn"
-        @purge="onPurge"
-        @restart="onRestart"
       />
-    </header>
+    </div>
 
     <div class="app-main">
       <div class="play-area">
@@ -106,7 +106,7 @@
 
     <MarketModal v-if="marketOpen" @close="marketOpen = false" />
 
-    <CampaignEnd v-if="campaignEnded" @restart="onRestart" />
+    <CampaignEnd v-if="campaignEnded" @restart="onNewSlot" />
   </div>
 </template>
 
@@ -221,15 +221,8 @@ function onEndTurn(): void {
   game.endTurn();
   selectedIndex.value = null;
 }
-function onPurge(): void {
-  game.purgeDissent();
-}
 function onAdvance(choices: Record<string, "potency" | "pliability" | "persistence">): void {
   game.advanceEpoch(choices);
-  selectedIndex.value = null;
-}
-function onRestart(): void {
-  game.restart();
   selectedIndex.value = null;
 }
 function onViewPile(which: "deck" | "discard"): void {

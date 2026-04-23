@@ -1,5 +1,5 @@
 <template>
-  <div style="display: flex; align-items: center; gap: 8px">
+  <div class="turn-bar">
     <span class="stat-pill">
       <span class="stat-label">Epoch</span>
       <span class="stat-value">{{ epochNumber }}</span>
@@ -28,12 +28,7 @@
       <span class="stat-label">Dissent</span>
       <span class="stat-value">{{ dissentCount }}</span>
     </span>
-    <div class="spacer" style="flex: 1"></div>
-    <button v-if="canPurge" @click="$emit('purge')" :disabled="materials < 5">
-      Purge Dissent (5 Mat)
-    </button>
     <button class="primary" @click="$emit('endTurn')" :disabled="ended">End Turn</button>
-    <button @click="$emit('restart')" title="Restart campaign">New Campaign</button>
   </div>
 </template>
 
@@ -47,13 +42,10 @@ defineProps<{
   materials: number;
   dissentCount: number;
   dissentFraction: number;
-  canPurge: boolean;
   ended: boolean;
 }>();
 
 defineEmits<{
   endTurn: [];
-  purge: [];
-  restart: [];
 }>();
 </script>

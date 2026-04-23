@@ -99,12 +99,6 @@ class GameService {
     this.refresh();
   }
 
-  purgeDissent(): void {
-    const r = this.api.purgeOneDissent();
-    this.report(r as any);
-    this.refresh();
-  }
-
   endTurn(): void {
     const r = this.api.endTurn();
     this.report(r as any);

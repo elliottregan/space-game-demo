@@ -74,7 +74,7 @@ button.primary:hover:not(:disabled) {
 
 .app-root {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
   height: 100%;
 }
 
@@ -85,6 +85,20 @@ button.primary:hover:not(:disabled) {
   padding: 8px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-raised);
+}
+
+.stats-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.turn-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .app-header h1 {

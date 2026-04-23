@@ -14,7 +14,6 @@ import {
   endTurn as endTurnCore,
   playCard as playCardCore,
   playMegaStructure as playMegaStructureCore,
-  purgeDissent,
   retrieveFromTableau as retrieveCore,
 } from "../core/epoch.ts";
 import { createRng, type RNG } from "../core/rng.ts";
@@ -297,13 +296,6 @@ export class GameAPI {
     if (!r.ok) return r;
     this.maybeEndEpoch();
     return { ok: true, value: { tier: r.tier, score: r.score } };
-  }
-
-  purgeOneDissent(): CommandResult<number> {
-    if (this.epoch.materials < 5) return { ok: false, error: "Need 5 Materials to purge." };
-    this.epoch.materials -= 5;
-    const purged = purgeDissent(this.epoch, 1);
-    return { ok: true, value: purged };
   }
 
   endTurn(): CommandResult {
