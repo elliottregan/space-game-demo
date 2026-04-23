@@ -660,7 +660,7 @@ button.primary:hover:not(:disabled) {
   border: 1px dashed var(--border-strong);
   border-radius: 6px;
   padding: 6px;
-  width: 140px;
+  width: 200px;
   min-height: 260px;
   display: flex;
   flex-direction: column;
