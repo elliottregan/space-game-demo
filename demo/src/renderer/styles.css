@@ -581,6 +581,21 @@ button.primary:hover:not(:disabled) {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+.discard-end-turn {
+  margin-top: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 12px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+}
+.discard-end-turn .btn-sub {
+  color: var(--fg-muted);
+  font-size: 10px;
+  font-weight: normal;
+}
 
 /* -------------------- Card list modal -------------------- */
 

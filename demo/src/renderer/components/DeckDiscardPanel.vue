@@ -26,6 +26,19 @@
     <button class="end-turn-big primary" :disabled="ended" @click="$emit('endTurn')">
       End Turn
     </button>
+    <button
+      class="discard-end-turn"
+      :disabled="ended || handCount === 0"
+      :title="
+        handCount === 0
+          ? 'No cards in hand to discard'
+          : `Discard all ${handCount} hand card(s) for +${handCount * discardGain} Mat, then end turn`
+      "
+      @click="$emit('discardAndEndTurn')"
+    >
+      Discard {{ handCount }} &amp; End Turn
+      <span class="btn-sub">+{{ handCount * discardGain }} Mat</span>
+    </button>
   </section>
 </template>
 
@@ -34,6 +47,8 @@ defineProps<{
   drawCount: number;
   discardCount: number;
   dissentCount: number;
+  handCount: number;
+  discardGain: number;
   ended: boolean;
 }>();
 
@@ -41,5 +56,6 @@ defineEmits<{
   view: [which: "deck" | "discard"];
   openMarket: [];
   endTurn: [];
+  discardAndEndTurn: [];
 }>();
 </script>
