@@ -502,7 +502,7 @@ button.primary:hover:not(:disabled) {
 }
 .pile-stack {
   position: relative;
-  width: 76px;
+  flex: 1 1 0;
   height: 106px;
   border-radius: 6px;
   border: 2px solid var(--border-strong);
@@ -578,11 +578,6 @@ button.primary:hover:not(:disabled) {
 .end-turn-big {
   margin-top: 8px;
   width: 100%;
-  padding: 14px 12px;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 .discard-end-turn {
   margin-top: 6px;
