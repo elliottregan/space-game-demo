@@ -474,9 +474,12 @@ button.primary:hover:not(:disabled) {
 }
 .hand-cards {
   display: flex;
+  flex-wrap: nowrap;
   gap: 6px;
-  flex-wrap: wrap;
   min-height: 160px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
 }
 .hand-actions {
   display: flex;
