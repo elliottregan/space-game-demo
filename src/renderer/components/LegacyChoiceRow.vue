@@ -52,6 +52,6 @@ function upgradeDescription(opt: "potency" | "pliability" | "persistence"): stri
 <style scoped>
 .effect-preview {
   font-size: 10px;
-  color: var(--fg-dim);
+  color: var(--text-muted);
 }
 </style>

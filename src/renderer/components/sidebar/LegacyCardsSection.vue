@@ -18,6 +18,6 @@ defineProps<{ cards: LegacyCard[] }>();
 </script>
 
 <style scoped>
-.empty { color: var(--fg-muted); font-size: 11px; }
-.legacy-meta { font-size: 10px; color: var(--fg-muted); }
+.empty { color: var(--text-subtle); font-size: 11px; }
+.legacy-meta { font-size: 10px; color: var(--text-subtle); }
 </style>

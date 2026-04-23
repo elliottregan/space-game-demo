@@ -19,12 +19,12 @@
         :alignment="getAlignment(card)"
         @select="$emit('toggleSelect', card.id)"
       />
-      <div v-if="hand.length === 0" style="color: var(--fg-muted); padding: 40px">Empty hand</div>
+      <div v-if="hand.length === 0" style="color: var(--text-subtle); padding: 40px">Empty hand</div>
     </div>
 
     <div class="hand-actions">
       <template v-if="selectedCards.length === 0">
-        <span style="color: var(--fg-muted)"
+        <span style="color: var(--text-subtle)"
           >Click cards to select. Actions apply to all selected.</span
         >
       </template>
@@ -48,14 +48,14 @@
           v-else-if="
             playableSelection.length === selectedCards.length && validSharedSlots.length === 0
           "
-          style="color: var(--fg-dim)"
+          style="color: var(--text-muted)"
         >
           No slot fits all selected cards.
         </span>
-        <span v-else-if="playableSelection.length > 0" style="color: var(--fg-dim)">
+        <span v-else-if="playableSelection.length > 0" style="color: var(--text-muted)">
           Selection mixes playable and un-playable cards — Play disabled.
         </span>
-        <span v-else style="color: var(--fg-dim)">Selection has no playable cards.</span>
+        <span v-else style="color: var(--text-muted)">Selection has no playable cards.</span>
 
         <button
           class="secondary"

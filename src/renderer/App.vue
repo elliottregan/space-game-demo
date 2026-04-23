@@ -2,7 +2,7 @@
   <div class="app-root">
     <header class="app-header">
       <h1>Deck-Building Demo</h1>
-      <span class="app-sub" style="color: var(--fg-dim); font-size: 12px">
+      <span class="app-sub" style="color: var(--text-muted); font-size: 12px">
         Throwaway prototype · {{ demonymLabel }}
       </span>
       <div class="spacer"></div>
@@ -14,6 +14,7 @@
         @new-slot="onNewSlot"
         @delete-slot="onDeleteSlot"
       />
+      <ThemeToggle />
     </header>
 
     <div class="stats-bar">
@@ -129,6 +130,7 @@ import DeckDiscardPanel from "./components/DeckDiscardPanel.vue";
 import CardListModal from "./components/CardListModal.vue";
 import MarketModal from "./components/MarketModal.vue";
 import SaveSlotMenu from "./components/SaveSlotMenu.vue";
+import ThemeToggle from "./components/ThemeToggle.vue";
 import type { Card } from "../core/types.ts";
 import { SETTING_BY_ID } from "../core/settings.ts";
 import { MAX_SLOTS } from "../facade/persistence.ts";

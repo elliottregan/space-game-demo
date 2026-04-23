@@ -22,5 +22,5 @@ const recent = computed(() => {
 </script>
 
 <style scoped>
-.turn { color: var(--fg-muted); }
+.turn { color: var(--text-subtle); }
 </style>

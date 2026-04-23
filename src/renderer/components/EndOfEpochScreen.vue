@@ -74,10 +74,10 @@ const nextSettingDisplay = computed(() =>
 .eoe-instructions {
   margin-bottom: 8px;
   font-size: 12px;
-  color: var(--fg-dim);
+  color: var(--text-muted);
 }
 .empty {
-  color: var(--fg-dim);
+  color: var(--text-muted);
   font-size: 12px;
 }
 </style>

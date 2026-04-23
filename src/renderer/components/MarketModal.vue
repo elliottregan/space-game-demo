@@ -7,10 +7,10 @@
       </div>
       <div class="card-list-empty" style="padding: 60px 40px">
         <div style="font-size: 16px; margin-bottom: 12px">Not stocked yet.</div>
-        <div style="color: var(--fg-muted); font-size: 12px">
+        <div style="color: var(--text-subtle); font-size: 12px">
           Future feature: spend Materials to acquire cards.
         </div>
-        <div style="color: var(--fg-muted); font-size: 12px; margin-top: 12px">
+        <div style="color: var(--text-subtle); font-size: 12px; margin-top: 12px">
           For now, every card is in your starting deck.
         </div>
       </div>

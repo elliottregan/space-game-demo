@@ -26,5 +26,5 @@ const active = computed(() => props.monuments.filter((m) => m.active).length);
 </script>
 
 <style scoped>
-.empty { color: var(--fg-muted); font-size: 11px; }
+.empty { color: var(--text-subtle); font-size: 11px; }
 </style>
