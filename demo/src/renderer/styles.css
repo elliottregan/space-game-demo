@@ -589,16 +589,22 @@ button.primary:hover:not(:disabled) {
   border: 1px dashed var(--border-strong);
   border-radius: 6px;
   padding: 6px;
-  min-width: 140px;
+  width: 140px;
   min-height: 260px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   align-items: center;
+  overflow: hidden;
+  box-sizing: border-box;
+  flex: 0 0 auto;
 }
 .tableau-slot.improved {
-  border-style: solid;
-  border-color: var(--accent);
+  /* Overlay an outline instead of swapping border style, so the box
+     dimensions stay identical and siblings don't reflow. */
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+  border-color: transparent;
 }
 .slot-header {
   width: 100%;
