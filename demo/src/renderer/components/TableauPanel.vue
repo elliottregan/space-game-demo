@@ -9,9 +9,11 @@
       >
         <div class="slot-header">
           Slot {{ i + 1 }}
-          <span v-if="slot.lands.length > 0" class="slot-status">
-            rank {{ slot.lands[0]!.rank }} × {{ slot.lands.length
-            }}<span v-if="isImproved(slot)"> · improved</span>
+          <span
+            v-if="slot.lands.length > 0"
+            :class="['slot-status', { improved: isImproved(slot) }]"
+          >
+            {{ statusLabel(slot) }}
           </span>
           <span v-else class="slot-status slot-empty-text">empty</span>
         </div>
@@ -60,6 +62,17 @@ defineEmits<{
 
 function isImproved(slot: TableauSlot): boolean {
   return slot.lands.length >= 2;
+}
+
+function statusLabel(slot: TableauSlot): string {
+  const rank = slot.lands[0]?.rank;
+  const n = slot.lands.length;
+  if (!rank) return "empty";
+  if (n === 1) return `Rank ${rank} · needs another to improve`;
+  if (n === 2) return `Rank ${rank} · pair (improved)`;
+  if (n === 3) return `Rank ${rank} · three of a kind`;
+  if (n >= 4) return `Rank ${rank} · four of a kind`;
+  return `Rank ${rank}`;
 }
 
 function retrieveLabel(i: number): string {

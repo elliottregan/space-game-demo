@@ -692,6 +692,9 @@ button.primary:hover:not(:disabled) {
   text-transform: none;
   letter-spacing: 0;
 }
+.slot-status.improved {
+  color: var(--accent);
+}
 .slot-empty-text {
   color: var(--fg-muted);
 }
