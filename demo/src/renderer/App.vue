@@ -40,7 +40,7 @@
         <TableauPanel
           :tableau="epoch.tableau"
           :production="landProduction"
-          :retrieve-cost="setting.rules.retrieveInfluenceCost"
+          :retrieve-cost="retrieveCost"
           :can-retrieve="canRetrieve"
           @retrieve="onRetrieve"
         />
@@ -51,10 +51,12 @@
             :selected-index="selectedIndex"
             :influence="epoch.influence"
             :valid-slots="validSlotsForSelected"
+            :discard-gain="setting.rules.discardMaterialGain"
             :get-effective-cost="getEffectiveCost"
             :get-alignment="getAlignment"
             @select-card="onSelectCard"
             @play-card="onPlayCard"
+            @discard-for-material="onDiscardForMaterial"
           />
           <DeckDiscardPanel
             :draw-count="epoch.draw.length"
@@ -177,6 +179,9 @@ function getAlignment(card: Card): "aligned" | "opposed" | "neutral" {
 function canRetrieve(slotIndex: number): boolean {
   return game.canRetrieve(slotIndex);
 }
+function retrieveCost(slotIndex: number): { inf: number; mat: number } | null {
+  return game.retrieveCost(slotIndex);
+}
 
 function onSelectCard(index: number): void {
   selectedIndex.value = selectedIndex.value === index ? null : index;
@@ -189,6 +194,12 @@ function onPlayCard(handIndex: number, slotIndex: number): void {
 }
 function onRetrieve(slotIndex: number): void {
   game.retrieve(slotIndex);
+}
+function onDiscardForMaterial(handIndex: number): void {
+  const card = epoch.value.hand[handIndex];
+  if (!card) return;
+  game.discardForMaterial(card.id);
+  selectedIndex.value = null;
 }
 function onPlayMegaStructure(projectId: string): void {
   game.playMegaStructure(projectId);

@@ -9,6 +9,7 @@ import {
 import {
   createEpoch,
   currentVector,
+  discardForMaterial as discardForMaterialCore,
   effectiveInfluenceCost,
   endTurn as endTurnCore,
   playCard as playCardCore,
@@ -18,6 +19,12 @@ import {
 } from "../core/epoch.ts";
 import { createRng, type RNG } from "../core/rng.ts";
 import { getSetting } from "../core/settings.ts";
+import {
+  loadSavedState,
+  writeSavedState,
+  clearSavedState,
+  type SavedState,
+} from "./persistence.ts";
 import type { Campaign, Card, Epoch, IdeologyVector, Setting, TableauSlot } from "../core/types.ts";
 import { checkAlignment, demonym, demonymName } from "../core/ideology.ts";
 import {
@@ -58,11 +65,36 @@ export class GameAPI {
 
   private endOfEpoch: EndOfEpochState | null = null;
 
-  constructor(seed = 1) {
-    this.campaign = createCampaign(seed);
-    this.setting = getSetting(this.campaign.currentSettingId);
-    this.rng = createRng(seed);
-    this.epoch = createEpoch(this.setting, this.campaign, this.rng, 1);
+  constructor(seed = 1, opts: { skipLoad?: boolean } = {}) {
+    const saved = opts.skipLoad ? null : loadSavedState();
+    if (saved) {
+      this.campaign = saved.campaign;
+      this.setting = getSetting(saved.settingId);
+      this.epoch = saved.epoch;
+      this.endOfEpoch = saved.endOfEpoch;
+      this.rng = createRng(saved.seed);
+    } else {
+      this.campaign = createCampaign(seed);
+      this.setting = getSetting(this.campaign.currentSettingId);
+      this.rng = createRng(seed);
+      this.epoch = createEpoch(this.setting, this.campaign, this.rng, 1);
+    }
+  }
+
+  /** Serialize current state for persistence. */
+  exportState(): SavedState {
+    return {
+      version: 1,
+      campaign: this.campaign,
+      settingId: this.setting.id,
+      epoch: this.epoch,
+      endOfEpoch: this.endOfEpoch,
+      seed: this.campaign.seed,
+    };
+  }
+
+  persist(): void {
+    writeSavedState(this.exportState());
   }
 
   // -----------------------------------------------------------------------
@@ -168,6 +200,24 @@ export class GameAPI {
     return { ok: true, value: r.card };
   }
 
+  /** Cost to retrieve the topmost card of a slot (for UI display). */
+  retrieveCost(slotIndex: number): { inf: number; mat: number } | null {
+    const slot = this.epoch.tableau[slotIndex];
+    if (!slot || (slot.topper === null && slot.lands.length === 0)) return null;
+    const topmost = slot.topper ?? slot.lands[slot.lands.length - 1]!;
+    const isLand = topmost.kind === "land";
+    return {
+      inf: this.setting.rules.retrieveInfluenceCost,
+      mat: isLand ? this.setting.rules.retrieveLandMaterialCost : 0,
+    };
+  }
+
+  discardForMaterial(cardId: string): CommandResult<{ gained: number }> {
+    const r = discardForMaterialCore(this.epoch, this.setting, cardId);
+    if (!r.ok) return r;
+    return { ok: true, value: { gained: r.gained } };
+  }
+
   playMegaStructure(projectId: string): CommandResult<{ tier: string; score: number }> {
     const r = playMegaStructureCore(this.epoch, this.setting, projectId);
     if (!r.ok) return r;
@@ -215,6 +265,7 @@ export class GameAPI {
   }
 
   resetCampaign(seed = Date.now()): void {
+    clearSavedState();
     this.campaign = createCampaign(seed);
     this.setting = getSetting(this.campaign.currentSettingId);
     this.rng = createRng(seed);

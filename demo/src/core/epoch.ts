@@ -246,7 +246,12 @@ function opposingIdeology(ideology: "solidarity" | "sovereignty" | "transformati
   }
 }
 
-/** Retrieve the topmost card of a slot back into hand for `retrieveInfluenceCost` Influence. */
+/**
+ * Retrieve the topmost card of a slot back into hand.
+ * - Topper (Role/Keystone): costs `retrieveInfluenceCost` Influence.
+ * - Land: costs `retrieveInfluenceCost` Influence + `retrieveLandMaterialCost`
+ *   Materials, and adds 1 Quiet Dissent to the top of the deck.
+ */
 export function retrieveFromTableau(
   epoch: Epoch,
   setting: Setting,
@@ -259,18 +264,56 @@ export function retrieveFromTableau(
   if (slot.topper === null && slot.lands.length === 0)
     return { ok: false, error: "Slot is empty." };
 
-  const cost = setting.rules.retrieveInfluenceCost;
-  if (epoch.influence < cost) return { ok: false, error: `Need ${cost} Influence.` };
+  const topmost = slot.topper ?? slot.lands[slot.lands.length - 1]!;
+  const isLand = topmost.kind === "land";
+
+  const infCost = setting.rules.retrieveInfluenceCost;
+  const matCost = isLand ? setting.rules.retrieveLandMaterialCost : 0;
+
+  if (epoch.influence < infCost) return { ok: false, error: `Need ${infCost} Influence.` };
+  if (isLand && epoch.materials < matCost) {
+    return { ok: false, error: `Retrieving a Land costs ${matCost} Materials.` };
+  }
 
   const card = popTopmost(slot);
   if (!card) return { ok: false, error: "Nothing to retrieve." };
-  epoch.influence -= cost;
+
+  epoch.influence -= infCost;
+  if (isLand) {
+    epoch.materials -= matCost;
+    epoch.draw.unshift(makeDissent("quiet"));
+  }
   epoch.hand.push(card);
   epoch.eventLog.push({
     turn: epoch.turn,
-    text: `Retrieved ${card.name} from slot ${slotIndex + 1}.`,
+    text: isLand
+      ? `Retrieved ${card.name} from slot ${slotIndex + 1}. 1 Quiet Dissent added to top of deck.`
+      : `Retrieved ${card.name} from slot ${slotIndex + 1}.`,
+    kind: isLand ? "warn" : undefined,
   });
   return { ok: true, card };
+}
+
+/** Discard a specific hand card to gain `discardMaterialGain` Materials. */
+export function discardForMaterial(
+  epoch: Epoch,
+  setting: Setting,
+  cardId: string,
+): { ok: true; card: Card; gained: number } | { ok: false; error: string } {
+  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
+  if (epoch.phase !== "main") return { ok: false, error: "Not in main phase." };
+  const idx = epoch.hand.findIndex((c) => c.id === cardId);
+  if (idx === -1) return { ok: false, error: "Card not in hand." };
+  const card = epoch.hand[idx]!;
+  const gain = setting.rules.discardMaterialGain;
+  epoch.hand.splice(idx, 1);
+  epoch.discard.push(card);
+  epoch.materials += gain;
+  epoch.eventLog.push({
+    turn: epoch.turn,
+    text: `Discarded ${card.name} for +${gain} Mat.`,
+  });
+  return { ok: true, card, gained: gain };
 }
 
 /** Attempt to play a mega-structure from the current hand. */

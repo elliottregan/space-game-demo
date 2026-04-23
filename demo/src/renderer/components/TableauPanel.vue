@@ -32,10 +32,10 @@
         <div v-if="slot.lands.length > 0 || slot.topper" class="slot-actions">
           <button
             :disabled="!canRetrieve(i)"
-            :title="`Retrieve topmost card for ${retrieveCost} Inf`"
+            :title="retrieveTitle(i)"
             @click="$emit('retrieve', i)"
           >
-            Retrieve ({{ retrieveCost }} Inf)
+            {{ retrieveLabel(i) }}
           </button>
         </div>
       </div>
@@ -47,11 +47,11 @@
 import type { TableauSlot } from "../../core/types.ts";
 import Card from "./Card.vue";
 
-defineProps<{
+const props = defineProps<{
   tableau: TableauSlot[];
   production: number;
-  retrieveCost: number;
   canRetrieve: (slotIndex: number) => boolean;
+  retrieveCost: (slotIndex: number) => { inf: number; mat: number } | null;
 }>();
 
 defineEmits<{
@@ -60,5 +60,21 @@ defineEmits<{
 
 function isImproved(slot: TableauSlot): boolean {
   return slot.lands.length >= 2;
+}
+
+function retrieveLabel(i: number): string {
+  const c = props.retrieveCost(i);
+  if (!c) return "Retrieve";
+  if (c.mat > 0) return `Retrieve (${c.inf} Inf + ${c.mat} Mat)`;
+  return `Retrieve (${c.inf} Inf)`;
+}
+
+function retrieveTitle(i: number): string {
+  const c = props.retrieveCost(i);
+  if (!c) return "Retrieve topmost card";
+  if (c.mat > 0) {
+    return `Retrieving this Land also generates 1 Quiet Dissent on top of the deck.`;
+  }
+  return `Retrieve topmost card`;
 }
 </script>

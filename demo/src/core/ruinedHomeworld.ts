@@ -37,6 +37,8 @@ export const RUINED_HOMEWORLD: Setting = {
     softTurnLimit: 20,
     dissentLossThreshold: 0.4,
     retrieveInfluenceCost: 1,
+    retrieveLandMaterialCost: 2,
+    discardMaterialGain: 1,
   },
   startingDeck: RUINED_DECK,
   startingTableau: [],

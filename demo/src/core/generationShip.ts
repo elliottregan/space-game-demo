@@ -41,6 +41,8 @@ export const GENERATION_SHIP: Setting = {
     softTurnLimit: 20,
     dissentLossThreshold: 0.5,
     retrieveInfluenceCost: 1,
+    retrieveLandMaterialCost: 2,
+    discardMaterialGain: 1,
   },
   startingDeck: SHIP_DECK,
   startingTableau: [],

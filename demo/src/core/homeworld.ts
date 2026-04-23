@@ -68,6 +68,8 @@ export const HOMEWORLD: Setting = {
     softTurnLimit: 24,
     dissentLossThreshold: 0.5,
     retrieveInfluenceCost: 1,
+    retrieveLandMaterialCost: 2,
+    discardMaterialGain: 1,
   },
   startingDeck: ALL_CARD_IDS,
   startingTableau: [],

@@ -36,10 +36,24 @@
               : "No improved slot available — stack a matching-rank Land first."
           }}
         </span>
+        <button
+          class="secondary"
+          :title="`Discard for +${discardGain} Mat`"
+          @click="$emit('discardForMaterial', selectedIndex!)"
+        >
+          Discard (+{{ discardGain }} Mat)
+        </button>
       </template>
-      <span v-else-if="selectedCard && isDissent(selectedCard)" style="color: var(--fg-dim)">
-        Dissent cannot be played.
-      </span>
+      <template v-else-if="selectedCard && isDissent(selectedCard)">
+        <span style="color: var(--fg-dim)">Dissent cannot be played.</span>
+        <button
+          class="secondary"
+          :title="`Discard for +${discardGain} Mat`"
+          @click="$emit('discardForMaterial', selectedIndex!)"
+        >
+          Discard (+{{ discardGain }} Mat)
+        </button>
+      </template>
       <span v-else style="color: var(--fg-muted)">Select a card to see valid slots.</span>
     </div>
   </section>
@@ -55,6 +69,7 @@ const props = defineProps<{
   selectedIndex: number | null;
   influence: number;
   validSlots: number[]; // valid slot indices for the currently selected card
+  discardGain: number;
   getEffectiveCost: (card: CardT) => number;
   getAlignment: (card: CardT) => "aligned" | "opposed" | "neutral";
 }>();
@@ -62,6 +77,7 @@ const props = defineProps<{
 defineEmits<{
   selectCard: [index: number];
   playCard: [handIndex: number, slotIndex: number];
+  discardForMaterial: [handIndex: number];
 }>();
 
 const selectedCard = computed(() =>

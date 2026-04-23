@@ -21,6 +21,7 @@ class GameService {
   private refresh(): void {
     this.snapshot.value = this.api.snapshot();
     this.endOfEpoch.value = this.api.endOfEpochState();
+    this.api.persist();
   }
 
   private report(r: { ok: boolean; error?: string }): void {
@@ -49,6 +50,16 @@ class GameService {
 
   canRetrieve(slotIndex: number): boolean {
     return this.api.canRetrieve(slotIndex);
+  }
+
+  retrieveCost(slotIndex: number): { inf: number; mat: number } | null {
+    return this.api.retrieveCost(slotIndex);
+  }
+
+  discardForMaterial(cardId: string): void {
+    const r = this.api.discardForMaterial(cardId);
+    this.report(r as any);
+    this.refresh();
   }
 
   landProduction(): number {

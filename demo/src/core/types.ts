@@ -151,6 +151,8 @@ export interface SettingRules {
   softTurnLimit: number;
   dissentLossThreshold: number;
   retrieveInfluenceCost: number;
+  retrieveLandMaterialCost: number; // extra Material cost when retrieving a Land
+  discardMaterialGain: number; // Material gained when discarding a hand card
 }
 
 export interface Setting {

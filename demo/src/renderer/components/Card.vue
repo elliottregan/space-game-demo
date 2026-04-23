@@ -13,7 +13,9 @@
       <span class="card-suit-chip">{{ suitLabel }}</span>
     </div>
     <div class="card-name">{{ card.name }}</div>
-    <div v-if="!compact" class="card-effect">{{ effectText }}</div>
+    <ul v-if="!compact && effectLines.length > 0" class="card-effect-list">
+      <li v-for="(line, i) in effectLines" :key="i">{{ line }}</li>
+    </ul>
     <div class="card-footer">
       <span
         v-if="showInfluence && card.kind !== 'land' && card.kind !== 'dissent'"
@@ -89,20 +91,35 @@ const displayedInfluenceCost = computed(() =>
     : props.card.influenceCost,
 );
 
-const effectText = computed(() => describeEffect(props.card));
+const effectLines = computed(() => describeEffectLines(props.card));
 
-function describeEffect(card: Card): string {
-  if (card.kind === "dissent") return card.flavor ?? "Unplayable.";
+function describeEffectLines(card: Card): string[] {
+  if (card.kind === "dissent") {
+    const txt = card.flavor ?? "Unplayable.";
+    return txt ? [txt] : [];
+  }
   if (card.kind === "land") {
-    const base = `+${landMat(card.rank)} Materials/turn`;
-    if (card.slotPassive) return `${base}. ${describeEffectSpec(card.slotPassive)} when top.`;
-    return base;
+    const lines: string[] = [`+${landMat(card.rank)} Mat/turn`];
+    if (card.slotPassive) {
+      const p = describeEffectSpec(card.slotPassive);
+      if (p) lines.push(`${p} (when top)`);
+    }
+    return lines;
   }
-  const text = describeEffectSpec(card.effect);
+  const lines = flattenEffect(card.effect);
   if (card.slotPassive) {
-    return `${text}\nSlot: ${describeEffectSpec(card.slotPassive)}`;
+    const p = describeEffectSpec(card.slotPassive);
+    if (p) lines.push(`On slot: ${p}`);
   }
-  return text;
+  return lines;
+}
+
+function flattenEffect(effect: any): string[] {
+  if (effect.kind === "compound") {
+    return effect.effects.flatMap(flattenEffect).filter((s: string) => s.length > 0);
+  }
+  const s = describeEffectSpec(effect);
+  return s ? [s] : [];
 }
 
 function landMat(rank: number): number {
