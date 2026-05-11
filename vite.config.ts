@@ -20,9 +20,9 @@ export default defineConfig({
     host: process.env.VITE_HOST || "localhost",
     port: 5173,
     // Allow a browser running on the host to reach the dev server via the
-    // cspace sandbox hostname (<sandbox>.<project>.cspace2.local:5173).
+    // cspace sandbox hostname (<sandbox>.<project>.cspace.local:5173).
     // Without this, vite returns "Blocked request" for any non-localhost
     // Host header.
-    allowedHosts: [".cspace2.local"],
+    allowedHosts: [".cspace.local"],
   },
 });
