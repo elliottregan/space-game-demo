@@ -1,10 +1,9 @@
 {
-  "name": "Space Game - Bun/Vue/Vite with Claude Code",
-  "dockerComposeFile": "docker-compose.yml",
-  "service": "devcontainer",
+  "name": "space-game-demo",
   "workspaceFolder": "/workspace",
-  "remoteUser": "dev",
-  "forwardPorts": [5173, 24678],
-  "postCreateCommand": "bun install",
-  "postStartCommand": "sudo /usr/local/bin/init-firewall.sh && /usr/local/bin/init-claude-plugins.sh"
+  "forwardPorts": [5173],
+  "portsAttributes": {
+    "5173": { "label": "dev" }
+  },
+  "postCreateCommand": "bun install"
 }

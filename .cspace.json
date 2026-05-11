@@ -1,0 +1,14 @@
+{
+  "project": {
+    "name": "space-game-demo",
+    "repo": "elliottregan/space-game-demo",
+    "prefix": "sp"
+  },
+  "advisors": {
+    "decision-maker": {
+      "baseBranch": "main",
+      "effort": "max",
+      "model": "claude-opus-4-7"
+    }
+  }
+}
