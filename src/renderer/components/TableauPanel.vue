@@ -1,42 +1,89 @@
 <template>
   <section class="section tableau-panel">
     <h2>Tableau · produces {{ production }} Mat / turn</h2>
-    <div class="tableau-slots">
-      <TableauSlot
-        v-for="(slot, i) in tableau"
+    <div class="tableau-grid" :style="{ '--col-count': columns.length }">
+      <div class="row-labels">
+        <div class="row-label">Charter</div>
+        <div class="row-label">Influence</div>
+        <div class="row-label">Land</div>
+        <div class="row-label"></div>
+      </div>
+      <TableauColumn
+        v-for="(col, i) in columns"
         :key="i"
-        :slot="slot"
-        :index="i"
-        :can-retrieve="canRetrieve(i)"
-        :retrieve-cost="retrieveCost(i)"
-        :valid-slots-for-drag="validSlotsForDraggedCard"
-        @retrieve="$emit('retrieve', i)"
-        @drop-card="(cardId) => $emit('dropCard', cardId, i)"
+        :column="col"
+        :buildable="columnBuildable[i] ?? false"
+        :build-tooltip="buildTooltip(i)"
+        :valid-for-drag="validForDrag(i)"
+        @place-card="(cardId) => $emit('placeCard', cardId, i)"
+        @discard-land="$emit('discardLand', i)"
+        @discard-charter="$emit('discardCharter', i)"
+        @recall-influence="$emit('recallInfluence', i)"
+        @discard-column="$emit('discardColumn', i)"
+        @build="$emit('build', i)"
       />
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import type { TableauSlot as TableauSlotT } from "../../core/types.ts";
-import TableauSlot from "./TableauSlot.vue";
+import type { Card, Column } from "../../core/types.ts";
+import TableauColumn from "./TableauColumn.vue";
 import { dragging } from "../util/dragState.ts";
+import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../../core/column.ts";
 
 const props = defineProps<{
-  tableau: TableauSlotT[];
+  columns: Column[];
   production: number;
-  canRetrieve: (slotIndex: number) => boolean;
-  retrieveCost: (slotIndex: number) => { inf: number; mat: number } | null;
-  validSlotsFor: (cardId: string) => number[];
+  columnBuildable: boolean[];
+  buildableLabels: string[]; // one label per column (e.g., "Pair → The Commons (+2)")
+  getCardFromHand: (cardId: string) => Card | null;
 }>();
 
 defineEmits<{
-  retrieve: [slotIndex: number];
-  dropCard: [cardId: string, slotIndex: number];
+  placeCard: [cardId: string, columnIndex: number];
+  discardLand: [columnIndex: number];
+  discardCharter: [columnIndex: number];
+  recallInfluence: [columnIndex: number];
+  discardColumn: [columnIndex: number];
+  build: [columnIndex: number];
 }>();
 
-const validSlotsForDraggedCard = computed(() =>
-  dragging.value ? props.validSlotsFor(dragging.value.cardId) : [],
-);
+function buildTooltip(i: number): string {
+  const label = props.buildableLabels[i] ?? "";
+  return label || "Build";
+}
+
+function validForDrag(i: number): { land: boolean; influence: boolean; charter: boolean } {
+  const card = dragging.value ? props.getCardFromHand(dragging.value.cardId) : null;
+  if (!card) return { land: false, influence: false, charter: false };
+  const col = props.columns[i]!;
+  return {
+    land: card.kind === "land" && canPlaceLand(col, card),
+    influence: card.kind === "role" && canPlaceInfluence(col, card),
+    charter: card.kind === "charter" && canPlaceCharter(col, card),
+  };
+}
 </script>
+
+<style scoped>
+.tableau-grid {
+  display: grid;
+  grid-template-columns: 80px repeat(var(--col-count), 1fr);
+  gap: 6px;
+}
+.row-labels {
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.row-label {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+</style>
