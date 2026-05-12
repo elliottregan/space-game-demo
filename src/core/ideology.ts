@@ -3,34 +3,28 @@
 
 import type {
   Card,
+  Column,
   Demonym,
   Ideology,
   IdeologyTerrain,
   IdeologyVector,
-  TableauSlot,
 } from "./types.ts";
-import { allTableauCards } from "./tableau.ts";
+import { columnCards } from "./column.ts";
 
-export function deriveVector(tableau: TableauSlot[], terrain: IdeologyTerrain): IdeologyVector {
+export function deriveVector(columns: Column[], terrain: IdeologyTerrain): IdeologyVector {
   let axis1 = terrain.axis1;
   let axis2 = terrain.axis2;
 
-  for (const card of allTableauCards(tableau)) {
-    if (card.ideology === "wild") continue;
-    const r = card.rank;
-    switch (card.ideology) {
-      case "solidarity":
-        axis1 -= r;
-        break;
-      case "sovereignty":
-        axis1 += r;
-        break;
-      case "transformation":
-        axis2 += r;
-        break;
-      case "heritage":
-        axis2 -= r;
-        break;
+  for (const col of columns) {
+    for (const card of columnCards(col)) {
+      if (card.ideology === "wild") continue;
+      const r = card.rank;
+      switch (card.ideology) {
+        case "solidarity":     axis1 -= r; break;
+        case "sovereignty":    axis1 += r; break;
+        case "transformation": axis2 += r; break;
+        case "heritage":       axis2 -= r; break;
+      }
     }
   }
 
