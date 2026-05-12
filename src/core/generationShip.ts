@@ -1,55 +1,59 @@
-// Generation Ship — post-Ark Setting. Tighter constraints.
+// Generation Ship Setting — column-based redesign.
 
-import type { Setting, MegaProject } from "./types.ts";
+import type { Setting, KeystoneProject, Crisis, ColumnConfig } from "./types.ts";
 import { ALL_CARDS } from "./cards.ts";
+import { DEFAULT_PROJECT_VALUE } from "./projects.ts";
 
-// Smaller starting deck: exclude Architect roles (visionaries stay on
-// Homeworld) and Lands rank 8-9 (no room for grand structures in transit).
-const SHIP_DECK = ALL_CARDS.filter((c) => {
-  if (c.kind === "role" && c.role === "architect") return false;
-  if (c.kind === "land" && c.rank >= 8) return false;
-  if (c.id === "keystone-founding-charter") return false;
-  if (c.id === "keystone-critical-mass") return false;
-  return true;
-}).map((c) => c.id);
+// Generation Ship gates out the founding charter — see spec.
+const EXCLUDED_IDS = new Set<string>(["keystone-founding-charter"]);
+const STARTING_DECK = ALL_CARDS.filter((c) => !EXCLUDED_IDS.has(c.id)).map((c) => c.id);
 
-const LIFE_SUPPORT: MegaProject = {
-  id: "the-life-support",
-  name: "Life Support",
-  description:
-    "Keep the ship alive. Play a Straight of Scholar + Preacher + Engineer with The Navigator's Compass.",
-  primaryAxis: "axis2",
-  primaryDirection: "positive",
-  requiredHand: { kind: "straight", ranks: [11, 12, 13] },
-  keystoneId: "keystone-navigators-compass",
-  monumentEffect: { terrainDelta: { axis2: 2 }, baseMagnitude: 2 },
-  flavor: "No planet beneath. Only the ship.",
+const PROJECTS: KeystoneProject[] = [
+  { id: "ship-bulkhead-patch", pattern: "high-card",
+    name: "Bulkhead Patch", flavor: "Tape and prayer.",
+    value: DEFAULT_PROJECT_VALUE["high-card"] },
+  { id: "ship-twin-screws", pattern: "pair",
+    name: "Twin Screws", flavor: "Redundancy is doctrine.",
+    value: DEFAULT_PROJECT_VALUE["pair"] },
+  { id: "ship-trinity-array", pattern: "three-of-a-kind",
+    name: "Trinity Array", flavor: "Three antennae, one ear.",
+    value: DEFAULT_PROJECT_VALUE["three-of-a-kind"] },
+  { id: "ship-unison-engine", pattern: "flush",
+    name: "Unison Engine", flavor: "All ideologies pull the same direction.",
+    value: DEFAULT_PROJECT_VALUE["flush"] },
+  { id: "ship-fourfold-drive", pattern: "four-of-a-kind",
+    name: "Fourfold Drive", flavor: "Four engines, one heartbeat.",
+    value: DEFAULT_PROJECT_VALUE["four-of-a-kind"] },
+];
+
+const CRISIS: Crisis = {
+  id: "ship-deep-cold",
+  name: "Deep Cold",
+  flavor: "The ship enters a silent corridor between stars.",
+  difficulty: 14,
 };
 
 export const GENERATION_SHIP: Setting = {
   id: "generation-ship",
   name: "Generation Ship",
-  description: "En route. Closed system. Tight hand, cramped tableau.",
-  flavorText:
-    "The Ark burns its engines. There is no soil. Only the ship, and what you brought with you.",
+  description: "The voyage. Resources tight; ideology drifts.",
+  flavorText: "Years stretched thin. The bulkheads remember everyone who passed.",
   rules: {
     handSize: 6,
-    tableauSlots: 3,
+    columnCount: 6,
     influenceBaseline: 3,
     materialsPerLandBase: 1,
     deckStartMinSize: 10,
-    softTurnLimit: 20,
+    maxTurns: 14,
     dissentLossThreshold: 0.5,
-    retrieveInfluenceCost: 1,
-    retrieveLandMaterialCost: 2,
-    discardMaterialGain: 1,
   },
-  startingDeck: SHIP_DECK,
-  startingTableau: [],
-  megaProjects: [LIFE_SUPPORT],
+  startingDeck: STARTING_DECK,
+  startingColumns: [],
+  projects: PROJECTS,
+  crisis: CRISIS,
   shortTermTasks: [],
   transitions: {
-    onWin: { "the-life-support": "campaign-end" },
+    onWin: "campaign-end",
     onLoss: "campaign-end",
   },
 };
