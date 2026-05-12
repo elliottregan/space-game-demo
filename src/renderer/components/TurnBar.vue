@@ -1,34 +1,15 @@
 <template>
   <div class="turn-bar">
-    <span class="stat-pill">
-      <span class="stat-label">Epoch</span>
-      <span class="stat-value">{{ epochNumber }}</span>
-    </span>
-    <span class="stat-pill">
-      <span class="stat-label">Setting</span>
-      <span class="stat-value" style="text-transform: none">{{ settingName }}</span>
-    </span>
-    <span class="stat-pill">
-      <span class="stat-label">Turn</span>
-      <span class="stat-value">{{ turn }} / {{ turnLimit }}</span>
-    </span>
-    <span class="stat-pill">
-      <span class="stat-label">Inf</span>
-      <span class="stat-value">{{ influence }}</span>
-    </span>
-    <span class="stat-pill">
-      <span class="stat-label">Mat</span>
-      <span class="stat-value">{{ materials }}</span>
-    </span>
-    <span
-      class="stat-pill"
-      :class="{ danger: dissentFraction > 0.4 }"
-      :title="`${Math.round(dissentFraction * 100)}% of deck`"
-    >
-      <span class="stat-label">Dissent</span>
-      <span class="stat-value">{{ dissentCount }}</span>
-    </span>
-    <button class="primary" @click="$emit('endTurn')" :disabled="ended">End Turn</button>
+    <div class="meta">
+      <b>Epoch {{ epochNumber }}</b> · {{ settingName }}
+    </div>
+    <div class="turn-progress" :class="{ near: turn / maxTurns >= 0.66, edge: turn / maxTurns >= 0.85 }">
+      Turn {{ turn }} / {{ maxTurns }} · Crisis after T{{ maxTurns }}
+    </div>
+    <div class="resources">
+      Inf {{ influence }} · Mat {{ materials }} · Dissent {{ dissentCount }}
+    </div>
+    <button :disabled="ended" @click="$emit('end-turn')">End turn</button>
   </div>
 </template>
 
@@ -37,15 +18,17 @@ defineProps<{
   epochNumber: number;
   settingName: string;
   turn: number;
-  turnLimit: number;
+  maxTurns: number;
   influence: number;
   materials: number;
   dissentCount: number;
   dissentFraction: number;
   ended: boolean;
 }>();
-
-defineEmits<{
-  endTurn: [];
-}>();
+defineEmits<{ "end-turn": [] }>();
 </script>
+
+<style scoped>
+.turn-progress.near { color: var(--warn, #c80); }
+.turn-progress.edge { color: var(--danger, #c33); }
+</style>
