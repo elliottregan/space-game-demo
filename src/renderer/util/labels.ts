@@ -1,4 +1,4 @@
-// Card + keystone label helpers.
+// Card display label helpers.
 
 import type { Card, CardIdeology } from "../../core/types.ts";
 
@@ -30,19 +30,6 @@ export function landMaterialPerTurn(rank: number): number {
   if (rank <= 5) return 1;
   if (rank <= 7) return 2;
   return 3;
-}
-
-export function keystoneLabel(id: string): string {
-  switch (id) {
-    case "keystone-navigators-compass":
-      return "Navigator's Compass";
-    case "keystone-founding-charter":
-      return "Founding Charter";
-    case "keystone-critical-mass":
-      return "Critical Mass";
-    default:
-      return "charter";
-  }
 }
 
 export function isDissent(card: Card): boolean {

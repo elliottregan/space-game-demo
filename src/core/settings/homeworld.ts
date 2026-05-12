@@ -72,7 +72,6 @@ export const HOMEWORLD: Setting = {
   startingColumns: STARTING_COLUMNS,
   projects: PROJECTS,
   crisis: CRISIS,
-  shortTermTasks: [],
   transitions: {
     onWin: "generation-ship",
     onLoss: "ruined-homeworld",

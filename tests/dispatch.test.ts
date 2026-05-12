@@ -23,8 +23,6 @@ function freshEpoch(columns: Column[] = []): Epoch {
     eventLog: [],
     influence: 0,
     materials: 0,
-    taskProgress: {},
-    tasksRevealed: [],
     endOfTurnQueue: [],
     status: { kind: "in-progress" },
     crisis: { status: "pending" },

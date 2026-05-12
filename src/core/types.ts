@@ -99,34 +99,17 @@ export interface IdeologyTerrain {
 export type Demonym = "collective" | "dominion" | "ascendancy" | "keepers" | null;
 
 // -------------------------------------------------------------------------
-// Short-term tasks (stubbed in this iteration — kept for future)
-// -------------------------------------------------------------------------
-
-export type TaskPredicate =
-  | { kind: "acquire-rank"; min: number }
-  | { kind: "acquire-role"; count: number }
-  | { kind: "axis-reach"; axis: "axis1" | "axis2"; min: number }
-  | { kind: "purge-dissent"; count: number };
-
-export interface TaskDef {
-  id: string;
-  name: string;
-  description: string;
-  predicate: TaskPredicate;
-  reward: EffectSpec;
-}
-
-// -------------------------------------------------------------------------
 // Settings
 // -------------------------------------------------------------------------
 
 export interface SettingRules {
   handSize: number;
-  columnCount: number; // replaces tableauSlots
+  columnCount: number;
   influenceBaseline: number;
   materialsPerLandBase: number;
   deckStartMinSize: number;
-  maxTurns: number; // turn budget; Crisis fires when exceeded
+  /** Turn budget. Crisis fires once `epoch.turn` exceeds this. */
+  maxTurns: number;
   dissentLossThreshold: number;
 }
 
@@ -137,12 +120,12 @@ export interface Setting {
   flavorText: string;
   rules: SettingRules;
   startingDeck: string[];
-  startingColumns: ColumnConfig[]; // replaces startingTableau
-  projects: KeystoneProject[]; // exactly 5, one per pattern
+  startingColumns: ColumnConfig[];
+  /** Exactly one project per pattern (high-card, pair, three, flush, four). */
+  projects: KeystoneProject[];
   crisis: Crisis;
-  shortTermTasks: TaskDef[];
   transitions: {
-    onWin: string | "campaign-end"; // single next-setting; no per-project routing
+    onWin: string | "campaign-end";
     onLoss: string | "campaign-end";
   };
 }
@@ -150,12 +133,6 @@ export interface Setting {
 // -------------------------------------------------------------------------
 // Runtime state
 // -------------------------------------------------------------------------
-
-export interface TaskProgressState {
-  taskId: string;
-  completed: boolean;
-  completedOnTurn?: number;
-}
 
 export interface Epoch {
   epochNumber: number;
@@ -165,13 +142,11 @@ export interface Epoch {
   hand: Card[];
   draw: Card[];
   discard: Card[];
-  columns: Column[]; // replaces tableau
+  columns: Column[];
   unlockedProjects: ProjectUnlock[];
-  eventLog: GameEvent[]; // typed event log (was EventEntry[])
+  eventLog: GameEvent[];
   influence: number;
   materials: number;
-  taskProgress: Record<string, TaskProgressState>;
-  tasksRevealed: string[];
   endOfTurnQueue: EffectSpec[];
   status: EpochStatus;
   crisis: {

@@ -78,7 +78,6 @@ export const GENERATION_SHIP: Setting = {
   startingColumns: [],
   projects: PROJECTS,
   crisis: CRISIS,
-  shortTermTasks: [],
   transitions: {
     onWin: "campaign-end",
     onLoss: "campaign-end",

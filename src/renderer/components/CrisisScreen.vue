@@ -32,8 +32,8 @@
         v-for="cand in candidates"
         :key="cand.id"
         :candidate="cand"
-        :chosen="choices[cand.id]"
-        @choose="(u) => onChoose(cand.id, u)"
+        :model-value="choices[cand.id] ?? cand.suggestedUpgrades[0] ?? 'potency'"
+        @update:model-value="(u: 'potency' | 'pliability' | 'persistence') => onChoose(cand.id, u)"
       />
 
       <button class="primary" @click="$emit('advance', choices)">

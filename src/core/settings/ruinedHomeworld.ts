@@ -69,7 +69,6 @@ export const RUINED_HOMEWORLD: Setting = {
   startingColumns: [],
   projects: PROJECTS,
   crisis: CRISIS,
-  shortTermTasks: [],
   transitions: {
     onWin: "campaign-end",
     onLoss: "campaign-end",

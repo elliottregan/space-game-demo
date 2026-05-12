@@ -6,20 +6,17 @@ import {
   finalizeEpoch,
   type EndOfEpochState,
 } from "../core/engine/campaign.ts";
+import { createEpoch, currentVector, effectiveInfluenceCost } from "../core/engine/epoch.ts";
 import {
   buildColumn as buildColumnCore,
-  createEpoch,
-  currentVector,
   discardCharter as discardCharterCore,
   discardColumn as discardColumnCore,
   discardFromHand as discardFromHandCore,
   discardLand as discardLandCore,
-  effectiveInfluenceCost,
-  endTurn as endTurnCore,
   placeCard as placeCardCore,
   recallInfluence as recallInfluenceCore,
-  resolveCrisis as resolveCrisisCore,
-} from "../core/engine/epoch.ts";
+} from "../core/engine/commands.ts";
+import { endTurn as endTurnCore, resolveCrisis as resolveCrisisCore } from "../core/engine/turn.ts";
 import { createRng, type RNG } from "../core/engine/rng.ts";
 import { getSetting } from "../core/settings/index.ts";
 import {
@@ -186,8 +183,6 @@ export class GameAPI {
       columns: columnsView,
       unlockedProjects: [...this.epoch.unlockedProjects],
       eventLog: [...this.epoch.eventLog],
-      taskProgress: { ...this.epoch.taskProgress },
-      tasksRevealed: [...this.epoch.tasksRevealed],
       endOfTurnQueue: [...this.epoch.endOfTurnQueue],
       crisis: {
         status: this.epoch.crisis.status,
