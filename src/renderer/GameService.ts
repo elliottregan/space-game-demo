@@ -58,22 +58,8 @@ class GameService {
     return this.api.getAlignment(card);
   }
 
-  validSlots(cardId: string): number[] {
-    return this.api.validSlots(cardId);
-  }
-
-  canRetrieve(slotIndex: number): boolean {
-    return this.api.canRetrieve(slotIndex);
-  }
-
-  retrieveCost(slotIndex: number): { inf: number; mat: number } | null {
-    return this.api.retrieveCost(slotIndex);
-  }
-
-  discardForMaterial(cardId: string): void {
-    const r = this.api.discardForMaterial(cardId);
-    this.report(r as any);
-    this.refresh();
+  validColumns(cardId: string): number[] {
+    return this.api.validColumns(cardId);
   }
 
   landProduction(): number {
@@ -81,22 +67,37 @@ class GameService {
   }
 
   // Commands
-  playCard(cardId: string, slotIndex: number): void {
-    const r = this.api.playCard(cardId, slotIndex);
-    this.report(r as any);
-    this.refresh();
+  placeCard(cardId: string, columnIndex: number): void {
+    const r = this.api.placeCard(cardId, columnIndex);
+    this.report(r as any); this.refresh();
   }
-
-  retrieve(slotIndex: number): void {
-    const r = this.api.retrieveFromTableau(slotIndex);
-    this.report(r as any);
-    this.refresh();
+  discardLand(columnIndex: number): void {
+    const r = this.api.discardLand(columnIndex);
+    this.report(r as any); this.refresh();
   }
-
-  playMegaStructure(projectId: string): void {
-    const r = this.api.playMegaStructure(projectId);
-    this.report(r as any);
-    this.refresh();
+  discardCharter(columnIndex: number): void {
+    const r = this.api.discardCharter(columnIndex);
+    this.report(r as any); this.refresh();
+  }
+  recallInfluence(columnIndex: number): void {
+    const r = this.api.recallInfluence(columnIndex);
+    this.report(r as any); this.refresh();
+  }
+  discardColumn(columnIndex: number): void {
+    const r = this.api.discardColumn(columnIndex);
+    this.report(r as any); this.refresh();
+  }
+  discardFromHand(cardId: string): void {
+    const r = this.api.discardFromHand(cardId);
+    this.report(r as any); this.refresh();
+  }
+  buildColumn(columnIndex: number): void {
+    const r = this.api.buildColumn(columnIndex);
+    this.report(r as any); this.refresh();
+  }
+  resolveCrisis(): void {
+    const r = this.api.resolveCrisis();
+    this.report(r as any); this.refresh();
   }
 
   endTurn(): void {
