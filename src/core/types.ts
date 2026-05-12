@@ -285,3 +285,83 @@ export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
 export const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 export const err = <T>(error: string): Result<T> => ({ ok: false, error });
+
+// --------------------------------------------------------------------------
+// New: three-tier column (replaces TableauSlot in a later task).
+// --------------------------------------------------------------------------
+
+export interface LandRow {
+  cards: Card[]; // all same rank when non-empty; max 4
+}
+
+export interface InfluenceRow {
+  card: Card | null; // a card with kind === "role"
+}
+
+export interface CharterRow {
+  card: Card | null; // a card with kind === "charter"
+}
+
+export interface Column {
+  lands: LandRow;
+  influence: InfluenceRow;
+  charter: CharterRow;
+}
+
+export interface ColumnConfig {
+  lands: string[]; // card ids; must share rank
+  influence?: string;
+  charter?: string;
+}
+
+export type PatternKind =
+  | "high-card"
+  | "pair"
+  | "three-of-a-kind"
+  | "flush"
+  | "four-of-a-kind";
+
+export interface KeystoneProject {
+  id: string;
+  pattern: PatternKind;
+  name: string;
+  flavor: string;
+  value: number;            // contribution to Crisis score
+  unlockEffect?: EffectSpec; // semantics deferred
+}
+
+export interface ProjectUnlock {
+  projectId: string;
+  pattern: PatternKind;
+  turn: number;
+  cards: Card[]; // snapshot of the built column at Build time
+}
+
+export interface Crisis {
+  id: string;
+  name: string;
+  flavor: string;
+  difficulty: number;
+}
+
+export interface CrisisOutcome {
+  totalValue: number;
+  cleared: boolean;
+  contributingUnlocks: ProjectUnlock[]; // ordered: four → flush → three → pair → high-card, then turn order
+}
+
+export type DiscardSource = "tableau-land" | "tableau-charter" | "column" | "hand";
+
+export type GameEvent =
+  | { type: "card-played-to-land"; card: Card; columnIndex: number }
+  | { type: "card-played-to-influence"; card: Card; columnIndex: number }
+  | { type: "card-played-to-charter"; card: Card; columnIndex: number }
+  | { type: "card-discarded"; card: Card; source: DiscardSource }
+  | { type: "card-recalled-to-hand"; card: Card; columnIndex: number }
+  | { type: "column-built"; columnIndex: number; unlock: ProjectUnlock }
+  | { type: "dissent-added"; variant: DissentVariant }
+  | { type: "turn-ended"; turn: number }
+  | { type: "crisis-resolved"; outcome: CrisisOutcome };
+
+// New phase enum (will replace the existing EpochPhase later).
+export type EpochPhaseV2 = "play" | "crisis" | "end-of-epoch";
