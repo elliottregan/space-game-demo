@@ -314,3 +314,47 @@ export function buildColumn(
   dispatch(epoch, { type: "column-built", columnIndex, unlock });
   return { ok: true, value: unlock };
 }
+
+export function endTurn(epoch: Epoch, _campaign: Campaign, setting: Setting, rng: RNG): void {
+  if (epoch.status.kind !== "in-progress") return;
+  if (epoch.phase !== "play") return;
+
+  // Production: each Land produces materials per its rank.
+  let produced = 0;
+  for (const col of epoch.columns) {
+    for (const l of col.lands.cards) produced += landMaterialProduction(l.rank);
+  }
+  epoch.materials += produced;
+
+  // Resolve end-of-turn effects (Backlash / queued addDissent etc.).
+  const ctx: EffectContext = {
+    epoch,
+    rng,
+    log: () => {},
+  };
+  resolveEndOfTurn(ctx);
+
+  // Loss-by-dissent check carries over.
+  const { dissent, total } = countDissentInDeck(epoch);
+  if (total > 0 && dissent / total > setting.rules.dissentLossThreshold) {
+    // Force Crisis with zero contribution → guaranteed loss path.
+    epoch.crisis.status = "pending";
+    epoch.phase = "crisis";
+    dispatch(epoch, { type: "turn-ended", turn: epoch.turn });
+    return;
+  }
+
+  // Transient ideology shift resets each turn.
+  (epoch as Epoch & { __shift?: { axis1: number; axis2: number } }).__shift = { axis1: 0, axis2: 0 };
+
+  dispatch(epoch, { type: "turn-ended", turn: epoch.turn });
+  epoch.turn += 1;
+
+  if (epoch.turn > setting.rules.maxTurns) {
+    epoch.phase = "crisis";
+    return;
+  }
+
+  drawToHandSize(epoch, setting.rules.handSize, rng);
+  epoch.influence = setting.rules.influenceBaseline;
+}
