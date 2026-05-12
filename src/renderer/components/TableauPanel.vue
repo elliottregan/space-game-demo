@@ -75,9 +75,9 @@ function validForDrag(i: number): { land: boolean; influence: boolean; charter: 
 }
 .row-labels {
   display: grid;
-  /* Row heights match the cell min-heights in styles.css so labels align
+  /* Row heights match the cell heights in styles.css so labels align
      with each row across all columns. */
-  grid-template-rows: 150px 150px 270px auto;
+  grid-template-rows: 150px 150px 150px auto;
   gap: 6px;
   font-size: 11px;
   font-weight: 600;

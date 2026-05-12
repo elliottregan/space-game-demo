@@ -30,23 +30,9 @@
         </div>
       </button>
     </div>
-    <div v-if="dissentCount > 0" class="dissent-note">Includes {{ dissentCount }} Dissent.</div>
     <button class="market-button" @click="$emit('openMarket')">Market</button>
     <button class="end-turn-big primary" :disabled="ended" @click="$emit('endTurn')">
       End Turn
-    </button>
-    <button
-      class="discard-end-turn"
-      :disabled="ended || handCount === 0"
-      :title="
-        handCount === 0
-          ? 'No cards in hand to discard'
-          : `Discard all ${handCount} hand card(s) and end turn (adds ${handCount} Dissent)`
-      "
-      @click="$emit('discardAndEndTurn')"
-    >
-      Discard {{ handCount }} &amp; End Turn
-      <span class="btn-sub">+{{ handCount }} Dissent</span>
     </button>
   </section>
 </template>
@@ -58,8 +44,6 @@ import { dragging, endDrag, readDragPayload } from "../util/dragState.ts";
 defineProps<{
   drawCount: number;
   discardCount: number;
-  dissentCount: number;
-  handCount: number;
   ended: boolean;
 }>();
 
@@ -67,7 +51,6 @@ const emit = defineEmits<{
   view: [which: "deck" | "discard"];
   openMarket: [];
   endTurn: [];
-  discardAndEndTurn: [];
   dropCard: [cardId: string];
 }>();
 

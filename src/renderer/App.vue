@@ -76,13 +76,10 @@
         <DeckDiscardPanel
           :draw-count="epoch.draw.length"
           :discard-count="epoch.discard.length"
-          :dissent-count="snapshot.deckCounts.dissent"
-          :hand-count="epoch.hand.length"
           :ended="epoch.status.kind !== 'in-progress'"
           @view="onViewPile"
           @open-market="marketOpen = true"
           @end-turn="onEndTurn"
-          @discard-and-end-turn="onDiscardAndEndTurn"
           @drop-card="onDiscardFromHand"
         />
 
@@ -262,12 +259,6 @@ function onResolveCrisis(): void {
   game.resolveCrisis();
 }
 function onEndTurn(): void {
-  game.endTurn();
-  selectedIds.value = [];
-}
-function onDiscardAndEndTurn(): void {
-  const ids = epoch.value.hand.map((c) => c.id);
-  for (const id of ids) game.discardFromHand(id);
   game.endTurn();
   selectedIds.value = [];
 }

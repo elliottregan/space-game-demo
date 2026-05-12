@@ -347,6 +347,14 @@ export function endTurn(epoch: Epoch, _campaign: Campaign, setting: Setting, rng
   // Transient ideology shift resets each turn.
   (epoch as Epoch & { __shift?: { axis1: number; axis2: number } }).__shift = { axis1: 0, axis2: 0 };
 
+  // End-of-turn hand cycle: cards still in hand drop to discard without
+  // triggering Dissent. The per-discard Dissent rule applies to deliberate
+  // releases, not the natural turn cycle.
+  if (epoch.hand.length > 0) {
+    epoch.discard.push(...epoch.hand);
+    epoch.hand = [];
+  }
+
   dispatch(epoch, { type: "turn-ended", turn: epoch.turn });
   epoch.turn += 1;
 
