@@ -1,14 +1,15 @@
 // EffectSpec resolver. Immediate effects mutate Epoch state directly;
 // end-of-turn effects are queued for resolution at end-phase.
 
-import type { Card, EffectSpec, Epoch, EventEntry } from "./types.ts";
+import type { Card, EffectSpec, Epoch } from "./types.ts";
 import { makeDissent } from "./cards.ts";
 import type { RNG } from "./rng.ts";
+import { dispatch } from "./dispatch.ts";
 
 export interface EffectContext {
   epoch: Epoch;
   rng: RNG;
-  log: (entry: EventEntry) => void;
+  log: (text: string) => void;
 }
 
 export function applyEffect(effect: EffectSpec, ctx: EffectContext): void {
@@ -37,7 +38,7 @@ export function applyEffect(effect: EffectSpec, ctx: EffectContext): void {
       return;
 
     case "peekMarket":
-      ctx.log({ turn: ctx.epoch.turn, text: `Peek: top ${effect.count} of market.` });
+      ctx.log(`Peek: top ${effect.count} of market.`);
       return;
 
     case "nextAcquireDiscount":
@@ -64,18 +65,10 @@ export function resolveEndOfTurn(ctx: EffectContext): void {
   for (const effect of queue) {
     switch (effect.kind) {
       case "addDissent": {
+        ctx.log(`+${effect.amount} ${effect.variant} added to deck.`);
         for (let i = 0; i < effect.amount; i++) {
-          const card = makeDissent(
-            effect.variant,
-            effect.variant === "backlash" ? effect.ideology : undefined,
-          );
-          ctx.epoch.discard.push(card);
+          dispatch(ctx.epoch, { type: "dissent-added", variant: effect.variant });
         }
-        ctx.log({
-          turn: ctx.epoch.turn,
-          text: `+${effect.amount} ${effect.variant}${effect.ideology ? " (" + effect.ideology + ")" : ""} added to deck.`,
-          kind: "warn",
-        });
         break;
       }
       default:
