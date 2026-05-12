@@ -41,7 +41,7 @@ export function keystoneLabel(id: string): string {
     case "keystone-critical-mass":
       return "Critical Mass";
     default:
-      return "keystone";
+      return "charter";
   }
 }
 

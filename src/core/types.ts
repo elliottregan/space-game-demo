@@ -17,9 +17,9 @@ export const ROLE_RANK: Record<Role, 10 | 11 | 12 | 13 | 14> = {
 
 export type Rank = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
 
-export type CardKind = "land" | "role" | "keystone" | "dissent" | "legacy";
+export type CardKind = "land" | "role" | "charter" | "dissent" | "legacy";
 
-export type CardTag = "dissent" | "keystone" | "legacy" | "exclusive" | "purge" | "starter";
+export type CardTag = "dissent" | "charter" | "legacy" | "exclusive" | "purge" | "starter";
 
 export type DissentVariant = "quiet" | "backlash" | "unrest";
 

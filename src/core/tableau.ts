@@ -32,9 +32,9 @@ export function canPlaceLand(slot: TableauSlot, land: Card): boolean {
   return slot.lands[0]!.rank === land.rank;
 }
 
-/** Can a Role/Keystone topper be placed on this slot? */
+/** Can a Role/Charter topper be placed on this slot? */
 export function canPlaceTopper(slot: TableauSlot, topper: Card): boolean {
-  if (topper.kind !== "role" && topper.kind !== "keystone") return false;
+  if (topper.kind !== "role" && topper.kind !== "charter") return false;
   if (slot.topper !== null) return false;
   return isImproved(slot);
 }
@@ -51,7 +51,7 @@ export function validSlotsForCard(epoch: Epoch, card: Card): SlotOption[] {
     const slot = epoch.tableau[i]!;
     if (card.kind === "land" && canPlaceLand(slot, card)) {
       options.push({ index: i, reason: describeSlot(slot) });
-    } else if ((card.kind === "role" || card.kind === "keystone") && canPlaceTopper(slot, card)) {
+    } else if ((card.kind === "role" || card.kind === "charter") && canPlaceTopper(slot, card)) {
       options.push({ index: i, reason: describeSlot(slot) });
     }
   }

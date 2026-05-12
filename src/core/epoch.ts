@@ -194,7 +194,7 @@ export function playCard(
     return { ok: true, card, alignment: "neutral" };
   }
 
-  if (card.kind === "role" || card.kind === "keystone") {
+  if (card.kind === "role" || card.kind === "charter") {
     if (slotIndex === undefined) return { ok: false, error: "Choose an improved slot." };
     const slot = epoch.tableau[slotIndex];
     if (!slot) return { ok: false, error: "Invalid slot." };

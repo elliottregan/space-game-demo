@@ -353,13 +353,13 @@ function buildLands(): Card[] {
   return cards;
 }
 
-function buildBaseKeystones(): Card[] {
-  const starterTags: CardTag[] = ["keystone"];
+function buildBaseCharters(): Card[] {
+  const starterTags: CardTag[] = ["charter"];
   return [
     {
       id: "keystone-pioneer",
       name: "The Pioneer",
-      kind: "keystone",
+      kind: "charter",
       rank: 15,
       ideology: "wild",
       influenceCost: 3,
@@ -372,7 +372,7 @@ function buildBaseKeystones(): Card[] {
     {
       id: "keystone-apostle",
       name: "The Apostle",
-      kind: "keystone",
+      kind: "charter",
       rank: 15,
       ideology: "wild",
       influenceCost: 2,
@@ -385,15 +385,15 @@ function buildBaseKeystones(): Card[] {
   ];
 }
 
-// Homeworld's mega-project-specific Keystones. Not in the general market;
+// Homeworld's mega-project-specific Charters. Not in the general market;
 // they unlock per project via axis threshold + Materials.
-function buildHomeworldProjectKeystones(): Card[] {
-  const tags: CardTag[] = ["keystone"];
+function buildHomeworldProjectCharters(): Card[] {
+  const tags: CardTag[] = ["charter"];
   return [
     {
       id: "keystone-navigators-compass",
       name: "The Navigator's Compass",
-      kind: "keystone",
+      kind: "charter",
       rank: 15,
       ideology: "transformation",
       influenceCost: 2,
@@ -406,7 +406,7 @@ function buildHomeworldProjectKeystones(): Card[] {
     {
       id: "keystone-founding-charter",
       name: "The Founding Charter",
-      kind: "keystone",
+      kind: "charter",
       rank: 15,
       ideology: "solidarity",
       influenceCost: 2,
@@ -419,7 +419,7 @@ function buildHomeworldProjectKeystones(): Card[] {
     {
       id: "keystone-critical-mass",
       name: "Critical Mass",
-      kind: "keystone",
+      kind: "charter",
       rank: 15,
       ideology: "sovereignty",
       influenceCost: 3,
@@ -439,8 +439,8 @@ function buildHomeworldProjectKeystones(): Card[] {
 export const ALL_CARDS: Card[] = [
   ...buildRoles(),
   ...buildLands(),
-  ...buildBaseKeystones(),
-  ...buildHomeworldProjectKeystones(),
+  ...buildBaseCharters(),
+  ...buildHomeworldProjectCharters(),
 ];
 
 export const CARD_BY_ID: Record<string, Card> = Object.fromEntries(
