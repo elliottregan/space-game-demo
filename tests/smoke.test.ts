@@ -1,38 +1,33 @@
-// End-to-end smoke tests for the new mechanics.
-
 import { describe, test, expect } from "bun:test";
 import { GameAPI } from "../src/facade/GameAPI.ts";
 
 describe("GameAPI smoke", () => {
-  test("fresh campaign starts with Homeworld and a large deck", () => {
-    const api = new GameAPI(42);
+  test("fresh campaign starts with Homeworld", () => {
+    const api = new GameAPI(42, { skipLoad: true });
     const s = api.snapshot();
     expect(s.setting.id).toBe("homeworld");
     expect(s.epoch.epochNumber).toBe(1);
-    expect(s.epoch.hand.length).toBe(7);
-    expect(s.epoch.tableau.length).toBe(s.setting.rules.tableauSlots);
-    expect(s.epoch.tableau.every((slot) => slot.lands.length === 0 && slot.topper === null)).toBe(
-      true,
-    );
-    // All 57 cards: 20 Roles + 32 Lands + 2 base keystones + 3 project keystones.
-    // 7 in hand, so 50 left in draw.
-    expect(s.epoch.draw.length + s.epoch.hand.length).toBe(57);
+    expect(s.epoch.hand.length).toBe(s.setting.rules.handSize);
+    expect(s.epoch.columns.length).toBe(s.setting.rules.columnCount);
+    expect(
+      s.epoch.columns.every(
+        (col) =>
+          col.lands.cards.length === 0 && col.influence.card === null && col.charter.card === null,
+      ),
+    ).toBe(true);
   });
 
-  test("end turn does not crash and increments the turn counter", () => {
-    const api = new GameAPI(42);
+  test("end turn increments the turn counter while in play phase", () => {
+    const api = new GameAPI(42, { skipLoad: true });
     const t0 = api.snapshot().epoch.turn;
     api.endTurn();
     expect(api.snapshot().epoch.turn).toBe(t0 + 1);
   });
 
-  test("eventually loses to turn limit if no action taken", () => {
-    const api = new GameAPI(42);
-    let iter = 0;
-    while (api.snapshot().epoch.status.kind === "in-progress" && iter < 40) {
-      api.endTurn();
-      iter++;
-    }
-    expect(api.snapshot().epoch.status.kind).not.toBe("in-progress");
+  test("Crisis fires when turn budget is exceeded", () => {
+    const api = new GameAPI(42, { skipLoad: true });
+    const limit = api.snapshot().setting.rules.maxTurns;
+    for (let i = 0; i < limit + 1; i++) api.endTurn();
+    expect(api.snapshot().epoch.phase).toBe("crisis");
   });
 });
