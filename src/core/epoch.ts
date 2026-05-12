@@ -120,3 +120,105 @@ export function effectiveInfluenceCost(card: Card, vector: IdeologyVector): numb
   const adj = influenceCostAdjustment(alignment);
   return Math.max(0, card.influenceCost + adj);
 }
+
+export type Alignment = "aligned" | "opposed" | "neutral";
+
+export type PlaceResult =
+  | { ok: true; card: Card; alignment: Alignment }
+  | { ok: false; error: string };
+
+export function placeCard(
+  epoch: Epoch,
+  campaign: Campaign,
+  setting: Setting,
+  cardId: string,
+  columnIndex: number,
+  rng: RNG,
+): PlaceResult {
+  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
+  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+
+  const handIdx = epoch.hand.findIndex((c) => c.id === cardId);
+  if (handIdx === -1) return { ok: false, error: "Card not in hand." };
+  const card = epoch.hand[handIdx]!;
+  if (card.tags.includes("dissent")) return { ok: false, error: "Dissent cannot be played." };
+
+  const col = epoch.columns[columnIndex];
+  if (!col) return { ok: false, error: "Invalid column." };
+
+  const vector = currentVector(epoch, campaign);
+  const alignment = checkAlignment(card, vector);
+
+  if (card.kind === "land") {
+    if (!canPlaceLand(col, card)) {
+      return { ok: false, error: "Land cannot be placed there (rank mismatch or stack full)." };
+    }
+    epoch.hand.splice(handIdx, 1);
+    dispatch(epoch, { type: "card-played-to-land", card, columnIndex });
+    return { ok: true, card, alignment: "neutral" };
+  }
+
+  if (card.kind === "role") {
+    if (!canPlaceInfluence(col, card)) {
+      return { ok: false, error: "Influence row needs at least one Land below." };
+    }
+    return playToporRow(epoch, setting, vector, alignment, card, columnIndex, handIdx, "card-played-to-influence", rng);
+  }
+
+  if (card.kind === "charter") {
+    if (!canPlaceCharter(col, card)) {
+      return { ok: false, error: "Charter row needs the Influence row filled." };
+    }
+    return playToporRow(epoch, setting, vector, alignment, card, columnIndex, handIdx, "card-played-to-charter", rng);
+  }
+
+  return { ok: false, error: "Card kind cannot be played." };
+}
+
+function playToporRow(
+  epoch: Epoch,
+  _setting: Setting,
+  vector: IdeologyVector,
+  alignment: Alignment,
+  card: Card,
+  columnIndex: number,
+  handIdx: number,
+  eventType: GameEvent["type"] & ("card-played-to-influence" | "card-played-to-charter"),
+  rng: RNG,
+): PlaceResult {
+  const cost = effectiveInfluenceCost(card, vector);
+  if (epoch.influence < cost) {
+    return { ok: false, error: `Need ${cost} Influence (have ${epoch.influence}).` };
+  }
+  epoch.influence -= cost;
+  epoch.hand.splice(handIdx, 1);
+  dispatch(epoch, { type: eventType, card, columnIndex } as GameEvent);
+
+  const ctx: EffectContext = {
+    epoch,
+    rng,
+    log: () => {},
+  };
+  applyEffect(card.effect, ctx);
+
+  if (alignment === "opposed" && card.ideology !== "wild") {
+    epoch.endOfTurnQueue.push({
+      kind: "addDissent",
+      variant: "backlash",
+      ideology: opposingIdeology(card.ideology),
+      amount: 1,
+      timing: "end-of-turn",
+    });
+  }
+
+  return { ok: true, card, alignment };
+}
+
+function opposingIdeology(ideology: "solidarity" | "sovereignty" | "transformation" | "heritage") {
+  switch (ideology) {
+    case "solidarity":     return "sovereignty" as const;
+    case "sovereignty":    return "solidarity" as const;
+    case "transformation": return "heritage" as const;
+    case "heritage":       return "transformation" as const;
+  }
+}
