@@ -358,3 +358,40 @@ export function endTurn(epoch: Epoch, _campaign: Campaign, setting: Setting, rng
   drawToHandSize(epoch, setting.rules.handSize, rng);
   epoch.influence = setting.rules.influenceBaseline;
 }
+
+export function resolveCrisis(epoch: Epoch, setting: Setting): CrisisOutcome {
+  if (epoch.crisis.status === "resolved" && epoch.crisis.outcome) {
+    return epoch.crisis.outcome;
+  }
+  const order = reversePatternOrder();
+  const byPattern = new Map<string, ProjectUnlock[]>();
+  for (const u of epoch.unlockedProjects) {
+    const arr = byPattern.get(u.pattern) ?? [];
+    arr.push(u);
+    byPattern.set(u.pattern, arr);
+  }
+  const contributing: ProjectUnlock[] = [];
+  let total = 0;
+  for (const pattern of order) {
+    const unlocks = (byPattern.get(pattern) ?? []).slice().sort((a, b) => a.turn - b.turn);
+    for (const u of unlocks) {
+      const project = setting.projects.find((p) => p.id === u.projectId);
+      if (!project) continue;
+      total += project.value;
+      contributing.push(u);
+    }
+  }
+  const cleared = total >= setting.crisis.difficulty;
+  const outcome: CrisisOutcome = {
+    totalValue: total,
+    cleared,
+    contributingUnlocks: contributing,
+  };
+  epoch.crisis = { status: "resolved", outcome };
+  epoch.status = cleared ? { kind: "won", outcome } : { kind: "lost", outcome };
+  epoch.phase = "end-of-epoch";
+  dispatch(epoch, { type: "crisis-resolved", outcome });
+  return outcome;
+}
+
+export { purgeDissent };
