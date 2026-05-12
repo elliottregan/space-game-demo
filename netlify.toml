@@ -1,0 +1,13 @@
+# Netlify build config. Lives in-repo so it overrides any stale
+# dashboard settings (e.g., the legacy `build:visualizer` command from
+# before the deck-building redesign).
+
+[build]
+  command = "bun install --frozen-lockfile && bun run build"
+  publish = "dist"
+
+[build.environment]
+  # Pin a recent Bun. Netlify reads BUN_VERSION when present.
+  BUN_VERSION = "1.2.16"
+  # Skip auto-installing legacy npm/yarn packages on top of bun.
+  NPM_FLAGS = "--version"
