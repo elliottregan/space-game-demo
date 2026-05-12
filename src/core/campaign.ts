@@ -2,8 +2,10 @@
 
 import type {
   Campaign,
+  CrisisOutcome,
   Epoch,
   EpochResult,
+  Ideology,
   LegacyCandidate,
   LegacyCard,
   Setting,
@@ -16,6 +18,7 @@ import {
   mintCandidatesOnWin,
   type MintingResult,
 } from "./legacy.ts";
+import { unlockedIdeologyBreakdown } from "./projects.ts";
 import { HOMEWORLD } from "./homeworld.ts";
 import { currentVector, createEpoch } from "./epoch.ts";
 import { getSetting } from "./settings.ts";
@@ -39,6 +42,8 @@ export interface EndOfEpochState {
   monument?: MintingResult["monument"];
   nextSettingId: string | "campaign-end";
   outcome: "win" | "loss";
+  crisis: CrisisOutcome;
+  ideologyBreakdown: Record<Ideology, number>;
 }
 
 /**
@@ -54,26 +59,27 @@ export function prepareEndOfEpoch(
   campaign: Campaign,
 ): EndOfEpochState {
   const status = epoch.status;
-  if (status.kind === "won") {
-    const project = setting.megaProjects.find((p) => p.id === status.projectId)!;
-    const result = mintCandidatesOnWin(epoch, setting, campaign, project, status.tier);
+  if (status.kind !== "won" && status.kind !== "lost") {
     return {
-      candidates: result.candidates,
-      monument: result.monument,
-      nextSettingId: setting.transitions.onWin[project.id] ?? "campaign-end",
-      outcome: "win",
-    };
-  }
-  if (status.kind === "lost") {
-    const result = mintCandidatesOnLoss(epoch, setting, status.mode);
-    return {
-      candidates: result.candidates,
-      nextSettingId: setting.transitions.onLoss,
+      candidates: [],
+      nextSettingId: "campaign-end",
       outcome: "loss",
+      crisis: { totalValue: 0, cleared: false, contributingUnlocks: [] },
+      ideologyBreakdown: { solidarity: 0, sovereignty: 0, transformation: 0, heritage: 0 },
     };
   }
-  // in-progress: shouldn't be called; return harmless state.
-  return { candidates: [], nextSettingId: "campaign-end", outcome: "loss" };
+  const result =
+    status.kind === "won"
+      ? mintCandidatesOnWin(epoch, setting, campaign, status.outcome)
+      : mintCandidatesOnLoss(epoch, setting, status.outcome);
+  return {
+    candidates: result.candidates,
+    monument: result.monument,
+    nextSettingId: status.kind === "won" ? setting.transitions.onWin : setting.transitions.onLoss,
+    outcome: status.kind === "won" ? "win" : "loss",
+    crisis: status.outcome,
+    ideologyBreakdown: unlockedIdeologyBreakdown(epoch.unlockedProjects),
+  };
 }
 
 /**
@@ -87,45 +93,31 @@ export function finalizeEpoch(
   state: EndOfEpochState,
   upgradeChoices: Record<string, "potency" | "pliability" | "persistence">,
 ): { kind: "next"; epoch: Epoch; setting: Setting } | { kind: "campaign-end" } {
-  // Apply upgrades → legacy cards → campaign.
   const legacyCards: LegacyCard[] = state.candidates.map((cand) =>
-    applyUpgrade(
-      cand,
-      upgradeChoices[cand.id] ?? cand.suggestedUpgrades[0] ?? "potency",
-      epoch.epochNumber,
-    ),
+    applyUpgrade(cand, upgradeChoices[cand.id] ?? cand.suggestedUpgrades[0] ?? "potency", epoch.epochNumber),
   );
   campaign.legacyCards.push(...legacyCards);
-
-  // Monument + terrain (only on win).
-  if (state.monument) {
-    addMonumentToCampaign(campaign, state.monument);
-  }
-  if (epoch.status.kind === "lost") {
-    const finalVector = currentVector(epoch, campaign);
-    applyLossTerrainScar(campaign, epoch.status.mode, finalVector);
+  if (state.monument) addMonumentToCampaign(campaign, state.monument);
+  if (state.outcome === "loss") {
+    applyLossTerrainScar(campaign, state.crisis, currentVector(epoch, campaign));
   }
 
-  // Persist Epoch result.
   const result: EpochResult = {
     epochNumber: epoch.epochNumber,
     settingId: setting.id,
     outcome: state.outcome,
-    completedProjectId: epoch.status.kind === "won" ? epoch.status.projectId : undefined,
-    completionTier: epoch.status.kind === "won" ? epoch.status.tier : undefined,
-    lossMode: epoch.status.kind === "lost" ? epoch.status.mode : undefined,
+    totalValue: state.crisis.totalValue,
+    unlockCount: epoch.unlockedProjects.length,
     mintedLegacyIds: legacyCards.map((l) => l.id),
     finalIdeology: currentVector(epoch, campaign),
   };
   campaign.epochHistory.push(result);
   campaign.epochCount = epoch.epochNumber;
 
-  // Transition.
   if (state.nextSettingId === "campaign-end") {
     campaign.currentSettingId = "campaign-end";
     return { kind: "campaign-end" };
   }
-
   const nextSetting = getSetting(state.nextSettingId);
   campaign.currentSettingId = nextSetting.id;
   const rng = nextEpochRng(campaign);
