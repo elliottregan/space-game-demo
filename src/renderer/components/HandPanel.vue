@@ -12,7 +12,7 @@
         v-for="card in hand"
         :key="card.id"
         :card="card"
-        :selectable="!isDissent(card) || true"
+        :selectable="true"
         :selected="selectedIds.includes(card.id)"
         :unaffordable="!canPlay(card)"
         :influence-cost-override="getEffectiveCost(card)"
@@ -45,7 +45,7 @@
             :disabled="!allAffordable"
             @click="$emit('place-cards', selectedIds, idx)"
           >
-            {{ playVerb }} {{ selectedCards.length }} → Slot {{ idx + 1 }}
+            {{ playVerb }} {{ selectedCards.length }} → Col {{ idx + 1 }}
           </button>
         </template>
         <span

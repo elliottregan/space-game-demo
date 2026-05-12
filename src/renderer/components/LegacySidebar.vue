@@ -15,7 +15,7 @@ import LegacyCardsSection from "./sidebar/LegacyCardsSection.vue";
 import DeckCountsSection from "./sidebar/DeckCountsSection.vue";
 import EventLogSection from "./sidebar/EventLogSection.vue";
 import type {
-  EventEntry,
+  GameEvent,
   IdeologyTerrain,
   LegacyCard,
   Monument,
@@ -26,7 +26,7 @@ defineProps<{
   monuments: Monument[];
   legacyCards: LegacyCard[];
   counts: { hand: number; draw: number; discard: number; dissent: number };
-  events: EventEntry[];
+  events: GameEvent[];
   dissentThreshold: number;
 }>();
 </script>

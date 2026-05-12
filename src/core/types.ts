@@ -1,5 +1,5 @@
 // Core taxonomy and data shapes for the deck-building demo.
-// REDESIGN: tableau-based building, hand-based mega-structure completion.
+// Column three-tier model, Crisis-based resolution.
 
 export type Ideology = "solidarity" | "sovereignty" | "transformation" | "heritage";
 

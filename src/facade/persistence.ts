@@ -133,7 +133,3 @@ export function clearStore(): void {
   }
 }
 
-export function v2ArchiveExists(): boolean {
-  if (typeof localStorage === "undefined") return false;
-  return localStorage.getItem(ARCHIVE_KEY) !== null;
-}

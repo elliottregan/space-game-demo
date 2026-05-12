@@ -176,7 +176,7 @@ export class GameAPI {
     const epochView: Epoch = {
       ...this.epoch,
       hand: [...this.epoch.hand],
-      draw: this.epoch.draw,
+      draw: [...this.epoch.draw],
       discard: [...this.epoch.discard],
       columns: columnsView,
       unlockedProjects: [...this.epoch.unlockedProjects],

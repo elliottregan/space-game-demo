@@ -26,7 +26,7 @@
         <div class="pile-label">Discard</div>
         <div class="pile-count">{{ discardCount }}</div>
         <div class="pile-hint">
-          {{ isDragActive ? `drop for +${discardGain} Mat` : "click to review" }}
+          {{ isDragActive ? "drop to discard" : "click to review" }}
         </div>
       </button>
     </div>
@@ -41,12 +41,12 @@
       :title="
         handCount === 0
           ? 'No cards in hand to discard'
-          : `Discard all ${handCount} hand card(s) for +${handCount * discardGain} Mat, then end turn`
+          : `Discard all ${handCount} hand card(s) and end turn (adds ${handCount} Dissent)`
       "
       @click="$emit('discardAndEndTurn')"
     >
       Discard {{ handCount }} &amp; End Turn
-      <span class="btn-sub">+{{ handCount * discardGain }} Mat</span>
+      <span class="btn-sub">+{{ handCount }} Dissent</span>
     </button>
   </section>
 </template>
@@ -60,7 +60,6 @@ defineProps<{
   discardCount: number;
   dissentCount: number;
   handCount: number;
-  discardGain: number;
   ended: boolean;
 }>();
 

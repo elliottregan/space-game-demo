@@ -1,19 +1,10 @@
 import { describe, test, expect } from "bun:test";
 import { dispatch } from "../src/core/dispatch.ts";
 import { createEmptyColumn, placeLand, placeInfluence, placeCharter } from "../src/core/column.ts";
-import { getCard, landId, roleId, makeDissent } from "../src/core/cards.ts";
-import type { Card, Column, Epoch, GameEvent, ProjectUnlock } from "../src/core/types.ts";
+import { getCard, landId, roleId } from "../src/core/cards.ts";
+import type { Column, Epoch, ProjectUnlock } from "../src/core/types.ts";
 
-// Return type is widened to include future Epoch fields (columns,
-// unlockedProjects, GameEvent[]-typed eventLog) that land in Task 8.
-// The `as unknown as Epoch` cast satisfies dispatch()'s parameter type.
-type EpochV2 = Epoch & {
-  columns: Column[];
-  unlockedProjects: ProjectUnlock[];
-  eventLog: GameEvent[];
-};
-
-function freshEpoch(columns: Column[] = []): EpochV2 {
+function freshEpoch(columns: Column[] = []): Epoch {
   return {
     epochNumber: 1,
     settingId: "test",
@@ -32,7 +23,7 @@ function freshEpoch(columns: Column[] = []): EpochV2 {
     endOfTurnQueue: [],
     status: { kind: "in-progress" },
     crisis: { status: "pending" },
-  } as unknown as EpochV2;
+  };
 }
 
 const land = (rank: number, ideo: "solidarity" | "sovereignty" | "transformation" | "heritage") =>

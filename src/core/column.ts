@@ -1,4 +1,4 @@
-// Column data + placement helpers. Replaces tableau.ts in a later task.
+// Column data + placement helpers for the three-tier column model.
 
 import type { Card, Column, ColumnConfig } from "./types.ts";
 
