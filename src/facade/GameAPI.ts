@@ -1,4 +1,4 @@
-// Facade between core and renderer. Redesigned for tableau-based play.
+// Facade between core and renderer. Redesigned for column-based play.
 
 import {
   createCampaign,
@@ -7,14 +7,18 @@ import {
   type EndOfEpochState,
 } from "../core/campaign.ts";
 import {
+  buildColumn as buildColumnCore,
   createEpoch,
   currentVector,
-  discardForMaterial as discardForMaterialCore,
+  discardCharter as discardCharterCore,
+  discardColumn as discardColumnCore,
+  discardFromHand as discardFromHandCore,
+  discardLand as discardLandCore,
   effectiveInfluenceCost,
   endTurn as endTurnCore,
-  playCard as playCardCore,
-  playMegaStructure as playMegaStructureCore,
-  retrieveFromTableau as retrieveCore,
+  placeCard as placeCardCore,
+  recallInfluence as recallInfluenceCore,
+  resolveCrisis as resolveCrisisCore,
 } from "../core/epoch.ts";
 import { createRng, type RNG } from "../core/rng.ts";
 import { getSetting } from "../core/settings.ts";
@@ -28,27 +32,13 @@ import {
   writeStore,
   type SaveSlot,
   type SavedState,
-  type SaveStore,
 } from "./persistence.ts";
-import type { Campaign, Card, Epoch, IdeologyVector, Setting, TableauSlot } from "../core/types.ts";
+import type { Campaign, Card, Column, Epoch, IdeologyVector, Setting } from "../core/types.ts";
 import { checkAlignment, demonym, demonymName } from "../core/ideology.ts";
-import {
-  describeRequirement,
-  evaluateMegaStructure,
-  type MegaStructureEval,
-} from "../core/patterns.ts";
-import {
-  canPlaceLand,
-  canPlaceTopper,
-  isImproved,
-  validSlotsForCard as validSlotsForCardCore,
-} from "../core/tableau.ts";
+import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../core/column.ts";
+import { evaluateColumn } from "../core/columnPatterns.ts";
 import { landMaterialProduction } from "../core/cards.ts";
-
-export interface ProjectProgress {
-  projectId: string;
-  evaluation: MegaStructureEval;
-}
+import { unlockedIdeologyBreakdown } from "../core/projects.ts";
 
 export interface Snapshot {
   campaign: Campaign;
@@ -56,8 +46,9 @@ export interface Snapshot {
   epoch: Epoch;
   vector: IdeologyVector;
   demonymLabel: string;
-  projectProgress: ProjectProgress[];
   deckCounts: { hand: number; draw: number; discard: number; dissent: number };
+  ideologyBreakdown: Record<"solidarity" | "sovereignty" | "transformation" | "heritage", number>;
+  columnBuildable: boolean[]; // parallel to epoch.columns
 }
 
 export type CommandResult<T = void> = { ok: true; value: T } | { ok: false; error: string };
@@ -174,78 +165,79 @@ export class GameAPI {
 
   snapshot(): Snapshot {
     const vector = currentVector(this.epoch, this.campaign);
-    const dis = this.epoch.hand
-      .concat(this.epoch.draw, this.epoch.discard)
+    const dis = this.epoch.hand.concat(this.epoch.draw, this.epoch.discard)
       .filter((c) => c.tags.includes("dissent")).length;
-    const projectProgress = this.setting.megaProjects.map((p) => ({
-      projectId: p.id,
-      evaluation: evaluateMegaStructure(p, this.epoch.hand),
+    const columnsView: Column[] = this.epoch.columns.map((c) => ({
+      lands: { cards: [...c.lands.cards] },
+      influence: { card: c.influence.card },
+      charter: { card: c.charter.card },
     }));
+    const columnBuildable = columnsView.map((c) => evaluateColumn(c, this.setting.projects) !== null);
     const epochView: Epoch = {
       ...this.epoch,
       hand: [...this.epoch.hand],
       draw: this.epoch.draw,
       discard: [...this.epoch.discard],
-      tableau: this.epoch.tableau.map((s) => ({ lands: [...s.lands], topper: s.topper })),
+      columns: columnsView,
+      unlockedProjects: [...this.epoch.unlockedProjects],
+      eventLog: [...this.epoch.eventLog],
       taskProgress: { ...this.epoch.taskProgress },
       tasksRevealed: [...this.epoch.tasksRevealed],
-      eventLog: [...this.epoch.eventLog],
       endOfTurnQueue: [...this.epoch.endOfTurnQueue],
-    };
-    const campaignView = {
-      ...this.campaign,
-      monuments: [...this.campaign.monuments],
-      legacyCards: [...this.campaign.legacyCards],
-      terrain: { ...this.campaign.terrain },
-      epochHistory: [...this.campaign.epochHistory],
+      crisis: {
+        status: this.epoch.crisis.status,
+        outcome: this.epoch.crisis.outcome,
+      },
     };
     return {
-      campaign: campaignView,
+      campaign: {
+        ...this.campaign,
+        monuments: [...this.campaign.monuments],
+        legacyCards: [...this.campaign.legacyCards],
+        terrain: { ...this.campaign.terrain },
+        epochHistory: [...this.campaign.epochHistory],
+      },
       setting: this.setting,
       epoch: epochView,
       vector,
       demonymLabel: demonymName(demonym(vector)),
-      projectProgress,
       deckCounts: {
         hand: this.epoch.hand.length,
         draw: this.epoch.draw.length,
         discard: this.epoch.discard.length,
         dissent: dis,
       },
+      ideologyBreakdown: unlockedIdeologyBreakdown(this.epoch.unlockedProjects),
+      columnBuildable,
     };
   }
 
-  // -----------------------------------------------------------------------
-  // Queries
-  // -----------------------------------------------------------------------
-
   getEffectiveCost(card: Card): number {
-    const vector = currentVector(this.epoch, this.campaign);
-    return effectiveInfluenceCost(card, vector);
+    return effectiveInfluenceCost(card, currentVector(this.epoch, this.campaign));
   }
 
   getAlignment(card: Card): "aligned" | "opposed" | "neutral" {
-    const vector = currentVector(this.epoch, this.campaign);
-    return checkAlignment(card, vector);
+    return checkAlignment(card, currentVector(this.epoch, this.campaign));
   }
 
-  /** Return valid tableau slot indices for a given card in hand. */
-  validSlots(cardId: string): number[] {
+  /** Indices of columns where the given hand card could be placed. */
+  validColumns(cardId: string): number[] {
     const card = this.epoch.hand.find((c) => c.id === cardId);
     if (!card) return [];
-    return validSlotsForCardCore(this.epoch, card).map((s) => s.index);
-  }
-
-  canRetrieve(slotIndex: number): boolean {
-    const slot = this.epoch.tableau[slotIndex];
-    if (!slot) return false;
-    return slot.topper !== null || slot.lands.length > 0;
+    const out: number[] = [];
+    for (let i = 0; i < this.epoch.columns.length; i++) {
+      const col = this.epoch.columns[i]!;
+      if (card.kind === "land" && canPlaceLand(col, card)) out.push(i);
+      else if (card.kind === "role" && canPlaceInfluence(col, card)) out.push(i);
+      else if (card.kind === "charter" && canPlaceCharter(col, card)) out.push(i);
+    }
+    return out;
   }
 
   landProductionPerTurn(): number {
     let total = 0;
-    for (const slot of this.epoch.tableau) {
-      for (const l of slot.lands) total += landMaterialProduction(l.rank);
+    for (const col of this.epoch.columns) {
+      for (const l of col.lands.cards) total += landMaterialProduction(l.rank);
     }
     return total;
   }
@@ -254,57 +246,48 @@ export class GameAPI {
     return this.endOfEpoch;
   }
 
-  // -----------------------------------------------------------------------
-  // Commands
-  // -----------------------------------------------------------------------
-
-  playCard(cardId: string, slotIndex: number): CommandResult<Card> {
-    if (this.epoch.status.kind !== "in-progress") {
-      return { ok: false, error: "Epoch ended." };
-    }
-    const r = playCardCore(this.epoch, this.campaign, this.setting, cardId, slotIndex, this.rng);
-    if (!r.ok) return r;
-    return { ok: true, value: r.card };
+  placeCard(cardId: string, columnIndex: number): CommandResult<Card> {
+    const r = placeCardCore(this.epoch, this.campaign, this.setting, cardId, columnIndex, this.rng);
+    return r.ok ? { ok: true, value: r.card } : r;
   }
 
-  retrieveFromTableau(slotIndex: number): CommandResult<Card> {
-    const r = retrieveCore(this.epoch, this.setting, slotIndex);
-    if (!r.ok) return r;
-    return { ok: true, value: r.card };
+  discardLand(columnIndex: number): CommandResult<Card> {
+    return discardLandCore(this.epoch, columnIndex);
   }
-
-  /** Cost to retrieve the topmost card of a slot (for UI display). */
-  retrieveCost(slotIndex: number): { inf: number; mat: number } | null {
-    const slot = this.epoch.tableau[slotIndex];
-    if (!slot || (slot.topper === null && slot.lands.length === 0)) return null;
-    const topmost = slot.topper ?? slot.lands[slot.lands.length - 1]!;
-    const isLand = topmost.kind === "land";
-    return {
-      inf: this.setting.rules.retrieveInfluenceCost,
-      mat: isLand ? this.setting.rules.retrieveLandMaterialCost : 0,
-    };
+  discardCharter(columnIndex: number): CommandResult<Card> {
+    return discardCharterCore(this.epoch, columnIndex);
   }
-
-  discardForMaterial(cardId: string): CommandResult<{ gained: number }> {
-    const r = discardForMaterialCore(this.epoch, this.setting, cardId);
-    if (!r.ok) return r;
-    return { ok: true, value: { gained: r.gained } };
+  recallInfluence(columnIndex: number): CommandResult<Card> {
+    return recallInfluenceCore(this.epoch, columnIndex);
   }
-
-  playMegaStructure(projectId: string): CommandResult<{ tier: string; score: number }> {
-    const r = playMegaStructureCore(this.epoch, this.setting, projectId);
-    if (!r.ok) return r;
-    this.maybeEndEpoch();
-    return { ok: true, value: { tier: r.tier, score: r.score } };
+  discardColumn(columnIndex: number): CommandResult<void> {
+    return discardColumnCore(this.epoch, columnIndex);
+  }
+  discardFromHand(cardId: string): CommandResult<Card> {
+    return discardFromHandCore(this.epoch, cardId);
+  }
+  buildColumn(columnIndex: number): CommandResult<{ projectId: string; pattern: string }> {
+    const r = buildColumnCore(this.epoch, this.setting, columnIndex);
+    return r.ok ? { ok: true, value: { projectId: r.value.projectId, pattern: r.value.pattern } } : r;
   }
 
   endTurn(): CommandResult {
     endTurnCore(this.epoch, this.campaign, this.setting, this.rng);
+    this.maybeEnterCrisis();
+    return { ok: true, value: undefined };
+  }
+
+  resolveCrisis(): CommandResult {
+    if (this.epoch.phase !== "crisis") return { ok: false, error: "Not in crisis." };
+    resolveCrisisCore(this.epoch, this.setting);
     this.maybeEndEpoch();
     return { ok: true, value: undefined };
   }
 
-  // -----------------------------------------------------------------------
+  private maybeEnterCrisis(): void {
+    // Phase changes are driven by core; this hook left in case the renderer
+    // wants to react synchronously.
+  }
 
   private maybeEndEpoch(): void {
     if (this.epoch.status.kind !== "in-progress" && this.endOfEpoch === null) {
@@ -317,11 +300,7 @@ export class GameAPI {
   ): CommandResult<"next" | "campaign-end"> {
     if (!this.endOfEpoch) return { ok: false, error: "Epoch is still in progress." };
     const result = finalizeEpoch(
-      this.epoch,
-      this.setting,
-      this.campaign,
-      this.endOfEpoch,
-      upgradeChoices,
+      this.epoch, this.setting, this.campaign, this.endOfEpoch, upgradeChoices,
     );
     this.endOfEpoch = null;
     if (result.kind === "campaign-end") return { ok: true, value: "campaign-end" };
@@ -340,5 +319,3 @@ export class GameAPI {
     this.persist();
   }
 }
-
-export { checkAlignment, describeRequirement, canPlaceLand, canPlaceTopper, isImproved };
