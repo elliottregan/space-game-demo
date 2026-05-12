@@ -4,10 +4,10 @@ import {
   checkAlignment,
   influenceCostAdjustment,
   demonym,
-} from "../src/core/ideology.ts";
-import { unlockedIdeologyBreakdown } from "../src/core/projects.ts";
-import { getCard, landId, roleId } from "../src/core/cards.ts";
-import { createEmptyColumn, placeLand, placeInfluence } from "../src/core/column.ts";
+} from "../src/core/engine/ideology.ts";
+import { unlockedIdeologyBreakdown } from "../src/core/data/projects.ts";
+import { getCard, landId, roleId } from "../src/core/data/cards.ts";
+import { createEmptyColumn, placeLand, placeInfluence } from "../src/core/engine/column.ts";
 import type { Column, ProjectUnlock } from "../src/core/types.ts";
 
 function col(lands: string[], topper?: string): Column {

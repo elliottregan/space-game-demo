@@ -24,7 +24,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Ideology, KeystoneProject, PatternKind, ProjectUnlock } from "../../core/types.ts";
-import { PATTERNS_IN_ORDER } from "../../core/projects.ts";
+import { PATTERNS_IN_ORDER } from "../../core/data/projects.ts";
 
 const props = defineProps<{
   unlocks: ProjectUnlock[];

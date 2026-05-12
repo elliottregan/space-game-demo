@@ -1,7 +1,12 @@
 import { describe, test, expect } from "bun:test";
-import { evaluateColumn } from "../src/core/columnPatterns.ts";
-import { createEmptyColumn, placeLand, placeInfluence, placeCharter } from "../src/core/column.ts";
-import { getCard, landId, roleId } from "../src/core/cards.ts";
+import { evaluateColumn } from "../src/core/engine/columnPatterns.ts";
+import {
+  createEmptyColumn,
+  placeLand,
+  placeInfluence,
+  placeCharter,
+} from "../src/core/engine/column.ts";
+import { getCard, landId, roleId } from "../src/core/data/cards.ts";
 import type { KeystoneProject } from "../src/core/types.ts";
 
 const land = (rank: number, ideo: "solidarity" | "sovereignty" | "transformation" | "heritage") =>

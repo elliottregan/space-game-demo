@@ -1,6 +1,6 @@
 // Registry of all Settings available in the demo's campaign.
 
-import type { Setting } from "./types.ts";
+import type { Setting } from "../types.ts";
 import { HOMEWORLD } from "./homeworld.ts";
 import { GENERATION_SHIP } from "./generationShip.ts";
 import { RUINED_HOMEWORLD } from "./ruinedHomeworld.ts";

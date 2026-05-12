@@ -9,7 +9,7 @@ import type {
   LegacyCandidate,
   LegacyCard,
   Setting,
-} from "./types.ts";
+} from "../types.ts";
 import {
   applyUpgrade,
   addMonumentToCampaign,
@@ -18,10 +18,10 @@ import {
   mintCandidatesOnWin,
   type MintingResult,
 } from "./legacy.ts";
-import { unlockedIdeologyBreakdown } from "./projects.ts";
-import { HOMEWORLD } from "./homeworld.ts";
+import { unlockedIdeologyBreakdown } from "../data/projects.ts";
+import { HOMEWORLD } from "../settings/homeworld.ts";
 import { currentVector, createEpoch } from "./epoch.ts";
-import { getSetting } from "./settings.ts";
+import { getSetting } from "../settings/index.ts";
 import { createRng, type RNG } from "./rng.ts";
 
 export function createCampaign(seed: number): Campaign {

@@ -2,7 +2,7 @@
 // Up to 10 saves; each is the full serialized game state.
 
 import type { Campaign, Epoch } from "../core/types.ts";
-import type { EndOfEpochState } from "../core/campaign.ts";
+import type { EndOfEpochState } from "../core/engine/campaign.ts";
 
 const STORE_KEY = "deck-demo-saves-v3";
 const PREV_KEY = "deck-demo-saves-v2";

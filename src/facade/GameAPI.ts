@@ -5,7 +5,7 @@ import {
   prepareEndOfEpoch,
   finalizeEpoch,
   type EndOfEpochState,
-} from "../core/campaign.ts";
+} from "../core/engine/campaign.ts";
 import {
   buildColumn as buildColumnCore,
   createEpoch,
@@ -19,9 +19,9 @@ import {
   placeCard as placeCardCore,
   recallInfluence as recallInfluenceCore,
   resolveCrisis as resolveCrisisCore,
-} from "../core/epoch.ts";
-import { createRng, type RNG } from "../core/rng.ts";
-import { getSetting } from "../core/settings.ts";
+} from "../core/engine/epoch.ts";
+import { createRng, type RNG } from "../core/engine/rng.ts";
+import { getSetting } from "../core/settings/index.ts";
 import {
   addNewSlot,
   deleteSlot as deleteSlotInStore,
@@ -34,11 +34,11 @@ import {
   type SavedState,
 } from "./persistence.ts";
 import type { Campaign, Card, Column, Epoch, IdeologyVector, Setting } from "../core/types.ts";
-import { checkAlignment, demonym, demonymName } from "../core/ideology.ts";
-import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../core/column.ts";
-import { evaluateColumn } from "../core/columnPatterns.ts";
-import { landMaterialProduction } from "../core/cards.ts";
-import { unlockedIdeologyBreakdown } from "../core/projects.ts";
+import { checkAlignment, demonym, demonymName } from "../core/engine/ideology.ts";
+import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../core/engine/column.ts";
+import { evaluateColumn } from "../core/engine/columnPatterns.ts";
+import { landMaterialProduction } from "../core/data/cards.ts";
+import { unlockedIdeologyBreakdown } from "../core/data/projects.ts";
 
 export interface Snapshot {
   campaign: Campaign;

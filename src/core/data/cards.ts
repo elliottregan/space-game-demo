@@ -1,8 +1,8 @@
 // The 54-card pool + Homeworld project-specific keystones.
 // Spec: docs/specs/DECK-BUILDING-REDESIGN.md §6, §16.
 
-import type { Card, EffectSpec, Ideology, Role, CardTag } from "./types.ts";
-import { ROLE_RANK } from "./types.ts";
+import type { Card, EffectSpec, Ideology, Role, CardTag } from "../types.ts";
+import { ROLE_RANK } from "../types.ts";
 
 // -------------------------------------------------------------------------
 // Naming tables (spec §6)

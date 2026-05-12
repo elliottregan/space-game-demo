@@ -1,6 +1,6 @@
 // Helpers for KeystoneProject lookup, ordering, and ideology aggregation.
 
-import type { Ideology, KeystoneProject, PatternKind, ProjectUnlock } from "./types.ts";
+import type { Ideology, KeystoneProject, PatternKind, ProjectUnlock } from "../types.ts";
 
 export const PATTERNS_IN_ORDER: PatternKind[] = [
   "high-card",

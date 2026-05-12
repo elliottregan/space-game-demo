@@ -5,9 +5,9 @@ import {
   getProjectForPattern,
   reversePatternOrder,
   unlockedIdeologyBreakdown,
-} from "../src/core/projects.ts";
+} from "../src/core/data/projects.ts";
 import type { KeystoneProject, ProjectUnlock } from "../src/core/types.ts";
-import { getCard, landId, roleId } from "../src/core/cards.ts";
+import { getCard, landId, roleId } from "../src/core/data/cards.ts";
 
 const sample: KeystoneProject[] = [
   { id: "p-high", pattern: "high-card", name: "h", flavor: "", value: 1 },

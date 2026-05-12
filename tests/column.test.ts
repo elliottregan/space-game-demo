@@ -11,8 +11,8 @@ import {
   columnCards,
   columnLandRank,
   MAX_LAND_DEPTH,
-} from "../src/core/column.ts";
-import { getCard, landId, roleId } from "../src/core/cards.ts";
+} from "../src/core/engine/column.ts";
+import { getCard, landId, roleId } from "../src/core/data/cards.ts";
 
 const land = (
   rank: number,

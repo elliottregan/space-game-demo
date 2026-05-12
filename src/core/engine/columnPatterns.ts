@@ -1,6 +1,6 @@
 // Pure poker-pattern evaluator over a single Column.
 
-import type { Card, Column, KeystoneProject, PatternKind } from "./types.ts";
+import type { Card, Column, KeystoneProject, PatternKind } from "../types.ts";
 import { columnCards, isBuildable } from "./column.ts";
 
 export interface PatternMatch {

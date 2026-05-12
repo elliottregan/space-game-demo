@@ -11,8 +11,8 @@ import type {
   KeystoneProject,
   ProjectUnlock,
   Setting,
-} from "./types.ts";
-import { CARD_BY_ID, landMaterialProduction, makeDissent } from "./cards.ts";
+} from "../types.ts";
+import { CARD_BY_ID, landMaterialProduction, makeDissent } from "../data/cards.ts";
 import {
   applyEffect,
   countDissentInDeck,
@@ -32,7 +32,7 @@ import {
   createEmptyColumn,
 } from "./column.ts";
 import { evaluateColumn } from "./columnPatterns.ts";
-import { reversePatternOrder } from "./projects.ts";
+import { reversePatternOrder } from "../data/projects.ts";
 import { dispatch } from "./dispatch.ts";
 import type { RNG } from "./rng.ts";
 

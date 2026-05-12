@@ -1,7 +1,12 @@
 import { describe, test, expect } from "bun:test";
-import { dispatch } from "../src/core/dispatch.ts";
-import { createEmptyColumn, placeLand, placeInfluence, placeCharter } from "../src/core/column.ts";
-import { getCard, landId, roleId } from "../src/core/cards.ts";
+import { dispatch } from "../src/core/engine/dispatch.ts";
+import {
+  createEmptyColumn,
+  placeLand,
+  placeInfluence,
+  placeCharter,
+} from "../src/core/engine/column.ts";
+import { getCard, landId, roleId } from "../src/core/data/cards.ts";
 import type { Column, Epoch, ProjectUnlock } from "../src/core/types.ts";
 
 function freshEpoch(columns: Column[] = []): Epoch {

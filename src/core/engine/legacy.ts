@@ -11,8 +11,8 @@ import type {
   Monument,
   ProjectUnlock,
   Setting,
-} from "./types.ts";
-import { reversePatternOrder } from "./projects.ts";
+} from "../types.ts";
+import { reversePatternOrder } from "../data/projects.ts";
 
 export interface MintingResult {
   candidates: LegacyCandidate[];

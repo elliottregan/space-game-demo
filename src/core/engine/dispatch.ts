@@ -2,8 +2,8 @@
 // through dispatch(epoch, event). Side-effect rules (e.g. "discard adds
 // Dissent") live in one place: this file.
 
-import type { Epoch, GameEvent } from "./types.ts";
-import { makeDissent } from "./cards.ts";
+import type { Epoch, GameEvent } from "../types.ts";
+import { makeDissent } from "../data/cards.ts";
 import { clearColumn } from "./column.ts";
 
 export function dispatch(epoch: Epoch, ev: GameEvent): void {

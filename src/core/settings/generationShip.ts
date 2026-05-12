@@ -1,8 +1,8 @@
 // Generation Ship Setting — column-based redesign.
 
-import type { Setting, KeystoneProject, Crisis } from "./types.ts";
-import { ALL_CARDS } from "./cards.ts";
-import { DEFAULT_PROJECT_VALUE } from "./projects.ts";
+import type { Setting, KeystoneProject, Crisis } from "../types.ts";
+import { ALL_CARDS } from "../data/cards.ts";
+import { DEFAULT_PROJECT_VALUE } from "../data/projects.ts";
 
 // Generation Ship runs on a constrained deck: only Sovereignty + Transformation
 // (captaincy + technological progress) plus wild base charters. The Solidarity

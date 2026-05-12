@@ -1,7 +1,7 @@
 // Ideology vector derivation from the tableau + terrain.
 // Spec §8 adapted: the only on-board zone is the tableau (no project slots).
 
-import type { Card, Column, Demonym, Ideology, IdeologyTerrain, IdeologyVector } from "./types.ts";
+import type { Card, Column, Demonym, Ideology, IdeologyTerrain, IdeologyVector } from "../types.ts";
 import { columnCards } from "./column.ts";
 
 export function deriveVector(columns: Column[], terrain: IdeologyTerrain): IdeologyVector {

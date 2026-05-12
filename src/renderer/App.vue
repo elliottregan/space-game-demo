@@ -145,9 +145,9 @@ import MarketModal from "./components/MarketModal.vue";
 import SaveSlotMenu from "./components/SaveSlotMenu.vue";
 import ThemeToggle from "./components/ThemeToggle.vue";
 import type { Card } from "../core/types.ts";
-import { SETTING_BY_ID } from "../core/settings.ts";
+import { SETTING_BY_ID } from "../core/settings/index.ts";
 import { MAX_SLOTS } from "../facade/persistence.ts";
-import { evaluateColumn } from "../core/columnPatterns.ts";
+import { evaluateColumn } from "../core/engine/columnPatterns.ts";
 
 const game = getGameService();
 

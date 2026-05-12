@@ -1,6 +1,6 @@
 // Column data + placement helpers for the three-tier column model.
 
-import type { Card, Column, ColumnConfig } from "./types.ts";
+import type { Card, Column, ColumnConfig } from "../types.ts";
 
 export const MAX_LAND_DEPTH = 4;
 

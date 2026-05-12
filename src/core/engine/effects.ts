@@ -1,8 +1,8 @@
 // EffectSpec resolver. Immediate effects mutate Epoch state directly;
 // end-of-turn effects are queued for resolution at end-phase.
 
-import type { Card, EffectSpec, Epoch } from "./types.ts";
-import { makeDissent } from "./cards.ts";
+import type { Card, EffectSpec, Epoch } from "../types.ts";
+import { makeDissent } from "../data/cards.ts";
 import type { RNG } from "./rng.ts";
 import { dispatch } from "./dispatch.ts";
 

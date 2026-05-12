@@ -6,7 +6,7 @@
 //   seedOffset (default 0) — added to each iteration's seed (for re-runs).
 
 import { GameAPI } from "../src/facade/GameAPI.ts";
-import { evaluateColumn } from "../src/core/columnPatterns.ts";
+import { evaluateColumn } from "../src/core/engine/columnPatterns.ts";
 import type { PatternKind } from "../src/core/types.ts";
 
 const runs = Number(process.argv[2] ?? 50);
