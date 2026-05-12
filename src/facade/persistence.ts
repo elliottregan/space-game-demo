@@ -4,13 +4,14 @@
 import type { Campaign, Epoch } from "../core/types.ts";
 import type { EndOfEpochState } from "../core/campaign.ts";
 
-const STORE_KEY = "deck-demo-saves-v2";
-const LEGACY_KEY = "deck-demo-save-v1";
+const STORE_KEY = "deck-demo-saves-v3";
+const PREV_KEY = "deck-demo-saves-v2";
+const ARCHIVE_KEY = "deck-demo-saves-v2-archive";
 
 export const MAX_SLOTS = 10;
 
 export interface SavedState {
-  version: 1;
+  version: 3;
   campaign: Campaign;
   settingId: string;
   epoch: Epoch;
@@ -27,13 +28,13 @@ export interface SaveSlot {
 }
 
 export interface SaveStore {
-  version: 2;
+  version: 3;
   activeSlotId: string | null;
-  slots: SaveSlot[]; // newest-last ordering
+  slots: SaveSlot[];
 }
 
 function emptyStore(): SaveStore {
-  return { version: 2, activeSlotId: null, slots: [] };
+  return { version: 3, activeSlotId: null, slots: [] };
 }
 
 export function loadStore(): SaveStore {
@@ -42,25 +43,13 @@ export function loadStore(): SaveStore {
     const raw = localStorage.getItem(STORE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as SaveStore;
-      if (parsed.version === 2 && Array.isArray(parsed.slots)) return parsed;
+      if (parsed.version === 3 && Array.isArray(parsed.slots)) return parsed;
     }
-    // Migration from v1 single-save.
-    const legacyRaw = localStorage.getItem(LEGACY_KEY);
-    if (legacyRaw) {
-      const legacy = JSON.parse(legacyRaw) as SavedState;
-      if (legacy.version === 1) {
-        const slot: SaveSlot = {
-          id: newSlotId(),
-          label: labelFromState(legacy),
-          createdAt: Date.now(),
-          lastPlayedAt: Date.now(),
-          state: legacy,
-        };
-        const store: SaveStore = { version: 2, activeSlotId: slot.id, slots: [slot] };
-        writeStore(store);
-        localStorage.removeItem(LEGACY_KEY);
-        return store;
-      }
+    // One-time v2 archival.
+    const prev = localStorage.getItem(PREV_KEY);
+    if (prev && !localStorage.getItem(ARCHIVE_KEY)) {
+      localStorage.setItem(ARCHIVE_KEY, prev);
+      localStorage.removeItem(PREV_KEY);
     }
   } catch {
     // corrupted — start fresh
@@ -101,20 +90,11 @@ export function getActiveSlot(store: SaveStore): SaveSlot | null {
 }
 
 export function upsertActiveSlot(store: SaveStore, state: SavedState): SaveStore {
-  if (!store.activeSlotId) {
-    return addNewSlot(store, state);
-  }
+  if (!store.activeSlotId) return addNewSlot(store, state);
   const idx = store.slots.findIndex((s) => s.id === store.activeSlotId);
-  if (idx === -1) {
-    return addNewSlot(store, state);
-  }
+  if (idx === -1) return addNewSlot(store, state);
   const slot = store.slots[idx]!;
-  store.slots[idx] = {
-    ...slot,
-    state,
-    label: labelFromState(state),
-    lastPlayedAt: Date.now(),
-  };
+  store.slots[idx] = { ...slot, state, label: labelFromState(state), lastPlayedAt: Date.now() };
   return store;
 }
 
@@ -151,4 +131,9 @@ export function clearStore(): void {
   } catch {
     // ignore
   }
+}
+
+export function v2ArchiveExists(): boolean {
+  if (typeof localStorage === "undefined") return false;
+  return localStorage.getItem(ARCHIVE_KEY) !== null;
 }
