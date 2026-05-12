@@ -22,7 +22,7 @@
         :epoch-number="epoch.epochNumber"
         :setting-name="setting.name"
         :turn="epoch.turn"
-        :turn-limit="setting.rules.softTurnLimit"
+        :max-turns="setting.rules.maxTurns"
         :influence="epoch.influence"
         :materials="epoch.materials"
         :dissent-count="snapshot.deckCounts.dissent"
@@ -34,10 +34,10 @@
 
     <div class="app-main">
       <div class="play-area">
-        <ProjectZonesPanel
-          :projects="setting.megaProjects"
-          :progress="snapshot.projectProgress"
-          @play="onPlayMegaStructure"
+        <UnlockedProjectsPanel
+          :unlocks="epoch.unlockedProjects"
+          :projects="setting.projects"
+          :breakdown="snapshot.ideologyBreakdown"
         />
 
         <IdeologyDisplay
@@ -47,41 +47,48 @@
         />
 
         <TableauPanel
-          :tableau="epoch.tableau"
+          :columns="epoch.columns"
           :production="landProduction"
-          :retrieve-cost="retrieveCost"
-          :can-retrieve="canRetrieve"
-          :valid-slots-for="validSlotsFor"
-          @retrieve="onRetrieve"
-          @drop-card="onDropCardToSlot"
+          :column-buildable="snapshot.columnBuildable"
+          :buildable-labels="buildableLabels"
+          :get-card-from-hand="getCardFromHand"
+          @place-card="onPlaceCard"
+          @discard-land="onDiscardLand"
+          @discard-charter="onDiscardCharter"
+          @recall-influence="onRecallInfluence"
+          @discard-column="onDiscardColumn"
+          @build="onBuild"
         />
 
         <HandPanel
           :hand="epoch.hand"
           :selected-ids="selectedIds"
           :influence="epoch.influence"
-          :discard-gain="setting.rules.discardMaterialGain"
           :get-effective-cost="getEffectiveCost"
           :get-alignment="getAlignment"
-          :valid-slots-for="validSlotsFor"
+          :valid-columns-for="validColumnsFor"
           @toggle-select="onToggleSelect"
           @clear-selection="onClearSelection"
-          @play-to-slot="onPlayToSlot"
-          @discard-selection="onDiscardSelection"
+          @place-cards="onPlaceCards"
+          @discard-from-hand="onDiscardFromHand"
         />
         <DeckDiscardPanel
           :draw-count="epoch.draw.length"
           :discard-count="epoch.discard.length"
           :dissent-count="snapshot.deckCounts.dissent"
           :hand-count="epoch.hand.length"
-          :discard-gain="setting.rules.discardMaterialGain"
+          :discard-gain="0"
           :ended="epoch.status.kind !== 'in-progress'"
           @view="onViewPile"
           @open-market="marketOpen = true"
           @end-turn="onEndTurn"
           @discard-and-end-turn="onDiscardAndEndTurn"
-          @drop-card="onDropCardToDiscard"
+          @drop-card="onDiscardFromHand"
         />
+
+        <button v-if="!eoe && epoch.phase === 'crisis'" class="primary resolve-crisis" @click="onResolveCrisis">
+          Resolve Crisis
+        </button>
 
         <div v-if="lastError" class="error-bar">{{ lastError }}</div>
       </div>
@@ -97,10 +104,13 @@
       />
     </div>
 
-    <EndOfEpochScreen
+    <CrisisScreen
       v-if="eoe"
-      :state="eoe"
-      :turn="epoch.turn"
+      :crisis="setting.crisis"
+      :outcome="eoe.crisis"
+      :projects="setting.projects"
+      :candidates="eoe.candidates"
+      :breakdown="eoe.ideologyBreakdown"
       :next-setting-name="nextSettingName"
       @advance="onAdvance"
     />
@@ -124,10 +134,10 @@ import { getGameService } from "./GameService.ts";
 import TurnBar from "./components/TurnBar.vue";
 import HandPanel from "./components/HandPanel.vue";
 import TableauPanel from "./components/TableauPanel.vue";
-import ProjectZonesPanel from "./components/ProjectZonesPanel.vue";
+import UnlockedProjectsPanel from "./components/UnlockedProjectsPanel.vue";
 import IdeologyDisplay from "./components/IdeologyDisplay.vue";
 import LegacySidebar from "./components/LegacySidebar.vue";
-import EndOfEpochScreen from "./components/EndOfEpochScreen.vue";
+import CrisisScreen from "./components/CrisisScreen.vue";
 import CampaignEnd from "./components/CampaignEnd.vue";
 import DeckDiscardPanel from "./components/DeckDiscardPanel.vue";
 import CardListModal from "./components/CardListModal.vue";
@@ -137,6 +147,7 @@ import ThemeToggle from "./components/ThemeToggle.vue";
 import type { Card } from "../core/types.ts";
 import { SETTING_BY_ID } from "../core/settings.ts";
 import { MAX_SLOTS } from "../facade/persistence.ts";
+import { evaluateColumn } from "../core/columnPatterns.ts";
 
 const game = getGameService();
 
@@ -155,8 +166,8 @@ const activeSlotId = computed(() => game.activeSlotId.value);
 
 const landProduction = computed(() => {
   let total = 0;
-  for (const slot of epoch.value.tableau) {
-    for (const l of slot.lands) total += landMat(l.rank);
+  for (const col of epoch.value.columns) {
+    for (const l of col.lands.cards) total += landMat(l.rank);
   }
   return total;
 });
@@ -184,20 +195,31 @@ const nextSettingName = computed(() => {
   return SETTING_BY_ID[id]?.name ?? id;
 });
 
+const buildableLabels = computed(() => {
+  return epoch.value.columns.map((col) => {
+    const m = evaluateColumn(col, setting.value.projects);
+    if (!m) return "";
+    const p = setting.value.projects.find((p) => p.id === m.projectId);
+    return p ? `${patternLabel(m.kind)} → ${p.name} (+${p.value})` : "";
+  });
+});
+
+function getCardFromHand(cardId: string): Card | null {
+  return epoch.value.hand.find((c) => c.id === cardId) ?? null;
+}
+
+function patternLabel(p: string): string {
+  return p.split("-").map((s) => s[0]!.toUpperCase() + s.slice(1)).join(" ");
+}
+
 function getEffectiveCost(card: Card): number {
   return game.getEffectiveCost(card);
 }
 function getAlignment(card: Card): "aligned" | "opposed" | "neutral" {
   return game.getAlignment(card);
 }
-function canRetrieve(slotIndex: number): boolean {
-  return game.canRetrieve(slotIndex);
-}
-function retrieveCost(slotIndex: number): { inf: number; mat: number } | null {
-  return game.retrieveCost(slotIndex);
-}
-function validSlotsFor(cardId: string): number[] {
-  return game.validSlots(cardId);
+function validColumnsFor(cardId: string): number[] {
+  return game.validColumns(cardId);
 }
 
 function onToggleSelect(id: string): void {
@@ -208,34 +230,37 @@ function onToggleSelect(id: string): void {
 function onClearSelection(): void {
   selectedIds.value = [];
 }
-function onPlayToSlot(ids: string[], slotIndex: number): void {
+function onPlaceCard(cardId: string, i: number): void {
+  game.placeCard(cardId, i);
+}
+function onPlaceCards(ids: string[], i: number): void {
   for (const id of ids) {
-    // Re-check validity before each play: a prior placement can change the
-    // slot state (e.g., stack size). Skip cards that no longer fit.
-    if (game.validSlots(id).includes(slotIndex)) {
-      game.playCard(id, slotIndex);
-    }
+    if (game.validColumns(id).includes(i)) game.placeCard(id, i);
   }
   selectedIds.value = [];
 }
-function onDiscardSelection(ids: string[]): void {
-  for (const id of ids) game.discardForMaterial(id);
+function onDiscardLand(i: number): void {
+  game.discardLand(i);
+}
+function onDiscardCharter(i: number): void {
+  game.discardCharter(i);
+}
+function onRecallInfluence(i: number): void {
+  game.recallInfluence(i);
+}
+function onDiscardColumn(i: number): void {
+  game.discardColumn(i);
+}
+function onBuild(i: number): void {
+  game.buildColumn(i);
+}
+function onDiscardFromHand(idOrIds: string | string[]): void {
+  const ids = typeof idOrIds === "string" ? [idOrIds] : idOrIds;
+  for (const id of ids) game.discardFromHand(id);
   selectedIds.value = [];
 }
-function onRetrieve(slotIndex: number): void {
-  game.retrieve(slotIndex);
-}
-function onDropCardToSlot(cardId: string, slotIndex: number): void {
-  game.playCard(cardId, slotIndex);
-  selectedIds.value = selectedIds.value.filter((id) => id !== cardId);
-}
-function onDropCardToDiscard(cardId: string): void {
-  game.discardForMaterial(cardId);
-  selectedIds.value = selectedIds.value.filter((id) => id !== cardId);
-}
-function onPlayMegaStructure(projectId: string): void {
-  game.playMegaStructure(projectId);
-  selectedIds.value = [];
+function onResolveCrisis(): void {
+  game.resolveCrisis();
 }
 function onEndTurn(): void {
   game.endTurn();
@@ -243,7 +268,7 @@ function onEndTurn(): void {
 }
 function onDiscardAndEndTurn(): void {
   const ids = epoch.value.hand.map((c) => c.id);
-  for (const id of ids) game.discardForMaterial(id);
+  for (const id of ids) game.discardFromHand(id);
   game.endTurn();
   selectedIds.value = [];
 }
