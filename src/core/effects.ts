@@ -67,7 +67,7 @@ export function resolveEndOfTurn(ctx: EffectContext): void {
       case "addDissent": {
         ctx.log(`+${effect.amount} ${effect.variant} added to deck.`);
         for (let i = 0; i < effect.amount; i++) {
-          dispatch(ctx.epoch, { type: "dissent-added", variant: effect.variant });
+          dispatch(ctx.epoch, { type: "dissent-added", variant: effect.variant, ideology: effect.ideology });
         }
         break;
       }

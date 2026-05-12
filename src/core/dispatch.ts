@@ -64,7 +64,7 @@ export function dispatch(epoch: Epoch, ev: GameEvent): void {
       return;
     }
     case "dissent-added": {
-      const card = makeDissent(ev.variant);
+      const card = makeDissent(ev.variant, ev.ideology);
       ep.draw.unshift(card);
       break;
     }

@@ -318,7 +318,7 @@ export type GameEvent =
   | { type: "card-discarded"; card: Card; source: DiscardSource }
   | { type: "card-recalled-to-hand"; card: Card; columnIndex: number }
   | { type: "column-built"; columnIndex: number; unlock: ProjectUnlock }
-  | { type: "dissent-added"; variant: DissentVariant }
+  | { type: "dissent-added"; variant: DissentVariant; ideology?: Ideology }
   | { type: "turn-ended"; turn: number }
   | { type: "crisis-resolved"; outcome: CrisisOutcome };
 
