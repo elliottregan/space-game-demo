@@ -291,3 +291,26 @@ export function discardFromHand(epoch: Epoch, cardId: string): CmdResult<Card> {
   dispatch(epoch, { type: "card-discarded", card, source: "hand" });
   return { ok: true, value: card };
 }
+
+export function buildColumn(
+  epoch: Epoch,
+  setting: Setting,
+  columnIndex: number,
+): CmdResult<ProjectUnlock> {
+  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
+  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  const col = epoch.columns[columnIndex];
+  if (!col) return { ok: false, error: "Invalid column." };
+
+  const match = evaluateColumn(col, setting.projects);
+  if (!match) return { ok: false, error: "Column is not buildable." };
+
+  const unlock: ProjectUnlock = {
+    projectId: match.projectId,
+    pattern: match.kind,
+    turn: epoch.turn,
+    cards: [...match.cards],
+  };
+  dispatch(epoch, { type: "column-built", columnIndex, unlock });
+  return { ok: true, value: unlock };
+}
