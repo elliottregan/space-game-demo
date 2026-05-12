@@ -20,8 +20,8 @@
 </template>
 
 <script setup lang="ts">
-import type { Card as CardT } from "../../core/types.ts";
-import Card from "./Card.vue";
+import type { Card as CardT } from "../../../core/types.ts";
+import Card from "../core/Card.vue";
 
 defineProps<{
   card: CardT | null;

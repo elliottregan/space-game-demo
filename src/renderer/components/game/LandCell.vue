@@ -18,8 +18,8 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { Card as CardT } from "../../core/types.ts";
-import Card from "./Card.vue";
+import type { Card as CardT } from "../../../core/types.ts";
+import Card from "../core/Card.vue";
 
 const props = defineProps<{
   cards: CardT[];

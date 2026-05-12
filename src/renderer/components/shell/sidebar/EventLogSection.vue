@@ -11,7 +11,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { GameEvent } from "../../../core/types.ts";
+import type { GameEvent } from "../../../../core/types.ts";
 
 const props = defineProps<{ events: GameEvent[]; limit?: number }>();
 

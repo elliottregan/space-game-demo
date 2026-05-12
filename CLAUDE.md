@@ -66,10 +66,10 @@ Organized into three buckets. Each type lives next to the concept it describes; 
 
 - `App.vue` — root layout. CSS grid: projects · ideology · tableau (horizontal scroll) · hand + piles · errors.
 - `GameService.ts` — reactive bridge. `shallowRef<Snapshot>`, `shallowRef<SaveSlot[]>`, `ref<string | null>` for errors. Every command calls `api.persist()`.
-- `components/` — SFCs:
-  - Tableau: `TableauPanel`, `TableauColumn`, `LandCell`, `InfluenceCell`, `CharterCell`, `ColumnFooter`.
-  - Sidebar / overlays: `UnlockedProjectsPanel`, `LegacySidebar`, `CrisisScreen`, `CampaignEnd`, `CardListModal`, `MarketModal`, `SaveSlotMenu`, `ThemeToggle`.
-  - Other: `HandPanel`, `DeckDiscardPanel`, `IdeologyDisplay`, `AxisBar`, `TurnBar`, `Card`, `LegacyChoiceRow`.
+- `components/` — SFCs, three buckets mirroring `core/`:
+  - **`core/`** — pure visual primitives with no game-state knowledge. `Card`, `AxisBar`.
+  - **`shell/`** — chrome and framing around the play area: header (`TurnBar`, `SaveSlotMenu`, `ThemeToggle`), modals (`CampaignEnd`, `CardListModal`, `MarketModal`), sidebar scaffold (`LegacySidebar` + `sidebar/` sections).
+  - **`game/`** — gameplay-bound UI: tableau (`TableauPanel`, `TableauColumn`, `LandCell`, `InfluenceCell`, `CharterCell`, `ColumnFooter`), hand (`HandPanel`), piles (`DeckDiscardPanel`), info panels (`IdeologyDisplay`, `UnlockedProjectsPanel`), Crisis flow (`CrisisScreen`, `LegacyChoiceRow`).
 
 ### Scripts
 

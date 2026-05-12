@@ -39,7 +39,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { dragging, endDrag, readDragPayload } from "../util/dragState.ts";
+import { dragging, endDrag, readDragPayload } from "../../util/dragState.ts";
 
 defineProps<{
   drawCount: number;

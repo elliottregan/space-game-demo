@@ -27,10 +27,10 @@
 </template>
 
 <script setup lang="ts">
-import type { Card, Column } from "../../core/types.ts";
+import type { Card, Column } from "../../../core/types.ts";
 import TableauColumn from "./TableauColumn.vue";
-import { dragging } from "../util/dragState.ts";
-import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../../core/engine/column.ts";
+import { dragging } from "../../util/dragState.ts";
+import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../../../core/engine/column.ts";
 
 const props = defineProps<{
   columns: Column[];

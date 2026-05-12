@@ -23,8 +23,8 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { LegacyCandidate } from "../../core/types.ts";
-import { describeEffectSpec } from "../util/effects.ts";
+import type { LegacyCandidate } from "../../../core/types.ts";
+import { describeEffectSpec } from "../../util/effects.ts";
 
 const props = defineProps<{
   candidate: LegacyCandidate;

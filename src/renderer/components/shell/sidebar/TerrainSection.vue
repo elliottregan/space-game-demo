@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import type { IdeologyTerrain } from "../../../core/types.ts";
+import type { IdeologyTerrain } from "../../../../core/types.ts";
 
 defineProps<{ terrain: IdeologyTerrain }>();
 

@@ -77,9 +77,9 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { Card as CardT, Column } from "../../core/types.ts";
-import Card from "./Card.vue";
-import { beginDrag, endDrag, dragging } from "../util/dragState.ts";
+import type { Card as CardT, Column } from "../../../core/types.ts";
+import Card from "../core/Card.vue";
+import { beginDrag, endDrag, dragging } from "../../util/dragState.ts";
 
 const props = defineProps<{
   hand: CardT[];

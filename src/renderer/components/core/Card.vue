@@ -42,9 +42,9 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { Card } from "../../core/types.ts";
-import { flattenEffect, describeEffectSpec } from "../util/effects.ts";
-import { rankLabel, suitLabel, landMaterialPerTurn } from "../util/labels.ts";
+import type { Card } from "../../../core/types.ts";
+import { flattenEffect, describeEffectSpec } from "../../util/effects.ts";
+import { rankLabel, suitLabel, landMaterialPerTurn } from "../../util/labels.ts";
 
 const props = withDefaults(
   defineProps<{

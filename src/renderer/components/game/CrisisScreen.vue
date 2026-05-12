@@ -53,7 +53,7 @@ import type {
   LegacyCandidate,
   PatternKind,
   ProjectUnlock,
-} from "../../core/types.ts";
+} from "../../../core/types.ts";
 import LegacyChoiceRow from "./LegacyChoiceRow.vue";
 
 const props = defineProps<{

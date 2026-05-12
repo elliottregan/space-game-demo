@@ -23,8 +23,8 @@
 </template>
 
 <script setup lang="ts">
-import AxisBar from "./AxisBar.vue";
-import type { IdeologyVector, IdeologyTerrain } from "../../core/types.ts";
+import AxisBar from "../core/AxisBar.vue";
+import type { IdeologyVector, IdeologyTerrain } from "../../../core/types.ts";
 
 defineProps<{
   vector: IdeologyVector;

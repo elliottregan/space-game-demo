@@ -14,7 +14,7 @@ import MonumentsSection from "./sidebar/MonumentsSection.vue";
 import LegacyCardsSection from "./sidebar/LegacyCardsSection.vue";
 import DeckCountsSection from "./sidebar/DeckCountsSection.vue";
 import EventLogSection from "./sidebar/EventLogSection.vue";
-import type { GameEvent, IdeologyTerrain, LegacyCard, Monument } from "../../core/types.ts";
+import type { GameEvent, IdeologyTerrain, LegacyCard, Monument } from "../../../core/types.ts";
 
 defineProps<{
   terrain: IdeologyTerrain;

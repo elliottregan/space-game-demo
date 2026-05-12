@@ -12,7 +12,7 @@
 </template>
 
 <script setup lang="ts">
-import type { LegacyCard } from "../../../core/types.ts";
+import type { LegacyCard } from "../../../../core/types.ts";
 
 defineProps<{ cards: LegacyCard[] }>();
 </script>

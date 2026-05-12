@@ -45,8 +45,8 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onBeforeUnmount } from "vue";
-import type { SaveSlot } from "../../facade/persistence.ts";
-import { formatDate, formatRelative } from "../util/time.ts";
+import type { SaveSlot } from "../../../facade/persistence.ts";
+import { formatDate, formatRelative } from "../../util/time.ts";
 
 const props = defineProps<{
   slots: SaveSlot[];

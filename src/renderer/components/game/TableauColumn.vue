@@ -44,12 +44,12 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import type { Column } from "../../core/types.ts";
+import type { Column } from "../../../core/types.ts";
 import CharterCell from "./CharterCell.vue";
 import InfluenceCell from "./InfluenceCell.vue";
 import LandCell from "./LandCell.vue";
 import ColumnFooter from "./ColumnFooter.vue";
-import { dragging, endDrag, readDragPayload } from "../util/dragState.ts";
+import { dragging, endDrag, readDragPayload } from "../../util/dragState.ts";
 
 const props = defineProps<{
   column: Column;

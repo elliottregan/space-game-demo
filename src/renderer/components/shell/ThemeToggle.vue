@@ -10,7 +10,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { themePref, cycleTheme, themeLabel } from "../util/theme.ts";
+import { themePref, cycleTheme, themeLabel } from "../../util/theme.ts";
 
 const icon = computed(() => {
   if (themePref.value === "dark") return "◐";

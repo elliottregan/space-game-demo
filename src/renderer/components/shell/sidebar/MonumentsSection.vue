@@ -11,7 +11,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { Monument } from "../../../core/types.ts";
+import type { Monument } from "../../../../core/types.ts";
 
 const props = defineProps<{ monuments: Monument[] }>();
 
