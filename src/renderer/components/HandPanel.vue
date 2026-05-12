@@ -43,7 +43,7 @@
             :key="idx"
             class="primary"
             :disabled="!allAffordable"
-            @click="$emit('playToSlot', selectedIds, idx)"
+            @click="$emit('place-cards', selectedIds, idx)"
           >
             {{ playVerb }} {{ selectedCards.length }} → Slot {{ idx + 1 }}
           </button>
@@ -63,10 +63,10 @@
 
         <button
           class="secondary"
-          :title="`Discard ${selectedIds.length} card(s) for +${totalDiscardGain} Mat`"
-          @click="$emit('discardSelection', selectedIds)"
+          title="Discards the selected cards. Each adds 1 Quiet Dissent to the deck."
+          @click="$emit('discard-from-hand', selectedIds)"
         >
-          Discard {{ selectedIds.length }} (+{{ totalDiscardGain }} Mat)
+          Discard (+1 Dissent)
         </button>
       </template>
     </div>
@@ -83,17 +83,16 @@ const props = defineProps<{
   hand: CardT[];
   selectedIds: string[];
   influence: number;
-  discardGain: number;
   getEffectiveCost: (card: CardT) => number;
   getAlignment: (card: CardT) => "aligned" | "opposed" | "neutral";
-  validSlotsFor: (cardId: string) => number[];
+  validColumnsFor: (cardId: string) => number[];
 }>();
 
 defineEmits<{
   toggleSelect: [cardId: string];
   clearSelection: [];
-  playToSlot: [cardIds: string[], slotIndex: number];
-  discardSelection: [cardIds: string[]];
+  "place-cards": [cardIds: string[], columnIndex: number];
+  "discard-from-hand": [cardIds: string[]];
 }>();
 
 const selectedCards = computed(() =>
@@ -106,7 +105,7 @@ const playableSelection = computed(() => selectedCards.value.filter((c) => !isDi
 const validSharedSlots = computed(() => {
   const cards = playableSelection.value;
   if (cards.length === 0) return [];
-  const slotSets = cards.map((c) => new Set(props.validSlotsFor(c.id)));
+  const slotSets = cards.map((c) => new Set(props.validColumnsFor(c.id)));
   const first = slotSets[0];
   if (!first) return [];
   const intersection: number[] = [];
@@ -130,8 +129,6 @@ const playVerb = computed(() => {
   if (kinds.size === 1 && kinds.has("land")) return "Place";
   return "Play";
 });
-
-const totalDiscardGain = computed(() => props.discardGain * props.selectedIds.length);
 
 function isDissent(card: CardT): boolean {
   return card.tags.includes("dissent");
