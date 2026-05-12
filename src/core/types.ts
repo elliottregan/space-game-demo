@@ -99,28 +99,6 @@ export interface IdeologyTerrain {
 export type Demonym = "collective" | "dominion" | "ascendancy" | "keepers" | null;
 
 // -------------------------------------------------------------------------
-// Mega-Projects — hand-based completion
-// -------------------------------------------------------------------------
-
-/** What poker-like hand is required to play the mega-structure. */
-export type HandRequirement =
-  | { kind: "four-of-a-kind"; role: Role; count: 4 }
-  | { kind: "flush"; ideology: Ideology; count: number }
-  | { kind: "straight"; ranks: number[] }; // e.g., [11, 12, 13]
-
-export interface MegaProject {
-  id: string;
-  name: string;
-  description: string;
-  primaryAxis: "axis1" | "axis2";
-  primaryDirection: "positive" | "negative";
-  requiredHand: HandRequirement;
-  keystoneId: string; // the keystone card required in hand (in addition to the poker hand)
-  monumentEffect: { terrainDelta: Partial<IdeologyTerrain>; baseMagnitude: number };
-  flavor?: string;
-}
-
-// -------------------------------------------------------------------------
 // Short-term tasks (stubbed in this iteration — kept for future)
 // -------------------------------------------------------------------------
 
@@ -144,15 +122,12 @@ export interface TaskDef {
 
 export interface SettingRules {
   handSize: number;
-  tableauSlots: number;
+  columnCount: number;          // replaces tableauSlots
   influenceBaseline: number;
   materialsPerLandBase: number;
   deckStartMinSize: number;
-  softTurnLimit: number;
+  maxTurns: number;             // turn budget; Crisis fires when exceeded
   dissentLossThreshold: number;
-  retrieveInfluenceCost: number;
-  retrieveLandMaterialCost: number; // extra Material cost when retrieving a Land
-  discardMaterialGain: number; // Material gained when discarding a hand card
 }
 
 export interface Setting {
@@ -162,28 +137,19 @@ export interface Setting {
   flavorText: string;
   rules: SettingRules;
   startingDeck: string[];
-  startingTableau: TableauSlotConfig[];
-  megaProjects: MegaProject[];
+  startingColumns: ColumnConfig[];   // replaces startingTableau
+  projects: KeystoneProject[];       // exactly 5, one per pattern
+  crisis: Crisis;
   shortTermTasks: TaskDef[];
   transitions: {
-    onWin: Record<string, string | "campaign-end">;
+    onWin: string | "campaign-end";  // single next-setting; no per-project routing
     onLoss: string | "campaign-end";
   };
-}
-
-export interface TableauSlotConfig {
-  lands: string[]; // card ids (must share rank if multiple)
-  topper?: string; // card id of a Role/Keystone topper
 }
 
 // -------------------------------------------------------------------------
 // Runtime state
 // -------------------------------------------------------------------------
-
-export interface TableauSlot {
-  lands: Card[]; // stack of matching-rank Lands (1..4)
-  topper: Card | null; // Role or Keystone (requires improved slot, i.e., lands.length >= 2)
-}
 
 export interface TaskProgressState {
   taskId: string;
@@ -199,32 +165,27 @@ export interface Epoch {
   hand: Card[];
   draw: Card[];
   discard: Card[];
-  tableau: TableauSlot[];
+  columns: Column[];              // replaces tableau
+  unlockedProjects: ProjectUnlock[];
+  eventLog: GameEvent[];          // typed event log (was EventEntry[])
   influence: number;
   materials: number;
   taskProgress: Record<string, TaskProgressState>;
   tasksRevealed: string[];
   endOfTurnQueue: EffectSpec[];
-  eventLog: EventEntry[];
   status: EpochStatus;
+  crisis: {
+    status: "pending" | "resolved";
+    outcome?: CrisisOutcome;
+  };
 }
 
-export type EpochPhase = "draw" | "main" | "upkeep" | "end" | "ended";
+export type EpochPhase = "play" | "crisis" | "end-of-epoch";
 
 export type EpochStatus =
   | { kind: "in-progress" }
-  | { kind: "won"; projectId: string; tier: CompletionTier; score: number }
-  | { kind: "lost"; mode: LossMode };
-
-export type LossMode = "populace-turned" | "starved-out";
-
-export type CompletionTier = "bronze" | "silver" | "gold" | "platinum";
-
-export interface EventEntry {
-  turn: number;
-  text: string;
-  kind?: "info" | "warn" | "danger";
-}
+  | { kind: "won"; outcome: CrisisOutcome }
+  | { kind: "lost"; outcome: CrisisOutcome };
 
 // -------------------------------------------------------------------------
 // Campaign
@@ -232,9 +193,8 @@ export interface EventEntry {
 
 export interface Monument {
   id: string;
-  megaProjectId: string;
+  projectId: string;     // matches the strongest unlock that triggered it
   projectName: string;
-  tier: CompletionTier;
   mintedOnEpoch: number;
   terrainDelta: Partial<IdeologyTerrain>;
   active: boolean;
@@ -245,16 +205,15 @@ export interface LegacyCard {
   baseCard: Card;
   upgradePath: "potency" | "pliability" | "persistence";
   mintedOnEpoch: number;
-  mintedFrom: "mega-project" | "played" | "consolation";
+  mintedFrom: "unlock" | "consolation";
 }
 
 export interface EpochResult {
   epochNumber: number;
   settingId: string;
   outcome: "win" | "loss";
-  completedProjectId?: string;
-  completionTier?: CompletionTier;
-  lossMode?: LossMode;
+  totalValue: number;
+  unlockCount: number;
   mintedLegacyIds: string[];
   finalIdeology: IdeologyVector;
 }
@@ -273,7 +232,7 @@ export interface Campaign {
 export interface LegacyCandidate {
   id: string;
   baseCard: Card;
-  source: "mega-project" | "played" | "consolation";
+  source: "unlock" | "consolation";
   suggestedUpgrades: ("potency" | "pliability" | "persistence")[];
 }
 
@@ -287,7 +246,7 @@ export const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 export const err = <T>(error: string): Result<T> => ({ ok: false, error });
 
 // --------------------------------------------------------------------------
-// New: three-tier column (replaces TableauSlot in a later task).
+// Three-tier column
 // --------------------------------------------------------------------------
 
 export interface LandRow {
@@ -363,5 +322,3 @@ export type GameEvent =
   | { type: "turn-ended"; turn: number }
   | { type: "crisis-resolved"; outcome: CrisisOutcome };
 
-// New phase enum (will replace the existing EpochPhase later).
-export type EpochPhaseV2 = "play" | "crisis" | "end-of-epoch";
