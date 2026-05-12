@@ -41,3 +41,8 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Devcontainer
 .devcontainer/.env
 .cspace.local.json
+.cspace-postcreate-done
+
+# Playwright / browser smoke-test artifacts
+.playwright-mcp
+*.png

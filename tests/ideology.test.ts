@@ -29,10 +29,7 @@ describe("deriveVector", () => {
   test("tableau of Solidarity 2 + 3 tilts axis1 negative", () => {
     // Two separate columns — rank mismatch means they can't share a column,
     // but deriveVector is a pure function and accepts any columns.
-    const cols: Column[] = [
-      col([landId(2, "solidarity")]),
-      col([landId(3, "solidarity")]),
-    ];
+    const cols: Column[] = [col([landId(2, "solidarity")]), col([landId(3, "solidarity")])];
     const v = deriveVector(cols, { axis1: 0, axis2: 0 });
     expect(v.axis1).toBe(-5);
     expect(v.axis2).toBe(0);

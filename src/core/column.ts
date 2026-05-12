@@ -61,11 +61,7 @@ export function columnLandRank(col: Column): number | null {
 }
 
 export function isBuildable(col: Column): boolean {
-  return (
-    col.lands.cards.length >= 1 &&
-    col.influence.card !== null &&
-    col.charter.card !== null
-  );
+  return col.lands.cards.length >= 1 && col.influence.card !== null && col.charter.card !== null;
 }
 
 export function columnFromConfig(

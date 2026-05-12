@@ -3,7 +3,9 @@
     <div class="modal crisis-screen">
       <h1>{{ crisis.name }}</h1>
       <p class="flavor">{{ crisis.flavor }}</p>
-      <p class="difficulty">Difficulty: <b>{{ crisis.difficulty }}</b></p>
+      <p class="difficulty">
+        Difficulty: <b>{{ crisis.difficulty }}</b>
+      </p>
 
       <ol class="unlock-walk">
         <li v-for="(u, i) in walk" :key="u.projectId + '@' + u.turn">
@@ -20,8 +22,10 @@
       </p>
 
       <p class="ideology">
-        Ideology: S{{ breakdown.solidarity }} · V{{ breakdown.sovereignty }} ·
-        T{{ breakdown.transformation }} · H{{ breakdown.heritage }}
+        Ideology: S{{ breakdown.solidarity }} · V{{ breakdown.sovereignty }} · T{{
+          breakdown.transformation
+        }}
+        · H{{ breakdown.heritage }}
       </p>
 
       <LegacyChoiceRow
@@ -80,11 +84,16 @@ const nextLabel = computed(() =>
 
 function patternLabel(p: PatternKind): string {
   switch (p) {
-    case "four-of-a-kind": return "Four";
-    case "flush": return "Flush";
-    case "three-of-a-kind": return "Three";
-    case "pair": return "Pair";
-    case "high-card": return "High";
+    case "four-of-a-kind":
+      return "Four";
+    case "flush":
+      return "Flush";
+    case "three-of-a-kind":
+      return "Three";
+    case "pair":
+      return "Pair";
+    case "high-card":
+      return "High";
   }
 }
 function projectName(id: string): string {

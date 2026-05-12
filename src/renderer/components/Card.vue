@@ -4,7 +4,14 @@
       'card',
       `suit-${card.ideology}`,
       `kind-${card.kind}`,
-      { selectable, selected, unaffordable, wild: card.ideology === 'wild', compact, dragging: isDragging },
+      {
+        selectable,
+        selected,
+        unaffordable,
+        wild: card.ideology === 'wild',
+        compact,
+        dragging: isDragging,
+      },
     ]"
     :draggable="draggable"
     @click="$emit('select')"

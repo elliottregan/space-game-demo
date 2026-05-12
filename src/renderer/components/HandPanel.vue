@@ -23,7 +23,9 @@
         @dragstart="onCardDragStart(card, $event)"
         @dragend="onCardDragEnd"
       />
-      <div v-if="hand.length === 0" style="color: var(--text-subtle); padding: 40px">Empty hand</div>
+      <div v-if="hand.length === 0" style="color: var(--text-subtle); padding: 40px">
+        Empty hand
+      </div>
     </div>
 
     <div class="hand-actions">

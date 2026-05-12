@@ -1,6 +1,8 @@
 <template>
   <div class="axis-row">
-    <div class="axis-label"><span class="left">{{ leftLabel }}</span></div>
+    <div class="axis-label">
+      <span class="left">{{ leftLabel }}</span>
+    </div>
     <div class="axis-bar">
       <div class="center-line"></div>
       <div class="threshold" :style="{ left: percent(-3) + '%' }"></div>

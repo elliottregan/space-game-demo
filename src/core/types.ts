@@ -122,11 +122,11 @@ export interface TaskDef {
 
 export interface SettingRules {
   handSize: number;
-  columnCount: number;          // replaces tableauSlots
+  columnCount: number; // replaces tableauSlots
   influenceBaseline: number;
   materialsPerLandBase: number;
   deckStartMinSize: number;
-  maxTurns: number;             // turn budget; Crisis fires when exceeded
+  maxTurns: number; // turn budget; Crisis fires when exceeded
   dissentLossThreshold: number;
 }
 
@@ -137,12 +137,12 @@ export interface Setting {
   flavorText: string;
   rules: SettingRules;
   startingDeck: string[];
-  startingColumns: ColumnConfig[];   // replaces startingTableau
-  projects: KeystoneProject[];       // exactly 5, one per pattern
+  startingColumns: ColumnConfig[]; // replaces startingTableau
+  projects: KeystoneProject[]; // exactly 5, one per pattern
   crisis: Crisis;
   shortTermTasks: TaskDef[];
   transitions: {
-    onWin: string | "campaign-end";  // single next-setting; no per-project routing
+    onWin: string | "campaign-end"; // single next-setting; no per-project routing
     onLoss: string | "campaign-end";
   };
 }
@@ -165,9 +165,9 @@ export interface Epoch {
   hand: Card[];
   draw: Card[];
   discard: Card[];
-  columns: Column[];              // replaces tableau
+  columns: Column[]; // replaces tableau
   unlockedProjects: ProjectUnlock[];
-  eventLog: GameEvent[];          // typed event log (was EventEntry[])
+  eventLog: GameEvent[]; // typed event log (was EventEntry[])
   influence: number;
   materials: number;
   taskProgress: Record<string, TaskProgressState>;
@@ -193,7 +193,7 @@ export type EpochStatus =
 
 export interface Monument {
   id: string;
-  projectId: string;     // matches the strongest unlock that triggered it
+  projectId: string; // matches the strongest unlock that triggered it
   projectName: string;
   mintedOnEpoch: number;
   terrainDelta: Partial<IdeologyTerrain>;
@@ -273,19 +273,14 @@ export interface ColumnConfig {
   charter?: string;
 }
 
-export type PatternKind =
-  | "high-card"
-  | "pair"
-  | "three-of-a-kind"
-  | "flush"
-  | "four-of-a-kind";
+export type PatternKind = "high-card" | "pair" | "three-of-a-kind" | "flush" | "four-of-a-kind";
 
 export interface KeystoneProject {
   id: string;
   pattern: PatternKind;
   name: string;
   flavor: string;
-  value: number;            // contribution to Crisis score
+  value: number; // contribution to Crisis score
   unlockEffect?: EffectSpec; // semantics deferred
 }
 
@@ -321,4 +316,3 @@ export type GameEvent =
   | { type: "dissent-added"; variant: DissentVariant; ideology?: Ideology }
   | { type: "turn-ended"; turn: number }
   | { type: "crisis-resolved"; outcome: CrisisOutcome };
-

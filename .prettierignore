@@ -1,0 +1,14 @@
+node_modules
+dist
+.cspace
+.playwright-mcp
+*.png
+docs/
+
+# External / user-managed content — leave whitespace alone.
+.agents/
+.claude/
+.github/
+.cspace/
+*.md
+bun.lock

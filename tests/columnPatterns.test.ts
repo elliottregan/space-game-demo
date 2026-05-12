@@ -1,29 +1,30 @@
 import { describe, test, expect } from "bun:test";
 import { evaluateColumn } from "../src/core/columnPatterns.ts";
-import {
-  createEmptyColumn,
-  placeLand,
-  placeInfluence,
-  placeCharter,
-} from "../src/core/column.ts";
+import { createEmptyColumn, placeLand, placeInfluence, placeCharter } from "../src/core/column.ts";
 import { getCard, landId, roleId } from "../src/core/cards.ts";
 import type { KeystoneProject } from "../src/core/types.ts";
 
 const land = (rank: number, ideo: "solidarity" | "sovereignty" | "transformation" | "heritage") =>
   getCard(landId(rank, ideo));
-const role = (r: "agitator" | "scholar" | "preacher" | "engineer" | "architect", i: "solidarity" | "sovereignty" | "transformation" | "heritage") =>
-  getCard(roleId(r, i));
+const role = (
+  r: "agitator" | "scholar" | "preacher" | "engineer" | "architect",
+  i: "solidarity" | "sovereignty" | "transformation" | "heritage",
+) => getCard(roleId(r, i));
 const charter = () => getCard("keystone-founding-charter");
 
 const projects: KeystoneProject[] = [
-  { id: "p-high",  pattern: "high-card",       name: "High",  flavor: "", value: 1 },
-  { id: "p-pair",  pattern: "pair",            name: "Pair",  flavor: "", value: 2 },
+  { id: "p-high", pattern: "high-card", name: "High", flavor: "", value: 1 },
+  { id: "p-pair", pattern: "pair", name: "Pair", flavor: "", value: 2 },
   { id: "p-three", pattern: "three-of-a-kind", name: "Three", flavor: "", value: 4 },
-  { id: "p-flush", pattern: "flush",           name: "Flush", flavor: "", value: 5 },
-  { id: "p-four",  pattern: "four-of-a-kind",  name: "Four",  flavor: "", value: 8 },
+  { id: "p-flush", pattern: "flush", name: "Flush", flavor: "", value: 5 },
+  { id: "p-four", pattern: "four-of-a-kind", name: "Four", flavor: "", value: 8 },
 ];
 
-function complete(rank: number, landIdeo: ("solidarity" | "sovereignty" | "transformation" | "heritage")[], roleIdeo: "solidarity" | "sovereignty" | "transformation" | "heritage" = "heritage") {
+function complete(
+  rank: number,
+  landIdeo: ("solidarity" | "sovereignty" | "transformation" | "heritage")[],
+  roleIdeo: "solidarity" | "sovereignty" | "transformation" | "heritage" = "heritage",
+) {
   const col = createEmptyColumn();
   for (const i of landIdeo) placeLand(col, land(rank, i));
   placeInfluence(col, role("scholar", roleIdeo));
@@ -51,7 +52,10 @@ describe("evaluateColumn", () => {
   });
 
   test("three-of-a-kind: 3 same-rank lands, mixed ideology", () => {
-    const m = evaluateColumn(complete(7, ["solidarity", "heritage", "sovereignty"], "transformation"), projects);
+    const m = evaluateColumn(
+      complete(7, ["solidarity", "heritage", "sovereignty"], "transformation"),
+      projects,
+    );
     expect(m?.kind).toBe("three-of-a-kind");
   });
 

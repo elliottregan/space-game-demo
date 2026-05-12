@@ -69,35 +69,43 @@ class GameService {
   // Commands
   placeCard(cardId: string, columnIndex: number): void {
     const r = this.api.placeCard(cardId, columnIndex);
-    this.report(r as any); this.refresh();
+    this.report(r as any);
+    this.refresh();
   }
   discardLand(columnIndex: number): void {
     const r = this.api.discardLand(columnIndex);
-    this.report(r as any); this.refresh();
+    this.report(r as any);
+    this.refresh();
   }
   discardCharter(columnIndex: number): void {
     const r = this.api.discardCharter(columnIndex);
-    this.report(r as any); this.refresh();
+    this.report(r as any);
+    this.refresh();
   }
   recallInfluence(columnIndex: number): void {
     const r = this.api.recallInfluence(columnIndex);
-    this.report(r as any); this.refresh();
+    this.report(r as any);
+    this.refresh();
   }
   discardColumn(columnIndex: number): void {
     const r = this.api.discardColumn(columnIndex);
-    this.report(r as any); this.refresh();
+    this.report(r as any);
+    this.refresh();
   }
   discardFromHand(cardId: string): void {
     const r = this.api.discardFromHand(cardId);
-    this.report(r as any); this.refresh();
+    this.report(r as any);
+    this.refresh();
   }
   buildColumn(columnIndex: number): void {
     const r = this.api.buildColumn(columnIndex);
-    this.report(r as any); this.refresh();
+    this.report(r as any);
+    this.refresh();
   }
   resolveCrisis(): void {
     const r = this.api.resolveCrisis();
-    this.report(r as any); this.refresh();
+    this.report(r as any);
+    this.refresh();
   }
 
   endTurn(): void {

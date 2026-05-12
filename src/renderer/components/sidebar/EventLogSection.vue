@@ -43,5 +43,8 @@ function formatEvent(e: GameEvent): string {
 </script>
 
 <style scoped>
-.event-entry { color: var(--text-subtle); font-size: 11px; }
+.event-entry {
+  color: var(--text-subtle);
+  font-size: 11px;
+}
 </style>

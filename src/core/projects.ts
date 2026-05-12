@@ -1,11 +1,6 @@
 // Helpers for KeystoneProject lookup, ordering, and ideology aggregation.
 
-import type {
-  Ideology,
-  KeystoneProject,
-  PatternKind,
-  ProjectUnlock,
-} from "./types.ts";
+import type { Ideology, KeystoneProject, PatternKind, ProjectUnlock } from "./types.ts";
 
 export const PATTERNS_IN_ORDER: PatternKind[] = [
   "high-card",
@@ -34,9 +29,7 @@ export function getProjectForPattern(
   return projects.find((p) => p.pattern === pattern) ?? null;
 }
 
-export function unlockedIdeologyBreakdown(
-  unlocks: ProjectUnlock[],
-): Record<Ideology, number> {
+export function unlockedIdeologyBreakdown(unlocks: ProjectUnlock[]): Record<Ideology, number> {
   const out: Record<Ideology, number> = {
     solidarity: 0,
     sovereignty: 0,

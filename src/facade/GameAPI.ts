@@ -167,14 +167,17 @@ export class GameAPI {
 
   snapshot(): Snapshot {
     const vector = currentVector(this.epoch, this.campaign);
-    const dis = this.epoch.hand.concat(this.epoch.draw, this.epoch.discard)
+    const dis = this.epoch.hand
+      .concat(this.epoch.draw, this.epoch.discard)
       .filter((c) => c.tags.includes("dissent")).length;
     const columnsView: Column[] = this.epoch.columns.map((c) => ({
       lands: { cards: [...c.lands.cards] },
       influence: { card: c.influence.card },
       charter: { card: c.charter.card },
     }));
-    const columnBuildable = columnsView.map((c) => evaluateColumn(c, this.setting.projects) !== null);
+    const columnBuildable = columnsView.map(
+      (c) => evaluateColumn(c, this.setting.projects) !== null,
+    );
     const epochView: Epoch = {
       ...this.epoch,
       hand: [...this.epoch.hand],
@@ -270,7 +273,9 @@ export class GameAPI {
   }
   buildColumn(columnIndex: number): CommandResult<{ projectId: string; pattern: string }> {
     const r = buildColumnCore(this.epoch, this.setting, columnIndex);
-    return r.ok ? { ok: true, value: { projectId: r.value.projectId, pattern: r.value.pattern } } : r;
+    return r.ok
+      ? { ok: true, value: { projectId: r.value.projectId, pattern: r.value.pattern } }
+      : r;
   }
 
   endTurn(): CommandResult {
@@ -302,7 +307,11 @@ export class GameAPI {
   ): CommandResult<"next" | "campaign-end"> {
     if (!this.endOfEpoch) return { ok: false, error: "Epoch is still in progress." };
     const result = finalizeEpoch(
-      this.epoch, this.setting, this.campaign, this.endOfEpoch, upgradeChoices,
+      this.epoch,
+      this.setting,
+      this.campaign,
+      this.endOfEpoch,
+      upgradeChoices,
     );
     this.endOfEpoch = null;
     if (result.kind === "campaign-end") return { ok: true, value: "campaign-end" };

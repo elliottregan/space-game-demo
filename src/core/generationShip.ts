@@ -16,21 +16,41 @@ const STARTING_DECK = ALL_CARDS.filter((c) => SHIP_IDEOLOGIES.has(c.ideology)).m
 // Four-of-a-Kind mathematically impossible (only 2 Lands per rank exist).
 // The Ship's design identity: "small builds, many of them, made to count."
 const PROJECTS: KeystoneProject[] = [
-  { id: "ship-bulkhead-patch", pattern: "high-card",
-    name: "Bulkhead Patch", flavor: "Tape and prayer.",
-    value: 2 },
-  { id: "ship-twin-screws", pattern: "pair",
-    name: "Twin Screws", flavor: "Redundancy is doctrine.",
-    value: 3 },
-  { id: "ship-trinity-array", pattern: "three-of-a-kind",
-    name: "Trinity Array", flavor: "Three antennae, one ear.",
-    value: DEFAULT_PROJECT_VALUE["three-of-a-kind"] },
-  { id: "ship-unison-engine", pattern: "flush",
-    name: "Unison Engine", flavor: "All ideologies pull the same direction.",
-    value: DEFAULT_PROJECT_VALUE["flush"] },
-  { id: "ship-fourfold-drive", pattern: "four-of-a-kind",
-    name: "Fourfold Drive", flavor: "Four engines, one heartbeat.",
-    value: DEFAULT_PROJECT_VALUE["four-of-a-kind"] },
+  {
+    id: "ship-bulkhead-patch",
+    pattern: "high-card",
+    name: "Bulkhead Patch",
+    flavor: "Tape and prayer.",
+    value: 2,
+  },
+  {
+    id: "ship-twin-screws",
+    pattern: "pair",
+    name: "Twin Screws",
+    flavor: "Redundancy is doctrine.",
+    value: 3,
+  },
+  {
+    id: "ship-trinity-array",
+    pattern: "three-of-a-kind",
+    name: "Trinity Array",
+    flavor: "Three antennae, one ear.",
+    value: DEFAULT_PROJECT_VALUE["three-of-a-kind"],
+  },
+  {
+    id: "ship-unison-engine",
+    pattern: "flush",
+    name: "Unison Engine",
+    flavor: "All ideologies pull the same direction.",
+    value: DEFAULT_PROJECT_VALUE["flush"],
+  },
+  {
+    id: "ship-fourfold-drive",
+    pattern: "four-of-a-kind",
+    name: "Fourfold Drive",
+    flavor: "Four engines, one heartbeat.",
+    value: DEFAULT_PROJECT_VALUE["four-of-a-kind"],
+  },
 ];
 
 const CRISIS: Crisis = {

@@ -2,9 +2,8 @@
   <section class="section">
     <h2>Deck</h2>
     <div class="deck-counts">
-      <span>Hand</span><span>{{ counts.hand }}</span>
-      <span>Draw</span><span>{{ counts.draw }}</span>
-      <span>Discard</span><span>{{ counts.discard }}</span>
+      <span>Hand</span><span>{{ counts.hand }}</span> <span>Draw</span
+      ><span>{{ counts.draw }}</span> <span>Discard</span><span>{{ counts.discard }}</span>
       <span :class="{ danger }">Dissent</span>
       <span :class="{ danger }">{{ counts.dissent }} / {{ total }}</span>
     </div>

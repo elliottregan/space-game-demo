@@ -3,7 +3,10 @@
     <div class="meta">
       <b>Epoch {{ epochNumber }}</b> · {{ settingName }}
     </div>
-    <div class="turn-progress" :class="{ near: turn / maxTurns >= 0.66, edge: turn / maxTurns >= 0.85 }">
+    <div
+      class="turn-progress"
+      :class="{ near: turn / maxTurns >= 0.66, edge: turn / maxTurns >= 0.85 }"
+    >
       Turn {{ turn }} / {{ maxTurns }} · Crisis after T{{ maxTurns }}
     </div>
     <div class="resources">
@@ -29,6 +32,10 @@ defineEmits<{ "end-turn": [] }>();
 </script>
 
 <style scoped>
-.turn-progress.near { color: var(--warn, #c80); }
-.turn-progress.edge { color: var(--danger, #c33); }
+.turn-progress.near {
+  color: var(--warn, #c80);
+}
+.turn-progress.edge {
+  color: var(--danger, #c33);
+}
 </style>

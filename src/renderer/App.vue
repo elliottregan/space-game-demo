@@ -83,7 +83,11 @@
           @drop-card="onDiscardFromHand"
         />
 
-        <button v-if="!eoe && epoch.phase === 'crisis'" class="primary resolve-crisis" @click="onResolveCrisis">
+        <button
+          v-if="!eoe && epoch.phase === 'crisis'"
+          class="primary resolve-crisis"
+          @click="onResolveCrisis"
+        >
           Resolve Crisis
         </button>
 
@@ -205,7 +209,10 @@ function getCardFromHand(cardId: string): Card | null {
 }
 
 function patternLabel(p: string): string {
-  return p.split("-").map((s) => s[0]!.toUpperCase() + s.slice(1)).join(" ");
+  return p
+    .split("-")
+    .map((s) => s[0]!.toUpperCase() + s.slice(1))
+    .join(" ");
 }
 
 function getEffectiveCost(card: Card): number {

@@ -28,5 +28,7 @@ function fmt(n: number): string {
   justify-content: space-between;
   font-size: 11px;
 }
-.value { color: var(--accent); }
+.value {
+  color: var(--accent);
+}
 </style>

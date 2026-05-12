@@ -7,21 +7,41 @@ import { DEFAULT_PROJECT_VALUE } from "./projects.ts";
 const ALL_CARD_IDS = ALL_CARDS.map((c) => c.id);
 
 const PROJECTS: KeystoneProject[] = [
-  { id: "ruin-candle", pattern: "high-card",
-    name: "Candle in the Dust", flavor: "Something burns again.",
-    value: DEFAULT_PROJECT_VALUE["high-card"] },
-  { id: "ruin-two-stones", pattern: "pair",
-    name: "Two Stones Reset", flavor: "The first wall returns.",
-    value: DEFAULT_PROJECT_VALUE["pair"] },
-  { id: "ruin-third-pillar", pattern: "three-of-a-kind",
-    name: "Third Pillar", flavor: "Memory is laid in threes.",
-    value: DEFAULT_PROJECT_VALUE["three-of-a-kind"] },
-  { id: "ruin-monoculture", pattern: "flush",
-    name: "Monoculture", flavor: "One belief survives, for now.",
-    value: DEFAULT_PROJECT_VALUE["flush"] },
-  { id: "ruin-cornerstones", pattern: "four-of-a-kind",
-    name: "The Cornerstones", flavor: "Four corners hold what is left.",
-    value: DEFAULT_PROJECT_VALUE["four-of-a-kind"] },
+  {
+    id: "ruin-candle",
+    pattern: "high-card",
+    name: "Candle in the Dust",
+    flavor: "Something burns again.",
+    value: DEFAULT_PROJECT_VALUE["high-card"],
+  },
+  {
+    id: "ruin-two-stones",
+    pattern: "pair",
+    name: "Two Stones Reset",
+    flavor: "The first wall returns.",
+    value: DEFAULT_PROJECT_VALUE["pair"],
+  },
+  {
+    id: "ruin-third-pillar",
+    pattern: "three-of-a-kind",
+    name: "Third Pillar",
+    flavor: "Memory is laid in threes.",
+    value: DEFAULT_PROJECT_VALUE["three-of-a-kind"],
+  },
+  {
+    id: "ruin-monoculture",
+    pattern: "flush",
+    name: "Monoculture",
+    flavor: "One belief survives, for now.",
+    value: DEFAULT_PROJECT_VALUE["flush"],
+  },
+  {
+    id: "ruin-cornerstones",
+    pattern: "four-of-a-kind",
+    name: "The Cornerstones",
+    flavor: "Four corners hold what is left.",
+    value: DEFAULT_PROJECT_VALUE["four-of-a-kind"],
+  },
 ];
 
 const CRISIS: Crisis = {

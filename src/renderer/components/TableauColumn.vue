@@ -64,7 +64,7 @@ const emit = defineEmits<{
   "discard-charter": [];
   "recall-influence": [];
   "discard-column": [];
-  "build": [];
+  build: [];
 }>();
 
 const dragOver = ref<"land" | "influence" | "charter" | null>(null);
@@ -87,9 +87,11 @@ function onDragOver(e: DragEvent, row: "land" | "influence" | "charter"): void {
   if (e.dataTransfer && rowAcceptsDrag(row)) e.dataTransfer.dropEffect = "move";
 }
 function rowAcceptsDrag(row: "land" | "influence" | "charter"): boolean {
-  return row === "land" ? props.validForDrag.land
-    : row === "influence" ? props.validForDrag.influence
-    : props.validForDrag.charter;
+  return row === "land"
+    ? props.validForDrag.land
+    : row === "influence"
+      ? props.validForDrag.influence
+      : props.validForDrag.charter;
 }
 function onDrop(e: DragEvent): void {
   dragOver.value = null;

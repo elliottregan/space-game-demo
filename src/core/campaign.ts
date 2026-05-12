@@ -94,7 +94,11 @@ export function finalizeEpoch(
   upgradeChoices: Record<string, "potency" | "pliability" | "persistence">,
 ): { kind: "next"; epoch: Epoch; setting: Setting } | { kind: "campaign-end" } {
   const legacyCards: LegacyCard[] = state.candidates.map((cand) =>
-    applyUpgrade(cand, upgradeChoices[cand.id] ?? cand.suggestedUpgrades[0] ?? "potency", epoch.epochNumber),
+    applyUpgrade(
+      cand,
+      upgradeChoices[cand.id] ?? cand.suggestedUpgrades[0] ?? "potency",
+      epoch.epochNumber,
+    ),
   );
   campaign.legacyCards.push(...legacyCards);
   if (state.monument) addMonumentToCampaign(campaign, state.monument);

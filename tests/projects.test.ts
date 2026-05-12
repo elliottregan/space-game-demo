@@ -10,11 +10,11 @@ import type { KeystoneProject, ProjectUnlock } from "../src/core/types.ts";
 import { getCard, landId, roleId } from "../src/core/cards.ts";
 
 const sample: KeystoneProject[] = [
-  { id: "p-high",  pattern: "high-card",       name: "h", flavor: "", value: 1 },
-  { id: "p-pair",  pattern: "pair",            name: "p", flavor: "", value: 2 },
+  { id: "p-high", pattern: "high-card", name: "h", flavor: "", value: 1 },
+  { id: "p-pair", pattern: "pair", name: "p", flavor: "", value: 2 },
   { id: "p-three", pattern: "three-of-a-kind", name: "t", flavor: "", value: 4 },
-  { id: "p-flush", pattern: "flush",           name: "f", flavor: "", value: 5 },
-  { id: "p-four",  pattern: "four-of-a-kind",  name: "4", flavor: "", value: 8 },
+  { id: "p-flush", pattern: "flush", name: "f", flavor: "", value: 5 },
+  { id: "p-four", pattern: "four-of-a-kind", name: "4", flavor: "", value: 8 },
 ];
 
 describe("projects helpers", () => {
@@ -55,10 +55,14 @@ describe("projects helpers", () => {
   });
 
   test("unlockedIdeologyBreakdown sums non-wild ideology counts", () => {
-    const land = (rank: number, ideo: "solidarity" | "sovereignty" | "transformation" | "heritage") =>
-      getCard(landId(rank, ideo));
-    const role = (r: "agitator" | "scholar" | "preacher" | "engineer" | "architect", i: "solidarity" | "sovereignty" | "transformation" | "heritage") =>
-      getCard(roleId(r, i));
+    const land = (
+      rank: number,
+      ideo: "solidarity" | "sovereignty" | "transformation" | "heritage",
+    ) => getCard(landId(rank, ideo));
+    const role = (
+      r: "agitator" | "scholar" | "preacher" | "engineer" | "architect",
+      i: "solidarity" | "sovereignty" | "transformation" | "heritage",
+    ) => getCard(roleId(r, i));
     const unlocks: ProjectUnlock[] = [
       {
         projectId: "x",
@@ -75,7 +79,11 @@ describe("projects helpers", () => {
         projectId: "y",
         pattern: "high-card",
         turn: 2,
-        cards: [land(3, "sovereignty"), role("scholar", "sovereignty"), getCard("keystone-pioneer")], // wild keystone
+        cards: [
+          land(3, "sovereignty"),
+          role("scholar", "sovereignty"),
+          getCard("keystone-pioneer"),
+        ], // wild keystone
       },
     ];
     const b = unlockedIdeologyBreakdown(unlocks);

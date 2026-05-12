@@ -9,9 +9,8 @@
     </div>
     <div v-for="group in grouped" :key="group.pattern" class="pattern-group">
       <div class="pattern-header">
-        {{ patternLabel(group.pattern) }} ·
-        {{ group.unlocks.length }} unlocked ·
-        value {{ group.totalValue }}
+        {{ patternLabel(group.pattern) }} · {{ group.unlocks.length }} unlocked · value
+        {{ group.totalValue }}
       </div>
       <div v-for="u in group.unlocks" :key="u.projectId + '@' + u.turn" class="unlock-entry">
         <span class="project-name">{{ projectName(u.projectId) }}</span>
@@ -34,31 +33,44 @@ const props = defineProps<{
 }>();
 
 const grouped = computed(() => {
-  return [...PATTERNS_IN_ORDER].reverse().map((pattern) => {
-    const unlocks = props.unlocks.filter((u) => u.pattern === pattern);
-    let totalValue = 0;
-    for (const u of unlocks) {
-      const p = props.projects.find((p) => p.id === u.projectId);
-      if (p) totalValue += p.value;
-    }
-    return { pattern, unlocks, totalValue };
-  }).filter((g) => g.unlocks.length > 0);
+  return [...PATTERNS_IN_ORDER]
+    .reverse()
+    .map((pattern) => {
+      const unlocks = props.unlocks.filter((u) => u.pattern === pattern);
+      let totalValue = 0;
+      for (const u of unlocks) {
+        const p = props.projects.find((p) => p.id === u.projectId);
+        if (p) totalValue += p.value;
+      }
+      return { pattern, unlocks, totalValue };
+    })
+    .filter((g) => g.unlocks.length > 0);
 });
 
 function patternLabel(p: PatternKind): string {
   switch (p) {
-    case "four-of-a-kind": return "Four of a Kind";
-    case "flush": return "Flush";
-    case "three-of-a-kind": return "Three of a Kind";
-    case "pair": return "Pair";
-    case "high-card": return "High Card";
+    case "four-of-a-kind":
+      return "Four of a Kind";
+    case "flush":
+      return "Flush";
+    case "three-of-a-kind":
+      return "Three of a Kind";
+    case "pair":
+      return "Pair";
+    case "high-card":
+      return "High Card";
   }
 }
 function projectName(id: string): string {
   return props.projects.find((p) => p.id === id)?.name ?? id;
 }
 function entryIdeology(u: ProjectUnlock): string {
-  const counts: Record<Ideology, number> = { solidarity: 0, sovereignty: 0, transformation: 0, heritage: 0 };
+  const counts: Record<Ideology, number> = {
+    solidarity: 0,
+    sovereignty: 0,
+    transformation: 0,
+    heritage: 0,
+  };
   for (const c of u.cards) {
     if (c.ideology === "wild") continue;
     counts[c.ideology] += 1;

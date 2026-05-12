@@ -14,10 +14,14 @@ import {
 } from "../src/core/column.ts";
 import { getCard, landId, roleId } from "../src/core/cards.ts";
 
-const land = (rank: number, ideology: "solidarity" | "sovereignty" | "transformation" | "heritage") =>
-  getCard(landId(rank, ideology));
-const role = (r: "agitator" | "scholar" | "preacher" | "engineer" | "architect", i: "solidarity" | "sovereignty" | "transformation" | "heritage") =>
-  getCard(roleId(r, i));
+const land = (
+  rank: number,
+  ideology: "solidarity" | "sovereignty" | "transformation" | "heritage",
+) => getCard(landId(rank, ideology));
+const role = (
+  r: "agitator" | "scholar" | "preacher" | "engineer" | "architect",
+  i: "solidarity" | "sovereignty" | "transformation" | "heritage",
+) => getCard(roleId(r, i));
 const charter = () => getCard("keystone-founding-charter");
 
 describe("column placement", () => {
@@ -87,8 +91,10 @@ describe("column placement", () => {
     const l2 = land(7, "heritage");
     const r = role("scholar", "solidarity");
     const ch = charter();
-    placeLand(col, l1); placeLand(col, l2);
-    placeInfluence(col, r); placeCharter(col, ch);
+    placeLand(col, l1);
+    placeLand(col, l2);
+    placeInfluence(col, r);
+    placeCharter(col, ch);
     expect(columnCards(col)).toEqual([l1, l2, r, ch]);
   });
 

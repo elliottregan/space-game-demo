@@ -127,7 +127,9 @@ function reportFor(settingId: string, runs: number): unknown {
   const avgFirst: Record<string, number | null> = {};
   for (const p of patternKinds) {
     avgUnlocks[p] = round(mean(results.map((r) => r.unlocksByPattern[p])));
-    const firsts = results.map((r) => r.firstByPattern[p]).filter((x): x is number => x !== undefined);
+    const firsts = results
+      .map((r) => r.firstByPattern[p])
+      .filter((x): x is number => x !== undefined);
     avgFirst[p] = round(mean(firsts));
   }
   const avgTotalUnlocks = round(

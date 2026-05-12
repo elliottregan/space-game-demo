@@ -9,10 +9,7 @@ export interface PatternMatch {
   cards: Card[];
 }
 
-export function evaluateColumn(
-  col: Column,
-  projects: KeystoneProject[],
-): PatternMatch | null {
+export function evaluateColumn(col: Column, projects: KeystoneProject[]): PatternMatch | null {
   if (!isBuildable(col)) return null;
 
   const cards = columnCards(col);

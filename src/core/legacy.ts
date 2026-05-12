@@ -46,7 +46,11 @@ export function mintCandidatesOnWin(
   return { candidates, monument };
 }
 
-export function mintCandidatesOnLoss(epoch: Epoch, _setting: Setting, _outcome: CrisisOutcome): MintingResult {
+export function mintCandidatesOnLoss(
+  epoch: Epoch,
+  _setting: Setting,
+  _outcome: CrisisOutcome,
+): MintingResult {
   const candidates: LegacyCandidate[] = [];
   const consolation = buildConsolationLegacy();
   candidates.push({
@@ -58,7 +62,11 @@ export function mintCandidatesOnLoss(epoch: Epoch, _setting: Setting, _outcome: 
   return { candidates };
 }
 
-function buildMonument(epoch: Epoch, outcome: CrisisOutcome, setting: Setting): Monument | undefined {
+function buildMonument(
+  epoch: Epoch,
+  outcome: CrisisOutcome,
+  setting: Setting,
+): Monument | undefined {
   if (outcome.contributingUnlocks.length === 0) return undefined;
   const strongest = outcome.contributingUnlocks[0]!; // first is highest-pattern, earliest turn
   const project = setting.projects.find((p) => p.id === strongest.projectId);
@@ -67,7 +75,8 @@ function buildMonument(epoch: Epoch, outcome: CrisisOutcome, setting: Setting): 
   const mag = Math.max(1, Math.floor(outcome.totalValue / 5));
   const delta: Partial<IdeologyTerrain> = {};
   // Use net ideology of contributing unlocks: solidarity vs sovereignty drives axis1.
-  let axis1 = 0, axis2 = 0;
+  let axis1 = 0,
+    axis2 = 0;
   for (const u of outcome.contributingUnlocks) {
     for (const c of u.cards) {
       if (c.ideology === "wild") continue;
@@ -153,12 +162,18 @@ function amplifyEffect(effect: Card["effect"]): Card["effect"] {
   const amp = (e: Card["effect"]): Card["effect"] => {
     switch (e.kind) {
       case "gainInfluence":
-      case "gainMaterials":   return { ...e, amount: e.amount + 1 };
-      case "draw":            return { ...e, count: e.count + 1 };
-      case "removeDissent":   return { ...e, amount: e.amount + 1 };
-      case "shiftIdeology":   return { ...e, amount: e.amount + 1 };
-      case "compound":        return { ...e, effects: e.effects.map(amp) };
-      default: return e;
+      case "gainMaterials":
+        return { ...e, amount: e.amount + 1 };
+      case "draw":
+        return { ...e, count: e.count + 1 };
+      case "removeDissent":
+        return { ...e, amount: e.amount + 1 };
+      case "shiftIdeology":
+        return { ...e, amount: e.amount + 1 };
+      case "compound":
+        return { ...e, effects: e.effects.map(amp) };
+      default:
+        return e;
     }
   };
   return amp(effect);
@@ -173,8 +188,10 @@ export function addMonumentToCampaign(campaign: Campaign, monument: Monument): v
     const oldest = active.shift();
     if (oldest) oldest.active = false;
   }
-  if (monument.terrainDelta.axis1 !== undefined) campaign.terrain.axis1 += monument.terrainDelta.axis1;
-  if (monument.terrainDelta.axis2 !== undefined) campaign.terrain.axis2 += monument.terrainDelta.axis2;
+  if (monument.terrainDelta.axis1 !== undefined)
+    campaign.terrain.axis1 += monument.terrainDelta.axis1;
+  if (monument.terrainDelta.axis2 !== undefined)
+    campaign.terrain.axis2 += monument.terrainDelta.axis2;
 }
 
 export function applyLossTerrainScar(

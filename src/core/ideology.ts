@@ -1,14 +1,7 @@
 // Ideology vector derivation from the tableau + terrain.
 // Spec §8 adapted: the only on-board zone is the tableau (no project slots).
 
-import type {
-  Card,
-  Column,
-  Demonym,
-  Ideology,
-  IdeologyTerrain,
-  IdeologyVector,
-} from "./types.ts";
+import type { Card, Column, Demonym, Ideology, IdeologyTerrain, IdeologyVector } from "./types.ts";
 import { columnCards } from "./column.ts";
 
 export function deriveVector(columns: Column[], terrain: IdeologyTerrain): IdeologyVector {
@@ -20,10 +13,18 @@ export function deriveVector(columns: Column[], terrain: IdeologyTerrain): Ideol
       if (card.ideology === "wild") continue;
       const r = card.rank;
       switch (card.ideology) {
-        case "solidarity":     axis1 -= r; break;
-        case "sovereignty":    axis1 += r; break;
-        case "transformation": axis2 += r; break;
-        case "heritage":       axis2 -= r; break;
+        case "solidarity":
+          axis1 -= r;
+          break;
+        case "sovereignty":
+          axis1 += r;
+          break;
+        case "transformation":
+          axis2 += r;
+          break;
+        case "heritage":
+          axis2 -= r;
+          break;
       }
     }
   }

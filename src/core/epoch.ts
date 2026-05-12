@@ -79,7 +79,10 @@ export function createEpoch(
 }
 
 function applyScarredTerrainDissent(epoch: Epoch, terrain: { axis1: number; axis2: number }): void {
-  const addIf = (mag: number, _ideology: "solidarity" | "sovereignty" | "transformation" | "heritage") => {
+  const addIf = (
+    mag: number,
+    _ideology: "solidarity" | "sovereignty" | "transformation" | "heritage",
+  ) => {
     if (mag < 2) return;
     const n = Math.min(3, Math.floor(mag / 2));
     for (let i = 0; i < n; i++) {
@@ -102,10 +105,18 @@ export function currentVector(epoch: Epoch, campaign: Campaign): IdeologyVector 
   for (const card of epoch.hand) {
     if (card.tags.includes("dissent") && card.ideology !== "wild") {
       switch (card.ideology) {
-        case "solidarity":     backlashBonus.axis1 -= 1; break;
-        case "sovereignty":    backlashBonus.axis1 += 1; break;
-        case "transformation": backlashBonus.axis2 += 1; break;
-        case "heritage":       backlashBonus.axis2 -= 1; break;
+        case "solidarity":
+          backlashBonus.axis1 -= 1;
+          break;
+        case "sovereignty":
+          backlashBonus.axis1 += 1;
+          break;
+        case "transformation":
+          backlashBonus.axis2 += 1;
+          break;
+        case "heritage":
+          backlashBonus.axis2 -= 1;
+          break;
       }
     }
   }
@@ -162,14 +173,34 @@ export function placeCard(
     if (!canPlaceInfluence(col, card)) {
       return { ok: false, error: "Influence row needs at least one Land below." };
     }
-    return playToporRow(epoch, setting, vector, alignment, card, columnIndex, handIdx, "card-played-to-influence", rng);
+    return playToporRow(
+      epoch,
+      setting,
+      vector,
+      alignment,
+      card,
+      columnIndex,
+      handIdx,
+      "card-played-to-influence",
+      rng,
+    );
   }
 
   if (card.kind === "charter") {
     if (!canPlaceCharter(col, card)) {
       return { ok: false, error: "Charter row needs the Influence row filled." };
     }
-    return playToporRow(epoch, setting, vector, alignment, card, columnIndex, handIdx, "card-played-to-charter", rng);
+    return playToporRow(
+      epoch,
+      setting,
+      vector,
+      alignment,
+      card,
+      columnIndex,
+      handIdx,
+      "card-played-to-charter",
+      rng,
+    );
   }
 
   return { ok: false, error: "Card kind cannot be played." };
@@ -216,16 +247,18 @@ function playToporRow(
 
 function opposingIdeology(ideology: "solidarity" | "sovereignty" | "transformation" | "heritage") {
   switch (ideology) {
-    case "solidarity":     return "sovereignty" as const;
-    case "sovereignty":    return "solidarity" as const;
-    case "transformation": return "heritage" as const;
-    case "heritage":       return "transformation" as const;
+    case "solidarity":
+      return "sovereignty" as const;
+    case "sovereignty":
+      return "solidarity" as const;
+    case "transformation":
+      return "heritage" as const;
+    case "heritage":
+      return "transformation" as const;
   }
 }
 
-export type CmdResult<T = void> =
-  | { ok: true; value: T }
-  | { ok: false; error: string };
+export type CmdResult<T = void> = { ok: true; value: T } | { ok: false; error: string };
 
 export function discardLand(epoch: Epoch, columnIndex: number): CmdResult<Card> {
   if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
@@ -345,7 +378,10 @@ export function endTurn(epoch: Epoch, _campaign: Campaign, setting: Setting, rng
   }
 
   // Transient ideology shift resets each turn.
-  (epoch as Epoch & { __shift?: { axis1: number; axis2: number } }).__shift = { axis1: 0, axis2: 0 };
+  (epoch as Epoch & { __shift?: { axis1: number; axis2: number } }).__shift = {
+    axis1: 0,
+    axis2: 0,
+  };
 
   // End-of-turn hand cycle: cards still in hand drop to discard without
   // triggering Dissent. The per-discard Dissent rule applies to deliberate
