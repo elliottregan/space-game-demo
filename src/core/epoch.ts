@@ -222,3 +222,72 @@ function opposingIdeology(ideology: "solidarity" | "sovereignty" | "transformati
     case "heritage":       return "transformation" as const;
   }
 }
+
+export type CmdResult<T = void> =
+  | { ok: true; value: T }
+  | { ok: false; error: string };
+
+export function discardLand(epoch: Epoch, columnIndex: number): CmdResult<Card> {
+  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
+  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  const col = epoch.columns[columnIndex];
+  if (!col) return { ok: false, error: "Invalid column." };
+  const card = col.lands.cards.pop();
+  if (!card) return { ok: false, error: "No Land to discard." };
+  dispatch(epoch, { type: "card-discarded", card, source: "tableau-land" });
+  return { ok: true, value: card };
+}
+
+export function discardCharter(epoch: Epoch, columnIndex: number): CmdResult<Card> {
+  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
+  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  const col = epoch.columns[columnIndex];
+  if (!col) return { ok: false, error: "Invalid column." };
+  const card = col.charter.card;
+  if (!card) return { ok: false, error: "No Charter to discard." };
+  col.charter.card = null;
+  dispatch(epoch, { type: "card-discarded", card, source: "tableau-charter" });
+  return { ok: true, value: card };
+}
+
+export function recallInfluence(epoch: Epoch, columnIndex: number): CmdResult<Card> {
+  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
+  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  const col = epoch.columns[columnIndex];
+  if (!col) return { ok: false, error: "Invalid column." };
+  const card = col.influence.card;
+  if (!card) return { ok: false, error: "No Influence to recall." };
+  if (col.charter.card !== null) {
+    return { ok: false, error: "Discard the Charter first." };
+  }
+  dispatch(epoch, { type: "card-recalled-to-hand", card, columnIndex });
+  return { ok: true, value: card };
+}
+
+export function discardColumn(epoch: Epoch, columnIndex: number): CmdResult<void> {
+  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
+  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  const col = epoch.columns[columnIndex];
+  if (!col) return { ok: false, error: "Invalid column." };
+  const cards = columnCards(col);
+  if (cards.length === 0) return { ok: false, error: "Column is empty." };
+  // Clear first so the cascade does not double-touch.
+  col.lands.cards.length = 0;
+  col.influence.card = null;
+  col.charter.card = null;
+  for (const c of cards) {
+    dispatch(epoch, { type: "card-discarded", card: c, source: "column" });
+  }
+  return { ok: true, value: undefined };
+}
+
+export function discardFromHand(epoch: Epoch, cardId: string): CmdResult<Card> {
+  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
+  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  const idx = epoch.hand.findIndex((c) => c.id === cardId);
+  if (idx === -1) return { ok: false, error: "Card not in hand." };
+  const card = epoch.hand[idx]!;
+  epoch.hand.splice(idx, 1);
+  dispatch(epoch, { type: "card-discarded", card, source: "hand" });
+  return { ok: true, value: card };
+}
