@@ -52,7 +52,7 @@ export function canPlaceLand(col: Column, card: Card): boolean {
   if (card.kind !== "land") return false;
   if (col.lands.cards.length >= MAX_LAND_DEPTH) return false;
   if (col.lands.cards.length === 0) return true;
-  return col.lands.cards[0]!.rank === card.rank;
+  return col.lands.cards[0].rank === card.rank;
 }
 
 export function canPlaceInfluence(col: Column, card: Card): boolean {

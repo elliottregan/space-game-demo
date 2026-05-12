@@ -58,7 +58,10 @@ export function createEpoch(
   epochNumber: number,
 ): Epoch {
   const starterIds = [...setting.startingDeck];
-  const starterCards: Card[] = starterIds.map((id) => CARD_BY_ID[id]!).filter(Boolean);
+  const starterCards: Card[] = starterIds.flatMap((id) => {
+    const card = CARD_BY_ID[id];
+    return card ? [card] : [];
+  });
   const legacyCards: Card[] = campaign.legacyCards.map((l) => l.baseCard);
   const deck = rng.shuffle([...starterCards, ...legacyCards]);
 

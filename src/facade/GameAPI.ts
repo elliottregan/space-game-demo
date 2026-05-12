@@ -114,7 +114,8 @@ export class GameAPI {
     if (!store.slots.some((s) => s.id === slotId)) return false;
     const updated = switchSlot(store, slotId);
     writeStore(updated);
-    const slot = getActiveSlot(updated)!;
+    const slot = getActiveSlot(updated);
+    if (!slot) return false;
     this.loadFromState(slot.state);
     return true;
   }
@@ -226,7 +227,7 @@ export class GameAPI {
     if (!card) return [];
     const out: number[] = [];
     for (let i = 0; i < this.epoch.columns.length; i++) {
-      const col = this.epoch.columns[i]!;
+      const col = this.epoch.columns[i];
       if (card.kind === "land" && canPlaceLand(col, card)) out.push(i);
       else if (card.kind === "role" && canPlaceInfluence(col, card)) out.push(i);
       else if (card.kind === "charter" && canPlaceCharter(col, card)) out.push(i);

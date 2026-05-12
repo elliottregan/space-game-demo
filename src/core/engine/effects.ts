@@ -114,7 +114,7 @@ export function purgeDissent(epoch: Epoch, count: number): number {
   const pools: Card[][] = [epoch.discard, epoch.hand, epoch.draw];
   for (const pool of pools) {
     for (let i = pool.length - 1; i >= 0 && purged < count; i--) {
-      if (pool[i]!.tags.includes("dissent")) {
+      if (pool[i].tags.includes("dissent")) {
         pool.splice(i, 1);
         purged++;
       }

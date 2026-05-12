@@ -99,7 +99,10 @@ defineEmits<{
 }>();
 
 const selectedCards = computed(() =>
-  props.selectedIds.map((id) => props.hand.find((c) => c.id === id)!).filter(Boolean),
+  props.selectedIds.flatMap((id) => {
+    const card = props.hand.find((c) => c.id === id);
+    return card ? [card] : [];
+  }),
 );
 
 const playableSelection = computed(() => selectedCards.value.filter((c) => !isDissent(c)));
@@ -113,7 +116,7 @@ const validSharedSlots = computed(() => {
   if (cards.length === 0) return [];
   const out: number[] = [];
   for (let i = 0; i < props.columns.length; i++) {
-    if (canPlaceAllSequentially(cards, props.columns[i]!)) out.push(i);
+    if (canPlaceAllSequentially(cards, props.columns[i])) out.push(i);
   }
   return out;
 });

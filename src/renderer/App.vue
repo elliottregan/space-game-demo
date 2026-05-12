@@ -211,7 +211,7 @@ function getCardFromHand(cardId: string): Card | null {
 function patternLabel(p: string): string {
   return p
     .split("-")
-    .map((s) => s[0]!.toUpperCase() + s.slice(1))
+    .map((s) => s[0].toUpperCase() + s.slice(1))
     .join(" ");
 }
 

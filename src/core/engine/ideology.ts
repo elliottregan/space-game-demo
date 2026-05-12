@@ -73,7 +73,7 @@ export function checkAlignment(card: Card, vector: IdeologyVector): Alignment {
 
   if (candidates.length === 0) return "neutral";
   candidates.sort((a, b) => b.magnitude - a.magnitude);
-  return candidates[0]!.verdict;
+  return candidates[0].verdict;
 }
 
 function axisVerdict(ideology: Ideology, axis: "axis1" | "axis2", value: number): Alignment {
@@ -107,7 +107,7 @@ export function demonym(vector: IdeologyVector): Demonym {
 
   if (candidates.length === 0) return null;
   candidates.sort((a, b) => b.mag - a.mag);
-  return candidates[0]!.d;
+  return candidates[0].d;
 }
 
 export function demonymName(d: Demonym): string {

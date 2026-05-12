@@ -41,8 +41,9 @@ function runEpoch(api: GameAPI): RunResult {
     let played = false;
     for (const card of snap.epoch.hand) {
       const cols = api.validColumns(card.id);
-      if (cols.length === 0) continue;
-      const r = api.placeCard(card.id, cols[0]!);
+      const col = cols[0];
+      if (col === undefined) continue;
+      const r = api.placeCard(card.id, col);
       if (r.ok) {
         played = true;
         break;
@@ -51,7 +52,7 @@ function runEpoch(api: GameAPI): RunResult {
     // 2) build any buildable column.
     const snap2 = api.snapshot();
     for (let i = 0; i < snap2.epoch.columns.length; i++) {
-      const m = evaluateColumn(snap2.epoch.columns[i]!, snap2.setting.projects);
+      const m = evaluateColumn(snap2.epoch.columns[i], snap2.setting.projects);
       if (!m) continue;
       const r = api.buildColumn(i);
       if (r.ok) {
@@ -67,7 +68,8 @@ function runEpoch(api: GameAPI): RunResult {
   }
   if (api.snapshot().epoch.phase === "crisis") api.resolveCrisis();
   const snap = api.snapshot();
-  const outcome = snap.epoch.crisis.outcome!;
+  const outcome = snap.epoch.crisis.outcome;
+  if (!outcome) throw new Error("Crisis did not resolve after MAX_STEPS.");
   const difficulty = snap.setting.crisis.difficulty;
   return {
     won: outcome.cleared,
@@ -84,7 +86,7 @@ function median(arr: number[]): number | null {
   if (arr.length === 0) return null;
   const s = [...arr].sort((a, b) => a - b);
   const m = Math.floor(s.length / 2);
-  return s.length % 2 === 1 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+  return s.length % 2 === 1 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 
 function mean(arr: number[]): number | null {
@@ -94,7 +96,8 @@ function mean(arr: number[]): number | null {
 
 function stdev(arr: number[]): number | null {
   if (arr.length === 0) return null;
-  const m = mean(arr)!;
+  const m = mean(arr);
+  if (m === null) return null;
   const v = arr.reduce((a, b) => a + (b - m) ** 2, 0) / arr.length;
   return Math.sqrt(v);
 }

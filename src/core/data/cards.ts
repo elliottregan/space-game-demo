@@ -423,7 +423,7 @@ function buildLands(): Card[] {
       const slotPassive = LAND_SLOT_PASSIVE[rank]?.[ideology];
       cards.push({
         id: landId(rank, ideology),
-        name: LAND_NAMES[rank]![ideology],
+        name: LAND_NAMES[rank][ideology],
         kind: "land",
         rank: rank as Card["rank"],
         ideology,
@@ -551,7 +551,9 @@ export function makeDissent(variant: "quiet" | "backlash" | "unrest", against?: 
       ? "Quiet Dissent"
       : variant === "unrest"
         ? "Unrest"
-        : `Ideological Backlash · ${againstName(against!)}`;
+        : against
+          ? `Ideological Backlash · ${againstName(against)}`
+          : "Ideological Backlash";
   return {
     id,
     name,

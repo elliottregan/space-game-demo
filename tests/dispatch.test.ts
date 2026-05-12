@@ -68,11 +68,14 @@ describe("dispatch", () => {
     placeInfluence(col, getCard(roleId("scholar", "solidarity")));
     placeCharter(col, getCard("keystone-founding-charter"));
     const ep = freshEpoch([col]);
+    const influence = col.influence.card;
+    const charter = col.charter.card;
+    if (!influence || !charter) throw new Error("expected placed cards");
     const unlock: ProjectUnlock = {
       projectId: "p-pair",
       pattern: "pair",
       turn: ep.turn,
-      cards: [...col.lands.cards, col.influence.card!, col.charter.card!],
+      cards: [...col.lands.cards, influence, charter],
     };
     dispatch(ep, { type: "column-built", columnIndex: 0, unlock });
     expect(ep.unlockedProjects).toContain(unlock);
@@ -88,6 +91,6 @@ describe("dispatch", () => {
     const ep = freshEpoch();
     dispatch(ep, { type: "dissent-added", variant: "quiet" });
     expect(ep.eventLog.length).toBe(1);
-    expect(ep.eventLog[0]!.type).toBe("dissent-added");
+    expect(ep.eventLog[0].type).toBe("dissent-added");
   });
 });

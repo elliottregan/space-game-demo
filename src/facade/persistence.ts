@@ -93,7 +93,7 @@ export function upsertActiveSlot(store: SaveStore, state: SavedState): SaveStore
   if (!store.activeSlotId) return addNewSlot(store, state);
   const idx = store.slots.findIndex((s) => s.id === store.activeSlotId);
   if (idx === -1) return addNewSlot(store, state);
-  const slot = store.slots[idx]!;
+  const slot = store.slots[idx];
   store.slots[idx] = { ...slot, state, label: labelFromState(state), lastPlayedAt: Date.now() };
   return store;
 }

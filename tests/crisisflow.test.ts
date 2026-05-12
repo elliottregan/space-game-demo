@@ -18,7 +18,8 @@ describe("Crisis flow", () => {
     const limit = api.snapshot().setting.rules.maxTurns;
     for (let i = 0; i < limit + 1; i++) api.endTurn();
     api.resolveCrisis();
-    const out = api.snapshot().epoch.crisis.outcome!;
+    const out = api.snapshot().epoch.crisis.outcome;
+    if (!out) throw new Error("expected crisis outcome");
     expect(typeof out.totalValue).toBe("number");
     expect(typeof out.cleared).toBe("boolean");
   });
@@ -28,7 +29,8 @@ describe("Crisis flow", () => {
     const limit = api.snapshot().setting.rules.maxTurns;
     for (let i = 0; i < limit + 1; i++) api.endTurn();
     api.resolveCrisis();
-    const out = api.snapshot().epoch.crisis.outcome!;
+    const out = api.snapshot().epoch.crisis.outcome;
+    if (!out) throw new Error("expected crisis outcome");
     expect(out.cleared).toBe(false);
     expect(out.totalValue).toBe(0);
   });

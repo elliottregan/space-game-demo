@@ -39,6 +39,6 @@ function sharesOneIdeology(cards: Card[]): boolean {
   // "wild" cards never satisfy a flush.
   if (cards.some((c) => c.ideology === "wild")) return false;
   if (cards.length === 0) return false;
-  const ideology = cards[0]!.ideology;
+  const ideology = cards[0].ideology;
   return cards.every((c) => c.ideology === ideology);
 }

@@ -57,7 +57,7 @@ function buildTooltip(i: number): string {
 function validForDrag(i: number): { land: boolean; influence: boolean; charter: boolean } {
   const card = dragging.value ? props.getCardFromHand(dragging.value.cardId) : null;
   if (!card) return { land: false, influence: false, charter: false };
-  const col = props.columns[i]!;
+  const col = props.columns[i];
   return {
     land: card.kind === "land" && canPlaceLand(col, card),
     influence: card.kind === "role" && canPlaceInfluence(col, card),

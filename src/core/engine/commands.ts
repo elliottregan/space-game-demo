@@ -39,7 +39,7 @@ export function placeCard(
 
   const handIdx = epoch.hand.findIndex((c) => c.id === cardId);
   if (handIdx === -1) return { ok: false, error: "Card not in hand." };
-  const card = epoch.hand[handIdx]!;
+  const card = epoch.hand[handIdx];
   if (card.tags.includes("dissent")) return { ok: false, error: "Dissent cannot be played." };
 
   const col = epoch.columns[columnIndex];
@@ -201,7 +201,7 @@ export function discardFromHand(epoch: Epoch, cardId: string): CmdResult<Card> {
   if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
   const idx = epoch.hand.findIndex((c) => c.id === cardId);
   if (idx === -1) return { ok: false, error: "Card not in hand." };
-  const card = epoch.hand[idx]!;
+  const card = epoch.hand[idx];
   epoch.hand.splice(idx, 1);
   dispatch(epoch, { type: "card-discarded", card, source: "hand" });
   return { ok: true, value: card };

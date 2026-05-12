@@ -9,7 +9,6 @@ import type {
   LegacyCandidate,
   LegacyCard,
   Monument,
-  ProjectUnlock,
   Setting,
 } from "../types.ts";
 import { reversePatternOrder } from "../data/projects.ts";
@@ -68,7 +67,7 @@ function buildMonument(
   setting: Setting,
 ): Monument | undefined {
   if (outcome.contributingUnlocks.length === 0) return undefined;
-  const strongest = outcome.contributingUnlocks[0]!; // first is highest-pattern, earliest turn
+  const strongest = outcome.contributingUnlocks[0]; // first is highest-pattern, earliest turn
   const project = setting.projects.find((p) => p.id === strongest.projectId);
   if (!project) return undefined;
   // Terrain effect: positive sovereignty/transformation for high patterns, otherwise no shift.

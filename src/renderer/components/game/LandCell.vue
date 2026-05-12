@@ -29,5 +29,5 @@ const props = defineProps<{
 
 defineEmits<{ discard: [] }>();
 
-const topCard = computed(() => props.cards[props.cards.length - 1]!);
+const topCard = computed(() => props.cards[props.cards.length - 1]);
 </script>
