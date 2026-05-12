@@ -61,7 +61,7 @@ export class GameAPI {
 
   private endOfEpoch: EndOfEpochState | null = null;
 
-  constructor(seed = 1, opts: { skipLoad?: boolean } = {}) {
+  constructor(seed = 1, opts: { skipLoad?: boolean; forceSettingId?: string } = {}) {
     const store = opts.skipLoad ? null : loadStore();
     const active = store ? getActiveSlot(store) : null;
     if (active) {
@@ -73,6 +73,8 @@ export class GameAPI {
       this.rng = createRng(saved.seed);
     } else {
       this.campaign = createCampaign(seed);
+      // Test/debug knob: skip Homeworld and start at a specific Setting.
+      if (opts.forceSettingId) this.campaign.currentSettingId = opts.forceSettingId;
       this.setting = getSetting(this.campaign.currentSettingId);
       this.rng = createRng(seed);
       this.epoch = createEpoch(this.setting, this.campaign, this.rng, 1);
