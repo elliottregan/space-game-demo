@@ -1,8 +1,26 @@
-// Ideology vector derivation from the tableau + terrain.
-// Spec §8 adapted: the only on-board zone is the tableau (no project slots).
+// Ideology vector derivation + alignment + demonym.
+// Vector is derived from the column contents each call — never stored.
 
-import type { Card, Column, Demonym, Ideology, IdeologyTerrain, IdeologyVector } from "../types.ts";
-import { columnCards } from "./column.ts";
+import type { Card, Ideology } from "../data/cards.ts";
+import { type Column, columnCards } from "./column.ts";
+
+// -------------------------------------------------------------------------
+// Ideology vector + terrain
+// -------------------------------------------------------------------------
+
+export interface IdeologyVector {
+  /** +Sovereignty / -Solidarity */
+  axis1: number;
+  /** +Transformation / -Heritage */
+  axis2: number;
+}
+
+export interface IdeologyTerrain {
+  axis1: number;
+  axis2: number;
+}
+
+export type Demonym = "collective" | "dominion" | "ascendancy" | "keepers" | null;
 
 export function deriveVector(columns: Column[], terrain: IdeologyTerrain): IdeologyVector {
   let axis1 = terrain.axis1;

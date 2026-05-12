@@ -1,15 +1,10 @@
-// Campaign management: new game, Epoch transitions.
+// Campaign types + management (new game, Epoch transitions).
 
-import type {
-  Campaign,
-  CrisisOutcome,
-  Epoch,
-  EpochResult,
-  Ideology,
-  LegacyCandidate,
-  LegacyCard,
-  Setting,
-} from "../types.ts";
+import type { Card, Ideology } from "../data/cards.ts";
+import type { CrisisOutcome } from "../data/projects.ts";
+import type { Epoch } from "./epoch.ts";
+import type { IdeologyTerrain, IdeologyVector } from "./ideology.ts";
+import type { Setting } from "../settings/index.ts";
 import {
   applyUpgrade,
   addMonumentToCampaign,
@@ -23,6 +18,56 @@ import { HOMEWORLD } from "../settings/homeworld.ts";
 import { currentVector, createEpoch } from "./epoch.ts";
 import { getSetting } from "../settings/index.ts";
 import { createRng, type RNG } from "./rng.ts";
+
+// -------------------------------------------------------------------------
+// Campaign-scoped types: minted artifacts, history, the campaign itself.
+// -------------------------------------------------------------------------
+
+export interface Monument {
+  id: string;
+  /** Matches the strongest unlock that triggered it. */
+  projectId: string;
+  projectName: string;
+  mintedOnEpoch: number;
+  terrainDelta: Partial<IdeologyTerrain>;
+  active: boolean;
+}
+
+export interface LegacyCard {
+  id: string;
+  baseCard: Card;
+  upgradePath: "potency" | "pliability" | "persistence";
+  mintedOnEpoch: number;
+  mintedFrom: "unlock" | "consolation";
+}
+
+export interface LegacyCandidate {
+  id: string;
+  baseCard: Card;
+  source: "unlock" | "consolation";
+  suggestedUpgrades: ("potency" | "pliability" | "persistence")[];
+}
+
+export interface EpochResult {
+  epochNumber: number;
+  settingId: string;
+  outcome: "win" | "loss";
+  totalValue: number;
+  unlockCount: number;
+  mintedLegacyIds: string[];
+  finalIdeology: IdeologyVector;
+}
+
+export interface Campaign {
+  id: string;
+  seed: number;
+  currentSettingId: string;
+  legacyCards: LegacyCard[];
+  monuments: Monument[];
+  terrain: IdeologyTerrain;
+  epochHistory: EpochResult[];
+  epochCount: number;
+}
 
 export function createCampaign(seed: number): Campaign {
   return {

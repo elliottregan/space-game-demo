@@ -1,6 +1,52 @@
-// Helpers for KeystoneProject lookup, ordering, and ideology aggregation.
+// Project / Crisis / Pattern types + lookup helpers.
+// Keystone Projects are the per-Setting buildable outcomes (one per pattern);
+// a ProjectUnlock records what was built; CrisisOutcome aggregates them at
+// end-of-Epoch.
 
-import type { Ideology, KeystoneProject, PatternKind, ProjectUnlock } from "../types.ts";
+import type { Card, EffectSpec, Ideology } from "./cards.ts";
+
+// -------------------------------------------------------------------------
+// Pattern + Project + Crisis types
+// -------------------------------------------------------------------------
+
+export type PatternKind = "high-card" | "pair" | "three-of-a-kind" | "flush" | "four-of-a-kind";
+
+export interface KeystoneProject {
+  id: string;
+  pattern: PatternKind;
+  name: string;
+  flavor: string;
+  /** Contribution to the Crisis score when this project's pattern is built. */
+  value: number;
+  /** Optional one-shot or passive effect on unlock; semantics deferred. */
+  unlockEffect?: EffectSpec;
+}
+
+export interface ProjectUnlock {
+  projectId: string;
+  pattern: PatternKind;
+  turn: number;
+  /** Snapshot of the built column at Build time (used for the unlock log). */
+  cards: Card[];
+}
+
+export interface Crisis {
+  id: string;
+  name: string;
+  flavor: string;
+  difficulty: number;
+}
+
+export interface CrisisOutcome {
+  totalValue: number;
+  cleared: boolean;
+  /** Ordered: four → flush → three → pair → high-card, then by turn. */
+  contributingUnlocks: ProjectUnlock[];
+}
+
+// -------------------------------------------------------------------------
+// Helpers
+// -------------------------------------------------------------------------
 
 export const PATTERNS_IN_ORDER: PatternKind[] = [
   "high-card",

@@ -1,8 +1,94 @@
-// The 54-card pool + Homeworld project-specific keystones.
-// Spec: docs/specs/DECK-BUILDING-REDESIGN.md §6, §16.
+// Card pool — the static deck content + the types describing it.
+// Types: Card, CardKind, Ideology, Role, Rank, EffectSpec, …
 
-import type { Card, EffectSpec, Ideology, Role, CardTag } from "../types.ts";
-import { ROLE_RANK } from "../types.ts";
+// -------------------------------------------------------------------------
+// Ideology + Role taxonomy
+// -------------------------------------------------------------------------
+
+export type Ideology = "solidarity" | "sovereignty" | "transformation" | "heritage";
+
+export const IDEOLOGIES: Ideology[] = ["solidarity", "sovereignty", "transformation", "heritage"];
+
+export type CardIdeology = Ideology | "wild";
+
+export type Role = "agitator" | "scholar" | "preacher" | "engineer" | "architect";
+
+export const ROLE_RANK: Record<Role, 10 | 11 | 12 | 13 | 14> = {
+  agitator: 10,
+  scholar: 11,
+  preacher: 12,
+  engineer: 13,
+  architect: 14,
+};
+
+export type Rank = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
+
+// -------------------------------------------------------------------------
+// Card kinds and tags
+// -------------------------------------------------------------------------
+
+export type CardKind = "land" | "role" | "charter" | "dissent" | "legacy";
+
+export type CardTag = "dissent" | "charter" | "legacy" | "exclusive" | "purge" | "starter";
+
+export type DissentVariant = "quiet" | "backlash" | "unrest";
+
+// -------------------------------------------------------------------------
+// Effect DSL — serializable
+// -------------------------------------------------------------------------
+
+export type Timing = "immediate" | "end-of-turn";
+
+export type SerializablePredicate =
+  | { kind: "suit"; ideology: Ideology }
+  | { kind: "role"; role: Role }
+  | { kind: "rank"; min?: number; max?: number }
+  | { kind: "land" }
+  | { kind: "and"; predicates: SerializablePredicate[] }
+  | { kind: "or"; predicates: SerializablePredicate[] };
+
+export type EffectSpec =
+  | { kind: "gainInfluence"; amount: number; timing: "immediate" }
+  | { kind: "gainMaterials"; amount: number; timing: "immediate" }
+  | { kind: "draw"; count: number; timing: "immediate" }
+  | {
+      kind: "addDissent";
+      variant: DissentVariant;
+      ideology?: Ideology;
+      amount: number;
+      timing: "end-of-turn";
+    }
+  | { kind: "removeDissent"; amount: number; timing: "immediate" }
+  | { kind: "shiftIdeology"; axis: "axis1" | "axis2"; amount: number; timing: "immediate" }
+  | {
+      kind: "discount";
+      predicate: SerializablePredicate;
+      amount: number;
+      timing: "end-of-turn";
+    }
+  | { kind: "peekMarket"; count: number; timing: "immediate" }
+  | { kind: "nextAcquireDiscount"; amount: number; timing: "immediate" }
+  | { kind: "noop"; timing: "immediate" }
+  | { kind: "compound"; effects: EffectSpec[] };
+
+// -------------------------------------------------------------------------
+// Card
+// -------------------------------------------------------------------------
+
+export interface Card {
+  id: string;
+  name: string;
+  kind: CardKind;
+  rank: Rank;
+  ideology: CardIdeology;
+  role?: Role;
+  influenceCost: number;
+  marketCost: number;
+  effect: EffectSpec;
+  slotPassive?: EffectSpec;
+  tags: CardTag[];
+  flavor?: string;
+}
 
 // -------------------------------------------------------------------------
 // Naming tables (spec §6)
@@ -305,7 +391,6 @@ export function landId(rank: number, ideology: Ideology): string {
 // Builders
 // -------------------------------------------------------------------------
 
-const IDEOLOGIES: Ideology[] = ["solidarity", "sovereignty", "transformation", "heritage"];
 const ROLES: Role[] = ["agitator", "scholar", "preacher", "engineer", "architect"];
 
 function buildRoles(): Card[] {

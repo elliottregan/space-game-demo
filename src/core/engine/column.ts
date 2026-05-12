@@ -1,6 +1,42 @@
-// Column data + placement helpers for the three-tier column model.
+// Column types + placement helpers for the three-tier column model.
 
-import type { Card, Column, ColumnConfig } from "../types.ts";
+import type { Card } from "../data/cards.ts";
+
+// -------------------------------------------------------------------------
+// Column shape
+// -------------------------------------------------------------------------
+
+export interface LandRow {
+  /** All same rank when non-empty; max 4 cards. */
+  cards: Card[];
+}
+
+export interface InfluenceRow {
+  /** A card with kind === "role". */
+  card: Card | null;
+}
+
+export interface CharterRow {
+  /** A card with kind === "charter". */
+  card: Card | null;
+}
+
+export interface Column {
+  lands: LandRow;
+  influence: InfluenceRow;
+  charter: CharterRow;
+}
+
+export interface ColumnConfig {
+  /** Card ids; must share rank when length > 1. */
+  lands: string[];
+  influence?: string;
+  charter?: string;
+}
+
+// -------------------------------------------------------------------------
+// Placement helpers
+// -------------------------------------------------------------------------
 
 export const MAX_LAND_DEPTH = 4;
 

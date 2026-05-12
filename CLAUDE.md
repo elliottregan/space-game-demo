@@ -26,26 +26,36 @@ Strict three-layer separation: `core/` → `facade/` → `renderer/`. No layer i
 
 ### `src/core/` — pure TypeScript game logic (no Vue)
 
-Organized into three buckets plus shared types:
+Organized into three buckets. Each type lives next to the concept it describes; **`types.ts`** is a thin barrel that re-exports them so a mixed handful can be grabbed in one import.
 
-- **`types.ts`** — every type definition: `Card`, `Column`, `Epoch`, `Campaign`, `KeystoneProject`, `Crisis`, `CrisisOutcome`, `GameEvent`, `EffectSpec`, etc.
+- **Type homes:**
+  - `Card`, `EffectSpec`, `Ideology`, `Role`, `Rank`, `CardKind`, etc. → `data/cards.ts`
+  - `PatternKind`, `KeystoneProject`, `ProjectUnlock`, `Crisis`, `CrisisOutcome` → `data/projects.ts`
+  - `IdeologyVector`, `IdeologyTerrain`, `Demonym`, `Alignment` → `engine/ideology.ts`
+  - `Column`, `LandRow`, `InfluenceRow`, `CharterRow`, `ColumnConfig` → `engine/column.ts`
+  - `GameEvent`, `DiscardSource` → `engine/events.ts`
+  - `Epoch`, `EpochPhase`, `EpochStatus` → `engine/epoch.ts`
+  - `Campaign`, `Monument`, `LegacyCard`, `LegacyCandidate`, `EpochResult` → `engine/campaign.ts`
+  - `Setting`, `SettingRules` → `settings/index.ts`
 - **`data/`** — static content + tunable defaults. Edit here for balance.
-  - `cards.ts` — the card pool (Lands, Roles, Charters) + builders + id helpers + `makeDissent()`.
-  - `projects.ts` — `DEFAULT_PROJECT_VALUE` (per-pattern value scale), `PATTERNS_IN_ORDER`, `reversePatternOrder`, `getProjectForPattern`, `unlockedIdeologyBreakdown`.
+  - `cards.ts` — the card pool (Lands, Roles, Charters) + builders + id helpers + `makeDissent()` + all card-related types.
+  - `projects.ts` — `DEFAULT_PROJECT_VALUE` (per-pattern value scale), `PATTERNS_IN_ORDER`, `reversePatternOrder`, `getProjectForPattern`, `unlockedIdeologyBreakdown` + project / crisis types.
 - **`settings/`** — one file per scenario. Add a new scenario here.
-  - `index.ts` — registry (`SETTINGS`, `SETTING_BY_ID`, `getSetting`).
+  - `index.ts` — `Setting` / `SettingRules` types + registry (`SETTINGS`, `SETTING_BY_ID`, `getSetting`).
   - `homeworld.ts`, `generationShip.ts`, `ruinedHomeworld.ts` — `Setting` definitions. Each owns its `rules` (handSize, columnCount, maxTurns, influenceBaseline, dissentLossThreshold), `startingDeck` (card-id filter), `projects` (one per pattern; per-Setting `value`), `crisis` (id + difficulty + flavor), `transitions`.
-- **`engine/`** — pure logic; no data, no Vue.
+- **`engine/`** — pure logic; no Vue.
   - `rng.ts` — seedable mulberry32 PRNG with `shuffle`.
-  - `column.ts` — placement helpers (`canPlaceLand`/`Influence`/`Charter`, `placeLand`/…, `columnFromConfig`, `isBuildable`, `columnCards`).
+  - `column.ts` — `Column` types + placement helpers (`canPlaceLand`/`Influence`/`Charter`, `placeLand`/…, `columnFromConfig`, `isBuildable`, `columnCards`).
   - `columnPatterns.ts` — `evaluateColumn(col, projects)` returns the highest poker pattern match.
   - `dispatch.ts` — single state-mutation entry point. Every event flows through `dispatch(epoch, event)`. The "every discard adds Dissent" rule lives in the `card-discarded` handler.
-  - `events.ts` — re-exports `GameEvent` / `DiscardSource` from `../types.ts` (stable import path).
+  - `events.ts` — `GameEvent` / `DiscardSource` types.
   - `effects.ts` — `applyEffect` (immediate) + `resolveEndOfTurn` (queued) + `drawToHandSize`, `purgeDissent`, `countDissentInDeck`.
-  - `ideology.ts` — `deriveVector(columns, terrain)`, `checkAlignment`, `demonym`.
-  - `epoch.ts` — Epoch lifecycle + commands: `placeCard`, `discardLand`, `discardCharter`, `recallInfluence`, `discardColumn`, `discardFromHand`, `buildColumn`, `endTurn`, `resolveCrisis`.
+  - `ideology.ts` — ideology types + `deriveVector(columns, terrain)`, `checkAlignment`, `demonym`.
+  - `epoch.ts` — `Epoch` type + lifecycle: `createEpoch`, `currentVector`, `effectiveInfluenceCost`.
+  - `commands.ts` — per-turn player verbs: `placeCard`, `discardLand`, `discardCharter`, `recallInfluence`, `discardColumn`, `discardFromHand`, `buildColumn`.
+  - `turn.ts` — `endTurn`, `resolveCrisis`.
   - `legacy.ts` — Legacy minting from `CrisisOutcome`; Monument creation; terrain effects.
-  - `campaign.ts` — `createCampaign`, `prepareEndOfEpoch`, `finalizeEpoch` (Setting transitions).
+  - `campaign.ts` — `Campaign` / `Monument` / `LegacyCard` types + `createCampaign`, `prepareEndOfEpoch`, `finalizeEpoch` (Setting transitions).
 
 ### `src/facade/` — command/query API between core and renderer
 

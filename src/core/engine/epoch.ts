@@ -1,12 +1,53 @@
-// Epoch lifecycle + ideology-derived helpers.
+// Epoch types + lifecycle + ideology-derived helpers.
 // Per-turn commands live in commands.ts; turn/crisis flow in turn.ts.
 
-import type { Campaign, Card, Column, Epoch, IdeologyVector, Setting } from "../types.ts";
+import type { Card, EffectSpec } from "../data/cards.ts";
+import type { CrisisOutcome, ProjectUnlock } from "../data/projects.ts";
+import type { Campaign } from "./campaign.ts";
+import type { GameEvent } from "./events.ts";
+import { type Column, columnFromConfig, createEmptyColumn } from "./column.ts";
 import { CARD_BY_ID, makeDissent } from "../data/cards.ts";
 import { drawToHandSize, getTransientShift, purgeDissent } from "./effects.ts";
-import { checkAlignment, deriveVector, influenceCostAdjustment } from "./ideology.ts";
-import { columnFromConfig, createEmptyColumn } from "./column.ts";
+import {
+  checkAlignment,
+  deriveVector,
+  influenceCostAdjustment,
+  type IdeologyVector,
+} from "./ideology.ts";
+import type { Setting } from "../settings/index.ts";
 import type { RNG } from "./rng.ts";
+
+// -------------------------------------------------------------------------
+// Epoch runtime state
+// -------------------------------------------------------------------------
+
+export interface Epoch {
+  epochNumber: number;
+  settingId: string;
+  turn: number;
+  phase: EpochPhase;
+  hand: Card[];
+  draw: Card[];
+  discard: Card[];
+  columns: Column[];
+  unlockedProjects: ProjectUnlock[];
+  eventLog: GameEvent[];
+  influence: number;
+  materials: number;
+  endOfTurnQueue: EffectSpec[];
+  status: EpochStatus;
+  crisis: {
+    status: "pending" | "resolved";
+    outcome?: CrisisOutcome;
+  };
+}
+
+export type EpochPhase = "play" | "crisis" | "end-of-epoch";
+
+export type EpochStatus =
+  | { kind: "in-progress" }
+  | { kind: "won"; outcome: CrisisOutcome }
+  | { kind: "lost"; outcome: CrisisOutcome };
 
 export type Alignment = "aligned" | "opposed" | "neutral";
 
