@@ -1,15 +1,13 @@
+# Netlify build config. Lives in-repo so it overrides any stale
+# dashboard settings (e.g., the legacy `build:visualizer` command from
+# before the deck-building redesign).
+
 [build]
-  command = "bun run build"
+  command = "bun install --frozen-lockfile && bun run build"
   publish = "dist"
 
-# SPA routing: redirect all requests to index.html for Vue Router
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-# Cache static assets
-[[headers]]
-  for = "/assets/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+[build.environment]
+  # Pin a recent Bun. Netlify reads BUN_VERSION when present.
+  BUN_VERSION = "1.2.16"
+  # Skip auto-installing legacy npm/yarn packages on top of bun.
+  NPM_FLAGS = "--version"
