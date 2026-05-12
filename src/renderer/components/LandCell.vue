@@ -5,7 +5,9 @@
       { occupied: cards.length > 0, 'drop-target': isDropTarget, 'drag-over': isDragOver },
     ]"
   >
-    <div v-if="cards.length === 0" class="cell-empty">place a Land</div>
+    <div v-if="cards.length === 0" class="cell-empty">
+      <span class="cell-empty-label">Land</span>
+    </div>
     <div v-else class="land-stack">
       <Card
         v-for="(card, i) in cards"

@@ -9,7 +9,9 @@
       <span class="lock-glyph">🔒</span>
       <span class="lock-hint">fill Influence first</span>
     </div>
-    <div v-else-if="!card" class="cell-empty">place a Charter</div>
+    <div v-else-if="!card" class="cell-empty">
+      <span class="cell-empty-label">Charter</span>
+    </div>
     <div v-else class="cell-content">
       <Card :card="card" :selectable="false" />
       <button class="cell-action" @click.stop="$emit('discard')">Discard</button>

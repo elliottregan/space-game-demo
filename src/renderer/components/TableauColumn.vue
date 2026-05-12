@@ -105,7 +105,9 @@ function onDrop(e: DragEvent): void {
 <style scoped>
 .tableau-column {
   display: grid;
-  grid-template-rows: auto auto auto auto;
-  gap: 4px;
+  /* Matches the row heights in TableauPanel's row-labels so rows align
+     across all columns and the row labels in the left margin. */
+  grid-template-rows: 150px 150px 270px auto;
+  gap: 6px;
 }
 </style>

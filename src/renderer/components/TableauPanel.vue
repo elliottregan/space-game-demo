@@ -69,13 +69,20 @@ function validForDrag(i: number): { land: boolean; influence: boolean; charter: 
 <style scoped>
 .tableau-grid {
   display: grid;
-  grid-template-columns: 80px repeat(var(--col-count), 1fr);
+  grid-template-columns: 80px repeat(var(--col-count), minmax(120px, 1fr));
   gap: 6px;
+  align-items: start;
 }
 .row-labels {
   display: grid;
-  grid-template-rows: auto auto auto auto;
-  font-size: 12px;
+  /* Row heights match the cell min-heights in styles.css so labels align
+     with each row across all columns. */
+  grid-template-rows: 150px 150px 270px auto;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
 }
 .row-label {
@@ -83,7 +90,5 @@ function validForDrag(i: number): { land: boolean; influence: boolean; charter: 
   align-items: center;
   justify-content: flex-end;
   padding-right: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 </style>

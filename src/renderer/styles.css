@@ -866,6 +866,134 @@ button.primary:hover:not(:disabled) {
   flex: 1;
 }
 
+/* -------------------- Column tableau (new three-tier model) -------------------- */
+
+.cell {
+  border: 1px dashed var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  box-sizing: border-box;
+  position: relative;
+  /* Each cell type sets its own height below; min-width matches card width. */
+  min-width: 112px;
+  width: 112px;
+  margin-inline: auto;
+}
+.cell.land-cell {
+  height: 270px;
+  justify-content: flex-start;
+}
+.cell.influence-cell,
+.cell.charter-cell {
+  height: 150px;
+}
+.cell.occupied {
+  border-style: solid;
+  border-color: var(--border);
+  background: transparent;
+  padding: 0;
+}
+.cell.locked {
+  background: color-mix(in srgb, var(--text-muted) 6%, transparent);
+  border-color: var(--border);
+  color: var(--text-subtle);
+}
+
+.cell-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--text-subtle);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.cell-empty-label {
+  opacity: 0.7;
+}
+.cell-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+}
+.lock-glyph {
+  font-size: 18px;
+  opacity: 0.5;
+}
+.lock-hint {
+  font-size: 10px;
+  color: var(--text-subtle);
+}
+
+.cell-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.cell-content .card {
+  margin-bottom: 0;
+}
+.land-stack {
+  position: relative;
+  width: 112px;
+  display: flex;
+  flex-direction: column;
+}
+.land-stack .card:not(:first-child) {
+  margin-top: -110px;
+}
+.land-stack .card:last-of-type {
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+.cell-action {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  padding: 2px 8px;
+  z-index: 2;
+}
+
+.cell.drop-target {
+  outline: 1px dashed var(--accent);
+  outline-offset: -1px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.cell.drag-over {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.column-footer {
+  display: flex;
+  gap: 4px;
+  flex-direction: column;
+}
+.column-footer button {
+  font-size: 11px;
+  padding: 4px 6px;
+}
+
 /* -------------------- Market -------------------- */
 
 .market-panel {

@@ -64,6 +64,7 @@
           :hand="epoch.hand"
           :selected-ids="selectedIds"
           :influence="epoch.influence"
+          :columns="epoch.columns"
           :get-effective-cost="getEffectiveCost"
           :get-alignment="getAlignment"
           :valid-columns-for="validColumnsFor"

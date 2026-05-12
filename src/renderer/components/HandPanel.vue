@@ -75,7 +75,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { Card as CardT } from "../../core/types.ts";
+import type { Card as CardT, Column } from "../../core/types.ts";
 import Card from "./Card.vue";
 import { beginDrag, endDrag, dragging } from "../util/dragState.ts";
 
@@ -83,6 +83,7 @@ const props = defineProps<{
   hand: CardT[];
   selectedIds: string[];
   influence: number;
+  columns: Column[];
   getEffectiveCost: (card: CardT) => number;
   getAlignment: (card: CardT) => "aligned" | "opposed" | "neutral";
   validColumnsFor: (cardId: string) => number[];
@@ -101,19 +102,45 @@ const selectedCards = computed(() =>
 
 const playableSelection = computed(() => selectedCards.value.filter((c) => !isDissent(c)));
 
-/** Slots where EVERY playable selected card can be played. */
+/** Columns where EVERY playable selected card can be placed in order
+ * (Land row stacks lands of matching rank; Influence holds one Role;
+ * Charter holds one Charter). Simulating sequential placement avoids
+ * promising slots where only the first selected card actually fits. */
 const validSharedSlots = computed(() => {
   const cards = playableSelection.value;
   if (cards.length === 0) return [];
-  const slotSets = cards.map((c) => new Set(props.validColumnsFor(c.id)));
-  const first = slotSets[0];
-  if (!first) return [];
-  const intersection: number[] = [];
-  for (const s of first) {
-    if (slotSets.every((set) => set.has(s))) intersection.push(s);
+  const out: number[] = [];
+  for (let i = 0; i < props.columns.length; i++) {
+    if (canPlaceAllSequentially(cards, props.columns[i]!)) out.push(i);
   }
-  return intersection.sort((a, b) => a - b);
+  return out;
 });
+
+function canPlaceAllSequentially(cards: CardT[], col: Column): boolean {
+  let landCount = col.lands.cards.length;
+  let landRank: number | null = col.lands.cards[0]?.rank ?? null;
+  let influenceFilled = col.influence.card !== null;
+  let charterFilled = col.charter.card !== null;
+  for (const c of cards) {
+    if (c.kind === "land") {
+      if (landCount >= 4) return false;
+      if (landRank !== null && landRank !== c.rank) return false;
+      landCount++;
+      landRank = c.rank;
+    } else if (c.kind === "role") {
+      if (influenceFilled) return false;
+      if (landCount < 1) return false;
+      influenceFilled = true;
+    } else if (c.kind === "charter") {
+      if (charterFilled) return false;
+      if (!influenceFilled) return false;
+      charterFilled = true;
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
 
 const allAffordable = computed(() => {
   // Lands are free; Roles/Keystones cost Influence. Sum non-Land costs.
