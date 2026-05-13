@@ -183,8 +183,8 @@ describe("evaluateColumn", () => {
     // ranks 5,6,7,8,9 in land row → straight
     const col = createEmptyColumn();
     for (const r of [5, 6, 7, 8, 9]) placeLand(col, land(r, "heritage"));
-    placeInfluence(col, role("scholar", "solidarity")); // different ideology → no flush
-    placeCharter(col, charter()); // solidarity charter → still mixed
+    placeInfluence(col, role("scholar", "solidarity")); // mixes ideology → no flush
+    placeCharter(col, charter());
     const m = evaluateColumn(col, projects);
     expect(m?.kind).toBe("straight");
     expect(m?.projectId).toBe("p-straight");

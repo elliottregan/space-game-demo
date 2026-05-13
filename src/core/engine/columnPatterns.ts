@@ -31,6 +31,10 @@ function resolveColumnPattern(
   role: RowHand | null,
   flush: boolean,
 ): PatternKind | null {
+  // isBuildable already guarantees rows are non-empty, but identifyRowHand
+  // still returns null when a row's contents don't form any known hand
+  // (e.g. two different-rank lands). Bail out in that case — there's no
+  // pattern to unlock.
   if (land === null || role === null) return null;
 
   // 1. royal-flush — role-row straight + column-flush
