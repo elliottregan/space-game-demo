@@ -83,7 +83,7 @@ const CRISIS: Crisis = {
   id: "ruin-collapse",
   name: "The Long Collapse",
   flavor: "What was once a city must be coaxed back into shape.",
-  difficulty: 8,
+  difficulty: 20,
 };
 
 export const RUINED_HOMEWORLD: Setting = {
