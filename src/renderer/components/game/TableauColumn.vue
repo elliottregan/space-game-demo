@@ -12,7 +12,7 @@
       @discard="$emit('discard-charter')"
     />
     <InfluenceCell
-      :card="column.influence.cards[0] ?? null"
+      :cards="column.influence.cards"
       :locked="column.lands.cards.length === 0"
       :is-drop-target="influenceDropTarget"
       :is-drag-over="dragOver === 'influence'"
