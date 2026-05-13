@@ -11,7 +11,7 @@ Each run (an "Epoch") is a single card-play session on a `Setting` (Homeworld, G
 ## Commands
 
 - `bun install` — install dependencies (auto-installs lefthook hooks via `prepare`)
-- `bun run dev` — Vite dev server, http://localhost:5174
+- `bun run dev` — Vite dev server, http://localhost:5173
 - `bun run build` — production build
 - `bun run preview` — preview production build
 - `bun run typecheck` — `tsc --noEmit`
