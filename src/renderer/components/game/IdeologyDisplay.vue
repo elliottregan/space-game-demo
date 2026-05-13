@@ -43,44 +43,16 @@
 
         <!-- Pole labels -->
         <text
-          :x="CENTER"
-          :y="LABEL_INSET"
-          text-anchor="middle"
-          dominant-baseline="hanging"
-          :style="{ fill: 'var(--suit-transformation)' }"
+          v-for="id in IDEOLOGIES"
+          :key="id"
+          :x="poleAnchor(id).x"
+          :y="poleAnchor(id).y"
+          :text-anchor="poleAnchor(id).textAnchor"
+          :dominant-baseline="poleAnchor(id).dominantBaseline"
+          :style="{ fill: `var(${IDEOLOGY_DISPLAY[id].cssColorVar})` }"
           class="pole-label"
         >
-          Transformation
-        </text>
-        <text
-          :x="CENTER"
-          :y="SIZE - LABEL_INSET"
-          text-anchor="middle"
-          dominant-baseline="auto"
-          :style="{ fill: 'var(--suit-heritage)' }"
-          class="pole-label"
-        >
-          Heritage
-        </text>
-        <text
-          :x="LABEL_INSET"
-          :y="CENTER"
-          text-anchor="start"
-          dominant-baseline="middle"
-          :style="{ fill: 'var(--suit-solidarity)' }"
-          class="pole-label"
-        >
-          Solidarity
-        </text>
-        <text
-          :x="SIZE - LABEL_INSET"
-          :y="CENTER"
-          text-anchor="end"
-          dominant-baseline="middle"
-          :style="{ fill: 'var(--suit-sovereignty)' }"
-          class="pole-label"
-        >
-          Sovereignty
+          {{ IDEOLOGY_DISPLAY[id].name }}
         </text>
 
         <!-- Halo around dot -->
@@ -105,8 +77,14 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { Demonym, IdeologyVector } from "../../../core/types.ts";
-import { demonym, demonymName } from "../../../core/engine/ideology.ts";
+import type { Ideology, IdeologyVector } from "../../../core/types.ts";
+import { IDEOLOGY_DISPLAY, IDEOLOGIES } from "../../../core/data/ideologies.ts";
+import {
+  demonym,
+  demonymName,
+  IDEOLOGY_AXIS,
+  IDEOLOGY_BY_DEMONYM,
+} from "../../../core/engine/ideology.ts";
 
 const props = defineProps<{
   vector: IdeologyVector;
@@ -127,12 +105,26 @@ const THRESHOLDS = [3, 6, 8] as const;
 const DOT_RADIUS = 4.5;
 const HALO_OFFSET = 6;
 
-const DEMONYM_COLOR: Record<NonNullable<Demonym>, string> = {
-  collective: "var(--suit-solidarity)",
-  dominion: "var(--suit-sovereignty)",
-  ascendancy: "var(--suit-transformation)",
-  keepers: "var(--suit-heritage)",
-};
+interface PoleAnchor {
+  x: number;
+  y: number;
+  textAnchor: "middle" | "start" | "end";
+  dominantBaseline: "hanging" | "auto" | "middle";
+}
+
+function poleAnchor(id: Ideology): PoleAnchor {
+  const { axis, sign } = IDEOLOGY_AXIS[id];
+  if (axis === "axis2") {
+    // sign +1 → top, sign -1 → bottom
+    return sign > 0
+      ? { x: CENTER, y: LABEL_INSET, textAnchor: "middle", dominantBaseline: "hanging" }
+      : { x: CENTER, y: SIZE - LABEL_INSET, textAnchor: "middle", dominantBaseline: "auto" };
+  }
+  // axis1: sign +1 → right, sign -1 → left
+  return sign > 0
+    ? { x: SIZE - LABEL_INSET, y: CENTER, textAnchor: "end", dominantBaseline: "middle" }
+    : { x: LABEL_INSET, y: CENTER, textAnchor: "start", dominantBaseline: "middle" };
+}
 
 function clamp(v: number): number {
   return Math.max(-MAX, Math.min(MAX, v));
@@ -149,9 +141,11 @@ const dotY = computed(() => CENTER - toCanvas(props.vector.axis2));
 const demonymKey = computed(() => demonym(props.vector));
 const demonymLabel = computed(() => demonymName(demonymKey.value));
 
-const dotColor = computed(() =>
-  demonymKey.value ? DEMONYM_COLOR[demonymKey.value] : "var(--accent)",
-);
+const dotColor = computed(() => {
+  const key = demonymKey.value;
+  if (!key) return "var(--accent)";
+  return `var(${IDEOLOGY_DISPLAY[IDEOLOGY_BY_DEMONYM[key]].cssColorVar})`;
+});
 
 const demonymLabelStyle = computed(() => {
   if (!demonymKey.value) return { color: "var(--text-subtle)" };

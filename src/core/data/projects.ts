@@ -4,6 +4,7 @@
 // end-of-Epoch.
 
 import type { Card, EffectSpec, Ideology } from "./cards.ts";
+import { zeroIdeologyBreakdown } from "./ideologies.ts";
 
 // -------------------------------------------------------------------------
 // Pattern + Project + Crisis types
@@ -76,12 +77,7 @@ export function getProjectForPattern(
 }
 
 export function unlockedIdeologyBreakdown(unlocks: ProjectUnlock[]): Record<Ideology, number> {
-  const out: Record<Ideology, number> = {
-    solidarity: 0,
-    sovereignty: 0,
-    transformation: 0,
-    heritage: 0,
-  };
+  const out = zeroIdeologyBreakdown();
   for (const u of unlocks) {
     for (const c of u.cards) {
       if (c.ideology === "wild") continue;

@@ -9,13 +9,15 @@ export type {
   CardTag,
   DissentVariant,
   EffectSpec,
-  Ideology,
   Rank,
   Role,
   SerializablePredicate,
   Timing,
 } from "./data/cards.ts";
-export { IDEOLOGIES, ROLE_RANK } from "./data/cards.ts";
+export { ROLE_RANK } from "./data/cards.ts";
+
+export type { Ideology, IdeologyDisplay } from "./data/ideologies.ts";
+export { IDEOLOGIES, IDEOLOGY_DISPLAY, zeroIdeologyBreakdown } from "./data/ideologies.ts";
 
 export type {
   Crisis,

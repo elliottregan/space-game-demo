@@ -1,6 +1,7 @@
 // Card display label helpers.
 
 import type { Card, CardIdeology } from "../../core/types.ts";
+import { IDEOLOGY_DISPLAY } from "../../core/data/ideologies.ts";
 
 export function rankLabel(rank: number): string {
   if (rank === 11) return "J";
@@ -12,18 +13,8 @@ export function rankLabel(rank: number): string {
 }
 
 export function suitLabel(ideology: CardIdeology): string {
-  switch (ideology) {
-    case "solidarity":
-      return "Sol";
-    case "sovereignty":
-      return "Sov";
-    case "transformation":
-      return "Trn";
-    case "heritage":
-      return "Her";
-    case "wild":
-      return "Wild";
-  }
+  if (ideology === "wild") return "Wild";
+  return IDEOLOGY_DISPLAY[ideology].abbrev;
 }
 
 export function landMaterialPerTurn(rank: number): number {

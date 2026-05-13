@@ -1,13 +1,14 @@
 // Card pool — the static deck content + the types describing it.
-// Types: Card, CardKind, Ideology, Role, Rank, EffectSpec, …
+// Types: Card, CardKind, Role, Rank, EffectSpec, … (Ideology lives in ./ideologies.ts)
+
+import type { Ideology } from "./ideologies.ts";
+import { IDEOLOGIES } from "./ideologies.ts";
 
 // -------------------------------------------------------------------------
 // Ideology + Role taxonomy
 // -------------------------------------------------------------------------
 
-export type Ideology = "solidarity" | "sovereignty" | "transformation" | "heritage";
-
-export const IDEOLOGIES: Ideology[] = ["solidarity", "sovereignty", "transformation", "heritage"];
+export { type Ideology, IDEOLOGIES } from "./ideologies.ts";
 
 export type CardIdeology = Ideology | "wild";
 

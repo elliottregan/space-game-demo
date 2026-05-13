@@ -22,10 +22,10 @@
       </p>
 
       <p class="ideology">
-        Ideology: S{{ breakdown.solidarity }} · V{{ breakdown.sovereignty }} · T{{
-          breakdown.transformation
-        }}
-        · H{{ breakdown.heritage }}
+        Ideology:
+        <template v-for="(id, i) in IDEOLOGIES" :key="id">
+          <span v-if="i > 0"> · </span>{{ IDEOLOGY_DISPLAY[id].code }}{{ breakdown[id] }}
+        </template>
       </p>
 
       <LegacyChoiceRow
@@ -54,6 +54,7 @@ import type {
   PatternKind,
   ProjectUnlock,
 } from "../../../core/types.ts";
+import { IDEOLOGIES, IDEOLOGY_DISPLAY } from "../../../core/data/ideologies.ts";
 import LegacyChoiceRow from "./LegacyChoiceRow.vue";
 
 const props = defineProps<{

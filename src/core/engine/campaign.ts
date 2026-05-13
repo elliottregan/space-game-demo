@@ -14,6 +14,7 @@ import {
   type MintingResult,
 } from "./legacy.ts";
 import { unlockedIdeologyBreakdown } from "../data/projects.ts";
+import { zeroIdeologyBreakdown } from "../data/ideologies.ts";
 import { HOMEWORLD } from "../settings/homeworld.ts";
 import { currentVector, createEpoch } from "./epoch.ts";
 import { getSetting } from "../settings/index.ts";
@@ -110,7 +111,7 @@ export function prepareEndOfEpoch(
       nextSettingId: "campaign-end",
       outcome: "loss",
       crisis: { totalValue: 0, cleared: false, contributingUnlocks: [] },
-      ideologyBreakdown: { solidarity: 0, sovereignty: 0, transformation: 0, heritage: 0 },
+      ideologyBreakdown: zeroIdeologyBreakdown(),
     };
   }
   const result =

@@ -19,6 +19,7 @@
 
 <script setup lang="ts">
 import type { Ideology, KeystoneProject, ProjectUnlock } from "../../../core/types.ts";
+import { zeroIdeologyBreakdown } from "../../../core/data/ideologies.ts";
 
 const props = defineProps<{
   unlocks: ProjectUnlock[];
@@ -31,12 +32,7 @@ function projectName(id: string): string {
 }
 
 function ideologyBreakdown(u: ProjectUnlock): Partial<Record<Ideology, number>> {
-  const counts: Record<Ideology, number> = {
-    solidarity: 0,
-    sovereignty: 0,
-    transformation: 0,
-    heritage: 0,
-  };
+  const counts = zeroIdeologyBreakdown();
   for (const c of u.cards) {
     if (c.ideology === "wild") continue;
     counts[c.ideology] += 1;
