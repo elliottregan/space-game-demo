@@ -2,7 +2,7 @@
 // Types: Card, CardKind, Role, Rank, EffectSpec, … (Ideology lives in ./ideologies.ts)
 
 import type { Ideology } from "./ideologies.ts";
-import { IDEOLOGIES } from "./ideologies.ts";
+import { IDEOLOGIES, IDEOLOGY_DISPLAY } from "./ideologies.ts";
 
 // -------------------------------------------------------------------------
 // Ideology + Role taxonomy
@@ -575,5 +575,5 @@ export function makeDissent(variant: "quiet" | "backlash" | "unrest", against?: 
 }
 
 function againstName(ideology: Ideology): string {
-  return ideology.charAt(0).toUpperCase() + ideology.slice(1);
+  return IDEOLOGY_DISPLAY[ideology].name;
 }

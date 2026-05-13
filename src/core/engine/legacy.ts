@@ -12,6 +12,7 @@ import type {
   Setting,
 } from "../types.ts";
 import { reversePatternOrder } from "../data/projects.ts";
+import { IDEOLOGY_AXIS } from "./ideology.ts";
 
 export interface MintingResult {
   candidates: LegacyCandidate[];
@@ -72,21 +73,18 @@ function buildMonument(
   if (!project) return undefined;
   // Terrain effect: positive sovereignty/transformation for high patterns, otherwise no shift.
   const mag = Math.max(1, Math.floor(outcome.totalValue / 5));
-  const delta: Partial<IdeologyTerrain> = {};
-  // Use net ideology of contributing unlocks: solidarity vs sovereignty drives axis1.
-  let axis1 = 0,
-    axis2 = 0;
+  // Net ideology of contributing unlocks → only the direction is used (× mag below).
+  const sum = { axis1: 0, axis2: 0 };
   for (const u of outcome.contributingUnlocks) {
     for (const c of u.cards) {
       if (c.ideology === "wild") continue;
-      if (c.ideology === "solidarity") axis1 -= 1;
-      if (c.ideology === "sovereignty") axis1 += 1;
-      if (c.ideology === "transformation") axis2 += 1;
-      if (c.ideology === "heritage") axis2 -= 1;
+      const { axis, sign } = IDEOLOGY_AXIS[c.ideology];
+      sum[axis] += sign;
     }
   }
-  if (axis1 !== 0) delta.axis1 = Math.sign(axis1) * mag;
-  if (axis2 !== 0) delta.axis2 = Math.sign(axis2) * mag;
+  const delta: Partial<IdeologyTerrain> = {};
+  if (sum.axis1 !== 0) delta.axis1 = Math.sign(sum.axis1) * mag;
+  if (sum.axis2 !== 0) delta.axis2 = Math.sign(sum.axis2) * mag;
   return {
     id: `monument-${project.id}-e${epoch.epochNumber}`,
     projectId: project.id,
