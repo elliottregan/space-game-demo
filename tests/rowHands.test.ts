@@ -78,7 +78,7 @@ describe("validateRowHand", () => {
 });
 
 describe("canCommitHand", () => {
-  it.skip("growing from pair to three by adding a same-rank card is valid", () => {
+  it("growing from pair to three by adding a same-rank card is valid", () => {
     const col = createEmptyColumn();
     const three = nOfRank(landsPool(), 3);
     placeLand(col, three[0]);
@@ -86,14 +86,14 @@ describe("canCommitHand", () => {
     expect(canCommitHand(col, "land", [three[2]])).toBe(true);
   });
 
-  it.skip("committing 4 lands of two ranks (2+2) to an empty row is two-pair, valid", () => {
+  it("committing 4 lands of two ranks (2+2) to an empty row is two-pair, valid", () => {
     const col = createEmptyColumn();
     const a = pairOfRank(landsPool());
     const b = pairOfRank(landsPool(), { excludeRank: a[0].rank });
     expect(canCommitHand(col, "land", [...a, ...b])).toBe(true);
   });
 
-  it.skip("committing two different-rank cards to an empty row is rejected (not a hand)", () => {
+  it("committing two different-rank cards to an empty row is rejected (not a hand)", () => {
     const col = createEmptyColumn();
     const lands = landsPool();
     const a = lands.find((c) => c.rank === 4)!;
@@ -101,7 +101,7 @@ describe("canCommitHand", () => {
     expect(canCommitHand(col, "land", [a, b])).toBe(false);
   });
 
-  it.skip("rejects cards of the wrong kind for the row", () => {
+  it("rejects cards of the wrong kind for the row", () => {
     const col = createEmptyColumn();
     const role = ALL_CARDS.find((x) => x.kind === "role")!;
     expect(canCommitHand(col, "land", [role])).toBe(false);

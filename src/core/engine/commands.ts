@@ -115,18 +115,23 @@ export function discardCharter(epoch: Epoch, columnIndex: number): CmdResult<Car
   return { ok: true, value: card };
 }
 
-export function recallInfluence(epoch: Epoch, columnIndex: number): CmdResult<Card> {
+export function recallInfluence(epoch: Epoch, columnIndex: number): CmdResult<Card[]> {
   if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
   if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
   const col = epoch.columns[columnIndex];
-  if (!col) return { ok: false, error: "Invalid column." };
-  const card = col.influence.card;
-  if (!card) return { ok: false, error: "No Influence to recall." };
+  if (!col) return { ok: false, error: "no such column" };
+  if (col.influence.cards.length === 0) return { ok: false, error: "no influence to recall" };
   if (col.charter.card !== null) {
     return { ok: false, error: "Discard the Charter first." };
   }
-  dispatch(epoch, { type: "card-recalled-to-hand", card, columnIndex });
-  return { ok: true, value: card };
+  const recalled = [...col.influence.cards];
+  // Emit a discard event per recalled card so Dissent + discard piles get the
+  // same treatment as today's single-recall.
+  for (const card of recalled) {
+    dispatch(epoch, { type: "card-discarded", card, source: "influence-recall" });
+  }
+  col.influence.cards.length = 0;
+  return { ok: true, value: recalled };
 }
 
 export function discardColumn(epoch: Epoch, columnIndex: number): CmdResult<void> {
@@ -138,7 +143,7 @@ export function discardColumn(epoch: Epoch, columnIndex: number): CmdResult<void
   if (cards.length === 0) return { ok: false, error: "Column is empty." };
   // Clear first so the cascade does not double-touch.
   col.lands.cards.length = 0;
-  col.influence.card = null;
+  col.influence.cards.length = 0;
   col.charter.card = null;
   for (const c of cards) {
     dispatch(epoch, { type: "card-discarded", card: c, source: "column" });

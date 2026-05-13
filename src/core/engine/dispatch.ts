@@ -15,7 +15,7 @@ export function dispatch(epoch: Epoch, ev: GameEvent): void {
     }
     case "card-played-to-influence": {
       const col = epoch.columns[ev.columnIndex];
-      if (col) col.influence.card = ev.card;
+      if (col) col.influence.cards.push(ev.card);
       break;
     }
     case "card-played-to-charter": {
@@ -33,7 +33,7 @@ export function dispatch(epoch: Epoch, ev: GameEvent): void {
     }
     case "card-recalled-to-hand": {
       const col = epoch.columns[ev.columnIndex];
-      if (col) col.influence.card = null;
+      if (col) col.influence.cards.length = 0;
       epoch.hand.push(ev.card);
       break;
     }

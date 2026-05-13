@@ -50,10 +50,12 @@ export function validateRowHand(cards: Card[]): boolean {
   return identifyRowHand(cards) !== null;
 }
 
-export function canCommitHand(
-  _col: Column,
-  _row: "land" | "influence",
-  _newCards: Card[],
-): boolean {
-  throw new Error("canCommitHand requires InfluenceRow.cards refactor — see Task 4");
+export function canCommitHand(col: Column, row: "land" | "influence", newCards: Card[]): boolean {
+  if (newCards.length === 0) return false;
+  const requiredKind = row === "land" ? "land" : "role";
+  if (newCards.some((c) => c.kind !== requiredKind)) return false;
+
+  const existing = row === "land" ? col.lands.cards : col.influence.cards;
+  const after = [...existing, ...newCards];
+  return validateRowHand(after);
 }

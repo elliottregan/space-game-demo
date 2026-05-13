@@ -118,7 +118,7 @@ const validSharedSlots = computed(() => {
 function canPlaceAllSequentially(cards: CardT[], col: Column): boolean {
   let landCount = col.lands.cards.length;
   let landRank: number | null = col.lands.cards[0]?.rank ?? null;
-  let influenceFilled = col.influence.card !== null;
+  let influenceFilled = col.influence.cards.length > 0;
   let charterFilled = col.charter.card !== null;
   for (const c of cards) {
     if (c.kind === "land") {

@@ -81,7 +81,7 @@ describe("column placement", () => {
     placeCharter(col, charter());
     clearColumn(col);
     expect(col.lands.cards.length).toBe(0);
-    expect(col.influence.card).toBeNull();
+    expect(col.influence.cards.length).toBe(0);
     expect(col.charter.card).toBeNull();
   });
 

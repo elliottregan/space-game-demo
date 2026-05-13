@@ -2,7 +2,7 @@
   <div :class="['tableau-column', { 'drop-target': anyDropTarget, 'drag-over': isAnyDragOver }]">
     <CharterCell
       :card="column.charter.card"
-      :locked="column.influence.card === null"
+      :locked="column.influence.cards.length === 0"
       :is-drop-target="charterDropTarget"
       :is-drag-over="dragOver === 'charter'"
       @dragenter.prevent="dragOver = charterDropTarget ? 'charter' : null"
@@ -12,7 +12,7 @@
       @discard="$emit('discard-charter')"
     />
     <InfluenceCell
-      :card="column.influence.card"
+      :card="column.influence.cards[0] ?? null"
       :locked="column.lands.cards.length === 0"
       :is-drop-target="influenceDropTarget"
       :is-drag-over="dragOver === 'influence'"
@@ -79,7 +79,7 @@ const isAnyDragOver = computed(() => dragOver.value !== null);
 const empty = computed(
   () =>
     props.column.lands.cards.length === 0 &&
-    props.column.influence.card === null &&
+    props.column.influence.cards.length === 0 &&
     props.column.charter.card === null,
 );
 

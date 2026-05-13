@@ -58,7 +58,7 @@ describe("dispatch", () => {
     dispatch(ep, { type: "card-recalled-to-hand", card: r, columnIndex: 0 });
     expect(ep.hand).toContain(r);
     expect(ep.draw.length).toBe(0); // no dissent
-    expect(col.influence.card).toBeNull();
+    expect(col.influence.cards.length).toBe(0);
   });
 
   test("column-built cascades discards through the discard handler (one dissent per card) and clears the column", () => {
@@ -68,7 +68,7 @@ describe("dispatch", () => {
     placeInfluence(col, getCard(roleId("scholar", "solidarity")));
     placeCharter(col, getCard("keystone-founding-charter"));
     const ep = freshEpoch([col]);
-    const influence = col.influence.card;
+    const influence = col.influence.cards[0];
     const charter = col.charter.card;
     if (!influence || !charter) throw new Error("expected placed cards");
     const unlock: ProjectUnlock = {
@@ -80,7 +80,7 @@ describe("dispatch", () => {
     dispatch(ep, { type: "column-built", columnIndex: 0, unlock });
     expect(ep.unlockedProjects).toContain(unlock);
     expect(col.lands.cards.length).toBe(0);
-    expect(col.influence.card).toBeNull();
+    expect(col.influence.cards.length).toBe(0);
     expect(col.charter.card).toBeNull();
     // 4 cards discarded → 4 dissent added.
     expect(ep.draw.filter((c) => c.tags.includes("dissent")).length).toBe(4);

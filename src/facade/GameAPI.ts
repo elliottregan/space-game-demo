@@ -170,7 +170,7 @@ export class GameAPI {
       .filter((c) => c.tags.includes("dissent")).length;
     const columnsView: Column[] = this.epoch.columns.map((c) => ({
       lands: { cards: [...c.lands.cards] },
-      influence: { card: c.influence.card },
+      influence: { cards: c.influence.cards.map((card) => ({ ...card })) },
       charter: { card: c.charter.card },
     }));
     const columnBuildable = columnsView.map(
@@ -250,7 +250,7 @@ export class GameAPI {
   discardCharter(columnIndex: number): CommandResult<Card> {
     return discardCharterCore(this.epoch, columnIndex);
   }
-  recallInfluence(columnIndex: number): CommandResult<Card> {
+  recallInfluence(columnIndex: number): CommandResult<Card[]> {
     return recallInfluenceCore(this.epoch, columnIndex);
   }
   discardColumn(columnIndex: number): CommandResult<void> {

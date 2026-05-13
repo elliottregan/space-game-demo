@@ -4,7 +4,12 @@
 import type { Card, DissentVariant, Ideology } from "../data/cards.ts";
 import type { CrisisOutcome, ProjectUnlock } from "../data/projects.ts";
 
-export type DiscardSource = "tableau-land" | "tableau-charter" | "column" | "hand";
+export type DiscardSource =
+  | "tableau-land"
+  | "tableau-charter"
+  | "column"
+  | "hand"
+  | "influence-recall";
 
 export type GameEvent =
   | { type: "card-played-to-land"; card: Card; columnIndex: number }
