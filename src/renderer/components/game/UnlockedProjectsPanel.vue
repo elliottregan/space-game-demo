@@ -1,23 +1,35 @@
 <template>
-  <Panel class="unlocked-projects" :title="`Keystone Projects (${unlocks.length})`">
+  <Panel
+    class="unlocked-projects"
+    :title="`Keystone Projects (${unlocks.length}/${PATTERNS_IN_ORDER.length})`"
+  >
     <div class="project-list">
-      <div v-for="u in unlocks" :key="u.projectId + '@' + u.turn" class="project-card">
-        <span class="project-star">★</span>
-        <span class="project-name">{{ projectName(u.projectId) }}</span>
-        <span
-          v-for="(count, ideology) in ideologyBreakdown(u)"
-          :key="ideology"
-          class="project-ideology"
-        >
-          {{ ideology }}: {{ count }}
-        </span>
+      <div
+        v-for="pattern in PATTERNS_IN_ORDER"
+        :key="pattern"
+        class="project-card"
+        :class="{ unlocked: findUnlock(pattern) }"
+      >
+        <span class="project-star" v-if="findUnlock(pattern)">★</span>
+        <span class="project-star empty" v-else>○</span>
+        <span class="project-name">{{ getProjectName(pattern) }}</span>
+        <template v-if="findUnlock(pattern)">
+          <span
+            v-for="(count, ideology) in ideologyBreakdown(findUnlock(pattern)!)"
+            :key="ideology"
+            class="project-ideology"
+          >
+            {{ ideology }}: {{ count }}
+          </span>
+        </template>
       </div>
     </div>
   </Panel>
 </template>
 
 <script setup lang="ts">
-import type { Ideology, KeystoneProject, ProjectUnlock } from "../../../core/types.ts";
+import type { Ideology, KeystoneProject, ProjectUnlock, PatternKind } from "../../../core/types.ts";
+import { PATTERNS_IN_ORDER } from "../../../core/data/projects.ts";
 import { zeroIdeologyBreakdown } from "../../../core/data/ideologies.ts";
 import Panel from "../core/Panel.vue";
 
@@ -27,8 +39,13 @@ const props = defineProps<{
   breakdown: Record<Ideology, number>;
 }>();
 
-function projectName(id: string): string {
-  return props.projects.find((p) => p.id === id)?.name ?? id;
+function findUnlock(pattern: PatternKind): ProjectUnlock | undefined {
+  return props.unlocks.find((u) => u.pattern === pattern);
+}
+
+function getProjectName(pattern: PatternKind): string {
+  const proj = props.projects.find((p) => p.pattern === pattern);
+  return proj?.name ?? pattern;
 }
 
 function ideologyBreakdown(u: ProjectUnlock): Partial<Record<Ideology, number>> {
@@ -61,11 +78,23 @@ function ideologyBreakdown(u: ProjectUnlock): Partial<Record<Ideology, number>> 
   border-radius: var(--radius-md);
   background: var(--surface-card);
   min-width: 120px;
+  opacity: 0.6;
+}
+
+.project-card.unlocked {
+  opacity: 1;
+  border-color: var(--accent, gold);
+  background: var(--surface-3, var(--surface));
 }
 
 .project-star {
   font-size: 1rem;
   color: var(--accent, gold);
+}
+
+.project-star.empty {
+  opacity: 0.3;
+  color: var(--text-subtle);
 }
 
 .project-name {
