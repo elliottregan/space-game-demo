@@ -11,6 +11,7 @@ import { drawToHandSize, getTransientShift, purgeDissent } from "./effects.ts";
 import {
   checkAlignment,
   deriveVector,
+  IDEOLOGY_AXIS,
   influenceCostAdjustment,
   type IdeologyVector,
 } from "./ideology.ts";
@@ -115,20 +116,8 @@ export function currentVector(epoch: Epoch, campaign: Campaign): IdeologyVector 
   const backlashBonus = { axis1: 0, axis2: 0 };
   for (const card of epoch.hand) {
     if (card.tags.includes("dissent") && card.ideology !== "wild") {
-      switch (card.ideology) {
-        case "solidarity":
-          backlashBonus.axis1 -= 1;
-          break;
-        case "sovereignty":
-          backlashBonus.axis1 += 1;
-          break;
-        case "transformation":
-          backlashBonus.axis2 += 1;
-          break;
-        case "heritage":
-          backlashBonus.axis2 -= 1;
-          break;
-      }
+      const { axis, sign } = IDEOLOGY_AXIS[card.ideology];
+      backlashBonus[axis] += sign;
     }
   }
   return deriveVector(epoch.columns, {

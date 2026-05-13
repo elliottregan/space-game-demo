@@ -52,7 +52,7 @@
           :style="{ fill: cssColorFor(id) }"
           class="pole-label"
         >
-          {{ IDEOLOGY_DISPLAY[id].name }}
+          {{ IDEOLOGY_DISPLAY[id].abbrev }}
         </text>
 
         <!-- Halo around dot -->

@@ -50,6 +50,19 @@ export const IDEOLOGY_BY_DEMONYM: Record<NonNullable<Demonym>, Ideology> = {
   keepers: "heritage",
 };
 
+// The opposing ideology shares the same axis with the opposite sign — derived
+// once from IDEOLOGY_AXIS so adding a fifth ideology stays a one-table edit.
+export const OPPOSING_IDEOLOGY: Record<Ideology, Ideology> = Object.fromEntries(
+  IDEOLOGIES.map((id) => {
+    const { axis, sign } = IDEOLOGY_AXIS[id];
+    const opposite = IDEOLOGIES.find(
+      (other) => IDEOLOGY_AXIS[other].axis === axis && IDEOLOGY_AXIS[other].sign === -sign,
+    );
+    if (!opposite) throw new Error(`No opposing ideology for ${id}`);
+    return [id, opposite];
+  }),
+) as Record<Ideology, Ideology>;
+
 // -------------------------------------------------------------------------
 // Vector derivation
 // -------------------------------------------------------------------------

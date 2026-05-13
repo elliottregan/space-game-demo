@@ -16,7 +16,7 @@ import { evaluateColumn } from "./columnPatterns.ts";
 import { dispatch } from "./dispatch.ts";
 import { applyEffect } from "./effects.ts";
 import type { EffectContext } from "./effects.ts";
-import { checkAlignment } from "./ideology.ts";
+import { checkAlignment, OPPOSING_IDEOLOGY } from "./ideology.ts";
 import type { RNG } from "./rng.ts";
 import { currentVector, effectiveInfluenceCost, type Alignment } from "./epoch.ts";
 
@@ -120,26 +120,13 @@ function playToTopRow(
     epoch.endOfTurnQueue.push({
       kind: "addDissent",
       variant: "backlash",
-      ideology: opposingIdeology(card.ideology),
+      ideology: OPPOSING_IDEOLOGY[card.ideology],
       amount: 1,
       timing: "end-of-turn",
     });
   }
 
   return { ok: true, card, alignment };
-}
-
-function opposingIdeology(ideology: "solidarity" | "sovereignty" | "transformation" | "heritage") {
-  switch (ideology) {
-    case "solidarity":
-      return "sovereignty" as const;
-    case "sovereignty":
-      return "solidarity" as const;
-    case "transformation":
-      return "heritage" as const;
-    case "heritage":
-      return "transformation" as const;
-  }
 }
 
 export function discardLand(epoch: Epoch, columnIndex: number): CmdResult<Card> {
