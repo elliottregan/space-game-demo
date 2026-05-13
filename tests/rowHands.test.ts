@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
-import { identifyRowHand } from "../src/core/engine/rowHands.ts";
+import { identifyRowHand, validateRowHand, canCommitHand } from "../src/core/engine/rowHands.ts";
 import { ALL_CARDS, type Card } from "../src/core/data/cards.ts";
+import { createEmptyColumn, placeLand } from "../src/core/engine/column.ts";
 
 const landsPool = (): Card[] => ALL_CARDS.filter((x) => x.kind === "land");
 
@@ -56,6 +57,54 @@ describe("identifyRowHand", () => {
     const a = landsPool()[0];
     const five = [a, a, a, a, a];
     expect(identifyRowHand(five)).toBeNull();
+  });
+});
+
+describe("validateRowHand", () => {
+  it("returns true for an identified hand", () => {
+    expect(validateRowHand(pairOfRank(landsPool()))).toBe(true);
+  });
+
+  it("returns false for a non-hand state", () => {
+    const lands = landsPool();
+    const a = lands.find((c) => c.rank === 4)!;
+    const b = lands.find((c) => c.rank === 5)!;
+    expect(validateRowHand([a, b])).toBe(false);
+  });
+
+  it("returns false for an empty stack", () => {
+    expect(validateRowHand([])).toBe(false);
+  });
+});
+
+describe("canCommitHand", () => {
+  it.skip("growing from pair to three by adding a same-rank card is valid", () => {
+    const col = createEmptyColumn();
+    const three = nOfRank(landsPool(), 3);
+    placeLand(col, three[0]);
+    placeLand(col, three[1]);
+    expect(canCommitHand(col, "land", [three[2]])).toBe(true);
+  });
+
+  it.skip("committing 4 lands of two ranks (2+2) to an empty row is two-pair, valid", () => {
+    const col = createEmptyColumn();
+    const a = pairOfRank(landsPool());
+    const b = pairOfRank(landsPool(), { excludeRank: a[0].rank });
+    expect(canCommitHand(col, "land", [...a, ...b])).toBe(true);
+  });
+
+  it.skip("committing two different-rank cards to an empty row is rejected (not a hand)", () => {
+    const col = createEmptyColumn();
+    const lands = landsPool();
+    const a = lands.find((c) => c.rank === 4)!;
+    const b = lands.find((c) => c.rank === 5)!;
+    expect(canCommitHand(col, "land", [a, b])).toBe(false);
+  });
+
+  it.skip("rejects cards of the wrong kind for the row", () => {
+    const col = createEmptyColumn();
+    const role = ALL_CARDS.find((x) => x.kind === "role")!;
+    expect(canCommitHand(col, "land", [role])).toBe(false);
   });
 });
 

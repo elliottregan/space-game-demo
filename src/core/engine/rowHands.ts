@@ -44,3 +44,17 @@ function isStraight(cards: Card[]): boolean {
   }
   return true;
 }
+
+export function validateRowHand(cards: Card[]): boolean {
+  return identifyRowHand(cards) !== null;
+}
+
+import type { Column } from "./column.ts";
+
+export function canCommitHand(
+  _col: Column,
+  _row: "land" | "influence",
+  _newCards: Card[],
+): boolean {
+  throw new Error("canCommitHand requires InfluenceRow.cards refactor — see Task 4");
+}
