@@ -1,6 +1,5 @@
 <template>
-  <section class="section">
-    <h2>Legacy Cards ({{ cards.length }})</h2>
+  <Panel :title="`Legacy Cards (${cards.length})`">
     <div v-if="cards.length === 0" class="empty">None yet.</div>
     <div v-for="l in cards" :key="l.id" class="legacy-item">
       <div>{{ l.baseCard.name }}</div>
@@ -8,11 +7,12 @@
         E{{ l.mintedOnEpoch }} · {{ l.upgradePath }} · {{ l.mintedFrom }}
       </div>
     </div>
-  </section>
+  </Panel>
 </template>
 
 <script setup lang="ts">
 import type { LegacyCard } from "../../../../core/types.ts";
+import Panel from "../../core/Panel.vue";
 
 defineProps<{ cards: LegacyCard[] }>();
 </script>

@@ -1,11 +1,8 @@
 <template>
-  <section class="section hand-panel">
-    <div class="hand-header">
-      <h2>Hand ({{ hand.length }})</h2>
-      <div v-if="selectedIds.length > 0" class="selection-meta">
-        {{ selectedIds.length }} selected
-        <button class="linklike" @click="$emit('clearSelection')">clear</button>
-      </div>
+  <Panel class="hand-panel" :title="`Hand (${hand.length})`">
+    <div v-if="selectedIds.length > 0" class="selection-meta">
+      {{ selectedIds.length }} selected
+      <button class="linklike" @click="$emit('clearSelection')">clear</button>
     </div>
     <div class="hand-cards">
       <Card
@@ -70,13 +67,14 @@
         </button>
       </template>
     </div>
-  </section>
+  </Panel>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Card as CardT, Column } from "../../../core/types.ts";
 import Card from "../core/Card.vue";
+import Panel from "../core/Panel.vue";
 import { beginDrag, endDrag, dragging } from "../../util/dragState.ts";
 
 const props = defineProps<{

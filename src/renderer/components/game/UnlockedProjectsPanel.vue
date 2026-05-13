@@ -1,6 +1,5 @@
 <template>
-  <section class="section unlocked-projects">
-    <h2>Keystone Projects ({{ unlocks.length }})</h2>
+  <Panel class="unlocked-projects" :title="`Keystone Projects (${unlocks.length})`">
     <div class="project-list">
       <div v-for="u in unlocks" :key="u.projectId + '@' + u.turn" class="project-card">
         <span class="project-star">★</span>
@@ -14,12 +13,13 @@
         </span>
       </div>
     </div>
-  </section>
+  </Panel>
 </template>
 
 <script setup lang="ts">
 import type { Ideology, KeystoneProject, ProjectUnlock } from "../../../core/types.ts";
 import { zeroIdeologyBreakdown } from "../../../core/data/ideologies.ts";
+import Panel from "../core/Panel.vue";
 
 const props = defineProps<{
   unlocks: ProjectUnlock[];
@@ -49,17 +49,17 @@ function ideologyBreakdown(u: ProjectUnlock): Partial<Record<Ideology, number>> 
 .project-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .project-card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px 10px;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface-2, var(--surface));
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
   min-width: 120px;
 }
 

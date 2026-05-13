@@ -48,6 +48,28 @@
   --shadow-card: 0 2px 4px rgba(0, 0, 0, 0.4);
   --shadow-dropdown: 0 6px 16px rgba(0, 0, 0, 0.5);
   --shadow-overlay: rgba(0, 0, 0, 0.75);
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  /* Elevation */
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --elev-2: 0 6px 18px rgba(0, 0, 0, 0.28);
+  --elev-3: 0 14px 40px rgba(0, 0, 0, 0.4);
+
+  /* Layout */
+  --rail-width: 44px;
+  --rail-bg: var(--surface-sunken);
 }
 
 /* Light theme — follows OS when user hasn't chosen. */
@@ -86,6 +108,10 @@
     --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.12);
     --shadow-dropdown: 0 6px 16px rgba(0, 0, 0, 0.15);
     --shadow-overlay: rgba(0, 0, 0, 0.45);
+
+    --elev-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+    --elev-2: 0 6px 18px rgba(0, 0, 0, 0.12);
+    --elev-3: 0 14px 40px rgba(0, 0, 0, 0.18);
   }
 }
 
@@ -124,6 +150,10 @@
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.12);
   --shadow-dropdown: 0 6px 16px rgba(0, 0, 0, 0.15);
   --shadow-overlay: rgba(0, 0, 0, 0.45);
+
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --elev-2: 0 6px 18px rgba(0, 0, 0, 0.12);
+  --elev-3: 0 14px 40px rgba(0, 0, 0, 0.18);
 }
 
 * {
@@ -214,69 +244,23 @@ button.primary:hover:not(:disabled) {
 
 .app-main {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: var(--rail-width) minmax(0, 1fr) var(--rail-width);
   overflow: hidden;
+  min-height: 0;
 }
 
 .play-area {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  grid-template-rows: auto auto 1fr auto;
-  grid-template-areas:
-    "projects ideology crisis"
-    "tableau  tableau  tableau"
-    "hand     hand     piles"
-    "errors   errors   errors";
-  padding: 12px;
-  gap: 12px;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  padding: var(--space-3);
+  gap: var(--space-3);
   overflow: auto;
-}
-.projects-panel {
-  grid-area: projects;
-}
-.ideology-display {
-  grid-area: ideology;
-}
-.crisis-counter {
-  grid-area: crisis;
-}
-.tableau-panel {
-  grid-area: tableau;
+  min-width: 0;
+  min-height: 0;
 }
 .hand-panel {
-  grid-area: hand;
   min-width: 0;
-}
-.deck-discard-panel {
-  grid-area: piles;
-}
-.error-bar {
-  grid-area: errors;
-}
-
-.sidebar {
-  border-left: 1px solid var(--border);
-  background: var(--surface-raised);
-  overflow: auto;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.section {
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 8px 10px;
-}
-.section h2 {
-  margin: 0 0 8px 0;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
 }
 
 /* -------------------- Card -------------------- */
@@ -574,15 +558,6 @@ button.primary:hover:not(:disabled) {
 
 /* -------------------- Hand -------------------- */
 
-.hand-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 4px;
-}
-.hand-header h2 {
-  margin: 0 0 8px 0;
-}
 .selection-meta {
   font-size: 11px;
   color: var(--text-muted);
@@ -618,11 +593,6 @@ button.primary:hover:not(:disabled) {
 
 /* -------------------- Deck / Discard piles -------------------- */
 
-.deck-discard-panel {
-  min-width: 180px;
-  display: flex;
-  flex-direction: column;
-}
 .pile-row {
   display: flex;
   gap: 8px;
@@ -770,12 +740,6 @@ button.primary:hover:not(:disabled) {
 
 /* -------------------- Tableau -------------------- */
 
-.tableau-panel {
-}
-.tableau-panel {
-  min-width: 0;
-  overflow-x: auto;
-}
 .tableau-slots {
   display: flex;
   flex-wrap: nowrap;
@@ -1090,11 +1054,6 @@ button.primary:hover:not(:disabled) {
 
 /* -------------------- Ideology -------------------- */
 
-.ideology-display {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
 .axis-row {
   display: grid;
   grid-template-columns: 100px 1fr 40px;

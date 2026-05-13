@@ -1,17 +1,17 @@
 <template>
-  <section class="section">
-    <h2>Event Log</h2>
+  <Panel title="Event Log">
     <div class="event-log">
       <div v-for="(e, i) in recent" :key="i" class="event-entry">
         {{ formatEvent(e) }}
       </div>
     </div>
-  </section>
+  </Panel>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
 import type { GameEvent } from "../../../../core/types.ts";
+import Panel from "../../core/Panel.vue";
 
 const props = defineProps<{ events: GameEvent[]; limit?: number }>();
 

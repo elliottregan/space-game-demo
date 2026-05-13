@@ -1,6 +1,5 @@
 <template>
-  <section class="section ideology-display">
-    <h2>Ideology</h2>
+  <Panel class="ideology-display" title="Ideology">
     <div class="plot-wrap">
       <svg
         class="ideology-plot"
@@ -72,7 +71,7 @@
     <div class="demonym-label" :class="{ unaligned: !demonymKey }" :style="demonymLabelStyle">
       {{ demonymLabel }}
     </div>
-  </section>
+  </Panel>
 </template>
 
 <script setup lang="ts">
@@ -85,6 +84,7 @@ import {
   IDEOLOGY_AXIS,
   IDEOLOGY_BY_DEMONYM,
 } from "../../../core/engine/ideology.ts";
+import Panel from "../core/Panel.vue";
 
 const props = defineProps<{
   vector: IdeologyVector;
@@ -156,11 +156,6 @@ const demonymLabelStyle = computed(() => {
 </script>
 
 <style scoped>
-.ideology-display {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
 .plot-wrap {
   flex: 1 1 auto;
   display: flex;
@@ -181,7 +176,7 @@ const demonymLabelStyle = computed(() => {
   letter-spacing: 0.02em;
 }
 .demonym-label {
-  margin-top: 6px;
+  margin-top: var(--space-1);
   font-size: 12px;
   font-style: italic;
   text-align: center;

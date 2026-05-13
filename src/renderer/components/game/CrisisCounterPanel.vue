@@ -1,6 +1,5 @@
 <template>
-  <section class="section crisis-counter">
-    <h2>Crisis · {{ crisis.name }}</h2>
+  <Panel class="crisis-counter" :title="`Crisis · ${crisis.name}`">
     <div class="crisis-score">
       <span class="score-current" :class="{ passing: currentScore >= crisis.difficulty }">
         {{ currentScore }}
@@ -12,12 +11,13 @@
       <div class="crisis-bar-fill" :style="{ width: barWidth }" />
     </div>
     <div class="crisis-label">{{ statusLabel }}</div>
-  </section>
+  </Panel>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Crisis, KeystoneProject, ProjectUnlock } from "../../../core/types.ts";
+import Panel from "../core/Panel.vue";
 
 const props = defineProps<{
   crisis: Crisis;
@@ -45,17 +45,12 @@ const statusLabel = computed(() => {
 </script>
 
 <style scoped>
-.crisis-counter {
-  min-width: 140px;
-}
-
 .crisis-score {
   display: flex;
   align-items: baseline;
-  gap: 4px;
+  gap: var(--space-1);
   font-size: 1.5rem;
   font-weight: 700;
-  margin-bottom: 6px;
 }
 
 .score-current {
