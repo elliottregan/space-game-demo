@@ -60,6 +60,7 @@
           @clear-selection="onClearSelection"
           @place-cards="onPlaceCards"
           @discard-from-hand="onDiscardFromHand"
+          @commit-to-row="onCommitToRow"
         />
 
         <button
@@ -225,6 +226,7 @@ import type { Card } from "../core/types.ts";
 import { SETTING_BY_ID } from "../core/settings/index.ts";
 import { MAX_SLOTS } from "../facade/persistence.ts";
 import { evaluateColumn } from "../core/engine/columnPatterns.ts";
+import { patternLabel } from "./util/labels.ts";
 
 const game = getGameService();
 
@@ -310,13 +312,6 @@ function getCardFromHand(cardId: string): Card | null {
   return epoch.value.hand.find((c) => c.id === cardId) ?? null;
 }
 
-function patternLabel(p: string): string {
-  return p
-    .split("-")
-    .map((s) => s[0].toUpperCase() + s.slice(1))
-    .join(" ");
-}
-
 function validColumnsFor(cardId: string): number[] {
   return game.validColumns(cardId);
 }
@@ -337,6 +332,15 @@ function onPlaceCards(ids: string[], i: number): void {
     if (game.validColumns(id).includes(i)) game.placeCard(id, i);
   }
   selectedIds.value = [];
+}
+function onCommitToRow(columnIndex: number, row: "land" | "influence"): void {
+  // Sync the service's commitBuffer with the current selection, then commit.
+  game.commitBuffer.value = [...selectedIds.value];
+  game.commitToRow(columnIndex, row);
+  // commitToRow calls clearBuffer on success; mirror that in selectedIds.
+  if (game.commitBuffer.value.length === 0) {
+    selectedIds.value = [];
+  }
 }
 function onDiscardLand(i: number): void {
   game.discardLand(i);

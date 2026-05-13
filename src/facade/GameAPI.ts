@@ -9,6 +9,7 @@ import {
 import { createEpoch, currentVector } from "../core/engine/epoch.ts";
 import {
   buildColumn as buildColumnCore,
+  commitHand as commitHandCore,
   discardCharter as discardCharterCore,
   discardColumn as discardColumnCore,
   discardFromHand as discardFromHandCore,
@@ -81,7 +82,7 @@ export class GameAPI {
   /** Serialize current state for persistence. */
   exportState(): SavedState {
     return {
-      version: 3,
+      version: 4,
       campaign: this.campaign,
       settingId: this.setting.id,
       epoch: this.epoch,
@@ -170,7 +171,7 @@ export class GameAPI {
       .filter((c) => c.tags.includes("dissent")).length;
     const columnsView: Column[] = this.epoch.columns.map((c) => ({
       lands: { cards: [...c.lands.cards] },
-      influence: { card: c.influence.card },
+      influence: { cards: c.influence.cards.map((card) => ({ ...card })) },
       charter: { card: c.charter.card },
     }));
     const columnBuildable = columnsView.map(
@@ -250,7 +251,7 @@ export class GameAPI {
   discardCharter(columnIndex: number): CommandResult<Card> {
     return discardCharterCore(this.epoch, columnIndex);
   }
-  recallInfluence(columnIndex: number): CommandResult<Card> {
+  recallInfluence(columnIndex: number): CommandResult<Card[]> {
     return recallInfluenceCore(this.epoch, columnIndex);
   }
   discardColumn(columnIndex: number): CommandResult<void> {
@@ -264,6 +265,16 @@ export class GameAPI {
     return r.ok
       ? { ok: true, value: { projectId: r.value.projectId, pattern: r.value.pattern } }
       : r;
+  }
+
+  commitHand(
+    columnIndex: number,
+    row: "land" | "influence",
+    cardIds: string[],
+  ): CommandResult<Card[]> {
+    const result = commitHandCore(this.epoch, columnIndex, row, cardIds, this.rng);
+    if (result.ok) this.persist();
+    return result;
   }
 
   endTurn(): CommandResult {

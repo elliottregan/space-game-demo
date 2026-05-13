@@ -27,9 +27,9 @@ function formatEvent(e: GameEvent): string {
     case "card-played-to-charter":
       return `${e.type.replace(/-/g, " ")}: ${e.card.name} → col ${e.columnIndex + 1}`;
     case "card-discarded":
-      return `card discarded: ${e.card.name}`;
-    case "card-recalled-to-hand":
-      return `card recalled: ${e.card.name}`;
+      return `card discarded (${e.source}): ${e.card.name}`;
+    case "cards-committed":
+      return `cards committed to ${e.row} (col ${e.columnIndex + 1}): ${e.cards.map((c) => c.name).join(", ")}`;
     case "column-built":
       return `column ${e.columnIndex + 1} built → ${e.unlock.projectId}`;
     case "dissent-added":

@@ -850,9 +850,10 @@ button.primary:hover:not(:disabled) {
 .cell.charter-cell {
   height: 150px;
 }
-/* Land cell grows horizontally with its CardStack; expand width to fill
-   the column track instead of staying centered at 112px. */
-.cell.land-cell {
+/* Land and Influence cells grow horizontally with their CardStacks; expand
+   width to fill the column track instead of staying centered at 112px. */
+.cell.land-cell,
+.cell.influence-cell {
   width: 100%;
 }
 .cell.occupied {

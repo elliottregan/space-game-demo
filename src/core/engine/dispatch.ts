@@ -15,12 +15,19 @@ export function dispatch(epoch: Epoch, ev: GameEvent): void {
     }
     case "card-played-to-influence": {
       const col = epoch.columns[ev.columnIndex];
-      if (col) col.influence.card = ev.card;
+      if (col) col.influence.cards.push(ev.card);
       break;
     }
     case "card-played-to-charter": {
       const col = epoch.columns[ev.columnIndex];
       if (col) col.charter.card = ev.card;
+      break;
+    }
+    case "cards-committed": {
+      const col = epoch.columns[ev.columnIndex];
+      if (!col) return;
+      const target = ev.row === "land" ? col.lands.cards : col.influence.cards;
+      for (const card of ev.cards) target.push(card);
       break;
     }
     case "card-discarded": {
@@ -30,12 +37,6 @@ export function dispatch(epoch: Epoch, ev: GameEvent): void {
       // through dispatch so any future hooks on `dissent-added` apply.
       dispatch(epoch, { type: "dissent-added", variant: "quiet" });
       return; // eventLog already appended above
-    }
-    case "card-recalled-to-hand": {
-      const col = epoch.columns[ev.columnIndex];
-      if (col) col.influence.card = null;
-      epoch.hand.push(ev.card);
-      break;
     }
     case "column-built": {
       epoch.unlockedProjects.push(ev.unlock);

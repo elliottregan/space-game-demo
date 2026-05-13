@@ -38,11 +38,49 @@ const PROJECTS: KeystoneProject[] = [
     value: DEFAULT_PROJECT_VALUE["three-of-a-kind"],
   },
   {
+    id: "ship-twin-watch",
+    pattern: "two-pair",
+    name: "Twin Watch",
+    flavor: "Two crews, two shifts, one vigil.",
+    value: DEFAULT_PROJECT_VALUE["two-pair"],
+  },
+  {
+    id: "ship-transit-corridor",
+    pattern: "straight",
+    name: "Transit Corridor",
+    flavor: "Every deck in sequence. No gaps, no detours.",
+    value: DEFAULT_PROJECT_VALUE["straight"],
+  },
+  {
     id: "ship-unison-engine",
     pattern: "flush",
     name: "Unison Engine",
     flavor: "All ideologies pull the same direction.",
     value: DEFAULT_PROJECT_VALUE["flush"],
+  },
+  {
+    id: "ship-hearth-and-hull",
+    pattern: "full-house",
+    // Structurally unreachable on Generation Ship (2-ideology deck caps
+    // per-rank at 2; full-house needs 3+2 of one rank). Included for data
+    // completeness — the voyagers may yet dream of it.
+    name: "Hearth and Hull",
+    flavor: "Someone drew the plans. No one has counted enough hands.",
+    value: DEFAULT_PROJECT_VALUE["full-house"],
+  },
+  {
+    id: "ship-aligned-burn",
+    pattern: "straight-flush",
+    name: "Aligned Burn",
+    flavor: "Sovereignty and Transformation, rank on rank, all the same color in the viewport.",
+    value: DEFAULT_PROJECT_VALUE["straight-flush"],
+  },
+  {
+    id: "ship-founding-vector",
+    pattern: "royal-flush",
+    name: "Founding Vector",
+    flavor: "Every role, one ideology, perfect sequence. The destination earns a name.",
+    value: DEFAULT_PROJECT_VALUE["royal-flush"],
   },
   {
     id: "ship-fourfold-drive",
@@ -57,7 +95,7 @@ const CRISIS: Crisis = {
   id: "ship-deep-cold",
   name: "Deep Cold",
   flavor: "The ship enters a silent corridor between stars.",
-  difficulty: 12,
+  difficulty: 10,
 };
 
 export const GENERATION_SHIP: Setting = {
