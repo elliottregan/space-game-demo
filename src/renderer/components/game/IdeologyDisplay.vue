@@ -105,12 +105,11 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { IdeologyVector } from "../../../core/types.ts";
-import { demonym } from "../../../core/engine/ideology.ts";
+import type { Demonym, IdeologyVector } from "../../../core/types.ts";
+import { demonym, demonymName } from "../../../core/engine/ideology.ts";
 
 const props = defineProps<{
   vector: IdeologyVector;
-  demonymLabel: string;
 }>();
 
 // SVG geometry — square canvas in user-space units.
@@ -118,13 +117,22 @@ const SIZE = 200;
 const CENTER = SIZE / 2;
 // Inset reserved at each edge for pole labels.
 const LABEL_INSET = 10;
+// Breathing room between the pole-label baseline and the outer ring.
+const LABEL_GUTTER = 6;
 // Usable radius from center to the edge of the plot area.
-const RADIUS = CENTER - LABEL_INSET - 6;
-// Same clamp as the old AxisBar.
+const RADIUS = CENTER - LABEL_INSET - LABEL_GUTTER;
+// Hard clamp on ideology magnitude for plot scaling.
 const MAX = 20;
 const THRESHOLDS = [3, 6, 8] as const;
 const DOT_RADIUS = 4.5;
 const HALO_OFFSET = 6;
+
+const DEMONYM_COLOR: Record<NonNullable<Demonym>, string> = {
+  collective: "var(--suit-solidarity)",
+  dominion: "var(--suit-sovereignty)",
+  ascendancy: "var(--suit-transformation)",
+  keepers: "var(--suit-heritage)",
+};
 
 function clamp(v: number): number {
   return Math.max(-MAX, Math.min(MAX, v));
@@ -139,21 +147,11 @@ const dotX = computed(() => CENTER + toCanvas(props.vector.axis1));
 const dotY = computed(() => CENTER - toCanvas(props.vector.axis2));
 
 const demonymKey = computed(() => demonym(props.vector));
+const demonymLabel = computed(() => demonymName(demonymKey.value));
 
-const dotColor = computed(() => {
-  switch (demonymKey.value) {
-    case "collective":
-      return "var(--suit-solidarity)";
-    case "dominion":
-      return "var(--suit-sovereignty)";
-    case "ascendancy":
-      return "var(--suit-transformation)";
-    case "keepers":
-      return "var(--suit-heritage)";
-    default:
-      return "var(--accent)";
-  }
-});
+const dotColor = computed(() =>
+  demonymKey.value ? DEMONYM_COLOR[demonymKey.value] : "var(--accent)",
+);
 
 const demonymLabelStyle = computed(() => {
   if (!demonymKey.value) return { color: "var(--text-subtle)" };
