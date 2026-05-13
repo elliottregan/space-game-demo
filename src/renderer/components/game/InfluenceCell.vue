@@ -17,7 +17,7 @@
     <div v-else-if="cards.length === 0" class="cell-empty">
       <span class="cell-empty-label">Influence</span>
     </div>
-    <CardStack v-else :cards="cards">
+    <CardStack v-else :cards="cards" direction="horizontal">
       <button class="cell-action" @click.stop="$emit('recall')">Recall</button>
     </CardStack>
   </div>
