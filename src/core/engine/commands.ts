@@ -119,8 +119,8 @@ export function recallInfluence(epoch: Epoch, columnIndex: number): CmdResult<Ca
   if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
   if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
   const col = epoch.columns[columnIndex];
-  if (!col) return { ok: false, error: "no such column" };
-  if (col.influence.cards.length === 0) return { ok: false, error: "no influence to recall" };
+  if (!col) return { ok: false, error: "Invalid column." };
+  if (col.influence.cards.length === 0) return { ok: false, error: "No Influence to recall." };
   if (col.charter.card !== null) {
     return { ok: false, error: "Discard the Charter first." };
   }
