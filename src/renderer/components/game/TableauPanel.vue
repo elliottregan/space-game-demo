@@ -1,7 +1,10 @@
 <template>
   <section class="section tableau-panel">
     <h2>Tableau · produces {{ production }} Mat / turn</h2>
-    <div class="tableau-grid" :style="{ '--col-count': columns.length }">
+    <div
+      class="tableau-grid"
+      :style="{ '--col-count': columns.length, '--land-row-height': landRowHeight + 'px' }"
+    >
       <div class="row-labels">
         <div class="row-label">Charter</div>
         <div class="row-label">Influence</div>
@@ -27,10 +30,14 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import type { Card, Column } from "../../../core/types.ts";
 import TableauColumn from "./TableauColumn.vue";
 import { dragging } from "../../util/dragState.ts";
 import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../../../core/engine/column.ts";
+
+const STACK_OFFSET = 28;
+const CARD_HEIGHT = 150;
 
 const props = defineProps<{
   columns: Column[];
@@ -48,6 +55,11 @@ defineEmits<{
   discardColumn: [columnIndex: number];
   build: [columnIndex: number];
 }>();
+
+const landRowHeight = computed(() => {
+  const max = Math.max(1, ...props.columns.map((c) => c.lands.cards.length));
+  return CARD_HEIGHT + (max - 1) * STACK_OFFSET;
+});
 
 function buildTooltip(i: number): string {
   const label = props.buildableLabels[i] ?? "";
@@ -75,9 +87,9 @@ function validForDrag(i: number): { land: boolean; influence: boolean; charter: 
 }
 .row-labels {
   display: grid;
-  /* Row heights match the cell heights in styles.css so labels align
-     with each row across all columns. */
-  grid-template-rows: 150px 150px 150px auto;
+  /* The Land row grows with the tallest land stack; --land-row-height is
+     set on .tableau-grid so all columns and labels stay aligned. */
+  grid-template-rows: 150px 150px var(--land-row-height, 150px) auto;
   gap: 6px;
   font-size: 11px;
   font-weight: 600;

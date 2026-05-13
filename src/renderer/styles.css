@@ -880,10 +880,12 @@ button.primary:hover:not(:disabled) {
   width: 112px;
   margin-inline: auto;
 }
-.cell.land-cell,
 .cell.influence-cell,
 .cell.charter-cell {
   height: 150px;
+}
+.cell.land-cell {
+  height: var(--land-row-height, 150px);
 }
 .cell.occupied {
   border-style: solid;
@@ -941,30 +943,6 @@ button.primary:hover:not(:disabled) {
 .cell-content .card {
   margin-bottom: 0;
 }
-.land-stack {
-  position: relative;
-  width: 112px;
-  height: 150px;
-}
-.land-stack .card {
-  box-shadow:
-    0 0 0 1px var(--accent),
-    0 4px 8px rgba(0, 0, 0, 0.5);
-}
-.depth-badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  background: var(--accent);
-  color: var(--bg, #0a0a0a);
-  border-radius: 10px;
-  padding: 1px 6px;
-  font-size: 11px;
-  font-weight: 700;
-  z-index: 3;
-  pointer-events: none;
-}
-
 .cell-action {
   position: absolute;
   bottom: 4px;
