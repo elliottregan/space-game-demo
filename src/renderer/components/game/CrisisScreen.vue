@@ -84,28 +84,19 @@ const nextLabel = computed(() =>
 );
 
 function patternLabel(p: PatternKind): string {
-  switch (p) {
-    case "high-card":
-      return "High";
-    case "pair":
-      return "Pair";
-    case "two-pair":
-      return "Twain";
-    case "three-of-a-kind":
-      return "Three";
-    case "straight":
-      return "Straight";
-    case "flush":
-      return "Flush";
-    case "full-house":
-      return "Full";
-    case "four-of-a-kind":
-      return "Four";
-    case "straight-flush":
-      return "S.Flush";
-    case "royal-flush":
-      return "Royal";
-  }
+  const labels: Record<PatternKind, string> = {
+    "high-card": "High Card",
+    pair: "Pair",
+    "two-pair": "Two Pair",
+    "three-of-a-kind": "Three of a Kind",
+    straight: "Straight",
+    flush: "Flush",
+    "full-house": "Full House",
+    "four-of-a-kind": "Four of a Kind",
+    "straight-flush": "Straight Flush",
+    "royal-flush": "Royal Flush",
+  };
+  return labels[p];
 }
 function projectName(id: string): string {
   return props.projects.find((p) => p.id === id)?.name ?? id;

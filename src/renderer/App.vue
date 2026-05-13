@@ -312,10 +312,19 @@ function getCardFromHand(cardId: string): Card | null {
 }
 
 function patternLabel(p: string): string {
-  return p
-    .split("-")
-    .map((s) => s[0].toUpperCase() + s.slice(1))
-    .join(" ");
+  const labels: Record<string, string> = {
+    "high-card": "High Card",
+    pair: "Pair",
+    "two-pair": "Two Pair",
+    "three-of-a-kind": "Three of a Kind",
+    straight: "Straight",
+    flush: "Flush",
+    "full-house": "Full House",
+    "four-of-a-kind": "Four of a Kind",
+    "straight-flush": "Straight Flush",
+    "royal-flush": "Royal Flush",
+  };
+  return labels[p] || p;
 }
 
 function validColumnsFor(cardId: string): number[] {
