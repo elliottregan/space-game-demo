@@ -20,9 +20,14 @@ const charter = () => getCard("keystone-founding-charter");
 const projects: KeystoneProject[] = [
   { id: "p-high", pattern: "high-card", name: "High", flavor: "", value: 1 },
   { id: "p-pair", pattern: "pair", name: "Pair", flavor: "", value: 2 },
+  { id: "p-two-pair", pattern: "two-pair", name: "Two Pair", flavor: "", value: 3 },
   { id: "p-three", pattern: "three-of-a-kind", name: "Three", flavor: "", value: 4 },
-  { id: "p-flush", pattern: "flush", name: "Flush", flavor: "", value: 5 },
+  { id: "p-straight", pattern: "straight", name: "Straight", flavor: "", value: 5 },
+  { id: "p-flush", pattern: "flush", name: "Flush", flavor: "", value: 6 },
+  { id: "p-full-house", pattern: "full-house", name: "Full House", flavor: "", value: 7 },
   { id: "p-four", pattern: "four-of-a-kind", name: "Four", flavor: "", value: 8 },
+  { id: "p-sf", pattern: "straight-flush", name: "Straight Flush", flavor: "", value: 10 },
+  { id: "p-rf", pattern: "royal-flush", name: "Royal Flush", flavor: "", value: 12 },
 ];
 
 function complete(
@@ -105,5 +110,141 @@ describe("evaluateColumn", () => {
     placeCharter(col, getCard("keystone-pioneer")); // wild
     const m = evaluateColumn(col, projects);
     expect(m?.kind).toBe("pair");
+  });
+
+  // ── New 10-pattern tests ────────────────────────────────────────────────────
+
+  test("two-pair: pair-in-lands + pair-in-roles (cross-row)", () => {
+    // 2 same-rank lands = pair in land row; 2 same-role cards = pair in role row
+    const col = createEmptyColumn();
+    placeLand(col, land(7, "solidarity"));
+    placeLand(col, land(7, "heritage"));
+    placeInfluence(col, role("scholar", "solidarity"));
+    placeInfluence(col, role("scholar", "sovereignty"));
+    placeCharter(col, charter());
+    const m = evaluateColumn(col, projects);
+    expect(m?.kind).toBe("two-pair");
+    expect(m?.projectId).toBe("p-two-pair");
+  });
+
+  test("full-house: three-in-lands + pair-in-roles (cross-row)", () => {
+    const col = createEmptyColumn();
+    placeLand(col, land(7, "solidarity"));
+    placeLand(col, land(7, "heritage"));
+    placeLand(col, land(7, "sovereignty"));
+    placeInfluence(col, role("scholar", "solidarity"));
+    placeInfluence(col, role("scholar", "sovereignty"));
+    placeCharter(col, charter());
+    const m = evaluateColumn(col, projects);
+    expect(m?.kind).toBe("full-house");
+    expect(m?.projectId).toBe("p-full-house");
+  });
+
+  test("full-house: three-in-roles + pair-in-lands (cross-row, reversed)", () => {
+    const col = createEmptyColumn();
+    placeLand(col, land(7, "solidarity"));
+    placeLand(col, land(7, "heritage"));
+    placeInfluence(col, role("scholar", "solidarity"));
+    placeInfluence(col, role("scholar", "sovereignty"));
+    placeInfluence(col, role("scholar", "heritage"));
+    placeCharter(col, charter());
+    const m = evaluateColumn(col, projects);
+    expect(m?.kind).toBe("full-house");
+  });
+
+  test("full-house: three-in-lands + three-in-roles (both rows have ≥pair)", () => {
+    const col = createEmptyColumn();
+    placeLand(col, land(7, "solidarity"));
+    placeLand(col, land(7, "heritage"));
+    placeLand(col, land(7, "sovereignty"));
+    placeInfluence(col, role("scholar", "solidarity"));
+    placeInfluence(col, role("scholar", "sovereignty"));
+    placeInfluence(col, role("scholar", "heritage"));
+    placeCharter(col, charter());
+    const m = evaluateColumn(col, projects);
+    expect(m?.kind).toBe("full-house");
+  });
+
+  test("full-house: single-row full-house in land row (3+2 same-rank lands)", () => {
+    // 5 lands: rank 7 ×3, rank 8 ×2 → land-row full-house
+    const col = createEmptyColumn();
+    placeLand(col, land(7, "solidarity"));
+    placeLand(col, land(7, "heritage"));
+    placeLand(col, land(7, "sovereignty"));
+    placeLand(col, land(8, "solidarity"));
+    placeLand(col, land(8, "heritage"));
+    placeInfluence(col, role("scholar", "transformation"));
+    placeCharter(col, charter());
+    const m = evaluateColumn(col, projects);
+    expect(m?.kind).toBe("full-house");
+  });
+
+  test("straight: land-row straight (5 consecutive ranks)", () => {
+    // ranks 5,6,7,8,9 in land row → straight
+    const col = createEmptyColumn();
+    for (const r of [5, 6, 7, 8, 9]) placeLand(col, land(r, "heritage"));
+    placeInfluence(col, role("scholar", "solidarity")); // different ideology → no flush
+    placeCharter(col, charter()); // solidarity charter → still mixed
+    const m = evaluateColumn(col, projects);
+    expect(m?.kind).toBe("straight");
+    expect(m?.projectId).toBe("p-straight");
+  });
+
+  test("straight-flush: land-row straight + every column card mono-ideology", () => {
+    // ranks 5,6,7,8,9 all solidarity; role solidarity; charter solidarity
+    const col = createEmptyColumn();
+    for (const r of [5, 6, 7, 8, 9]) placeLand(col, land(r, "solidarity"));
+    placeInfluence(col, role("scholar", "solidarity"));
+    placeCharter(col, charter()); // solidarity
+    const m = evaluateColumn(col, projects);
+    expect(m?.kind).toBe("straight-flush");
+    expect(m?.projectId).toBe("p-sf");
+  });
+
+  test("royal-flush: role-row straight + every column card mono-ideology", () => {
+    // one of each role type (ranks 10-14) all solidarity + 1 land solidarity + charter solidarity
+    const col = createEmptyColumn();
+    placeLand(col, land(7, "solidarity"));
+    for (const r of ["agitator", "scholar", "preacher", "engineer", "architect"] as const) {
+      placeInfluence(col, role(r, "solidarity"));
+    }
+    placeCharter(col, charter()); // solidarity
+    const m = evaluateColumn(col, projects);
+    expect(m?.kind).toBe("royal-flush");
+    expect(m?.projectId).toBe("p-rf");
+  });
+
+  test("royal-flush beats straight-flush when both could apply (role-straight + flush)", () => {
+    // If the role row is a straight AND the land row is also a straight, and it's mono-ideology,
+    // royal-flush (rung 1) wins over straight-flush (rung 2).
+    const col = createEmptyColumn();
+    for (const r of [5, 6, 7, 8, 9]) placeLand(col, land(r, "solidarity"));
+    for (const r of ["agitator", "scholar", "preacher", "engineer", "architect"] as const) {
+      placeInfluence(col, role(r, "solidarity"));
+    }
+    placeCharter(col, charter()); // solidarity
+    const m = evaluateColumn(col, projects);
+    expect(m?.kind).toBe("royal-flush");
+  });
+
+  test("flush beats straight when only flush is present (no straight in either row)", () => {
+    // 3 same-rank lands + role + charter all solidarity → flush wins over anything lower
+    const col = createEmptyColumn();
+    placeLand(col, land(7, "solidarity"));
+    placeLand(col, land(7, "solidarity"));
+    placeLand(col, land(7, "solidarity"));
+    placeInfluence(col, role("scholar", "solidarity"));
+    placeCharter(col, charter()); // solidarity
+    const m = evaluateColumn(col, projects);
+    expect(m?.kind).toBe("flush");
+  });
+
+  test("four-of-a-kind beats flush (4-land mono-ideology column)", () => {
+    const col = createEmptyColumn();
+    for (let i = 0; i < 4; i++) placeLand(col, land(7, "solidarity"));
+    placeInfluence(col, role("scholar", "solidarity"));
+    placeCharter(col, charter()); // solidarity
+    const m = evaluateColumn(col, projects);
+    expect(m?.kind).toBe("four-of-a-kind");
   });
 });
