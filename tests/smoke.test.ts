@@ -1,5 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { GameAPI } from "../src/facade/GameAPI.ts";
+import { ALL_CARDS } from "../src/core/data/cards.ts";
 
 describe("GameAPI smoke", () => {
   test("fresh campaign starts with Homeworld", () => {
@@ -31,5 +32,19 @@ describe("GameAPI smoke", () => {
     const limit = api.snapshot().setting.rules.maxTurns;
     for (let i = 0; i < limit + 1; i++) api.endTurn();
     expect(api.snapshot().epoch.phase).toBe("crisis");
+  });
+
+  test("commits a pair of same-rank lands via GameAPI.commitHand", () => {
+    const api = new GameAPI(42, { skipLoad: true });
+    // Directly inject two rank-2 land cards into the hand for a deterministic pair.
+    const rank2Lands = ALL_CARDS.filter((c) => c.kind === "land" && c.rank === 2);
+    expect(rank2Lands.length).toBeGreaterThanOrEqual(2);
+    const [land1, land2] = rank2Lands;
+    // Replace hand with just these two cards.
+    (api as unknown as { epoch: { hand: typeof rank2Lands } }).epoch.hand = [land1, land2];
+
+    const result = api.commitHand(0, "land", [land1.id, land2.id]);
+    expect(result.ok).toBe(true);
+    expect(api.snapshot().epoch.columns[0].lands.cards.length).toBe(2);
   });
 });

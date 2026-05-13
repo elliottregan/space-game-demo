@@ -9,6 +9,7 @@ import {
 import { createEpoch, currentVector } from "../core/engine/epoch.ts";
 import {
   buildColumn as buildColumnCore,
+  commitHand as commitHandCore,
   discardCharter as discardCharterCore,
   discardColumn as discardColumnCore,
   discardFromHand as discardFromHandCore,
@@ -264,6 +265,16 @@ export class GameAPI {
     return r.ok
       ? { ok: true, value: { projectId: r.value.projectId, pattern: r.value.pattern } }
       : r;
+  }
+
+  commitHand(
+    columnIndex: number,
+    row: "land" | "influence",
+    cardIds: string[],
+  ): CommandResult<Card[]> {
+    const result = commitHandCore(this.epoch, columnIndex, row, cardIds, this.rng);
+    if (result.ok) this.persist();
+    return result;
   }
 
   endTurn(): CommandResult {
