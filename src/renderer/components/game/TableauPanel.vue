@@ -3,7 +3,7 @@
     <h2>Tableau · produces {{ production }} Mat / turn</h2>
     <div
       class="tableau-grid"
-      :style="{ '--col-count': columns.length, '--land-row-height': landRowHeight + 'px' }"
+      :style="{ '--col-count': columns.length, '--col-min-width': colMinWidth + 'px' }"
     >
       <div class="row-labels">
         <div class="row-label">Charter</div>
@@ -37,7 +37,7 @@ import { dragging } from "../../util/dragState.ts";
 import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../../../core/engine/column.ts";
 
 const STACK_OFFSET = 28;
-const CARD_HEIGHT = 150;
+const CARD_WIDTH = 112;
 
 const props = defineProps<{
   columns: Column[];
@@ -56,9 +56,9 @@ defineEmits<{
   build: [columnIndex: number];
 }>();
 
-const landRowHeight = computed(() => {
+const colMinWidth = computed(() => {
   const max = Math.max(1, ...props.columns.map((c) => c.lands.cards.length));
-  return CARD_HEIGHT + (max - 1) * STACK_OFFSET;
+  return CARD_WIDTH + (max - 1) * STACK_OFFSET;
 });
 
 function buildTooltip(i: number): string {
@@ -81,15 +81,15 @@ function validForDrag(i: number): { land: boolean; influence: boolean; charter: 
 <style scoped>
 .tableau-grid {
   display: grid;
-  grid-template-columns: 80px repeat(var(--col-count), minmax(120px, 1fr));
+  /* Column tracks grow with the widest horizontal land stack;
+     --col-min-width is set on this grid so all columns match. */
+  grid-template-columns: 80px repeat(var(--col-count), minmax(var(--col-min-width, 120px), 1fr));
   gap: 6px;
   align-items: start;
 }
 .row-labels {
   display: grid;
-  /* The Land row grows with the tallest land stack; --land-row-height is
-     set on .tableau-grid so all columns and labels stay aligned. */
-  grid-template-rows: 150px 150px var(--land-row-height, 150px) auto;
+  grid-template-rows: 150px 150px 150px auto;
   gap: 6px;
   font-size: 11px;
   font-weight: 600;

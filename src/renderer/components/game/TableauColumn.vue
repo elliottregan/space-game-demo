@@ -108,10 +108,8 @@ function onDrop(e: DragEvent): void {
 .tableau-column {
   display: grid;
   /* Matches the row heights in TableauPanel's row-labels so rows align
-     across all columns and the row labels in the left margin. The Land
-     row uses a CSS variable set on .tableau-grid so all columns grow
-     in lockstep with the tallest land stack. */
-  grid-template-rows: 150px 150px var(--land-row-height, 150px) auto;
+     across all columns and the row labels in the left margin. */
+  grid-template-rows: 150px 150px 150px auto;
   gap: 6px;
 }
 </style>

@@ -880,12 +880,15 @@ button.primary:hover:not(:disabled) {
   width: 112px;
   margin-inline: auto;
 }
+.cell.land-cell,
 .cell.influence-cell,
 .cell.charter-cell {
   height: 150px;
 }
+/* Land cell grows horizontally with its CardStack; expand width to fill
+   the column track instead of staying centered at 112px. */
 .cell.land-cell {
-  height: var(--land-row-height, 150px);
+  width: 100%;
 }
 .cell.occupied {
   border-style: solid;

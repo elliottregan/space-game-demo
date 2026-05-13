@@ -8,7 +8,7 @@
     <div v-if="cards.length === 0" class="cell-empty">
       <span class="cell-empty-label">Land</span>
     </div>
-    <CardStack v-else :cards="cards">
+    <CardStack v-else :cards="cards" direction="horizontal">
       <button class="cell-action" @click.stop="$emit('discard')">Discard</button>
     </CardStack>
   </div>
