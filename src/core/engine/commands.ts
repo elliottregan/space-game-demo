@@ -8,6 +8,7 @@ import { evaluateColumn } from "./columnPatterns.ts";
 import { dispatch } from "./dispatch.ts";
 import { applyEffect } from "./effects.ts";
 import type { EffectContext } from "./effects.ts";
+import { canCommitHand } from "./rowHands.ts";
 import type { RNG } from "./rng.ts";
 
 export type PlaceResult = { ok: true; card: Card } | { ok: false; error: string };
@@ -183,4 +184,58 @@ export function buildColumn(
   };
   dispatch(epoch, { type: "column-built", columnIndex, unlock });
   return { ok: true, value: unlock };
+}
+
+export function commitHand(
+  epoch: Epoch,
+  columnIndex: number,
+  row: "land" | "influence",
+  cardIds: string[],
+  rng: RNG,
+): CmdResult<Card[]> {
+  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
+  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  if (cardIds.length === 0) return { ok: false, error: "No cards to commit." };
+
+  const col = epoch.columns[columnIndex];
+  if (!col) return { ok: false, error: "Invalid column." };
+
+  // 1. Resolve card IDs → Cards in hand, preserving order.
+  const cards: Card[] = [];
+  for (const id of cardIds) {
+    const c = epoch.hand.find((h) => h.id === id);
+    if (!c) return { ok: false, error: `Card ${id} not in hand.` };
+    cards.push(c);
+  }
+
+  // 2. Kind check + row-hand validation.
+  if (!canCommitHand(col, row, cards)) {
+    return { ok: false, error: "Not a valid hand." };
+  }
+
+  // 3. For influence row, check affordability and deduct.
+  if (row === "influence") {
+    const totalCost = cards.reduce((sum, c) => sum + c.influenceCost, 0);
+    if (epoch.influence < totalCost) {
+      return { ok: false, error: "Not enough Influence." };
+    }
+    epoch.influence -= totalCost;
+  }
+
+  // 4. Remove the cards from hand.
+  const idsSet = new Set(cardIds);
+  epoch.hand = epoch.hand.filter((h) => !idsSet.has(h.id));
+
+  // 5. Dispatch — handler appends cards to the row in order.
+  dispatch(epoch, { type: "cards-committed", columnIndex, row, cards });
+
+  // 6. Fire per-card effects in placement order, matching placeCard's pattern.
+  if (row === "influence") {
+    const ctx: EffectContext = { epoch, rng, log: () => {} };
+    for (const card of cards) {
+      applyEffect(card.effect, ctx);
+    }
+  }
+
+  return { ok: true, value: cards };
 }

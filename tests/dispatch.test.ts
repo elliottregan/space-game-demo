@@ -9,6 +9,8 @@ import {
 import { getCard, landId, roleId } from "../src/core/data/cards.ts";
 import type { Column, Epoch, ProjectUnlock } from "../src/core/types.ts";
 import { countDissentInDeck } from "../src/core/engine/effects.ts";
+import { commitHand } from "../src/core/engine/commands.ts";
+import { createRng } from "../src/core/engine/rng.ts";
 
 function freshEpoch(columns: Column[] = []): Epoch {
   return {
@@ -150,5 +152,133 @@ describe("cards-committed event", () => {
     });
     // The existing column must be untouched.
     expect(ep.columns[0].lands.cards.length).toBe(0);
+  });
+});
+
+describe("commitHand command", () => {
+  const rng = createRng(42);
+
+  function epochWithHand(cards: ReturnType<typeof getCard>[], influence = 10): Epoch {
+    const ep = freshEpoch([createEmptyColumn()]);
+    ep.hand = cards.map((c) => ({ ...c, id: c.id + "-" + Math.random().toString(36).slice(2) }));
+    // keep stable references — re-use the card objects directly
+    ep.hand = [...cards];
+    ep.influence = influence;
+    return ep;
+  }
+
+  test("success — commit two same-rank lands; both appear in col.lands.cards in order", () => {
+    const card0 = getCard(landId(7, "solidarity"));
+    const card1 = getCard(landId(7, "heritage"));
+    const ep = epochWithHand([card0, card1]);
+    const result = commitHand(ep, 0, "land", [card0.id, card1.id], rng);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+    expect(result.value[0]).toBe(card0);
+    expect(result.value[1]).toBe(card1);
+    expect(ep.columns[0].lands.cards[0]).toBe(card0);
+    expect(ep.columns[0].lands.cards[1]).toBe(card1);
+    expect(ep.hand).not.toContain(card0);
+    expect(ep.hand).not.toContain(card1);
+  });
+
+  test("hand-membership rejection — card not in hand returns ok: false", () => {
+    const card0 = getCard(landId(7, "solidarity"));
+    const ep = epochWithHand([]);
+    const result = commitHand(ep, 0, "land", [card0.id], rng);
+    expect(result.ok).toBe(false);
+  });
+
+  test("wrong-kind rejection — roles to land row returns ok: false", () => {
+    const role = getCard(roleId("scholar", "solidarity"));
+    const ep = epochWithHand([role]);
+    const result = commitHand(ep, 0, "land", [role.id], rng);
+    expect(result.ok).toBe(false);
+  });
+
+  test("wrong-kind rejection — lands to influence row returns ok: false", () => {
+    const card = getCard(landId(7, "solidarity"));
+    const ep = epochWithHand([card]);
+    const result = commitHand(ep, 0, "influence", [card.id], rng);
+    expect(result.ok).toBe(false);
+  });
+
+  test("invalid hand rejection — two different-rank cards returns ok: false", () => {
+    const card0 = getCard(landId(7, "solidarity"));
+    const card1 = getCard(landId(8, "solidarity"));
+    const ep = epochWithHand([card0, card1]);
+    const result = commitHand(ep, 0, "land", [card0.id, card1.id], rng);
+    expect(result.ok).toBe(false);
+  });
+
+  test("influence cost deducted — committing two agitators deducts summed cost", () => {
+    // agitator has influenceCost: 1
+    const role0 = getCard(roleId("agitator", "solidarity"));
+    const role1 = getCard(roleId("agitator", "heritage"));
+    const ep = epochWithHand([role0, role1], 10);
+    const before = ep.influence;
+    // agitator solidarity effect: gainInfluence(1) costs 1; net per card = 0 influence change
+    // agitator heritage effect: gainInfluence(1) + backlash, costs 1
+    const result = commitHand(ep, 0, "influence", [role0.id, role1.id], rng);
+    expect(result.ok).toBe(true);
+    // cost = 1 + 1 = 2, effects give +1 +1 = 2, net = before - 2 + 2
+    const totalCost = role0.influenceCost + role1.influenceCost;
+    const totalGain = 1 + 1; // both agitators gain 1 influence immediately
+    expect(ep.influence).toBe(before - totalCost + totalGain);
+  });
+
+  test("insufficient influence — returns ok: false; epoch state untouched", () => {
+    const role0 = getCard(roleId("scholar", "solidarity")); // cost 2
+    const role1 = getCard(roleId("scholar", "heritage")); // cost 2
+    const ep = epochWithHand([role0, role1], 3); // total cost = 4, have 3
+    const influenceBefore = ep.influence;
+    const result = commitHand(ep, 0, "influence", [role0.id, role1.id], rng);
+    expect(result.ok).toBe(false);
+    expect(ep.influence).toBe(influenceBefore);
+    expect(ep.columns[0].influence.cards.length).toBe(0);
+    expect(ep.hand).toContain(role0);
+    expect(ep.hand).toContain(role1);
+  });
+
+  test("per-card effects fire — agitator solidarity pair gives +2 influence (both effects)", () => {
+    const role0 = getCard(roleId("agitator", "solidarity")); // cost 1, effect: +1 inf
+    const role1 = getCard(roleId("agitator", "transformation")); // cost 1, effect: +1 inf
+    const ep = epochWithHand([role0, role1], 10);
+    const before = ep.influence;
+    const result = commitHand(ep, 0, "influence", [role0.id, role1.id], rng);
+    expect(result.ok).toBe(true);
+    // 2 deducted, 2 gained from effects — net zero
+    expect(ep.influence).toBe(before);
+  });
+
+  test("phase guard — commit during crisis phase returns ok: false", () => {
+    const card0 = getCard(landId(7, "solidarity"));
+    const card1 = getCard(landId(7, "heritage"));
+    const ep = epochWithHand([card0, card1]);
+    ep.phase = "crisis";
+    const result = commitHand(ep, 0, "land", [card0.id, card1.id], rng);
+    expect(result.ok).toBe(false);
+  });
+
+  test("status guard — commit when epoch ended returns ok: false", () => {
+    const card0 = getCard(landId(7, "solidarity"));
+    const card1 = getCard(landId(7, "heritage"));
+    const ep = epochWithHand([card0, card1]);
+    ep.status = { kind: "won", outcome: { totalValue: 0, cleared: true, contributingUnlocks: [] } };
+    const result = commitHand(ep, 0, "land", [card0.id, card1.id], rng);
+    expect(result.ok).toBe(false);
+  });
+
+  test("empty cardIds returns ok: false", () => {
+    const ep = epochWithHand([]);
+    const result = commitHand(ep, 0, "land", [], rng);
+    expect(result.ok).toBe(false);
+  });
+
+  test("invalid column index returns ok: false", () => {
+    const card0 = getCard(landId(7, "solidarity"));
+    const ep = epochWithHand([card0]);
+    const result = commitHand(ep, 99, "land", [card0.id], rng);
+    expect(result.ok).toBe(false);
   });
 });
