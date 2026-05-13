@@ -49,16 +49,16 @@ describe("dispatch", () => {
     expect(ep.draw[0]?.tags.includes("dissent")).toBe(true);
   });
 
-  test("card-recalled-to-hand moves card back to hand with no dissent", () => {
+  test("influence-recall discard adds one dissent (card-discarded source=influence-recall)", () => {
     const col = createEmptyColumn();
     const r = getCard(roleId("scholar", "solidarity"));
     placeLand(col, land(7, "solidarity"));
     placeInfluence(col, r);
     const ep = freshEpoch([col]);
-    dispatch(ep, { type: "card-recalled-to-hand", card: r, columnIndex: 0 });
-    expect(ep.hand).toContain(r);
-    expect(ep.draw.length).toBe(0); // no dissent
-    expect(col.influence.cards.length).toBe(0);
+    dispatch(ep, { type: "card-discarded", card: r, source: "influence-recall" });
+    expect(ep.discard).toContain(r);
+    expect(ep.draw.length).toBe(1); // one dissent added
+    expect(ep.draw[0]?.tags.includes("dissent")).toBe(true);
   });
 
   test("column-built cascades discards through the discard handler (one dissent per card) and clears the column", () => {

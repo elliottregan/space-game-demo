@@ -31,12 +31,6 @@ export function dispatch(epoch: Epoch, ev: GameEvent): void {
       dispatch(epoch, { type: "dissent-added", variant: "quiet" });
       return; // eventLog already appended above
     }
-    case "card-recalled-to-hand": {
-      const col = epoch.columns[ev.columnIndex];
-      if (col) col.influence.cards.length = 0;
-      epoch.hand.push(ev.card);
-      break;
-    }
     case "column-built": {
       epoch.unlockedProjects.push(ev.unlock);
       const col = epoch.columns[ev.columnIndex];
