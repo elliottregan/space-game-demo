@@ -40,11 +40,7 @@
           :breakdown="snapshot.ideologyBreakdown"
         />
 
-        <IdeologyDisplay
-          :vector="snapshot.vector"
-          :terrain="snapshot.campaign.terrain"
-          :demonym-label="demonymLabel"
-        />
+        <IdeologyDisplay :vector="snapshot.vector" :demonym-label="demonymLabel" />
 
         <CrisisCounterPanel
           :crisis="setting.crisis"
