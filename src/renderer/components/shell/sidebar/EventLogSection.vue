@@ -28,6 +28,8 @@ function formatEvent(e: GameEvent): string {
       return `${e.type.replace(/-/g, " ")}: ${e.card.name} → col ${e.columnIndex + 1}`;
     case "card-discarded":
       return `card discarded (${e.source}): ${e.card.name}`;
+    case "cards-committed":
+      return `cards committed to ${e.row} (col ${e.columnIndex + 1}): ${e.cards.map((c) => c.name).join(", ")}`;
     case "column-built":
       return `column ${e.columnIndex + 1} built → ${e.unlock.projectId}`;
     case "dissent-added":

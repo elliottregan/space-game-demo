@@ -8,6 +8,7 @@ import {
 } from "../src/core/engine/column.ts";
 import { getCard, landId, roleId } from "../src/core/data/cards.ts";
 import type { Column, Epoch, ProjectUnlock } from "../src/core/types.ts";
+import { countDissentInDeck } from "../src/core/engine/effects.ts";
 
 function freshEpoch(columns: Column[] = []): Epoch {
   return {
@@ -92,5 +93,79 @@ describe("dispatch", () => {
     dispatch(ep, { type: "dissent-added", variant: "quiet" });
     expect(ep.eventLog.length).toBe(1);
     expect(ep.eventLog[0].type).toBe("dissent-added");
+  });
+});
+
+describe("cards-committed event", () => {
+  test("appends cards to the land row in placement order", () => {
+    const col = createEmptyColumn();
+    const ep = freshEpoch([col]);
+    const card0 = land(7, "solidarity");
+    const card1 = land(7, "heritage");
+    dispatch(ep, { type: "cards-committed", columnIndex: 0, row: "land", cards: [card0, card1] });
+    expect(ep.columns[0].lands.cards[0]).toBe(card0);
+    expect(ep.columns[0].lands.cards[1]).toBe(card1);
+    expect(ep.columns[0].lands.cards.length).toBe(2);
+  });
+
+  test("appends to the influence row when row === 'influence'", () => {
+    const col = createEmptyColumn();
+    const ep = freshEpoch([col]);
+    const role0 = getCard(roleId("scholar", "solidarity"));
+    const role1 = getCard(roleId("engineer", "solidarity"));
+    dispatch(ep, {
+      type: "cards-committed",
+      columnIndex: 0,
+      row: "influence",
+      cards: [role0, role1],
+    });
+    expect(ep.columns[0].influence.cards[0]).toBe(role0);
+    expect(ep.columns[0].influence.cards[1]).toBe(role1);
+    expect(ep.columns[0].influence.cards.length).toBe(2);
+  });
+
+  test("does NOT add Dissent", () => {
+    const col = createEmptyColumn();
+    const ep = freshEpoch([col]);
+    const { dissent: before } = countDissentInDeck(ep);
+    dispatch(ep, {
+      type: "cards-committed",
+      columnIndex: 0,
+      row: "land",
+      cards: [land(7, "solidarity"), land(7, "heritage")],
+    });
+    const { dissent: after } = countDissentInDeck(ep);
+    expect(after).toBe(before);
+  });
+
+  test("fires each card's immediate effect in placement order", () => {
+    const col = createEmptyColumn();
+    const ep = freshEpoch([col]);
+    // Scholar roles grant gainInfluence immediately.
+    const role0 = getCard(roleId("scholar", "solidarity"));
+    const role1 = getCard(roleId("scholar", "heritage"));
+    const influenceBefore = ep.influence;
+    dispatch(ep, {
+      type: "cards-committed",
+      columnIndex: 0,
+      row: "influence",
+      cards: [role0, role1],
+    });
+    // Each scholar gives gainInfluence; total increase must be > 0.
+    expect(ep.influence).toBeGreaterThan(influenceBefore);
+  });
+
+  test("ignores an unknown columnIndex (no crash, no row mutation)", () => {
+    const col = createEmptyColumn();
+    const ep = freshEpoch([col]);
+    // Should not throw.
+    dispatch(ep, {
+      type: "cards-committed",
+      columnIndex: 999,
+      row: "land",
+      cards: [land(7, "solidarity")],
+    });
+    // The existing column must be untouched.
+    expect(ep.columns[0].lands.cards.length).toBe(0);
   });
 });

@@ -5,6 +5,7 @@
 import type { Epoch, GameEvent } from "../types.ts";
 import { makeDissent } from "../data/cards.ts";
 import { clearColumn } from "./column.ts";
+import { applyEffect } from "./effects.ts";
 
 export function dispatch(epoch: Epoch, ev: GameEvent): void {
   switch (ev.type) {
@@ -21,6 +22,17 @@ export function dispatch(epoch: Epoch, ev: GameEvent): void {
     case "card-played-to-charter": {
       const col = epoch.columns[ev.columnIndex];
       if (col) col.charter.card = ev.card;
+      break;
+    }
+    case "cards-committed": {
+      const col = epoch.columns[ev.columnIndex];
+      if (!col) return;
+      const target = ev.row === "land" ? col.lands.cards : col.influence.cards;
+      const ctx = { epoch, rng: null as never, log: () => {} };
+      for (const card of ev.cards) {
+        target.push(card);
+        applyEffect(card.effect, ctx);
+      }
       break;
     }
     case "card-discarded": {

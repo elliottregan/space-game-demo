@@ -16,6 +16,7 @@ export type GameEvent =
   | { type: "card-played-to-influence"; card: Card; columnIndex: number }
   | { type: "card-played-to-charter"; card: Card; columnIndex: number }
   | { type: "card-discarded"; card: Card; source: DiscardSource }
+  | { type: "cards-committed"; columnIndex: number; row: "land" | "influence"; cards: Card[] }
   | { type: "column-built"; columnIndex: number; unlock: ProjectUnlock }
   | { type: "dissent-added"; variant: DissentVariant; ideology?: Ideology }
   | { type: "turn-ended"; turn: number }
