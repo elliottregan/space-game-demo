@@ -59,7 +59,7 @@ export const RUINED_HOMEWORLD: Setting = {
   rules: {
     handSize: 7,
     columnCount: 5,
-    influenceBaseline: 2,
+    influenceBaseline: 8,
     materialsPerLandBase: 1,
     deckStartMinSize: 10,
     maxTurns: 16,

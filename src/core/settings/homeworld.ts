@@ -62,7 +62,7 @@ export const HOMEWORLD: Setting = {
   rules: {
     handSize: 7,
     columnCount: 7,
-    influenceBaseline: 3,
+    influenceBaseline: 8,
     materialsPerLandBase: 1,
     deckStartMinSize: 10,
     maxTurns: 12,
