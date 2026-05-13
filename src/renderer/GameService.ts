@@ -3,6 +3,7 @@
 import { shallowRef, ref, type Ref, type ShallowRef } from "vue";
 import { GameAPI, type Snapshot } from "../facade/GameAPI.ts";
 import type { SaveSlot } from "../facade/persistence.ts";
+import { canCommitHand } from "../core/engine/rowHands.ts";
 
 class GameService {
   private api: GameAPI;
@@ -13,6 +14,9 @@ class GameService {
   slots: ShallowRef<SaveSlot[]>;
   activeSlotId: Ref<string | null>;
 
+  /** Cards currently staged in the commit buffer (card ids). */
+  commitBuffer: Ref<string[]>;
+
   constructor(seed = 1) {
     this.api = new GameAPI(seed);
     this.snapshot = shallowRef(this.api.snapshot());
@@ -20,6 +24,7 @@ class GameService {
     this.endOfEpoch = shallowRef(this.api.endOfEpochState());
     this.slots = shallowRef(this.api.listSlots());
     this.activeSlotId = ref(this.api.activeSlotId());
+    this.commitBuffer = ref<string[]>([]);
     // Ensure the current game has a slot.
     this.api.persist();
     this.reloadSlotList();
@@ -128,6 +133,49 @@ class GameService {
 
   deleteSlot(id: string): void {
     this.api.deleteSlot(id);
+    this.refresh();
+  }
+
+  // -----------------------------------------------------------------------
+  // Commit buffer — multi-card lay-down-hand flow
+  // -----------------------------------------------------------------------
+
+  toggleBufferCard(id: string): void {
+    const buf = this.commitBuffer.value;
+    const i = buf.indexOf(id);
+    if (i >= 0) {
+      this.commitBuffer.value = buf.filter((x) => x !== id);
+    } else {
+      this.commitBuffer.value = [...buf, id];
+    }
+  }
+
+  clearBuffer(): void {
+    this.commitBuffer.value = [];
+  }
+
+  /**
+   * Validate whether the buffered cards can be committed to the given row of
+   * the given column WITHOUT performing the commit.
+   */
+  canCommitToRow(columnIndex: number, row: "land" | "influence"): boolean {
+    const ids = this.commitBuffer.value;
+    if (ids.length === 0) return false;
+    const snap = this.snapshot.value;
+    const col = snap.epoch.columns[columnIndex];
+    if (!col) return false;
+    const cards = ids.flatMap((id) => {
+      const c = snap.epoch.hand.find((h) => h.id === id);
+      return c ? [c] : [];
+    });
+    if (cards.length !== ids.length) return false; // some id not in hand
+    return canCommitHand(col, row, cards);
+  }
+
+  commitToRow(columnIndex: number, row: "land" | "influence"): void {
+    const r = this.api.commitHand(columnIndex, row, [...this.commitBuffer.value]);
+    this.report(r as any);
+    if (r.ok) this.clearBuffer();
     this.refresh();
   }
 }
