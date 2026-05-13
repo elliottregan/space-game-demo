@@ -96,6 +96,12 @@ function validForDrag(i: number): { land: boolean; influence: boolean; charter: 
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
+  /* Pin to the left edge as the tableau scrolls horizontally, and keep
+     them above stacked cards (max ~hover 9999) and cell buttons (10000). */
+  position: sticky;
+  left: 0;
+  z-index: 10001;
+  background: var(--surface-raised);
 }
 .row-label {
   display: flex;

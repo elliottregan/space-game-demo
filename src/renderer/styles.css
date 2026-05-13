@@ -774,6 +774,7 @@ button.primary:hover:not(:disabled) {
 }
 .tableau-panel {
   min-width: 0;
+  overflow-x: auto;
 }
 .tableau-slots {
   display: flex;
