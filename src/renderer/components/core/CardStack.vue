@@ -4,7 +4,7 @@
       v-for="(c, i) in cards"
       :key="c.id"
       class="card-stack-slot"
-      :style="{ top: i * STACK_OFFSET + 'px', zIndex: i + 1 }"
+      :style="{ top: i * STACK_OFFSET + 'px', '--stack-z': i + 1 }"
     >
       <Card :card="c" :selectable="false" />
     </div>
@@ -36,6 +36,7 @@ const stackHeight = computed(() =>
 .card-stack-slot {
   position: absolute;
   left: 0;
+  z-index: var(--stack-z, 1);
 }
 .card-stack-slot:hover {
   z-index: 9999;
