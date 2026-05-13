@@ -85,16 +85,26 @@ const nextLabel = computed(() =>
 
 function patternLabel(p: PatternKind): string {
   switch (p) {
-    case "four-of-a-kind":
-      return "Four";
-    case "flush":
-      return "Flush";
-    case "three-of-a-kind":
-      return "Three";
-    case "pair":
-      return "Pair";
     case "high-card":
       return "High";
+    case "pair":
+      return "Pair";
+    case "two-pair":
+      return "Twain";
+    case "three-of-a-kind":
+      return "Three";
+    case "straight":
+      return "Straight";
+    case "flush":
+      return "Flush";
+    case "full-house":
+      return "Full";
+    case "four-of-a-kind":
+      return "Four";
+    case "straight-flush":
+      return "S.Flush";
+    case "royal-flush":
+      return "Royal";
   }
 }
 function projectName(id: string): string {
