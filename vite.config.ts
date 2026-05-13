@@ -13,7 +13,7 @@ export default defineConfig({
   },
   server: {
     host: process.env.VITE_HOST || "localhost",
-    port: 5174,
+    port: 5173,
     allowedHosts: [".cspace.test"],
   },
 });
