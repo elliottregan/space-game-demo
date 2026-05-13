@@ -59,7 +59,10 @@ defineEmits<{
 }>();
 
 const colMinWidth = computed(() => {
-  const max = Math.max(1, ...props.columns.map((c) => c.lands.cards.length));
+  const max = Math.max(
+    1,
+    ...props.columns.flatMap((c) => [c.lands.cards.length, c.influence.cards.length]),
+  );
   return CARD_WIDTH + (max - 1) * STACK_OFFSET;
 });
 
