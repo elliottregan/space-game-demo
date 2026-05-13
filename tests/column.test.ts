@@ -105,3 +105,49 @@ describe("column placement", () => {
     expect(columnLandRank(col)).toBe(7);
   });
 });
+
+describe("single-card placement routing through validateRowHand", () => {
+  test("first role on empty influence row is valid (high-card)", () => {
+    const col = createEmptyColumn();
+    placeLand(col, land(7, "solidarity"));
+    expect(canPlaceInfluence(col, role("scholar", "solidarity"))).toBe(true);
+  });
+
+  test("adding same-role-type to single role grows pair (valid)", () => {
+    const col = createEmptyColumn();
+    placeLand(col, land(7, "solidarity"));
+    placeInfluence(col, role("scholar", "solidarity"));
+    // Another scholar role (same rank 11)
+    expect(canPlaceInfluence(col, role("scholar", "heritage"))).toBe(true);
+  });
+
+  test("adding different-role-type to single role is rejected (would be 2 different ranks)", () => {
+    const col = createEmptyColumn();
+    placeLand(col, land(7, "solidarity"));
+    placeInfluence(col, role("scholar", "solidarity"));
+    // Engineer has rank 13, scholar has rank 11 → not a valid hand
+    expect(canPlaceInfluence(col, role("engineer", "solidarity"))).toBe(false);
+  });
+
+  test("first land on empty column is valid (high-card)", () => {
+    const col = createEmptyColumn();
+    expect(canPlaceLand(col, land(7, "solidarity"))).toBe(true);
+  });
+
+  test("adding same-rank land to single land grows pair (valid)", () => {
+    const col = createEmptyColumn();
+    placeLand(col, land(7, "solidarity"));
+    expect(canPlaceLand(col, land(7, "heritage"))).toBe(true);
+  });
+
+  test("adding different-rank land to single land is rejected (would be 2 different ranks)", () => {
+    const col = createEmptyColumn();
+    placeLand(col, land(7, "solidarity"));
+    expect(canPlaceLand(col, land(5, "solidarity"))).toBe(false);
+  });
+
+  test("influence placement still requires at least one land in the column", () => {
+    const col = createEmptyColumn();
+    expect(canPlaceInfluence(col, role("scholar", "solidarity"))).toBe(false);
+  });
+});

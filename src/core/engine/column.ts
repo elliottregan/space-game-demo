@@ -1,6 +1,7 @@
 // Column types + placement helpers for the three-tier column model.
 
 import type { Card } from "../data/cards.ts";
+import { validateRowHand } from "./rowHands.ts";
 
 // -------------------------------------------------------------------------
 // Column shape
@@ -50,15 +51,13 @@ export function createEmptyColumn(): Column {
 
 export function canPlaceLand(col: Column, card: Card): boolean {
   if (card.kind !== "land") return false;
-  if (col.lands.cards.length >= MAX_LAND_DEPTH) return false;
-  if (col.lands.cards.length === 0) return true;
-  return col.lands.cards[0].rank === card.rank;
+  return validateRowHand([...col.lands.cards, card]);
 }
 
 export function canPlaceInfluence(col: Column, card: Card): boolean {
   if (card.kind !== "role") return false;
-  if (col.influence.cards.length >= 1) return false;
-  return col.lands.cards.length >= 1;
+  if (col.lands.cards.length < 1) return false;
+  return validateRowHand([...col.influence.cards, card]);
 }
 
 export function canPlaceCharter(col: Column, card: Card): boolean {
