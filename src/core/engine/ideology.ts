@@ -2,8 +2,7 @@
 // Vector is derived from the column contents each call — never stored.
 
 import type { Card } from "../data/cards.ts";
-import type { Ideology } from "../data/ideologies.ts";
-import { IDEOLOGIES } from "../data/ideologies.ts";
+import { IDEOLOGIES, type Ideology } from "../data/ideologies.ts";
 import { type Column, columnCards } from "./column.ts";
 
 // -------------------------------------------------------------------------
@@ -125,17 +124,13 @@ export function demonym(vector: IdeologyVector): Demonym {
   return candidates[0].d;
 }
 
+const DEMONYM_NAMES: Record<NonNullable<Demonym>, string> = {
+  collective: "The Collective",
+  dominion: "The Dominion",
+  ascendancy: "The Ascendancy",
+  keepers: "The Keepers",
+};
+
 export function demonymName(d: Demonym): string {
-  switch (d) {
-    case "collective":
-      return "The Collective";
-    case "dominion":
-      return "The Dominion";
-    case "ascendancy":
-      return "The Ascendancy";
-    case "keepers":
-      return "The Keepers";
-    default:
-      return "Unaligned";
-  }
+  return d ? DEMONYM_NAMES[d] : "Unaligned";
 }

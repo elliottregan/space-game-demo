@@ -49,6 +49,11 @@ export const IDEOLOGY_DISPLAY: Record<Ideology, IdeologyDisplay> = {
 
 export const IDEOLOGIES: Ideology[] = ["solidarity", "sovereignty", "transformation", "heritage"];
 
+/** Wraps the per-ideology CSS custom-property in a `var(...)` reference. */
+export function cssColorFor(id: Ideology): string {
+  return `var(${IDEOLOGY_DISPLAY[id].cssColorVar})`;
+}
+
 /** Empty-zeroed breakdown counter, useful for tallies. */
 export function zeroIdeologyBreakdown(): Record<Ideology, number> {
   return { solidarity: 0, sovereignty: 0, transformation: 0, heritage: 0 };

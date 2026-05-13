@@ -49,7 +49,7 @@
           :y="poleAnchor(id).y"
           :text-anchor="poleAnchor(id).textAnchor"
           :dominant-baseline="poleAnchor(id).dominantBaseline"
-          :style="{ fill: `var(${IDEOLOGY_DISPLAY[id].cssColorVar})` }"
+          :style="{ fill: cssColorFor(id) }"
           class="pole-label"
         >
           {{ IDEOLOGY_DISPLAY[id].name }}
@@ -78,7 +78,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Ideology, IdeologyVector } from "../../../core/types.ts";
-import { IDEOLOGY_DISPLAY, IDEOLOGIES } from "../../../core/data/ideologies.ts";
+import { cssColorFor, IDEOLOGY_DISPLAY, IDEOLOGIES } from "../../../core/data/ideologies.ts";
 import {
   demonym,
   demonymName,
@@ -112,6 +112,8 @@ interface PoleAnchor {
   dominantBaseline: "hanging" | "auto" | "middle";
 }
 
+// Maps a pole to its SVG-edge position. Note: SVG y grows downward,
+// so axis2 sign +1 (positive Transformation) maps to a small y at the top.
 function poleAnchor(id: Ideology): PoleAnchor {
   const { axis, sign } = IDEOLOGY_AXIS[id];
   if (axis === "axis2") {
@@ -144,7 +146,7 @@ const demonymLabel = computed(() => demonymName(demonymKey.value));
 const dotColor = computed(() => {
   const key = demonymKey.value;
   if (!key) return "var(--accent)";
-  return `var(${IDEOLOGY_DISPLAY[IDEOLOGY_BY_DEMONYM[key]].cssColorVar})`;
+  return cssColorFor(IDEOLOGY_BY_DEMONYM[key]);
 });
 
 const demonymLabelStyle = computed(() => {
