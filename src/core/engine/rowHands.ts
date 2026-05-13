@@ -4,6 +4,7 @@
 // module does not classify them.
 
 import type { Card } from "../data/cards.ts";
+import type { Column } from "./column.ts";
 
 export type RowHand =
   | "high-card"
@@ -48,8 +49,6 @@ function isStraight(cards: Card[]): boolean {
 export function validateRowHand(cards: Card[]): boolean {
   return identifyRowHand(cards) !== null;
 }
-
-import type { Column } from "./column.ts";
 
 export function canCommitHand(
   _col: Column,
