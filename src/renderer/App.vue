@@ -46,6 +46,12 @@
           :demonym-label="demonymLabel"
         />
 
+        <CrisisCounterPanel
+          :crisis="setting.crisis"
+          :unlocks="epoch.unlockedProjects"
+          :projects="setting.projects"
+        />
+
         <TableauPanel
           :columns="epoch.columns"
           :production="landProduction"
@@ -144,6 +150,7 @@ import CardListModal from "./components/shell/CardListModal.vue";
 import MarketModal from "./components/shell/MarketModal.vue";
 import SaveSlotMenu from "./components/shell/SaveSlotMenu.vue";
 import ThemeToggle from "./components/shell/ThemeToggle.vue";
+import CrisisCounterPanel from "./components/game/CrisisCounterPanel.vue";
 import type { Card } from "../core/types.ts";
 import { SETTING_BY_ID } from "../core/settings/index.ts";
 import { MAX_SLOTS } from "../facade/persistence.ts";
