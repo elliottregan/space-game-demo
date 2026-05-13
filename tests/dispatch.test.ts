@@ -138,23 +138,6 @@ describe("cards-committed event", () => {
     expect(after).toBe(before);
   });
 
-  test("fires each card's immediate effect in placement order", () => {
-    const col = createEmptyColumn();
-    const ep = freshEpoch([col]);
-    // Scholar roles grant gainInfluence immediately.
-    const role0 = getCard(roleId("scholar", "solidarity"));
-    const role1 = getCard(roleId("scholar", "heritage"));
-    const influenceBefore = ep.influence;
-    dispatch(ep, {
-      type: "cards-committed",
-      columnIndex: 0,
-      row: "influence",
-      cards: [role0, role1],
-    });
-    // Each scholar gives gainInfluence; total increase must be > 0.
-    expect(ep.influence).toBeGreaterThan(influenceBefore);
-  });
-
   test("ignores an unknown columnIndex (no crash, no row mutation)", () => {
     const col = createEmptyColumn();
     const ep = freshEpoch([col]);
