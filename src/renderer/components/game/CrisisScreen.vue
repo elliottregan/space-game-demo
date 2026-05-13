@@ -55,6 +55,7 @@ import type {
   ProjectUnlock,
 } from "../../../core/types.ts";
 import { IDEOLOGIES, IDEOLOGY_DISPLAY } from "../../../core/data/ideologies.ts";
+import { patternLabel } from "../../util/labels.ts";
 import LegacyChoiceRow from "./LegacyChoiceRow.vue";
 
 const props = defineProps<{
@@ -83,21 +84,6 @@ const nextLabel = computed(() =>
   props.outcome.cleared ? `Continue to ${props.nextSettingName}` : "Continue",
 );
 
-function patternLabel(p: PatternKind): string {
-  const labels: Record<PatternKind, string> = {
-    "high-card": "High Card",
-    pair: "Pair",
-    "two-pair": "Two Pair",
-    "three-of-a-kind": "Three of a Kind",
-    straight: "Straight",
-    flush: "Flush",
-    "full-house": "Full House",
-    "four-of-a-kind": "Four of a Kind",
-    "straight-flush": "Straight Flush",
-    "royal-flush": "Royal Flush",
-  };
-  return labels[p];
-}
 function projectName(id: string): string {
   return props.projects.find((p) => p.id === id)?.name ?? id;
 }

@@ -226,6 +226,7 @@ import type { Card } from "../core/types.ts";
 import { SETTING_BY_ID } from "../core/settings/index.ts";
 import { MAX_SLOTS } from "../facade/persistence.ts";
 import { evaluateColumn } from "../core/engine/columnPatterns.ts";
+import { patternLabel } from "./util/labels.ts";
 
 const game = getGameService();
 
@@ -309,22 +310,6 @@ const buildableLabels = computed(() => {
 
 function getCardFromHand(cardId: string): Card | null {
   return epoch.value.hand.find((c) => c.id === cardId) ?? null;
-}
-
-function patternLabel(p: string): string {
-  const labels: Record<string, string> = {
-    "high-card": "High Card",
-    pair: "Pair",
-    "two-pair": "Two Pair",
-    "three-of-a-kind": "Three of a Kind",
-    straight: "Straight",
-    flush: "Flush",
-    "full-house": "Full House",
-    "four-of-a-kind": "Four of a Kind",
-    "straight-flush": "Straight Flush",
-    "royal-flush": "Royal Flush",
-  };
-  return labels[p] || p;
 }
 
 function validColumnsFor(cardId: string): number[] {

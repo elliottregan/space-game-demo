@@ -13,6 +13,7 @@
         <span class="project-star" v-if="findUnlock(pattern)">★</span>
         <span class="project-star empty" v-else>○</span>
         <span class="project-name">{{ getProjectName(pattern) }}</span>
+        <span class="project-pattern">{{ patternLabel(pattern) }}</span>
         <template v-if="findUnlock(pattern)">
           <span
             v-for="(count, ideology) in ideologyBreakdown(findUnlock(pattern)!)"
@@ -32,6 +33,7 @@ import type { Ideology, KeystoneProject, ProjectUnlock, PatternKind } from "../.
 import { PATTERNS_IN_ORDER } from "../../../core/data/projects.ts";
 import { zeroIdeologyBreakdown } from "../../../core/data/ideologies.ts";
 import Panel from "../core/Panel.vue";
+import { patternLabel } from "../../util/labels.ts";
 
 const props = defineProps<{
   unlocks: ProjectUnlock[];
@@ -100,6 +102,13 @@ function ideologyBreakdown(u: ProjectUnlock): Partial<Record<Ideology, number>> 
 .project-name {
   font-weight: 600;
   font-size: 0.85rem;
+}
+
+.project-pattern {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-subtle);
 }
 
 .project-ideology {
