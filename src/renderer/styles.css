@@ -385,12 +385,6 @@ button.primary:hover:not(:disabled) {
   color: var(--accent);
   font-weight: 700;
 }
-.card-inf-cost.aligned {
-  color: var(--status-positive);
-}
-.card-inf-cost.opposed {
-  color: var(--status-negative);
-}
 .card-market-cost {
   color: var(--text-muted);
 }

@@ -67,8 +67,6 @@
           :selected-ids="selectedIds"
           :influence="epoch.influence"
           :columns="epoch.columns"
-          :get-effective-cost="getEffectiveCost"
-          :get-alignment="getAlignment"
           :valid-columns-for="validColumnsFor"
           @toggle-select="onToggleSelect"
           @clear-selection="onClearSelection"
@@ -218,12 +216,6 @@ function patternLabel(p: string): string {
     .join(" ");
 }
 
-function getEffectiveCost(card: Card): number {
-  return game.getEffectiveCost(card);
-}
-function getAlignment(card: Card): "aligned" | "opposed" | "neutral" {
-  return game.getAlignment(card);
-}
 function validColumnsFor(cardId: string): number[] {
   return game.validColumns(cardId);
 }

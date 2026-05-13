@@ -7,14 +7,8 @@ import type { Campaign } from "./campaign.ts";
 import type { GameEvent } from "./events.ts";
 import { type Column, columnFromConfig, createEmptyColumn } from "./column.ts";
 import { CARD_BY_ID, makeDissent } from "../data/cards.ts";
-import { drawToHandSize, getTransientShift, purgeDissent } from "./effects.ts";
-import {
-  checkAlignment,
-  deriveVector,
-  IDEOLOGY_AXIS,
-  influenceCostAdjustment,
-  type IdeologyVector,
-} from "./ideology.ts";
+import { drawToHandSize, purgeDissent } from "./effects.ts";
+import { deriveVector, type IdeologyVector } from "./ideology.ts";
 import type { Setting } from "../settings/index.ts";
 import type { RNG } from "./rng.ts";
 
@@ -49,8 +43,6 @@ export type EpochStatus =
   | { kind: "in-progress" }
   | { kind: "won"; outcome: CrisisOutcome }
   | { kind: "lost"; outcome: CrisisOutcome };
-
-export type Alignment = "aligned" | "opposed" | "neutral";
 
 export function createEpoch(
   setting: Setting,
@@ -107,29 +99,8 @@ function applyScarredTerrainDissent(epoch: Epoch, terrain: { axis1: number; axis
   if (terrain.axis2 !== 0) addBacklash(Math.abs(terrain.axis2));
 }
 
-export function currentVector(epoch: Epoch, campaign: Campaign): IdeologyVector {
-  const shift = getTransientShift(epoch);
-  const baseTerrain = {
-    axis1: campaign.terrain.axis1 + shift.axis1,
-    axis2: campaign.terrain.axis2 + shift.axis2,
-  };
-  const backlashBonus = { axis1: 0, axis2: 0 };
-  for (const card of epoch.hand) {
-    if (card.tags.includes("dissent") && card.ideology !== "wild") {
-      const { axis, sign } = IDEOLOGY_AXIS[card.ideology];
-      backlashBonus[axis] += sign;
-    }
-  }
-  return deriveVector(epoch.columns, {
-    axis1: baseTerrain.axis1 + backlashBonus.axis1,
-    axis2: baseTerrain.axis2 + backlashBonus.axis2,
-  });
-}
-
-export function effectiveInfluenceCost(card: Card, vector: IdeologyVector): number {
-  const alignment = checkAlignment(card, vector);
-  const adj = influenceCostAdjustment(alignment);
-  return Math.max(0, card.influenceCost + adj);
+export function currentVector(epoch: Epoch, setting: Setting): IdeologyVector {
+  return deriveVector(epoch.columns, epoch.unlockedProjects, setting.projects);
 }
 
 export { purgeDissent };

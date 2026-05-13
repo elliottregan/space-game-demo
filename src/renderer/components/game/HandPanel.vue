@@ -15,8 +15,6 @@
         :selectable="true"
         :selected="selectedIds.includes(card.id)"
         :unaffordable="!canPlay(card)"
-        :influence-cost-override="getEffectiveCost(card)"
-        :alignment="getAlignment(card)"
         :draggable="true"
         :is-dragging="dragging?.cardId === card.id"
         @select="$emit('toggleSelect', card.id)"
@@ -86,8 +84,6 @@ const props = defineProps<{
   selectedIds: string[];
   influence: number;
   columns: Column[];
-  getEffectiveCost: (card: CardT) => number;
-  getAlignment: (card: CardT) => "aligned" | "opposed" | "neutral";
   validColumnsFor: (cardId: string) => number[];
 }>();
 
@@ -151,7 +147,7 @@ const allAffordable = computed(() => {
   // Lands are free; Roles/Keystones cost Influence. Sum non-Land costs.
   let total = 0;
   for (const c of playableSelection.value) {
-    if (c.kind !== "land") total += props.getEffectiveCost(c);
+    if (c.kind !== "land") total += c.influenceCost;
   }
   return props.influence >= total;
 });
@@ -169,7 +165,7 @@ function isDissent(card: CardT): boolean {
 function canPlay(card: CardT): boolean {
   if (isDissent(card)) return false;
   if (card.kind === "land") return true;
-  return props.influence >= props.getEffectiveCost(card);
+  return props.influence >= card.influenceCost;
 }
 
 function onCardDragStart(card: CardT, e: DragEvent): void {

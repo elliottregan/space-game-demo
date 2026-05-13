@@ -1,7 +1,7 @@
-// Ideology vector derivation + alignment + demonym.
+// Ideology vector derivation + demonym.
 // Vector is derived from the column contents each call — never stored.
 
-import type { Card } from "../data/cards.ts";
+import type { KeystoneProject, ProjectUnlock } from "../data/projects.ts";
 import { IDEOLOGIES, type Ideology } from "../data/ideologies.ts";
 import { type Column, columnCards } from "./column.ts";
 
@@ -67,60 +67,31 @@ export const OPPOSING_IDEOLOGY: Record<Ideology, Ideology> = Object.fromEntries(
 // Vector derivation
 // -------------------------------------------------------------------------
 
-export function deriveVector(columns: Column[], terrain: IdeologyTerrain): IdeologyVector {
-  let axis1 = terrain.axis1;
-  let axis2 = terrain.axis2;
+export function deriveVector(
+  columns: Column[],
+  unlockedProjects: ProjectUnlock[],
+  projects: KeystoneProject[],
+): IdeologyVector {
+  const v = { axis1: 0, axis2: 0 };
   for (const col of columns) {
-    for (const card of columnCards(col)) {
-      if (card.ideology === "wild") continue;
-      const { axis, sign } = IDEOLOGY_AXIS[card.ideology];
-      const delta = sign * card.rank;
-      if (axis === "axis1") axis1 += delta;
-      else axis2 += delta;
+    for (const c of columnCards(col)) {
+      if (c.ideology === "wild") continue;
+      const { axis, sign } = IDEOLOGY_AXIS[c.ideology];
+      v[axis] += sign;
     }
   }
-  return { axis1, axis2 };
-}
-
-export type Alignment = "aligned" | "opposed" | "neutral";
-
-export function checkAlignment(card: Card, vector: IdeologyVector): Alignment {
-  if (card.ideology === "wild") return "neutral";
-
-  const a1Active = Math.abs(vector.axis1) >= 3;
-  const a2Active = Math.abs(vector.axis2) >= 3;
-
-  const a1Verdict = axisVerdict(card.ideology, "axis1", vector.axis1);
-  const a2Verdict = axisVerdict(card.ideology, "axis2", vector.axis2);
-
-  if (!a1Active && !a2Active) return "neutral";
-
-  const candidates: { verdict: Alignment; magnitude: number }[] = [];
-  if (a1Active && a1Verdict !== "neutral") {
-    candidates.push({ verdict: a1Verdict, magnitude: Math.abs(vector.axis1) });
+  for (const u of unlockedProjects) {
+    const value = projects.find((p) => p.id === u.projectId)?.value ?? 0;
+    const net = { axis1: 0, axis2: 0 };
+    for (const c of u.cards) {
+      if (c.ideology === "wild") continue;
+      const { axis, sign } = IDEOLOGY_AXIS[c.ideology];
+      net[axis] += sign;
+    }
+    v.axis1 += Math.sign(net.axis1) * value;
+    v.axis2 += Math.sign(net.axis2) * value;
   }
-  if (a2Active && a2Verdict !== "neutral") {
-    candidates.push({ verdict: a2Verdict, magnitude: Math.abs(vector.axis2) });
-  }
-
-  if (candidates.length === 0) return "neutral";
-  candidates.sort((a, b) => b.magnitude - a.magnitude);
-  return candidates[0].verdict;
-}
-
-function axisVerdict(ideology: Ideology, axis: "axis1" | "axis2", value: number): Alignment {
-  const map = IDEOLOGY_AXIS[ideology];
-  if (map.axis !== axis) return "neutral";
-  const projection = map.sign * value;
-  if (projection > 0) return "aligned";
-  if (projection < 0) return "opposed";
-  return "neutral";
-}
-
-export function influenceCostAdjustment(alignment: Alignment): number {
-  if (alignment === "aligned") return -1;
-  if (alignment === "opposed") return 1;
-  return 0;
+  return v;
 }
 
 export function demonym(vector: IdeologyVector): Demonym {

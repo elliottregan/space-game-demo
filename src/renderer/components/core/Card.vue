@@ -29,9 +29,9 @@
     <div class="card-footer">
       <span
         v-if="showInfluence && card.kind !== 'land' && card.kind !== 'dissent'"
-        :class="['card-inf-cost', alignment]"
+        class="card-inf-cost"
       >
-        {{ displayedInfluenceCost }} Inf
+        {{ card.influenceCost }} Inf
       </span>
       <span v-else-if="card.kind === 'land'" class="card-inf-cost">Land</span>
       <span v-else-if="card.kind === 'dissent'" class="card-inf-cost">—</span>
@@ -54,8 +54,6 @@ const props = withDefaults(
     unaffordable?: boolean;
     showInfluence?: boolean;
     showMarketCost?: boolean;
-    influenceCostOverride?: number;
-    alignment?: "aligned" | "opposed" | "neutral";
     compact?: boolean;
     draggable?: boolean;
     isDragging?: boolean;
@@ -66,8 +64,6 @@ const props = withDefaults(
     unaffordable: false,
     showInfluence: true,
     showMarketCost: false,
-    influenceCostOverride: undefined,
-    alignment: "neutral",
     compact: false,
     draggable: false,
     isDragging: false,
@@ -79,12 +75,6 @@ defineEmits<{
   dragstart: [event: DragEvent];
   dragend: [event: DragEvent];
 }>();
-
-const displayedInfluenceCost = computed(() =>
-  props.influenceCostOverride !== undefined
-    ? props.influenceCostOverride
-    : props.card.influenceCost,
-);
 
 const effectLines = computed(() => describeCard(props.card));
 

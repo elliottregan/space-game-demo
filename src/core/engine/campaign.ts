@@ -149,7 +149,7 @@ export function finalizeEpoch(
   campaign.legacyCards.push(...legacyCards);
   if (state.monument) addMonumentToCampaign(campaign, state.monument);
   if (state.outcome === "loss") {
-    applyLossTerrainScar(campaign, state.crisis, currentVector(epoch, campaign));
+    applyLossTerrainScar(campaign, state.crisis, currentVector(epoch, setting));
   }
 
   const result: EpochResult = {
@@ -159,7 +159,7 @@ export function finalizeEpoch(
     totalValue: state.crisis.totalValue,
     unlockCount: epoch.unlockedProjects.length,
     mintedLegacyIds: legacyCards.map((l) => l.id),
-    finalIdeology: currentVector(epoch, campaign),
+    finalIdeology: currentVector(epoch, setting),
   };
   campaign.epochHistory.push(result);
   campaign.epochCount = epoch.epochNumber;

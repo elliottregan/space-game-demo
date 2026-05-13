@@ -2,33 +2,21 @@
 // Each command validates the request, mutates state via dispatch, and returns
 // a tagged result so the facade can surface errors without exceptions.
 
-import type {
-  Campaign,
-  Card,
-  Epoch,
-  GameEvent,
-  IdeologyVector,
-  ProjectUnlock,
-  Setting,
-} from "../types.ts";
+import type { Campaign, Card, Epoch, GameEvent, ProjectUnlock, Setting } from "../types.ts";
 import { canPlaceCharter, canPlaceInfluence, canPlaceLand, columnCards } from "./column.ts";
 import { evaluateColumn } from "./columnPatterns.ts";
 import { dispatch } from "./dispatch.ts";
 import { applyEffect } from "./effects.ts";
 import type { EffectContext } from "./effects.ts";
-import { checkAlignment, OPPOSING_IDEOLOGY } from "./ideology.ts";
 import type { RNG } from "./rng.ts";
-import { currentVector, effectiveInfluenceCost, type Alignment } from "./epoch.ts";
 
-export type PlaceResult =
-  | { ok: true; card: Card; alignment: Alignment }
-  | { ok: false; error: string };
+export type PlaceResult = { ok: true; card: Card } | { ok: false; error: string };
 
 export type CmdResult<T = void> = { ok: true; value: T } | { ok: false; error: string };
 
 export function placeCard(
   epoch: Epoch,
-  campaign: Campaign,
+  _campaign: Campaign,
   setting: Setting,
   cardId: string,
   columnIndex: number,
@@ -45,16 +33,13 @@ export function placeCard(
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
 
-  const vector = currentVector(epoch, campaign);
-  const alignment = checkAlignment(card, vector);
-
   if (card.kind === "land") {
     if (!canPlaceLand(col, card)) {
       return { ok: false, error: "Land cannot be placed there (rank mismatch or stack full)." };
     }
     epoch.hand.splice(handIdx, 1);
     dispatch(epoch, { type: "card-played-to-land", card, columnIndex });
-    return { ok: true, card, alignment: "neutral" };
+    return { ok: true, card };
   }
 
   if (card.kind === "role") {
@@ -64,8 +49,6 @@ export function placeCard(
     return playToTopRow(
       epoch,
       setting,
-      vector,
-      alignment,
       card,
       columnIndex,
       handIdx,
@@ -78,17 +61,7 @@ export function placeCard(
     if (!canPlaceCharter(col, card)) {
       return { ok: false, error: "Charter row needs the Influence row filled." };
     }
-    return playToTopRow(
-      epoch,
-      setting,
-      vector,
-      alignment,
-      card,
-      columnIndex,
-      handIdx,
-      "card-played-to-charter",
-      rng,
-    );
+    return playToTopRow(epoch, setting, card, columnIndex, handIdx, "card-played-to-charter", rng);
   }
 
   return { ok: false, error: "Card kind cannot be played." };
@@ -97,36 +70,26 @@ export function placeCard(
 function playToTopRow(
   epoch: Epoch,
   _setting: Setting,
-  vector: IdeologyVector,
-  alignment: Alignment,
   card: Card,
   columnIndex: number,
   handIdx: number,
   eventType: GameEvent["type"] & ("card-played-to-influence" | "card-played-to-charter"),
   rng: RNG,
 ): PlaceResult {
-  const cost = effectiveInfluenceCost(card, vector);
-  if (epoch.influence < cost) {
-    return { ok: false, error: `Need ${cost} Influence (have ${epoch.influence}).` };
+  if (epoch.influence < card.influenceCost) {
+    return {
+      ok: false,
+      error: `Need ${card.influenceCost} Influence (have ${epoch.influence}).`,
+    };
   }
-  epoch.influence -= cost;
+  epoch.influence -= card.influenceCost;
   epoch.hand.splice(handIdx, 1);
   dispatch(epoch, { type: eventType, card, columnIndex } as GameEvent);
 
   const ctx: EffectContext = { epoch, rng, log: () => {} };
   applyEffect(card.effect, ctx);
 
-  if (alignment === "opposed" && card.ideology !== "wild") {
-    epoch.endOfTurnQueue.push({
-      kind: "addDissent",
-      variant: "backlash",
-      ideology: OPPOSING_IDEOLOGY[card.ideology],
-      amount: 1,
-      timing: "end-of-turn",
-    });
-  }
-
-  return { ok: true, card, alignment };
+  return { ok: true, card };
 }
 
 export function discardLand(epoch: Epoch, columnIndex: number): CmdResult<Card> {

@@ -2,7 +2,6 @@
 
 import { shallowRef, ref, type Ref, type ShallowRef } from "vue";
 import { GameAPI, type Snapshot } from "../facade/GameAPI.ts";
-import type { Card } from "../core/types.ts";
 import type { SaveSlot } from "../facade/persistence.ts";
 
 class GameService {
@@ -50,14 +49,6 @@ class GameService {
   }
 
   // Queries
-  getEffectiveCost(card: Card): number {
-    return this.api.getEffectiveCost(card);
-  }
-
-  getAlignment(card: Card): "aligned" | "opposed" | "neutral" {
-    return this.api.getAlignment(card);
-  }
-
   validColumns(cardId: string): number[] {
     return this.api.validColumns(cardId);
   }

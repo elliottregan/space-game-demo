@@ -6,7 +6,7 @@ import {
   finalizeEpoch,
   type EndOfEpochState,
 } from "../core/engine/campaign.ts";
-import { createEpoch, currentVector, effectiveInfluenceCost } from "../core/engine/epoch.ts";
+import { createEpoch, currentVector } from "../core/engine/epoch.ts";
 import {
   buildColumn as buildColumnCore,
   discardCharter as discardCharterCore,
@@ -31,7 +31,7 @@ import {
   type SavedState,
 } from "./persistence.ts";
 import type { Campaign, Card, Column, Epoch, IdeologyVector, Setting } from "../core/types.ts";
-import { checkAlignment, demonym, demonymName } from "../core/engine/ideology.ts";
+import { demonym, demonymName } from "../core/engine/ideology.ts";
 import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../core/engine/column.ts";
 import { evaluateColumn } from "../core/engine/columnPatterns.ts";
 import { landMaterialProduction } from "../core/data/cards.ts";
@@ -164,7 +164,7 @@ export class GameAPI {
   // -----------------------------------------------------------------------
 
   snapshot(): Snapshot {
-    const vector = currentVector(this.epoch, this.campaign);
+    const vector = currentVector(this.epoch, this.setting);
     const dis = this.epoch.hand
       .concat(this.epoch.draw, this.epoch.discard)
       .filter((c) => c.tags.includes("dissent")).length;
@@ -211,14 +211,6 @@ export class GameAPI {
       ideologyBreakdown: unlockedIdeologyBreakdown(this.epoch.unlockedProjects),
       columnBuildable,
     };
-  }
-
-  getEffectiveCost(card: Card): number {
-    return effectiveInfluenceCost(card, currentVector(this.epoch, this.campaign));
-  }
-
-  getAlignment(card: Card): "aligned" | "opposed" | "neutral" {
-    return checkAlignment(card, currentVector(this.epoch, this.campaign));
   }
 
   /** Indices of columns where the given hand card could be placed. */
