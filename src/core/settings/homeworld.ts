@@ -36,11 +36,46 @@ const PROJECTS: KeystoneProject[] = [
     value: DEFAULT_PROJECT_VALUE["flush"],
   },
   {
+    id: "homeworld-twin-gates",
+    pattern: "two-pair",
+    name: "Twin Gates",
+    flavor: "Two ways in, two ways home.",
+    value: DEFAULT_PROJECT_VALUE["two-pair"],
+  },
+  {
+    id: "homeworld-long-march",
+    pattern: "straight",
+    name: "Long March",
+    flavor: "From dust to dawn in five strides.",
+    value: DEFAULT_PROJECT_VALUE["straight"],
+  },
+  {
+    id: "homeworld-settlement-hall",
+    pattern: "full-house",
+    name: "Settlement Hall",
+    flavor: "Three for the council, two for the door.",
+    value: DEFAULT_PROJECT_VALUE["full-house"],
+  },
+  {
     id: "homeworld-reactor-core",
     pattern: "four-of-a-kind",
     name: "Reactor Core",
     flavor: "Power harnessed, fourfold.",
     value: DEFAULT_PROJECT_VALUE["four-of-a-kind"],
+  },
+  {
+    id: "homeworld-migration-trail",
+    pattern: "straight-flush",
+    name: "Migration Trail",
+    flavor: "One creed, marched in order.",
+    value: DEFAULT_PROJECT_VALUE["straight-flush"],
+  },
+  {
+    id: "homeworld-first-compact",
+    pattern: "royal-flush",
+    name: "First Compact",
+    flavor: "Every voice, one banner, one road.",
+    value: DEFAULT_PROJECT_VALUE["royal-flush"],
   },
 ];
 
