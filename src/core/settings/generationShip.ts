@@ -68,7 +68,7 @@ export const GENERATION_SHIP: Setting = {
   rules: {
     handSize: 5,
     columnCount: 4,
-    influenceBaseline: 3,
+    influenceBaseline: 8,
     materialsPerLandBase: 1,
     deckStartMinSize: 10,
     maxTurns: 14,
