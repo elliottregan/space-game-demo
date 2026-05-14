@@ -21,10 +21,14 @@ defineProps<{ title: string }>();
   display: flex;
   flex-direction: column;
   min-width: 0;
+  /* Allow the panel to shrink below its intrinsic content size when its
+     parent gives it a bounded height — needed for in-panel scrolling. */
+  min-height: 0;
 }
 .panel-header {
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
 }
 .panel-title {
   margin: 0;
@@ -40,5 +44,7 @@ defineProps<{ title: string }>();
   flex-direction: column;
   gap: var(--space-2);
   min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
 }
 </style>
