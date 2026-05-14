@@ -4,12 +4,23 @@
 // end-of-Epoch.
 
 import type { Card, EffectSpec, Ideology } from "./cards.ts";
+import { zeroIdeologyBreakdown } from "./ideologies.ts";
 
 // -------------------------------------------------------------------------
 // Pattern + Project + Crisis types
 // -------------------------------------------------------------------------
 
-export type PatternKind = "high-card" | "pair" | "three-of-a-kind" | "flush" | "four-of-a-kind";
+export type PatternKind =
+  | "high-card"
+  | "pair"
+  | "two-pair"
+  | "three-of-a-kind"
+  | "straight"
+  | "flush"
+  | "full-house"
+  | "four-of-a-kind"
+  | "straight-flush"
+  | "royal-flush";
 
 export interface KeystoneProject {
   id: string;
@@ -51,17 +62,27 @@ export interface CrisisOutcome {
 export const PATTERNS_IN_ORDER: PatternKind[] = [
   "high-card",
   "pair",
+  "two-pair",
   "three-of-a-kind",
+  "straight",
   "flush",
+  "full-house",
   "four-of-a-kind",
+  "straight-flush",
+  "royal-flush",
 ];
 
 export const DEFAULT_PROJECT_VALUE: Record<PatternKind, number> = {
   "high-card": 1,
   pair: 2,
+  "two-pair": 3,
   "three-of-a-kind": 4,
-  flush: 5,
+  straight: 5,
+  flush: 6,
+  "full-house": 7,
   "four-of-a-kind": 8,
+  "straight-flush": 10,
+  "royal-flush": 12,
 };
 
 export function reversePatternOrder(): PatternKind[] {
@@ -76,12 +97,7 @@ export function getProjectForPattern(
 }
 
 export function unlockedIdeologyBreakdown(unlocks: ProjectUnlock[]): Record<Ideology, number> {
-  const out: Record<Ideology, number> = {
-    solidarity: 0,
-    sovereignty: 0,
-    transformation: 0,
-    heritage: 0,
-  };
+  const out = zeroIdeologyBreakdown();
   for (const u of unlocks) {
     for (const c of u.cards) {
       if (c.ideology === "wild") continue;

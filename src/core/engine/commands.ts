@@ -2,33 +2,22 @@
 // Each command validates the request, mutates state via dispatch, and returns
 // a tagged result so the facade can surface errors without exceptions.
 
-import type {
-  Campaign,
-  Card,
-  Epoch,
-  GameEvent,
-  IdeologyVector,
-  ProjectUnlock,
-  Setting,
-} from "../types.ts";
+import type { Campaign, Card, Epoch, GameEvent, ProjectUnlock, Setting } from "../types.ts";
 import { canPlaceCharter, canPlaceInfluence, canPlaceLand, columnCards } from "./column.ts";
 import { evaluateColumn } from "./columnPatterns.ts";
 import { dispatch } from "./dispatch.ts";
 import { applyEffect } from "./effects.ts";
 import type { EffectContext } from "./effects.ts";
-import { checkAlignment } from "./ideology.ts";
+import { canCommitHand } from "./rowHands.ts";
 import type { RNG } from "./rng.ts";
-import { currentVector, effectiveInfluenceCost, type Alignment } from "./epoch.ts";
 
-export type PlaceResult =
-  | { ok: true; card: Card; alignment: Alignment }
-  | { ok: false; error: string };
+export type PlaceResult = { ok: true; card: Card } | { ok: false; error: string };
 
 export type CmdResult<T = void> = { ok: true; value: T } | { ok: false; error: string };
 
 export function placeCard(
   epoch: Epoch,
-  campaign: Campaign,
+  _campaign: Campaign,
   setting: Setting,
   cardId: string,
   columnIndex: number,
@@ -45,16 +34,13 @@ export function placeCard(
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
 
-  const vector = currentVector(epoch, campaign);
-  const alignment = checkAlignment(card, vector);
-
   if (card.kind === "land") {
     if (!canPlaceLand(col, card)) {
       return { ok: false, error: "Land cannot be placed there (rank mismatch or stack full)." };
     }
     epoch.hand.splice(handIdx, 1);
     dispatch(epoch, { type: "card-played-to-land", card, columnIndex });
-    return { ok: true, card, alignment: "neutral" };
+    return { ok: true, card };
   }
 
   if (card.kind === "role") {
@@ -64,8 +50,6 @@ export function placeCard(
     return playToTopRow(
       epoch,
       setting,
-      vector,
-      alignment,
       card,
       columnIndex,
       handIdx,
@@ -78,17 +62,7 @@ export function placeCard(
     if (!canPlaceCharter(col, card)) {
       return { ok: false, error: "Charter row needs the Influence row filled." };
     }
-    return playToTopRow(
-      epoch,
-      setting,
-      vector,
-      alignment,
-      card,
-      columnIndex,
-      handIdx,
-      "card-played-to-charter",
-      rng,
-    );
+    return playToTopRow(epoch, setting, card, columnIndex, handIdx, "card-played-to-charter", rng);
   }
 
   return { ok: false, error: "Card kind cannot be played." };
@@ -97,49 +71,26 @@ export function placeCard(
 function playToTopRow(
   epoch: Epoch,
   _setting: Setting,
-  vector: IdeologyVector,
-  alignment: Alignment,
   card: Card,
   columnIndex: number,
   handIdx: number,
   eventType: GameEvent["type"] & ("card-played-to-influence" | "card-played-to-charter"),
   rng: RNG,
 ): PlaceResult {
-  const cost = effectiveInfluenceCost(card, vector);
-  if (epoch.influence < cost) {
-    return { ok: false, error: `Need ${cost} Influence (have ${epoch.influence}).` };
+  if (epoch.influence < card.influenceCost) {
+    return {
+      ok: false,
+      error: `Need ${card.influenceCost} Influence (have ${epoch.influence}).`,
+    };
   }
-  epoch.influence -= cost;
+  epoch.influence -= card.influenceCost;
   epoch.hand.splice(handIdx, 1);
   dispatch(epoch, { type: eventType, card, columnIndex } as GameEvent);
 
   const ctx: EffectContext = { epoch, rng, log: () => {} };
   applyEffect(card.effect, ctx);
 
-  if (alignment === "opposed" && card.ideology !== "wild") {
-    epoch.endOfTurnQueue.push({
-      kind: "addDissent",
-      variant: "backlash",
-      ideology: opposingIdeology(card.ideology),
-      amount: 1,
-      timing: "end-of-turn",
-    });
-  }
-
-  return { ok: true, card, alignment };
-}
-
-function opposingIdeology(ideology: "solidarity" | "sovereignty" | "transformation" | "heritage") {
-  switch (ideology) {
-    case "solidarity":
-      return "sovereignty" as const;
-    case "sovereignty":
-      return "solidarity" as const;
-    case "transformation":
-      return "heritage" as const;
-    case "heritage":
-      return "transformation" as const;
-  }
+  return { ok: true, card };
 }
 
 export function discardLand(epoch: Epoch, columnIndex: number): CmdResult<Card> {
@@ -165,18 +116,23 @@ export function discardCharter(epoch: Epoch, columnIndex: number): CmdResult<Car
   return { ok: true, value: card };
 }
 
-export function recallInfluence(epoch: Epoch, columnIndex: number): CmdResult<Card> {
+export function recallInfluence(epoch: Epoch, columnIndex: number): CmdResult<Card[]> {
   if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
   if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
-  const card = col.influence.card;
-  if (!card) return { ok: false, error: "No Influence to recall." };
+  if (col.influence.cards.length === 0) return { ok: false, error: "No Influence to recall." };
   if (col.charter.card !== null) {
     return { ok: false, error: "Discard the Charter first." };
   }
-  dispatch(epoch, { type: "card-recalled-to-hand", card, columnIndex });
-  return { ok: true, value: card };
+  const recalled = [...col.influence.cards];
+  // Emit a discard event per recalled card so Dissent + discard piles get the
+  // same treatment as today's single-recall.
+  for (const card of recalled) {
+    dispatch(epoch, { type: "card-discarded", card, source: "influence-recall" });
+  }
+  col.influence.cards.length = 0;
+  return { ok: true, value: recalled };
 }
 
 export function discardColumn(epoch: Epoch, columnIndex: number): CmdResult<void> {
@@ -188,7 +144,7 @@ export function discardColumn(epoch: Epoch, columnIndex: number): CmdResult<void
   if (cards.length === 0) return { ok: false, error: "Column is empty." };
   // Clear first so the cascade does not double-touch.
   col.lands.cards.length = 0;
-  col.influence.card = null;
+  col.influence.cards.length = 0;
   col.charter.card = null;
   for (const c of cards) {
     dispatch(epoch, { type: "card-discarded", card: c, source: "column" });
@@ -228,4 +184,58 @@ export function buildColumn(
   };
   dispatch(epoch, { type: "column-built", columnIndex, unlock });
   return { ok: true, value: unlock };
+}
+
+export function commitHand(
+  epoch: Epoch,
+  columnIndex: number,
+  row: "land" | "influence",
+  cardIds: string[],
+  rng: RNG,
+): CmdResult<Card[]> {
+  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
+  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  if (cardIds.length === 0) return { ok: false, error: "No cards to commit." };
+
+  const col = epoch.columns[columnIndex];
+  if (!col) return { ok: false, error: "Invalid column." };
+
+  // 1. Resolve card IDs → Cards in hand, preserving order.
+  const cards: Card[] = [];
+  for (const id of cardIds) {
+    const c = epoch.hand.find((h) => h.id === id);
+    if (!c) return { ok: false, error: `Card ${id} not in hand.` };
+    cards.push(c);
+  }
+
+  // 2. Kind check + row-hand validation.
+  if (!canCommitHand(col, row, cards)) {
+    return { ok: false, error: "Not a valid hand." };
+  }
+
+  // 3. For influence row, check affordability and deduct.
+  if (row === "influence") {
+    const totalCost = cards.reduce((sum, c) => sum + c.influenceCost, 0);
+    if (epoch.influence < totalCost) {
+      return { ok: false, error: "Not enough Influence." };
+    }
+    epoch.influence -= totalCost;
+  }
+
+  // 4. Remove the cards from hand.
+  const idsSet = new Set(cardIds);
+  epoch.hand = epoch.hand.filter((h) => !idsSet.has(h.id));
+
+  // 5. Dispatch — handler appends cards to the row in order.
+  dispatch(epoch, { type: "cards-committed", columnIndex, row, cards });
+
+  // 6. Fire per-card effects in placement order, matching placeCard's pattern.
+  if (row === "influence") {
+    const ctx: EffectContext = { epoch, rng, log: () => {} };
+    for (const card of cards) {
+      applyEffect(card.effect, ctx);
+    }
+  }
+
+  return { ok: true, value: cards };
 }

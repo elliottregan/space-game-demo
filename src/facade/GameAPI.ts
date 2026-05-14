@@ -6,9 +6,10 @@ import {
   finalizeEpoch,
   type EndOfEpochState,
 } from "../core/engine/campaign.ts";
-import { createEpoch, currentVector, effectiveInfluenceCost } from "../core/engine/epoch.ts";
+import { createEpoch, currentVector } from "../core/engine/epoch.ts";
 import {
   buildColumn as buildColumnCore,
+  commitHand as commitHandCore,
   discardCharter as discardCharterCore,
   discardColumn as discardColumnCore,
   discardFromHand as discardFromHandCore,
@@ -31,7 +32,7 @@ import {
   type SavedState,
 } from "./persistence.ts";
 import type { Campaign, Card, Column, Epoch, IdeologyVector, Setting } from "../core/types.ts";
-import { checkAlignment, demonym, demonymName } from "../core/engine/ideology.ts";
+import { demonym, demonymName } from "../core/engine/ideology.ts";
 import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../core/engine/column.ts";
 import { evaluateColumn } from "../core/engine/columnPatterns.ts";
 import { landMaterialProduction } from "../core/data/cards.ts";
@@ -81,7 +82,7 @@ export class GameAPI {
   /** Serialize current state for persistence. */
   exportState(): SavedState {
     return {
-      version: 3,
+      version: 4,
       campaign: this.campaign,
       settingId: this.setting.id,
       epoch: this.epoch,
@@ -164,13 +165,13 @@ export class GameAPI {
   // -----------------------------------------------------------------------
 
   snapshot(): Snapshot {
-    const vector = currentVector(this.epoch, this.campaign);
+    const vector = currentVector(this.epoch, this.setting);
     const dis = this.epoch.hand
       .concat(this.epoch.draw, this.epoch.discard)
       .filter((c) => c.tags.includes("dissent")).length;
     const columnsView: Column[] = this.epoch.columns.map((c) => ({
       lands: { cards: [...c.lands.cards] },
-      influence: { card: c.influence.card },
+      influence: { cards: c.influence.cards.map((card) => ({ ...card })) },
       charter: { card: c.charter.card },
     }));
     const columnBuildable = columnsView.map(
@@ -213,14 +214,6 @@ export class GameAPI {
     };
   }
 
-  getEffectiveCost(card: Card): number {
-    return effectiveInfluenceCost(card, currentVector(this.epoch, this.campaign));
-  }
-
-  getAlignment(card: Card): "aligned" | "opposed" | "neutral" {
-    return checkAlignment(card, currentVector(this.epoch, this.campaign));
-  }
-
   /** Indices of columns where the given hand card could be placed. */
   validColumns(cardId: string): number[] {
     const card = this.epoch.hand.find((c) => c.id === cardId);
@@ -258,7 +251,7 @@ export class GameAPI {
   discardCharter(columnIndex: number): CommandResult<Card> {
     return discardCharterCore(this.epoch, columnIndex);
   }
-  recallInfluence(columnIndex: number): CommandResult<Card> {
+  recallInfluence(columnIndex: number): CommandResult<Card[]> {
     return recallInfluenceCore(this.epoch, columnIndex);
   }
   discardColumn(columnIndex: number): CommandResult<void> {
@@ -272,6 +265,16 @@ export class GameAPI {
     return r.ok
       ? { ok: true, value: { projectId: r.value.projectId, pattern: r.value.pattern } }
       : r;
+  }
+
+  commitHand(
+    columnIndex: number,
+    row: "land" | "influence",
+    cardIds: string[],
+  ): CommandResult<Card[]> {
+    const result = commitHandCore(this.epoch, columnIndex, row, cardIds, this.rng);
+    if (result.ok) this.persist();
+    return result;
   }
 
   endTurn(): CommandResult {

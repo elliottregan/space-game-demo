@@ -1,6 +1,24 @@
 // Card display label helpers.
 
-import type { Card, CardIdeology } from "../../core/types.ts";
+import type { Card, CardIdeology, PatternKind } from "../../core/types.ts";
+import { IDEOLOGY_DISPLAY } from "../../core/data/ideologies.ts";
+
+const PATTERN_LABELS: Record<PatternKind, string> = {
+  "high-card": "High Card",
+  pair: "Pair",
+  "two-pair": "Two Pair",
+  "three-of-a-kind": "Three of a Kind",
+  straight: "Straight",
+  flush: "Flush",
+  "full-house": "Full House",
+  "four-of-a-kind": "Four of a Kind",
+  "straight-flush": "Straight Flush",
+  "royal-flush": "Royal Flush",
+};
+
+export function patternLabel(p: PatternKind): string {
+  return PATTERN_LABELS[p];
+}
 
 export function rankLabel(rank: number): string {
   if (rank === 11) return "J";
@@ -12,18 +30,8 @@ export function rankLabel(rank: number): string {
 }
 
 export function suitLabel(ideology: CardIdeology): string {
-  switch (ideology) {
-    case "solidarity":
-      return "Sol";
-    case "sovereignty":
-      return "Sov";
-    case "transformation":
-      return "Trn";
-    case "heritage":
-      return "Her";
-    case "wild":
-      return "Wild";
-  }
+  if (ideology === "wild") return "Wild";
+  return IDEOLOGY_DISPLAY[ideology].abbrev;
 }
 
 export function landMaterialPerTurn(rank: number): number {

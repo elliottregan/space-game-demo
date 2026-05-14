@@ -1,43 +1,190 @@
 <template>
-  <section class="section ideology-display">
-    <h2>Ideology · {{ demonymLabel }}</h2>
-    <AxisBar
-      left-label="Solidarity"
-      :value="vector.axis1"
-      :terrain-offset="terrain.axis1"
-      positive-color="var(--suit-sovereignty)"
-      negative-color="var(--suit-solidarity)"
-    />
-    <AxisBar
-      left-label="Heritage"
-      :value="vector.axis2"
-      :terrain-offset="terrain.axis2"
-      positive-color="var(--suit-transformation)"
-      negative-color="var(--suit-heritage)"
-    />
-    <div class="axis-legend">
-      <span>◁ Sovereignty · Transformation ▷</span>
-      <span>±3 active · ±6 dominant · ±8 gate</span>
+  <Panel class="ideology-display" title="Ideology">
+    <div class="plot-wrap">
+      <svg
+        class="ideology-plot"
+        :viewBox="`0 0 ${SIZE} ${SIZE}`"
+        preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label="Ideology position plot"
+      >
+        <!-- Axis cross-hairs -->
+        <line
+          :x1="0"
+          :y1="CENTER"
+          :x2="SIZE"
+          :y2="CENTER"
+          stroke="var(--border)"
+          stroke-width="0.5"
+        />
+        <line
+          :x1="CENTER"
+          :y1="0"
+          :x2="CENTER"
+          :y2="SIZE"
+          stroke="var(--border)"
+          stroke-width="0.5"
+        />
+
+        <!-- Threshold rings: active (3), dominant (6), gate (8) -->
+        <circle
+          v-for="threshold in THRESHOLDS"
+          :key="threshold"
+          :cx="CENTER"
+          :cy="CENTER"
+          :r="(threshold / MAX) * RADIUS"
+          fill="none"
+          stroke="var(--text-subtle)"
+          stroke-width="0.5"
+          stroke-dasharray="2 3"
+          opacity="0.7"
+        />
+
+        <!-- Pole labels -->
+        <text
+          v-for="id in IDEOLOGIES"
+          :key="id"
+          :x="poleAnchor(id).x"
+          :y="poleAnchor(id).y"
+          :text-anchor="poleAnchor(id).textAnchor"
+          :dominant-baseline="poleAnchor(id).dominantBaseline"
+          :style="{ fill: cssColorFor(id) }"
+          class="pole-label"
+        >
+          {{ IDEOLOGY_DISPLAY[id].abbrev }}
+        </text>
+
+        <!-- Halo around dot -->
+        <circle
+          :cx="dotX"
+          :cy="dotY"
+          :r="DOT_RADIUS + HALO_OFFSET"
+          fill="none"
+          :stroke="dotColor"
+          stroke-width="1.5"
+          stroke-opacity="0.4"
+        />
+        <!-- Position dot -->
+        <circle :cx="dotX" :cy="dotY" :r="DOT_RADIUS" :fill="dotColor" />
+      </svg>
     </div>
-  </section>
+    <div class="demonym-label" :class="{ unaligned: !demonymKey }" :style="demonymLabelStyle">
+      {{ demonymLabel }}
+    </div>
+  </Panel>
 </template>
 
 <script setup lang="ts">
-import AxisBar from "../core/AxisBar.vue";
-import type { IdeologyVector, IdeologyTerrain } from "../../../core/types.ts";
+import { computed } from "vue";
+import type { Ideology, IdeologyVector } from "../../../core/types.ts";
+import { cssColorFor, IDEOLOGY_DISPLAY, IDEOLOGIES } from "../../../core/data/ideologies.ts";
+import {
+  demonym,
+  demonymName,
+  IDEOLOGY_AXIS,
+  IDEOLOGY_BY_DEMONYM,
+} from "../../../core/engine/ideology.ts";
+import Panel from "../core/Panel.vue";
 
-defineProps<{
+const props = defineProps<{
   vector: IdeologyVector;
-  terrain: IdeologyTerrain;
-  demonymLabel: string;
 }>();
+
+// SVG geometry — square canvas in user-space units.
+const SIZE = 200;
+const CENTER = SIZE / 2;
+// Inset reserved at each edge for pole labels.
+const LABEL_INSET = 10;
+// Breathing room between the pole-label baseline and the outer ring.
+const LABEL_GUTTER = 6;
+// Usable radius from center to the edge of the plot area.
+const RADIUS = CENTER - LABEL_INSET - LABEL_GUTTER;
+// Hard clamp on ideology magnitude for plot scaling.
+const MAX = 20;
+const THRESHOLDS = [3, 6, 8] as const;
+const DOT_RADIUS = 4.5;
+const HALO_OFFSET = 6;
+
+interface PoleAnchor {
+  x: number;
+  y: number;
+  textAnchor: "middle" | "start" | "end";
+  dominantBaseline: "hanging" | "auto" | "middle";
+}
+
+// Maps a pole to its SVG-edge position. Note: SVG y grows downward,
+// so axis2 sign +1 (positive Transformation) maps to a small y at the top.
+function poleAnchor(id: Ideology): PoleAnchor {
+  const { axis, sign } = IDEOLOGY_AXIS[id];
+  if (axis === "axis2") {
+    // sign +1 → top, sign -1 → bottom
+    return sign > 0
+      ? { x: CENTER, y: LABEL_INSET, textAnchor: "middle", dominantBaseline: "hanging" }
+      : { x: CENTER, y: SIZE - LABEL_INSET, textAnchor: "middle", dominantBaseline: "auto" };
+  }
+  // axis1: sign +1 → right, sign -1 → left
+  return sign > 0
+    ? { x: SIZE - LABEL_INSET, y: CENTER, textAnchor: "end", dominantBaseline: "middle" }
+    : { x: LABEL_INSET, y: CENTER, textAnchor: "start", dominantBaseline: "middle" };
+}
+
+function clamp(v: number): number {
+  return Math.max(-MAX, Math.min(MAX, v));
+}
+
+function toCanvas(v: number): number {
+  return (clamp(v) / MAX) * RADIUS;
+}
+
+const dotX = computed(() => CENTER + toCanvas(props.vector.axis1));
+// Flip axis2 so Transformation (positive) sits at the top of the SVG.
+const dotY = computed(() => CENTER - toCanvas(props.vector.axis2));
+
+const demonymKey = computed(() => demonym(props.vector));
+const demonymLabel = computed(() => demonymName(demonymKey.value));
+
+const dotColor = computed(() => {
+  const key = demonymKey.value;
+  if (!key) return "var(--accent)";
+  return cssColorFor(IDEOLOGY_BY_DEMONYM[key]);
+});
+
+const demonymLabelStyle = computed(() => {
+  if (!demonymKey.value) return { color: "var(--text-subtle)" };
+  return { color: dotColor.value };
+});
 </script>
 
 <style scoped>
-.axis-legend {
-  font-size: 10px;
-  color: var(--text-subtle);
+.plot-wrap {
+  flex: 1 1 auto;
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+.ideology-plot {
+  width: 100%;
+  height: auto;
+  max-width: 220px;
+  aspect-ratio: 1 / 1;
+  display: block;
+}
+.pole-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.demonym-label {
+  margin-top: var(--space-1);
+  font-size: 12px;
+  font-style: italic;
+  text-align: center;
+}
+.demonym-label.unaligned {
+  font-weight: 400;
+}
+.demonym-label:not(.unaligned) {
+  font-weight: 600;
 }
 </style>

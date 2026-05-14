@@ -1,13 +1,14 @@
 // Card pool — the static deck content + the types describing it.
-// Types: Card, CardKind, Ideology, Role, Rank, EffectSpec, …
+// Types: Card, CardKind, Role, Rank, EffectSpec, … (Ideology lives in ./ideologies.ts)
+
+import type { Ideology } from "./ideologies.ts";
+import { IDEOLOGIES, IDEOLOGY_DISPLAY } from "./ideologies.ts";
 
 // -------------------------------------------------------------------------
 // Ideology + Role taxonomy
 // -------------------------------------------------------------------------
 
-export type Ideology = "solidarity" | "sovereignty" | "transformation" | "heritage";
-
-export const IDEOLOGIES: Ideology[] = ["solidarity", "sovereignty", "transformation", "heritage"];
+export { type Ideology, IDEOLOGIES } from "./ideologies.ts";
 
 export type CardIdeology = Ideology | "wild";
 
@@ -240,12 +241,6 @@ const removeDissent = (n: number): EffectSpec => ({
   amount: n,
   timing: "immediate",
 });
-const shift = (axis: "axis1" | "axis2", amount: number): EffectSpec => ({
-  kind: "shiftIdeology",
-  axis,
-  amount,
-  timing: "immediate",
-});
 const nextAcquireDiscount = (n: number): EffectSpec => ({
   kind: "nextAcquireDiscount",
   amount: n,
@@ -266,7 +261,7 @@ const ROLE_EFFECTS: Record<Role, Record<Ideology, RoleEffect>> = {
       influenceCost: 1,
       effect: compound(gainInf(2), addBacklash("solidarity")),
     },
-    transformation: { influenceCost: 1, effect: compound(gainInf(1), shift("axis2", 1)) },
+    transformation: { influenceCost: 1, effect: gainInf(1) },
     heritage: { influenceCost: 1, effect: compound(gainInf(1), addBacklash("transformation")) },
   },
   scholar: {
@@ -279,7 +274,6 @@ const ROLE_EFFECTS: Record<Role, Record<Ideology, RoleEffect>> = {
     solidarity: {
       influenceCost: 2,
       effect: gainInf(1),
-      slotPassive: shift("axis1", -1),
     },
     sovereignty: {
       influenceCost: 2,
@@ -287,7 +281,7 @@ const ROLE_EFFECTS: Record<Role, Record<Ideology, RoleEffect>> = {
     },
     transformation: {
       influenceCost: 3,
-      effect: compound(draw(2), shift("axis2", 1), addQuiet(1)),
+      effect: compound(draw(2), addQuiet(1)),
     },
     heritage: {
       influenceCost: 2,
@@ -311,7 +305,7 @@ const ROLE_EFFECTS: Record<Role, Record<Ideology, RoleEffect>> = {
     },
     transformation: {
       influenceCost: 3,
-      effect: compound(gainInf(2), draw(1), shift("axis2", 2)),
+      effect: compound(gainInf(2), draw(1)),
     },
     heritage: {
       influenceCost: 3,
@@ -483,7 +477,7 @@ function buildHomeworldProjectCharters(): Card[] {
       ideology: "transformation",
       influenceCost: 2,
       marketCost: 12,
-      effect: compound(draw(2), shift("axis2", 2)),
+      effect: draw(2),
       slotPassive: draw(1),
       tags,
       flavor: "Keystone — The Ark.",
@@ -496,7 +490,7 @@ function buildHomeworldProjectCharters(): Card[] {
       ideology: "solidarity",
       influenceCost: 2,
       marketCost: 12,
-      effect: compound(gainInf(2), shift("axis1", -2)),
+      effect: gainInf(2),
       slotPassive: gainInf(1),
       tags,
       flavor: "Keystone — The Commune.",
@@ -509,7 +503,7 @@ function buildHomeworldProjectCharters(): Card[] {
       ideology: "sovereignty",
       influenceCost: 3,
       marketCost: 12,
-      effect: compound(gainMat(3), shift("axis1", 2)),
+      effect: gainMat(3),
       slotPassive: gainMat(1),
       tags,
       flavor: "Keystone — The Reactor.",
@@ -574,5 +568,5 @@ export function makeDissent(variant: "quiet" | "backlash" | "unrest", against?: 
 }
 
 function againstName(ideology: Ideology): string {
-  return ideology.charAt(0).toUpperCase() + ideology.slice(1);
+  return IDEOLOGY_DISPLAY[ideology].name;
 }

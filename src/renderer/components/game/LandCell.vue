@@ -8,26 +8,21 @@
     <div v-if="cards.length === 0" class="cell-empty">
       <span class="cell-empty-label">Land</span>
     </div>
-    <div v-else class="land-stack">
-      <Card :card="topCard" :selectable="false" />
-      <div v-if="cards.length > 1" class="depth-badge">×{{ cards.length }}</div>
+    <CardStack v-else :cards="cards" direction="horizontal">
       <button class="cell-action" @click.stop="$emit('discard')">Discard</button>
-    </div>
+    </CardStack>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
 import type { Card as CardT } from "../../../core/types.ts";
-import Card from "../core/Card.vue";
+import CardStack from "../core/CardStack.vue";
 
-const props = defineProps<{
+defineProps<{
   cards: CardT[];
   isDropTarget: boolean;
   isDragOver: boolean;
 }>();
 
 defineEmits<{ discard: [] }>();
-
-const topCard = computed(() => props.cards[props.cards.length - 1]);
 </script>

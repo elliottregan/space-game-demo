@@ -42,13 +42,48 @@ const PROJECTS: KeystoneProject[] = [
     flavor: "Four corners hold what is left.",
     value: DEFAULT_PROJECT_VALUE["four-of-a-kind"],
   },
+  {
+    id: "ruin-salvage-pair",
+    pattern: "two-pair",
+    name: "Salvage Pact",
+    flavor: "Two debts, two promises. Enough to trade on.",
+    value: DEFAULT_PROJECT_VALUE["two-pair"],
+  },
+  {
+    id: "ruin-broken-road",
+    pattern: "straight",
+    name: "The Broken Road",
+    flavor: "Five waypoints cleared. The route holds, mostly.",
+    value: DEFAULT_PROJECT_VALUE["straight"],
+  },
+  {
+    id: "ruin-hearth-and-wall",
+    pattern: "full-house",
+    name: "Hearth and Wall",
+    flavor: "Three kept the fire. Two kept the gate. It was enough.",
+    value: DEFAULT_PROJECT_VALUE["full-house"],
+  },
+  {
+    id: "ruin-clean-line",
+    pattern: "straight-flush",
+    name: "Clean Line",
+    flavor: "One creed, one road. The scar runs straight.",
+    value: DEFAULT_PROJECT_VALUE["straight-flush"],
+  },
+  {
+    id: "ruin-first-accord",
+    pattern: "royal-flush",
+    name: "The First Accord",
+    flavor: "Every voice, one tongue. The ruins sign the founding charter.",
+    value: DEFAULT_PROJECT_VALUE["royal-flush"],
+  },
 ];
 
 const CRISIS: Crisis = {
   id: "ruin-collapse",
   name: "The Long Collapse",
   flavor: "What was once a city must be coaxed back into shape.",
-  difficulty: 8,
+  difficulty: 20,
 };
 
 export const RUINED_HOMEWORLD: Setting = {

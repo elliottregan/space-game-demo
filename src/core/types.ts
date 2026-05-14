@@ -9,13 +9,15 @@ export type {
   CardTag,
   DissentVariant,
   EffectSpec,
-  Ideology,
   Rank,
   Role,
   SerializablePredicate,
   Timing,
 } from "./data/cards.ts";
-export { IDEOLOGIES, ROLE_RANK } from "./data/cards.ts";
+export { ROLE_RANK } from "./data/cards.ts";
+
+export type { Ideology, IdeologyDisplay } from "./data/ideologies.ts";
+export { IDEOLOGIES, IDEOLOGY_DISPLAY, zeroIdeologyBreakdown } from "./data/ideologies.ts";
 
 export type {
   Crisis,
@@ -31,7 +33,7 @@ export type { CharterRow, Column, ColumnConfig, InfluenceRow, LandRow } from "./
 
 export type { DiscardSource, GameEvent } from "./engine/events.ts";
 
-export type { Alignment, Epoch, EpochPhase, EpochStatus } from "./engine/epoch.ts";
+export type { Epoch, EpochPhase, EpochStatus } from "./engine/epoch.ts";
 
 export type {
   Campaign,
