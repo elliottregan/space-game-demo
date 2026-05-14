@@ -50,18 +50,29 @@
           @build="onBuild"
         />
 
-        <HandPanel
-          :hand="epoch.hand"
-          :selected-ids="selectedIds"
-          :influence="epoch.influence"
-          :columns="epoch.columns"
-          :valid-columns-for="validColumnsFor"
-          @toggle-select="onToggleSelect"
-          @clear-selection="onClearSelection"
-          @place-cards="onPlaceCards"
-          @discard-from-hand="onDiscardFromHand"
-          @commit-to-row="onCommitToRow"
-        />
+        <div class="hand-row">
+          <HandPanel
+            :hand="epoch.hand"
+            :selected-ids="selectedIds"
+            :influence="epoch.influence"
+            :columns="epoch.columns"
+            :valid-columns-for="validColumnsFor"
+            @toggle-select="onToggleSelect"
+            @clear-selection="onClearSelection"
+            @place-cards="onPlaceCards"
+            @discard-from-hand="onDiscardFromHand"
+            @commit-to-row="onCommitToRow"
+          />
+          <DeckDiscardPanel
+            :draw-count="epoch.draw.length"
+            :discard-count="epoch.discard.length"
+            :ended="epoch.status.kind !== 'in-progress'"
+            @view="onViewPile"
+            @open-market="marketOpen = true"
+            @end-turn="onEndTurn"
+            @drop-card="onDiscardFromHand"
+          />
+        </div>
 
         <button
           v-if="!eoe && epoch.phase === 'crisis'"
@@ -95,6 +106,8 @@
             :crisis="setting.crisis"
             :unlocks="epoch.unlockedProjects"
             :projects="setting.projects"
+            :turn="epoch.turn"
+            :max-turns="setting.rules.maxTurns"
           />
         </RailFlyout>
         <RailFlyout
@@ -148,22 +161,6 @@
           @close="rightRailActive = null"
         >
           <EventLogSection :events="epoch.eventLog" />
-        </RailFlyout>
-        <RailFlyout
-          v-else-if="rightRailActive === 'piles'"
-          side="right"
-          title="Deck & Discard"
-          @close="rightRailActive = null"
-        >
-          <DeckDiscardPanel
-            :draw-count="epoch.draw.length"
-            :discard-count="epoch.discard.length"
-            :ended="epoch.status.kind !== 'in-progress'"
-            @view="onViewPile"
-            @open-market="marketOpen = true"
-            @end-turn="onEndTurn"
-            @drop-card="onDiscardFromHand"
-          />
         </RailFlyout>
       </div>
 
@@ -249,7 +246,6 @@ const rightRailItems: RailItem[] = [
   { key: "legacy", label: "Legacy Cards", icon: "legacy" },
   { key: "counts", label: "Deck Counts", icon: "counts" },
   { key: "log", label: "Event Log", icon: "log" },
-  { key: "piles", label: "Deck & Discard", icon: "piles" },
 ];
 
 function toggleLeft(key: string): void {

@@ -261,6 +261,13 @@ button.primary:hover:not(:disabled) {
 }
 .hand-panel {
   min-width: 0;
+  flex: 1 1 auto;
+}
+.hand-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: stretch;
+  min-width: 0;
 }
 
 /* -------------------- Card -------------------- */

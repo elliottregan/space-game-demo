@@ -87,6 +87,10 @@ function validForDrag(i: number): { land: boolean; influence: boolean; charter: 
 .tableau-scroll {
   overflow-x: auto;
   min-width: 0;
+  /* Confine the row-labels' very high z-index (needed to beat hovered land
+     stacks and cell-action buttons) to a local stacking context so it can't
+     punch through overlays like RailFlyout above the play area. */
+  isolation: isolate;
 }
 .tableau-grid {
   display: grid;
