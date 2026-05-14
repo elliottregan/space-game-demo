@@ -60,7 +60,6 @@
             @toggle-select="onToggleSelect"
             @clear-selection="onClearSelection"
             @place-cards="onPlaceCards"
-            @discard-from-hand="onDiscardFromHand"
             @commit-to-row="onCommitToRow"
           />
           <DeckDiscardPanel

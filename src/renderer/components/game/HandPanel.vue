@@ -1,9 +1,5 @@
 <template>
   <Panel class="hand-panel" :title="`Hand (${hand.length})`">
-    <div v-if="selectedIds.length > 0" class="selection-meta">
-      {{ selectedIds.length }} selected
-      <button class="linklike" @click="$emit('clearSelection')">clear</button>
-    </div>
     <div class="hand-cards">
       <Card
         v-for="card in hand"
@@ -23,65 +19,54 @@
       </div>
     </div>
 
+    <!-- Fixed-height action area. Reserves vertical space whether or not a
+         selection is active, so the panel itself never resizes and pushes
+         the tableau above. -->
     <div class="hand-actions">
-      <template v-if="selectedCards.length === 0">
-        <span style="color: var(--text-subtle)"
-          >Click cards to select. Actions apply to all selected.</span
-        >
-      </template>
+      <span v-if="selectedCards.length === 0" class="hand-hint">
+        Click cards to select. Actions apply to all selected.
+      </span>
 
       <template v-else>
-        <!-- Commit buffer panel — row-hand lay-down-hand flow -->
-        <div class="commit-buffer">
-          <div v-if="rowHandLabel" class="buffer-stats">
-            Hand: <strong>{{ rowHandLabel }}</strong>
-          </div>
-          <div v-else class="buffer-stats" style="color: var(--text-muted)">
-            Not a valid row-hand
-          </div>
+        <div class="action-meta">
+          <span>{{ selectedIds.length }} selected</span>
+          <button class="linklike" @click="$emit('clearSelection')">clear</button>
+          <span v-if="rowHandLabel" class="action-handlabel">
+            · Hand: <strong>{{ rowHandLabel }}</strong>
+          </span>
+        </div>
 
-          <div class="commit-row-buttons">
-            <template v-if="validSharedSlots.length > 0">
-              <!-- Single-card / homogeneous-slot path: show column-targeted buttons -->
-              <button
-                v-for="idx in validSharedSlots"
-                :key="'place-' + idx"
-                class="primary"
-                :disabled="!allAffordable"
-                @click="$emit('place-cards', selectedIds, idx)"
-              >
-                {{ playVerb }} {{ selectedCards.length }} → Col {{ idx + 1 }}
-              </button>
-            </template>
-
-            <!-- Lay-down-hand path: commit to a row across all columns that accept it -->
-            <template v-if="commitTargets.length > 0">
-              <button
-                v-for="t in commitTargets"
-                :key="'commit-' + t.row + '-' + t.columnIndex"
-                class="primary"
-                @click="$emit('commit-to-row', t.columnIndex, t.row)"
-              >
-                Lay down as {{ t.row === "land" ? "Land" : "Influence" }} → Col
-                {{ t.columnIndex + 1 }}
-              </button>
-            </template>
-
-            <span
-              v-if="validSharedSlots.length === 0 && commitTargets.length === 0"
-              style="color: var(--text-muted)"
+        <div class="action-buttons">
+          <template v-if="validSharedSlots.length > 0">
+            <button
+              v-for="idx in validSharedSlots"
+              :key="'place-' + idx"
+              class="primary"
+              :disabled="!allAffordable"
+              @click="$emit('place-cards', selectedIds, idx)"
             >
-              No valid placement for this selection.
-            </span>
-          </div>
+              {{ playVerb }} {{ selectedCards.length }} → Col {{ idx + 1 }}
+            </button>
+          </template>
 
-          <button
-            class="secondary"
-            title="Discards the selected cards. Each adds 1 Quiet Dissent to the deck."
-            @click="$emit('discard-from-hand', selectedIds)"
+          <template v-if="commitTargets.length > 0">
+            <button
+              v-for="t in commitTargets"
+              :key="'commit-' + t.row + '-' + t.columnIndex"
+              class="primary"
+              @click="$emit('commit-to-row', t.columnIndex, t.row)"
+            >
+              Lay down as {{ t.row === "land" ? "Land" : "Influence" }} → Col
+              {{ t.columnIndex + 1 }}
+            </button>
+          </template>
+
+          <span
+            v-if="validSharedSlots.length === 0 && commitTargets.length === 0"
+            class="action-empty"
           >
-            Discard (+1 Dissent)
-          </button>
+            No valid placement for this selection.
+          </span>
         </div>
       </template>
     </div>
@@ -108,7 +93,6 @@ defineEmits<{
   toggleSelect: [cardId: string];
   clearSelection: [];
   "place-cards": [cardIds: string[], columnIndex: number];
-  "discard-from-hand": [cardIds: string[]];
   "commit-to-row": [columnIndex: number, row: "land" | "influence"];
 }>();
 

@@ -565,13 +565,6 @@ button.primary:hover:not(:disabled) {
 
 /* -------------------- Hand -------------------- */
 
-.selection-meta {
-  font-size: 11px;
-  color: var(--text-muted);
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
 .linklike {
   background: transparent;
   border: none;
@@ -584,18 +577,44 @@ button.primary:hover:not(:disabled) {
 .hand-cards {
   display: flex;
   flex-wrap: nowrap;
-  gap: 6px;
+  gap: var(--space-1);
   min-height: 160px;
   overflow-x: auto;
-  padding-bottom: 6px;
+  padding-bottom: var(--space-1);
   scrollbar-width: thin;
 }
 .hand-actions {
   display: flex;
-  gap: 4px;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  /* Reserve enough vertical space for the meta line + a row of buttons so
+     the panel size stays put when a selection toggles. */
+  min-height: 56px;
+}
+.hand-hint {
+  color: var(--text-subtle);
+  font-size: 12px;
+  margin: auto 0;
+}
+.action-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+.action-handlabel {
+  color: var(--text);
+}
+.action-buttons {
+  display: flex;
+  gap: var(--space-1);
   flex-wrap: wrap;
-  margin-top: 6px;
-  min-height: 26px;
+}
+.action-empty {
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 /* -------------------- Deck / Discard piles -------------------- */
