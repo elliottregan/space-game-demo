@@ -40,7 +40,7 @@
     /* Ink */
     --ink: #f0ede6;
     --ink-muted: #a8a399;
-    --ink-subtle: #7a766d;
+    --ink-subtle: #8d887c;
 
     /* Structural rules (lines that separate, never enclose) */
     --rule: #3c3830;
@@ -50,14 +50,15 @@
     --accent: #eebf2e;
     --accent-hover: #f6cd4d;
     --accent-ink: #161513;
+    --accent-deep: #eebf2e; /* accent usable as ink on paper/mat */
 
     /* Ideology suits */
     --suit-solidarity: #3f74c9;
     --suit-sovereignty: #e23b30;
     --suit-transformation: #44a04e;
     --suit-heritage: #a76bd6;
-    --suit-wild: #eebf2e;
-    --suit-dissent: #e23b30;
+    --suit-wild: var(--accent);
+    --suit-dissent: var(--suit-sovereignty);
 
     /* Status */
     --status-positive: #44a04e;
@@ -69,6 +70,7 @@
        or click this"; lifted = hover/drag/floating sheet. */
     --shadow-interactive: 2px 3px 7px rgba(0, 0, 0, 0.35);
     --shadow-lifted: 5px 8px 18px rgba(0, 0, 0, 0.45);
+    --shadow-pressed: 1px 1px 3px rgba(0, 0, 0, 0.25);
     --scrim: rgba(10, 9, 8, 0.7);
 
     /* Spacing scale */
@@ -84,6 +86,7 @@
   }
 
   /* Light theme — follows OS when user hasn't chosen. */
+  /* NOTE: keep in sync with the other light block (media-query/explicit pair). */
   @media (prefers-color-scheme: light) {
     :root:not([data-theme="dark"]) {
       --ground: #f4f1ea;
@@ -94,29 +97,32 @@
       --paper-dissent: #f3ddd9;
       --ink: #14130f;
       --ink-muted: #5a5648;
-      --ink-subtle: #8a8578;
+      --ink-subtle: #6f6a5c;
       --rule: #cbc4b2;
       --rule-strong: #14130f;
       --accent: #e9b400;
       --accent-hover: #f5c41a;
       --accent-ink: #14130f;
+      --accent-deep: #8a6d00;
       --suit-solidarity: #1c4fa0;
       --suit-sovereignty: #d02e26;
       --suit-transformation: #1f7d33;
       --suit-heritage: #7b2fa3;
-      --suit-wild: #c79a00;
-      --suit-dissent: #d02e26;
+      --suit-wild: var(--accent);
+      --suit-dissent: var(--suit-sovereignty);
       --status-positive: #1f7d33;
       --status-negative: #d02e26;
       --status-warning: #a87a00;
       --status-info: #1c4fa0;
       --shadow-interactive: 2px 3px 7px rgba(20, 19, 15, 0.16);
       --shadow-lifted: 5px 8px 18px rgba(20, 19, 15, 0.22);
+      --shadow-pressed: 1px 1px 3px rgba(20, 19, 15, 0.14);
       --scrim: rgba(20, 19, 15, 0.45);
     }
   }
 
   /* Explicit light — overrides even when OS is dark. */
+  /* NOTE: keep in sync with the other light block (media-query/explicit pair). */
   :root[data-theme="light"] {
     --ground: #f4f1ea;
     --mat: #e9e4d8;
@@ -126,24 +132,26 @@
     --paper-dissent: #f3ddd9;
     --ink: #14130f;
     --ink-muted: #5a5648;
-    --ink-subtle: #8a8578;
+    --ink-subtle: #6f6a5c;
     --rule: #cbc4b2;
     --rule-strong: #14130f;
     --accent: #e9b400;
     --accent-hover: #f5c41a;
     --accent-ink: #14130f;
+    --accent-deep: #8a6d00;
     --suit-solidarity: #1c4fa0;
     --suit-sovereignty: #d02e26;
     --suit-transformation: #1f7d33;
     --suit-heritage: #7b2fa3;
-    --suit-wild: #c79a00;
-    --suit-dissent: #d02e26;
+    --suit-wild: var(--accent);
+    --suit-dissent: var(--suit-sovereignty);
     --status-positive: #1f7d33;
     --status-negative: #d02e26;
     --status-warning: #a87a00;
     --status-info: #1c4fa0;
     --shadow-interactive: 2px 3px 7px rgba(20, 19, 15, 0.16);
     --shadow-lifted: 5px 8px 18px rgba(20, 19, 15, 0.22);
+    --shadow-pressed: 1px 1px 3px rgba(20, 19, 15, 0.14);
     --scrim: rgba(20, 19, 15, 0.45);
   }
 
@@ -188,6 +196,7 @@
     color: var(--ink);
     font-family: "Space Grotesk Variable", "Space Grotesk", system-ui, sans-serif;
     font-size: 13px;
+    scrollbar-color: var(--rule-strong) transparent;
   }
 
   h1,
@@ -216,7 +225,7 @@
   }
   button:active:not(:disabled) {
     translate: 1px 1px;
-    box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--shadow-pressed);
   }
   /* Not clickable → not physical → no shadow. */
   button:disabled {
@@ -236,7 +245,7 @@
     background: transparent;
     border: none;
     box-shadow: none;
-    color: var(--accent);
+    color: var(--accent-deep);
     font-size: 11px;
     padding: 0;
     text-decoration: underline;
