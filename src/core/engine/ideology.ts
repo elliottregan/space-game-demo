@@ -16,11 +16,6 @@ export interface IdeologyVector {
   axis2: number;
 }
 
-export interface IdeologyTerrain {
-  axis1: number;
-  axis2: number;
-}
-
 export type Demonym = "collective" | "dominion" | "ascendancy" | "keepers" | null;
 
 // -------------------------------------------------------------------------

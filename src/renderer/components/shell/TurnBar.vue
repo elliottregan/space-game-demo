@@ -9,9 +9,7 @@
     >
       Turn {{ turn }} / {{ maxTurns }} · Crisis after T{{ maxTurns }}
     </div>
-    <div class="resources">
-      Inf {{ influence }} · Mat {{ materials }} · Dissent {{ dissentCount }}
-    </div>
+    <div class="resources">Inf {{ influence }} · Dissent {{ dissentCount }}</div>
     <button :disabled="ended" @click="$emit('end-turn')">End turn</button>
   </div>
 </template>
@@ -23,9 +21,7 @@ defineProps<{
   turn: number;
   maxTurns: number;
   influence: number;
-  materials: number;
   dissentCount: number;
-  dissentFraction: number;
   ended: boolean;
 }>();
 defineEmits<{ "end-turn": [] }>();

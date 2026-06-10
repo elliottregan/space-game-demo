@@ -1,136 +1,65 @@
 ---
 name: run-simulation
-description: Run Monte Carlo simulations to test game balance and strategy effectiveness
+description: Use when validating game balance after changing crisis difficulty, project values, card effects, rules (handSize, maxTurns, influenceBaseline), or starting-deck filters — or when asked whether a Setting is winnable or too easy/hard.
 ---
 
 # Run Simulation
 
 ## Overview
 
-Run Monte Carlo simulations of the game using the heuristic AI strategy to validate game balance, test changes, and analyze win rates.
+`scripts/analyze-crisis.ts` Monte-Carlos single Epochs with a greedy heuristic AI and prints one JSON report. It is the project's only balance simulator.
 
 **Announce at start:** "I'm using run-simulation to test game balance."
-
-## When to Use
-
-- After making balance changes (resource rates, building costs, tech requirements)
-- After modifying victory/defeat conditions
-- After changing AI strategy logic
-- When asked to verify game is winnable
-- When debugging why the AI loses or wins too fast
 
 ## Command
 
 ```bash
-bun run simulate [options]
+bun run scripts/analyze-crisis.ts [runs] [settingId] [seedOffset]
 ```
 
-## Options
+| Arg          | Default       | Notes                                                    |
+| ------------ | ------------- | -------------------------------------------------------- |
+| `runs`       | 50            | Use 300–500 for tuning decisions; 50 is noisy (±5%+)     |
+| `settingId`  | `homeworld`   | `homeworld` \| `generation-ship` \| `ruined-homeworld`   |
+| `seedOffset` | 0             | Different offset = independent seed set; use to validate |
 
-| Flag              | Description                                    |
-| ----------------- | ---------------------------------------------- |
-| `--runs N, -r N`  | Number of simulation runs (default: 100)       |
-| `--seed N, -s N`  | Starting seed for reproducibility (default: 1) |
-| `--log LEVEL, -l` | Output level: `silent`, `default`, `verbose`   |
-| `--help, -h`      | Show help message                              |
+No flags, no log files — output is JSON on stdout only.
 
-### Log Levels
+## Output Fields
 
-| Level     | Console | TXT File | JSON File   |
-| --------- | ------- | -------- | ----------- |
-| `silent`  | Yes     | No       | No          |
-| `default` | Yes     | Yes      | No          |
-| `verbose` | Yes     | Yes      | Yes (large) |
+| Field                                    | Meaning                                                     |
+| ---------------------------------------- | ----------------------------------------------------------- |
+| `winRate`                                | Fraction of runs where total project value ≥ difficulty     |
+| `margin` (mean/median/stdev/min/max)     | `totalValue − difficulty` per run                           |
+| `totalValue` (mean/median)               | Crisis score distribution, independent of difficulty        |
+| `avgUnlocksPerPattern`, `avgTotalUnlocks`| Which patterns the AI actually builds, per run              |
+| `avgFirstUnlockTurn`                     | Pacing: when each pattern first lands                       |
 
-## Common Invocations
+## Healthy Ranges
 
-```bash
-# Fast iteration (5 runs, no files)
-bun run simulate --runs 5 --log silent
+- **Win rate 80–95%.** 100% = too easy; <70% = punishing. The greedy AI is a *floor* on human skill — real players land higher, so tune relative to the AI, not to a target human win rate.
+- **`margin.min` should be negative** — if even the worst run wins, the Crisis is no threat.
 
-# Quick sanity check (50 runs, no files)
-bun run simulate --runs 50 --log silent
+## Workflow
 
-# Standard run (100 runs, saves txt report)
-bun run simulate
+For a **pure health check** (no change being made): run 300+ runs, validate with a second seed set, and compare against Healthy Ranges. Done.
 
-# Full analysis with json for visualization
-bun run simulate --runs 200 --log verbose
+For a **tuning loop**:
 
-# Reproducible run with specific seed
-bun run simulate --runs 500 --seed 42
-```
+1. **Baseline first.** Run 300+ runs per affected Setting *before* changing values. To baseline against `main`, use a temp worktree: `git worktree add /tmp/baseline main` → run there → `git worktree remove /tmp/baseline --force`.
+2. Make the change (see CLAUDE.md "Balance tuning quick reference" for where each knob lives).
+3. Re-run with identical `runs`/`seedOffset` and compare.
+4. **Validate with a second seed set** (e.g. `seedOffset 7`) before trusting a number.
 
-## Output Sections
+**Picking a difficulty:** target ≈ `totalValue.mean − 0.8 × margin.stdev` lands near an 80% win rate; verify by simulation.
 
-1. **Victory Time Distribution** - Min, median, P90, P95, max victory times with histogram
-2. **Peak Population Analysis** - Population statistics across all runs
-3. **Technology Research Frequency** - Which techs are researched and how often
-4. **Building Construction Patterns** - Average building counts per game
-5. **Outlier Analysis** - Slow victories (>550 sols) analysis
-6. **Critical Path Analysis** - Theoretical minimum vs actual minimum times
-7. **Victory vs Defeat Comparison** - Key differences between winning and losing runs
-8. **Correlation Analysis** - What factors correlate with victory
-9. **Bottleneck Analysis** - What blocks the AI most often
-10. **Event Impact Analysis** - Event frequency and effect on outcomes
-11. **Crisis Timeline Analysis** - When resource/morale crises occur
-12. **Social Cohesion Analysis** - Relationship network health metrics
+## Limitations
 
-## Interpreting Results
+- The AI plays one card at a time and never uses `commitHand`. It can therefore build high-card, pair, two-pair, three/four-of-a-kind, and flushes (same-rank stacking only) — but **never straights, full-houses, straight-flushes, or royal-flushes**, which all need multi-card commits. Permanent zeros for those patterns are an AI limitation, not a bug; the AI underestimates the score ceiling where they matter. Per-Setting deck filters add their own zeros (e.g. Generation Ship's 2-ideology deck rules out three/four-of-a-kind entirely).
+- Simulates a single Epoch from a fresh deck: no Legacy cards, no cross-Epoch effects.
 
-### Healthy Balance Indicators
+## Common Mistakes
 
-| Metric           | Healthy Range                        |
-| ---------------- | ------------------------------------ |
-| Win Rate         | 80-95%                               |
-| Median Victory   | 500-1000 sols                        |
-| Fastest Win      | ~487 sols (theoretical minimum)      |
-| P90 Victory Time | <700 sols                            |
-| Ideology Pockets | 3+, Fewer = ideology too homogeneous |
-
-### Warning Signs
-
-| Issue                    | Possible Cause                               |
-| ------------------------ | -------------------------------------------- |
-| Win rate <70%            | Early game too harsh, resource rates too low |
-| Win rate 100%            | Game too easy, needs more challenge          |
-| Avg time >1000 sols      | Victory conditions too difficult             |
-| Many starvation defeats  | Food production insufficient                 |
-| Many suffocation defeats | Oxygen production insufficient               |
-| High variance in times   | Random events too impactful                  |
-
-## Example Workflow
-
-After making a balance change:
-
-```bash
-# 1. Fast check - does it still compile and run?
-bun run simulate --runs 5 --log silent
-
-# 2. Quick validation - is the game still winnable?
-bun run simulate --runs 50 --log silent
-
-# 3. Standard run - save results for review
-bun run simulate
-
-# 4. Full analysis with visualization data
-bun run simulate --runs 200 --log verbose
-
-# 5. Start visualizer to explore results
-bun run visualize
-```
-
-## Output Files
-
-Results are saved to `logs/simulations/` with timestamps:
-
-- `simulation-{timestamp}-r{runs}-s{seed}.txt` - Human-readable report
-- `simulation-{timestamp}-r{runs}-s{seed}.json` - Full data for visualization (verbose only)
-
-## Technical Notes
-
-- Simulations use `HeuristicStrategy` which mimics reasonable player decisions
-- Each run uses an incrementing seed for reproducibility
-- Games are capped at 5,000 sols to prevent infinite loops
-- Uses parallel workers for faster execution on multi-core systems
-- Victory conditions: Colony Charter (30 pop sustained), Population (100), Generation Ship
+- Comparing runs that used different `runs` or `seedOffset` values.
+- Tuning from a 50-run sample — differences under ~5 points of win rate are noise at that size.
+- Reading the heuristic win rate as the expected human win rate.

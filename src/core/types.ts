@@ -7,11 +7,9 @@ export type {
   CardIdeology,
   CardKind,
   CardTag,
-  DissentVariant,
   EffectSpec,
   Rank,
   Role,
-  SerializablePredicate,
   Timing,
 } from "./data/cards.ts";
 export { ROLE_RANK } from "./data/cards.ts";
@@ -27,7 +25,7 @@ export type {
   ProjectUnlock,
 } from "./data/projects.ts";
 
-export type { Demonym, IdeologyTerrain, IdeologyVector } from "./engine/ideology.ts";
+export type { Demonym, IdeologyVector } from "./engine/ideology.ts";
 
 export type { CharterRow, Column, ColumnConfig, InfluenceRow, LandRow } from "./engine/column.ts";
 
@@ -40,6 +38,7 @@ export type {
   EpochResult,
   LegacyCandidate,
   LegacyCard,
+  LegacyUpgrade,
   Monument,
 } from "./engine/campaign.ts";
 

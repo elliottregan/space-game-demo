@@ -33,7 +33,7 @@
         :key="cand.id"
         :candidate="cand"
         :model-value="choices[cand.id] ?? cand.suggestedUpgrades[0] ?? 'potency'"
-        @update:model-value="(u: 'potency' | 'pliability' | 'persistence') => onChoose(cand.id, u)"
+        @update:model-value="(u: LegacyUpgrade) => onChoose(cand.id, u)"
       />
 
       <button class="primary" @click="$emit('advance', choices)">
@@ -51,8 +51,7 @@ import type {
   Ideology,
   KeystoneProject,
   LegacyCandidate,
-  PatternKind,
-  ProjectUnlock,
+  LegacyUpgrade,
 } from "../../../core/types.ts";
 import { IDEOLOGIES, IDEOLOGY_DISPLAY } from "../../../core/data/ideologies.ts";
 import { patternLabel } from "../../util/labels.ts";
@@ -66,9 +65,9 @@ const props = defineProps<{
   breakdown: Record<Ideology, number>;
   nextSettingName: string;
 }>();
-defineEmits<{ advance: [choices: Record<string, "potency" | "pliability" | "persistence">] }>();
+defineEmits<{ advance: [choices: Record<string, LegacyUpgrade>] }>();
 
-const choices = ref<Record<string, "potency" | "pliability" | "persistence">>({});
+const choices = ref<Record<string, LegacyUpgrade>>({});
 
 const walk = computed(() => props.outcome.contributingUnlocks);
 const runningTotals = computed(() => {
@@ -90,7 +89,7 @@ function projectName(id: string): string {
 function projectValue(id: string): number {
   return props.projects.find((p) => p.id === id)?.value ?? 0;
 }
-function onChoose(id: string, u: "potency" | "pliability" | "persistence"): void {
+function onChoose(id: string, u: LegacyUpgrade): void {
   choices.value = { ...choices.value, [id]: u };
 }
 </script>

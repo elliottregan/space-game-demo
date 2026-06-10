@@ -22,9 +22,7 @@
         :turn="epoch.turn"
         :max-turns="setting.rules.maxTurns"
         :influence="epoch.influence"
-        :materials="epoch.materials"
         :dissent-count="snapshot.deckCounts.dissent"
-        :dissent-fraction="dissentFraction"
         :ended="epoch.status.kind !== 'in-progress'"
         @end-turn="onEndTurn"
       />
@@ -36,7 +34,6 @@
       <div class="play-area">
         <TableauPanel
           :columns="epoch.columns"
-          :production="landProduction"
           :column-buildable="snapshot.columnBuildable"
           :buildable-labels="buildableLabels"
           :get-card-from-hand="getCardFromHand"
@@ -65,7 +62,6 @@
             :discard-count="epoch.discard.length"
             :ended="epoch.status.kind !== 'in-progress'"
             @view="onViewPile"
-            @open-market="marketOpen = true"
             @end-turn="onEndTurn"
             @drop-card="onDiscardFromHand"
           />
@@ -117,15 +113,7 @@
         </RailFlyout>
 
         <RailFlyout
-          v-if="rightRailActive === 'terrain'"
-          side="right"
-          title="Terrain"
-          @close="rightRailActive = null"
-        >
-          <TerrainSection :terrain="snapshot.campaign.terrain" />
-        </RailFlyout>
-        <RailFlyout
-          v-else-if="rightRailActive === 'monuments'"
+          v-if="rightRailActive === 'monuments'"
           side="right"
           title="Monuments"
           @close="rightRailActive = null"
@@ -146,10 +134,7 @@
           title="Deck counts"
           @close="rightRailActive = null"
         >
-          <DeckCountsSection
-            :counts="snapshot.deckCounts"
-            :dissent-threshold="setting.rules.dissentLossThreshold"
-          />
+          <DeckCountsSection :counts="snapshot.deckCounts" />
         </RailFlyout>
         <RailFlyout
           v-else-if="rightRailActive === 'log'"
@@ -187,8 +172,6 @@
       @close="pileView = null"
     />
 
-    <MarketModal v-if="marketOpen" @close="marketOpen = false" />
-
     <CampaignEnd v-if="campaignEnded" @restart="onNewSlot" />
   </div>
 </template>
@@ -205,18 +188,16 @@ import CrisisScreen from "./components/game/CrisisScreen.vue";
 import CampaignEnd from "./components/shell/CampaignEnd.vue";
 import DeckDiscardPanel from "./components/game/DeckDiscardPanel.vue";
 import CardListModal from "./components/shell/CardListModal.vue";
-import MarketModal from "./components/shell/MarketModal.vue";
 import SaveSlotMenu from "./components/shell/SaveSlotMenu.vue";
 import ThemeToggle from "./components/shell/ThemeToggle.vue";
 import CrisisCounterPanel from "./components/game/CrisisCounterPanel.vue";
 import Rail, { type RailItem } from "./components/shell/Rail.vue";
 import RailFlyout from "./components/shell/RailFlyout.vue";
-import TerrainSection from "./components/shell/sidebar/TerrainSection.vue";
 import MonumentsSection from "./components/shell/sidebar/MonumentsSection.vue";
 import LegacyCardsSection from "./components/shell/sidebar/LegacyCardsSection.vue";
 import DeckCountsSection from "./components/shell/sidebar/DeckCountsSection.vue";
 import EventLogSection from "./components/shell/sidebar/EventLogSection.vue";
-import type { Card } from "../core/types.ts";
+import type { Card, LegacyUpgrade } from "../core/types.ts";
 import { SETTING_BY_ID } from "../core/settings/index.ts";
 import { MAX_SLOTS } from "../facade/persistence.ts";
 import { evaluateColumn } from "../core/engine/columnPatterns.ts";
@@ -226,7 +207,6 @@ const game = getGameService();
 
 const selectedIds = ref<string[]>([]);
 const pileView = ref<"deck" | "discard" | null>(null);
-const marketOpen = ref(false);
 
 const leftRailActive = ref<string | null>(null);
 const rightRailActive = ref<string | null>(null);
@@ -238,7 +218,6 @@ const leftRailItems: RailItem[] = [
 ];
 
 const rightRailItems: RailItem[] = [
-  { key: "terrain", label: "Terrain", icon: "terrain" },
   { key: "monuments", label: "Monuments", icon: "monuments" },
   { key: "legacy", label: "Legacy cards", icon: "legacy" },
   { key: "counts", label: "Deck counts", icon: "counts" },
@@ -260,26 +239,6 @@ const lastError = computed(() => game.lastError.value);
 const demonymLabel = computed(() => snapshot.value.demonymLabel);
 const slots = computed(() => game.slots.value);
 const activeSlotId = computed(() => game.activeSlotId.value);
-
-const landProduction = computed(() => {
-  let total = 0;
-  for (const col of epoch.value.columns) {
-    for (const l of col.lands.cards) total += landMat(l.rank);
-  }
-  return total;
-});
-
-function landMat(rank: number): number {
-  if (rank <= 5) return 1;
-  if (rank <= 7) return 2;
-  return 3;
-}
-
-const dissentFraction = computed(() => {
-  const counts = snapshot.value.deckCounts;
-  const total = counts.hand + counts.draw + counts.discard;
-  return total === 0 ? 0 : counts.dissent / total;
-});
 
 const campaignEnded = computed(
   () => !eoe.value && snapshot.value.campaign.currentSettingId === "campaign-end",
@@ -362,7 +321,7 @@ function onEndTurn(): void {
   game.endTurn();
   selectedIds.value = [];
 }
-function onAdvance(choices: Record<string, "potency" | "pliability" | "persistence">): void {
+function onAdvance(choices: Record<string, LegacyUpgrade>): void {
   game.advanceEpoch(choices);
   selectedIds.value = [];
 }

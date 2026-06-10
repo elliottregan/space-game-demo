@@ -1,7 +1,7 @@
 // GameEvent — the discriminated union routed through dispatch().
 // Every state mutation in core is described as one of these events.
 
-import type { Card, DissentVariant, Ideology } from "../data/cards.ts";
+import type { Card } from "../data/cards.ts";
 import type { CrisisOutcome, ProjectUnlock } from "../data/projects.ts";
 
 export type DiscardSource =
@@ -18,6 +18,6 @@ export type GameEvent =
   | { type: "card-discarded"; card: Card; source: DiscardSource }
   | { type: "cards-committed"; columnIndex: number; row: "land" | "influence"; cards: Card[] }
   | { type: "column-built"; columnIndex: number; unlock: ProjectUnlock }
-  | { type: "dissent-added"; variant: DissentVariant; ideology?: Ideology }
+  | { type: "dissent-added" }
   | { type: "turn-ended"; turn: number }
   | { type: "crisis-resolved"; outcome: CrisisOutcome };

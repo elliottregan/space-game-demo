@@ -30,11 +30,6 @@
       <line x1="12" y1="2" x2="12" y2="22" />
       <line x1="2" y1="12" x2="22" y2="12" />
     </template>
-    <!-- Terrain: two mountain peaks -->
-    <template v-else-if="name === 'terrain'">
-      <polyline points="2,20 8,11 12,15 17,7 22,20" />
-      <line x1="2" y1="20" x2="22" y2="20" />
-    </template>
     <!-- Monuments: simple column/obelisk -->
     <template v-else-if="name === 'monuments'">
       <rect x="9" y="5" width="6" height="14" />
@@ -74,7 +69,6 @@ export type RailIconName =
   | "projects"
   | "crisis"
   | "ideology"
-  | "terrain"
   | "monuments"
   | "legacy"
   | "counts"

@@ -83,7 +83,7 @@ const CRISIS: Crisis = {
   id: "homeworld-arrival-storm",
   name: "Arrival Storm",
   flavor: "The first generation faces a dust-storm that will not pass.",
-  difficulty: 14,
+  difficulty: 16,
 };
 
 const STARTING_COLUMNS: ColumnConfig[] = [];
@@ -98,10 +98,7 @@ export const HOMEWORLD: Setting = {
     handSize: 7,
     columnCount: 7,
     influenceBaseline: 8,
-    materialsPerLandBase: 1,
-    deckStartMinSize: 10,
     maxTurns: 12,
-    dissentLossThreshold: 0.5,
   },
   startingDeck: ALL_CARD_IDS,
   startingColumns: STARTING_COLUMNS,

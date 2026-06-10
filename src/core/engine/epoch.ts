@@ -6,7 +6,7 @@ import type { CrisisOutcome, ProjectUnlock } from "../data/projects.ts";
 import type { Campaign } from "./campaign.ts";
 import type { GameEvent } from "./events.ts";
 import { type Column, columnFromConfig, createEmptyColumn } from "./column.ts";
-import { CARD_BY_ID, makeDissent } from "../data/cards.ts";
+import { CARD_BY_ID } from "../data/cards.ts";
 import { drawToHandSize, purgeDissent } from "./effects.ts";
 import { deriveVector, type IdeologyVector } from "./ideology.ts";
 import type { Setting } from "../settings/index.ts";
@@ -28,7 +28,6 @@ export interface Epoch {
   unlockedProjects: ProjectUnlock[];
   eventLog: GameEvent[];
   influence: number;
-  materials: number;
   endOfTurnQueue: EffectSpec[];
   status: EpochStatus;
   crisis: {
@@ -76,27 +75,13 @@ export function createEpoch(
     unlockedProjects: [],
     eventLog: [],
     influence: setting.rules.influenceBaseline,
-    materials: 0,
     endOfTurnQueue: [],
     status: { kind: "in-progress" },
     crisis: { status: "pending" },
   };
 
-  applyScarredTerrainDissent(epoch, campaign.terrain);
   drawToHandSize(epoch, setting.rules.handSize, rng);
   return epoch;
-}
-
-function applyScarredTerrainDissent(epoch: Epoch, terrain: { axis1: number; axis2: number }): void {
-  const addBacklash = (mag: number) => {
-    if (mag < 2) return;
-    const n = Math.min(3, Math.floor(mag / 2));
-    for (let i = 0; i < n; i++) {
-      epoch.draw.push(makeDissent("backlash"));
-    }
-  };
-  if (terrain.axis1 !== 0) addBacklash(Math.abs(terrain.axis1));
-  if (terrain.axis2 !== 0) addBacklash(Math.abs(terrain.axis2));
 }
 
 export function currentVector(epoch: Epoch, setting: Setting): IdeologyVector {

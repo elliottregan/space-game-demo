@@ -7,7 +7,6 @@ import { canPlaceCharter, canPlaceInfluence, canPlaceLand, columnCards } from ".
 import { evaluateColumn } from "./columnPatterns.ts";
 import { dispatch } from "./dispatch.ts";
 import { applyEffect } from "./effects.ts";
-import type { EffectContext } from "./effects.ts";
 import { canCommitHand } from "./rowHands.ts";
 import type { RNG } from "./rng.ts";
 
@@ -36,7 +35,7 @@ export function placeCard(
 
   if (card.kind === "land") {
     if (!canPlaceLand(col, card)) {
-      return { ok: false, error: "Land cannot be placed there (rank mismatch or stack full)." };
+      return { ok: false, error: "Land cannot be placed there (would not form a valid hand)." };
     }
     epoch.hand.splice(handIdx, 1);
     dispatch(epoch, { type: "card-played-to-land", card, columnIndex });
@@ -87,8 +86,7 @@ function playToTopRow(
   epoch.hand.splice(handIdx, 1);
   dispatch(epoch, { type: eventType, card, columnIndex } as GameEvent);
 
-  const ctx: EffectContext = { epoch, rng, log: () => {} };
-  applyEffect(card.effect, ctx);
+  applyEffect(card.effect, { epoch, rng });
 
   return { ok: true, card };
 }
@@ -231,9 +229,8 @@ export function commitHand(
 
   // 6. Fire per-card effects in placement order, matching placeCard's pattern.
   if (row === "influence") {
-    const ctx: EffectContext = { epoch, rng, log: () => {} };
     for (const card of cards) {
-      applyEffect(card.effect, ctx);
+      applyEffect(card.effect, { epoch, rng });
     }
   }
 

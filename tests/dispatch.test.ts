@@ -25,7 +25,6 @@ function freshEpoch(columns: Column[] = []): Epoch {
     unlockedProjects: [],
     eventLog: [],
     influence: 0,
-    materials: 0,
     endOfTurnQueue: [],
     status: { kind: "in-progress" },
     crisis: { status: "pending" },
@@ -36,19 +35,19 @@ const land = (rank: number, ideo: "solidarity" | "sovereignty" | "transformation
   getCard(landId(rank, ideo));
 
 describe("dispatch", () => {
-  test("card-discarded pushes to discard pile AND adds a quiet dissent to deck", () => {
+  test("card-discarded pushes to discard pile AND adds a dissent to deck", () => {
     const ep = freshEpoch();
     const card = land(7, "solidarity");
     dispatch(ep, { type: "card-discarded", card, source: "hand" });
     expect(ep.discard).toContain(card);
     const top = ep.draw[0];
     expect(top?.tags.includes("dissent")).toBe(true);
-    expect(top?.name).toBe("Quiet Dissent");
+    expect(top?.name).toBe("Dissent");
   });
 
   test("dissent-added places a dissent card on top of the deck", () => {
     const ep = freshEpoch();
-    dispatch(ep, { type: "dissent-added", variant: "quiet" });
+    dispatch(ep, { type: "dissent-added" });
     expect(ep.draw[0]?.tags.includes("dissent")).toBe(true);
   });
 
@@ -92,7 +91,7 @@ describe("dispatch", () => {
 
   test("event is appended to eventLog", () => {
     const ep = freshEpoch();
-    dispatch(ep, { type: "dissent-added", variant: "quiet" });
+    dispatch(ep, { type: "dissent-added" });
     expect(ep.eventLog.length).toBe(1);
     expect(ep.eventLog[0].type).toBe("dissent-added");
   });

@@ -11,10 +11,11 @@ import { DEFAULT_PROJECT_VALUE } from "../data/projects.ts";
 const SHIP_IDEOLOGIES = new Set<string>(["sovereignty", "transformation", "wild"]);
 const STARTING_DECK = ALL_CARDS.filter((c) => SHIP_IDEOLOGIES.has(c.ideology)).map((c) => c.id);
 
-// Ship project values are boosted on the achievable patterns (high-card,
-// pair, flush) because the 2-ideology deck makes Three-of-a-Kind and
-// Four-of-a-Kind mathematically impossible (only 2 Lands per rank exist).
-// The Ship's design identity: "small builds, many of them, made to count."
+// The 2-ideology deck caps any rank at 2 copies per row, so three-of-a-kind,
+// four-of-a-kind, and full-house are mathematically impossible here. Straights,
+// two-pair, flushes, and the straight/royal flushes remain reachable. Values
+// are boosted on the small patterns to fit the Ship's design identity:
+// "small builds, many of them, made to count."
 const PROJECTS: KeystoneProject[] = [
   {
     id: "ship-bulkhead-patch",
@@ -62,8 +63,8 @@ const PROJECTS: KeystoneProject[] = [
     id: "ship-hearth-and-hull",
     pattern: "full-house",
     // Structurally unreachable on Generation Ship (2-ideology deck caps
-    // per-rank at 2; full-house needs 3+2 of one rank). Included for data
-    // completeness — the voyagers may yet dream of it.
+    // per-rank at 2; full-house needs three of one rank somewhere). Included
+    // for data completeness — the voyagers may yet dream of it.
     name: "Hearth and Hull",
     flavor: "Someone drew the plans. No one has counted enough hands.",
     value: DEFAULT_PROJECT_VALUE["full-house"],
@@ -95,7 +96,7 @@ const CRISIS: Crisis = {
   id: "ship-deep-cold",
   name: "Deep Cold",
   flavor: "The ship enters a silent corridor between stars.",
-  difficulty: 10,
+  difficulty: 16,
 };
 
 export const GENERATION_SHIP: Setting = {
@@ -107,10 +108,7 @@ export const GENERATION_SHIP: Setting = {
     handSize: 5,
     columnCount: 4,
     influenceBaseline: 8,
-    materialsPerLandBase: 1,
-    deckStartMinSize: 10,
     maxTurns: 14,
-    dissentLossThreshold: 0.5,
   },
   startingDeck: STARTING_DECK,
   startingColumns: [],

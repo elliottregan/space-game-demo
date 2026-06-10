@@ -31,11 +31,19 @@ import {
   type SaveSlot,
   type SavedState,
 } from "./persistence.ts";
-import type { Campaign, Card, Column, Epoch, IdeologyVector, Setting } from "../core/types.ts";
+import type {
+  Campaign,
+  Card,
+  Column,
+  Epoch,
+  IdeologyVector,
+  LegacyUpgrade,
+  Setting,
+} from "../core/types.ts";
 import { demonym, demonymName } from "../core/engine/ideology.ts";
 import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../core/engine/column.ts";
 import { evaluateColumn } from "../core/engine/columnPatterns.ts";
-import { landMaterialProduction } from "../core/data/cards.ts";
+import { countDissentInDeck } from "../core/engine/effects.ts";
 import { unlockedIdeologyBreakdown } from "../core/data/projects.ts";
 
 export interface Snapshot {
@@ -166,9 +174,7 @@ export class GameAPI {
 
   snapshot(): Snapshot {
     const vector = currentVector(this.epoch, this.setting);
-    const dis = this.epoch.hand
-      .concat(this.epoch.draw, this.epoch.discard)
-      .filter((c) => c.tags.includes("dissent")).length;
+    const { dissent } = countDissentInDeck(this.epoch);
     const columnsView: Column[] = this.epoch.columns.map((c) => ({
       lands: { cards: [...c.lands.cards] },
       influence: { cards: c.influence.cards.map((card) => ({ ...card })) },
@@ -196,7 +202,6 @@ export class GameAPI {
         ...this.campaign,
         monuments: [...this.campaign.monuments],
         legacyCards: [...this.campaign.legacyCards],
-        terrain: { ...this.campaign.terrain },
         epochHistory: [...this.campaign.epochHistory],
       },
       setting: this.setting,
@@ -207,7 +212,7 @@ export class GameAPI {
         hand: this.epoch.hand.length,
         draw: this.epoch.draw.length,
         discard: this.epoch.discard.length,
-        dissent: dis,
+        dissent,
       },
       ideologyBreakdown: unlockedIdeologyBreakdown(this.epoch.unlockedProjects),
       columnBuildable,
@@ -226,14 +231,6 @@ export class GameAPI {
       else if (card.kind === "charter" && canPlaceCharter(col, card)) out.push(i);
     }
     return out;
-  }
-
-  landProductionPerTurn(): number {
-    let total = 0;
-    for (const col of this.epoch.columns) {
-      for (const l of col.lands.cards) total += landMaterialProduction(l.rank);
-    }
-    return total;
   }
 
   endOfEpochState(): EndOfEpochState | null {
@@ -302,7 +299,7 @@ export class GameAPI {
   }
 
   advanceEpoch(
-    upgradeChoices: Record<string, "potency" | "pliability" | "persistence">,
+    upgradeChoices: Record<string, LegacyUpgrade>,
   ): CommandResult<"next" | "campaign-end"> {
     if (!this.endOfEpoch) return { ok: false, error: "Epoch is still in progress." };
     const result = finalizeEpoch(

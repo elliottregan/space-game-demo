@@ -3,8 +3,8 @@
     <div class="deck-counts">
       <span>Hand</span><span>{{ counts.hand }}</span> <span>Draw</span
       ><span>{{ counts.draw }}</span> <span>Discard</span><span>{{ counts.discard }}</span>
-      <span :class="{ danger }">Dissent</span>
-      <span :class="{ danger }">{{ counts.dissent }} / {{ total }}</span>
+      <span>Dissent</span>
+      <span>{{ counts.dissent }} / {{ total }}</span>
     </div>
   </Panel>
 </template>
@@ -15,12 +15,7 @@ import Panel from "../../core/Panel.vue";
 
 const props = defineProps<{
   counts: { hand: number; draw: number; discard: number; dissent: number };
-  dissentThreshold: number;
 }>();
 
 const total = computed(() => props.counts.hand + props.counts.draw + props.counts.discard);
-const danger = computed(() => {
-  if (total.value === 0) return false;
-  return props.counts.dissent / total.value > props.dissentThreshold * 0.8;
-});
 </script>

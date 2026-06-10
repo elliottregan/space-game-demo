@@ -3,6 +3,7 @@
 import { shallowRef, ref, type Ref, type ShallowRef } from "vue";
 import { GameAPI, type Snapshot } from "../facade/GameAPI.ts";
 import type { SaveSlot } from "../facade/persistence.ts";
+import type { LegacyUpgrade } from "../core/types.ts";
 import { canCommitHand } from "../core/engine/rowHands.ts";
 
 class GameService {
@@ -58,10 +59,6 @@ class GameService {
     return this.api.validColumns(cardId);
   }
 
-  landProduction(): number {
-    return this.api.landProductionPerTurn();
-  }
-
   // Commands
   placeCard(cardId: string, columnIndex: number): void {
     const r = this.api.placeCard(cardId, columnIndex);
@@ -110,7 +107,7 @@ class GameService {
     this.refresh();
   }
 
-  advanceEpoch(choices: Record<string, "potency" | "pliability" | "persistence">): void {
+  advanceEpoch(choices: Record<string, LegacyUpgrade>): void {
     const r = this.api.advanceEpoch(choices);
     this.report(r as any);
     this.refresh();
