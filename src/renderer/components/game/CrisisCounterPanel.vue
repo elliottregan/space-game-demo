@@ -88,30 +88,25 @@ const countdownClass = computed(() => ({
   flex-direction: column;
   gap: var(--space-1);
 }
-
 .meter-label {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: var(--space-2);
 }
-
 .meter-name {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
-
 .meter-value {
   font-size: 13px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--ink);
   transition: color 0.2s;
 }
 .meter-value.passing {
-  color: var(--accent);
+  color: var(--status-positive);
 }
 .meter-value.near {
   color: var(--status-warning);
@@ -119,24 +114,20 @@ const countdownClass = computed(() => ({
 .meter-value.edge {
   color: var(--status-negative);
 }
-
 .meter-track {
-  height: 6px;
-  border-radius: 3px;
-  background: var(--border);
+  height: 8px;
+  background: var(--mat-strong);
   overflow: hidden;
 }
-
 .meter-fill {
   height: 100%;
-  border-radius: 3px;
-  background: var(--text-muted);
+  background: var(--ink-muted);
   transition:
     width 0.3s ease,
     background-color 0.2s ease;
 }
 .meter-fill.passing {
-  background: var(--accent);
+  background: var(--status-positive);
 }
 .meter-fill.near {
   background: var(--status-warning);
@@ -144,9 +135,8 @@ const countdownClass = computed(() => ({
 .meter-fill.edge {
   background: var(--status-negative);
 }
-
 .meter-hint {
   font-size: 11px;
-  color: var(--text-subtle);
+  color: var(--ink-subtle);
 }
 </style>
