@@ -71,6 +71,8 @@
     --shadow-interactive: 2px 3px 7px rgba(0, 0, 0, 0.35);
     --shadow-lifted: 5px 8px 18px rgba(0, 0, 0, 0.45);
     --shadow-pressed: 1px 1px 3px rgba(0, 0, 0, 0.25);
+    /* Inset recess for empty card slots — absence, not elevation. */
+    --shadow-slot: inset 2px 3px 6px rgba(0, 0, 0, 0.4);
     --scrim: rgba(10, 9, 8, 0.7);
 
     /* Spacing scale */
@@ -118,6 +120,7 @@
       --shadow-interactive: 2px 3px 7px rgba(20, 19, 15, 0.16);
       --shadow-lifted: 5px 8px 18px rgba(20, 19, 15, 0.22);
       --shadow-pressed: 1px 1px 3px rgba(20, 19, 15, 0.14);
+      --shadow-slot: inset 2px 3px 6px rgba(20, 19, 15, 0.18);
       --scrim: rgba(20, 19, 15, 0.45);
     }
   }
@@ -154,6 +157,7 @@
     --shadow-interactive: 2px 3px 7px rgba(20, 19, 15, 0.16);
     --shadow-lifted: 5px 8px 18px rgba(20, 19, 15, 0.22);
     --shadow-pressed: 1px 1px 3px rgba(20, 19, 15, 0.14);
+    --shadow-slot: inset 2px 3px 6px rgba(20, 19, 15, 0.18);
     --scrim: rgba(20, 19, 15, 0.45);
   }
 }
@@ -301,6 +305,12 @@
   .hand-panel {
     min-width: 0;
     flex: 1 1 auto;
+  }
+  /* Tableau and hand sit directly on the table — no mat behind them. The
+     ground itself is the playing surface; only the pile zone keeps a mat. */
+  .tableau-panel,
+  .hand-panel {
+    --panel-bg: transparent;
   }
   .hand-row {
     display: flex;
@@ -595,7 +605,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 4px;
+    padding: 0;
     position: relative;
     min-width: 112px;
     width: 112px;
@@ -614,43 +624,36 @@
   .cell.influence-cell {
     width: 100%;
   }
-  .cell:not(.occupied) {
-    background: color-mix(in srgb, var(--mat-strong) 60%, transparent);
-  }
-  .cell.occupied {
-    padding: 0;
-  }
   .cell.locked {
-    background: transparent;
     color: var(--ink-subtle);
   }
 
-  .cell-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    color: var(--ink-subtle);
-    font-size: 11px;
-  }
+  /* Empty / locked slots read as a card-shaped recess in the table — same
+     footprint as a card, telling the player a card goes here. */
+  .cell-empty,
   .cell-locked {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 4px;
-    width: 100%;
-    height: 100%;
+    width: 112px;
+    height: 144px;
+    margin: auto;
+    background: color-mix(in srgb, var(--mat-strong) 70%, transparent);
+    box-shadow: var(--shadow-slot);
+    color: var(--ink-subtle);
+    font-size: 11px;
+    text-align: center;
   }
-  .lock-glyph {
-    font-size: 18px;
-    opacity: 0.5;
+  /* Locked slots are fainter: the spot exists but isn't available yet. */
+  .cell-locked {
+    opacity: 0.55;
   }
   .lock-hint {
     font-size: 10px;
     color: var(--ink-subtle);
+    padding: 0 8px;
   }
 
   .cell-content {

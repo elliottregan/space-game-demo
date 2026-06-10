@@ -11,7 +11,6 @@
     ]"
   >
     <div v-if="locked" class="cell-locked">
-      <span class="lock-glyph">🔒</span>
       <span class="lock-hint">place a Land first</span>
     </div>
     <div v-else-if="cards.length === 0" class="cell-empty">

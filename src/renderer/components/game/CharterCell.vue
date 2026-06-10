@@ -6,7 +6,6 @@
     ]"
   >
     <div v-if="locked" class="cell-locked">
-      <span class="lock-glyph">🔒</span>
       <span class="lock-hint">fill Influence first</span>
     </div>
     <div v-else-if="!card" class="cell-empty">

@@ -116,7 +116,9 @@ function validForDrag(i: number): { land: boolean; influence: boolean; charter: 
   position: sticky;
   left: 0;
   z-index: 10001;
-  background: var(--mat);
+  /* Ground, not mat: the tableau panel is transparent, so the sticky mask
+     must match the table surface behind it. */
+  background: var(--ground);
 }
 .row-label {
   display: flex;
