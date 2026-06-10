@@ -785,6 +785,9 @@
   }
   .pile-stack {
     position: relative;
+    /* Keep the ::after stack edge inside this element's own stacking
+       context so z-index: -1 can't drop it behind ancestors. */
+    isolation: isolate;
     flex: 1 1 0;
     height: 106px;
     display: flex;
@@ -815,7 +818,9 @@
     position: absolute;
     inset: 0;
     translate: 4px 4px;
-    background: var(--mat-strong);
+    /* Ground, not mat-strong: the edge must contrast with the pile zone's
+       mat-strong panel or the stack depth disappears. */
+    background: var(--ground);
     z-index: -1;
   }
   .pile-deck {
