@@ -48,6 +48,28 @@
   --shadow-card: 0 2px 4px rgba(0, 0, 0, 0.4);
   --shadow-dropdown: 0 6px 16px rgba(0, 0, 0, 0.5);
   --shadow-overlay: rgba(0, 0, 0, 0.75);
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  /* Elevation */
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --elev-2: 0 6px 18px rgba(0, 0, 0, 0.28);
+  --elev-3: 0 14px 40px rgba(0, 0, 0, 0.4);
+
+  /* Layout */
+  --rail-width: 44px;
+  --rail-bg: var(--surface-sunken);
 }
 
 /* Light theme — follows OS when user hasn't chosen. */
@@ -86,6 +108,10 @@
     --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.12);
     --shadow-dropdown: 0 6px 16px rgba(0, 0, 0, 0.15);
     --shadow-overlay: rgba(0, 0, 0, 0.45);
+
+    --elev-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+    --elev-2: 0 6px 18px rgba(0, 0, 0, 0.12);
+    --elev-3: 0 14px 40px rgba(0, 0, 0, 0.18);
   }
 }
 
@@ -124,6 +150,10 @@
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.12);
   --shadow-dropdown: 0 6px 16px rgba(0, 0, 0, 0.15);
   --shadow-overlay: rgba(0, 0, 0, 0.45);
+
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --elev-2: 0 6px 18px rgba(0, 0, 0, 0.12);
+  --elev-3: 0 14px 40px rgba(0, 0, 0, 0.18);
 }
 
 * {
@@ -214,67 +244,33 @@ button.primary:hover:not(:disabled) {
 
 .app-main {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: var(--rail-width) minmax(0, 1fr) var(--rail-width);
   overflow: hidden;
+  min-height: 0;
 }
 
 .play-area {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: auto auto auto 1fr auto;
-  grid-template-areas:
-    "projects projects"
-    "ideology ideology"
-    "tableau  tableau"
-    "hand     piles"
-    "errors   errors";
-  padding: 12px;
-  gap: 12px;
-  overflow: auto;
-}
-.projects-panel {
-  grid-area: projects;
-}
-.ideology-display {
-  grid-area: ideology;
-}
-.tableau-panel {
-  grid-area: tableau;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  padding: var(--space-3);
+  gap: var(--space-3);
+  /* Hidden so the 1fr row truly bounds the TableauPanel's height — the
+     panel becomes the scroll container for overflowing tableau columns
+     rather than dumping the overflow up to the play area. */
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
 }
 .hand-panel {
-  grid-area: hand;
   min-width: 0;
+  flex: 1 1 auto;
 }
-.deck-discard-panel {
-  grid-area: piles;
-}
-.error-bar {
-  grid-area: errors;
-}
-
-.sidebar {
-  border-left: 1px solid var(--border);
-  background: var(--surface-raised);
-  overflow: auto;
-  padding: 12px;
+.hand-row {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.section {
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 8px 10px;
-}
-.section h2 {
-  margin: 0 0 8px 0;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
+  gap: var(--space-3);
+  align-items: stretch;
+  min-width: 0;
 }
 
 /* -------------------- Card -------------------- */
@@ -382,12 +378,6 @@ button.primary:hover:not(:disabled) {
   padding: 1px 6px;
   color: var(--accent);
   font-weight: 700;
-}
-.card-inf-cost.aligned {
-  color: var(--status-positive);
-}
-.card-inf-cost.opposed {
-  color: var(--status-negative);
 }
 .card-market-cost {
   color: var(--text-muted);
@@ -578,22 +568,6 @@ button.primary:hover:not(:disabled) {
 
 /* -------------------- Hand -------------------- */
 
-.hand-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 4px;
-}
-.hand-header h2 {
-  margin: 0 0 8px 0;
-}
-.selection-meta {
-  font-size: 11px;
-  color: var(--text-muted);
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
 .linklike {
   background: transparent;
   border: none;
@@ -606,27 +580,48 @@ button.primary:hover:not(:disabled) {
 .hand-cards {
   display: flex;
   flex-wrap: nowrap;
-  gap: 6px;
+  gap: var(--space-1);
   min-height: 160px;
   overflow-x: auto;
-  padding-bottom: 6px;
+  padding-bottom: var(--space-1);
   scrollbar-width: thin;
 }
 .hand-actions {
   display: flex;
-  gap: 4px;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  /* Reserve enough vertical space for the meta line + a row of buttons so
+     the panel size stays put when a selection toggles. */
+  min-height: 56px;
+}
+.hand-hint {
+  color: var(--text-subtle);
+  font-size: 12px;
+  margin: auto 0;
+}
+.action-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+.action-handlabel {
+  color: var(--text);
+}
+.action-buttons {
+  display: flex;
+  gap: var(--space-1);
   flex-wrap: wrap;
-  margin-top: 6px;
-  min-height: 26px;
+}
+.action-empty {
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 /* -------------------- Deck / Discard piles -------------------- */
 
-.deck-discard-panel {
-  min-width: 180px;
-  display: flex;
-  flex-direction: column;
-}
 .pile-row {
   display: flex;
   gap: 8px;
@@ -774,11 +769,6 @@ button.primary:hover:not(:disabled) {
 
 /* -------------------- Tableau -------------------- */
 
-.tableau-panel {
-}
-.tableau-panel {
-  min-width: 0;
-}
 .tableau-slots {
   display: flex;
   flex-wrap: nowrap;
@@ -889,6 +879,12 @@ button.primary:hover:not(:disabled) {
 .cell.charter-cell {
   height: 150px;
 }
+/* Land and Influence cells grow horizontally with their CardStacks; expand
+   width to fill the column track instead of staying centered at 112px. */
+.cell.land-cell,
+.cell.influence-cell {
+  width: 100%;
+}
 .cell.occupied {
   border-style: solid;
   border-color: var(--border);
@@ -945,30 +941,6 @@ button.primary:hover:not(:disabled) {
 .cell-content .card {
   margin-bottom: 0;
 }
-.land-stack {
-  position: relative;
-  width: 112px;
-  height: 150px;
-}
-.land-stack .card {
-  box-shadow:
-    0 0 0 1px var(--accent),
-    0 4px 8px rgba(0, 0, 0, 0.5);
-}
-.depth-badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  background: var(--accent);
-  color: var(--bg, #0a0a0a);
-  border-radius: 10px;
-  padding: 1px 6px;
-  font-size: 11px;
-  font-weight: 700;
-  z-index: 3;
-  pointer-events: none;
-}
-
 .cell-action {
   position: absolute;
   bottom: 4px;
@@ -976,7 +948,9 @@ button.primary:hover:not(:disabled) {
   transform: translateX(-50%);
   font-size: 10px;
   padding: 2px 8px;
-  z-index: 2;
+  /* Above stacked cards (max ~stack-size) and above the hover-pop value
+     (9999) so the button stays clickable even while inspecting a card. */
+  z-index: 10000;
 }
 
 .cell.drop-target {
@@ -1110,11 +1084,6 @@ button.primary:hover:not(:disabled) {
 
 /* -------------------- Ideology -------------------- */
 
-.ideology-display {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
 .axis-row {
   display: grid;
   grid-template-columns: 100px 1fr 40px;

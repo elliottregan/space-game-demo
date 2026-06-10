@@ -1,6 +1,7 @@
 // Column types + placement helpers for the three-tier column model.
 
 import type { Card } from "../data/cards.ts";
+import { validateRowHand } from "./rowHands.ts";
 
 // -------------------------------------------------------------------------
 // Column shape
@@ -12,8 +13,8 @@ export interface LandRow {
 }
 
 export interface InfluenceRow {
-  /** A card with kind === "role". */
-  card: Card | null;
+  /** All same role-type when non-empty; sized by configured row-hand. */
+  cards: Card[];
 }
 
 export interface CharterRow {
@@ -30,7 +31,7 @@ export interface Column {
 export interface ColumnConfig {
   /** Card ids; must share rank when length > 1. */
   lands: string[];
-  influence?: string;
+  influence?: string[];
   charter?: string;
 }
 
@@ -43,28 +44,26 @@ export const MAX_LAND_DEPTH = 4;
 export function createEmptyColumn(): Column {
   return {
     lands: { cards: [] },
-    influence: { card: null },
+    influence: { cards: [] },
     charter: { card: null },
   };
 }
 
 export function canPlaceLand(col: Column, card: Card): boolean {
   if (card.kind !== "land") return false;
-  if (col.lands.cards.length >= MAX_LAND_DEPTH) return false;
-  if (col.lands.cards.length === 0) return true;
-  return col.lands.cards[0].rank === card.rank;
+  return validateRowHand([...col.lands.cards, card]);
 }
 
 export function canPlaceInfluence(col: Column, card: Card): boolean {
   if (card.kind !== "role") return false;
-  if (col.influence.card !== null) return false;
-  return col.lands.cards.length >= 1;
+  if (col.lands.cards.length < 1) return false;
+  return validateRowHand([...col.influence.cards, card]);
 }
 
 export function canPlaceCharter(col: Column, card: Card): boolean {
   if (card.kind !== "charter") return false;
   if (col.charter.card !== null) return false;
-  return col.influence.card !== null;
+  return col.influence.cards.length >= 1;
 }
 
 export function placeLand(col: Column, card: Card): void {
@@ -72,7 +71,7 @@ export function placeLand(col: Column, card: Card): void {
 }
 
 export function placeInfluence(col: Column, card: Card): void {
-  col.influence.card = card;
+  col.influence.cards.push(card);
 }
 
 export function placeCharter(col: Column, card: Card): void {
@@ -81,13 +80,13 @@ export function placeCharter(col: Column, card: Card): void {
 
 export function clearColumn(col: Column): void {
   col.lands.cards.length = 0;
-  col.influence.card = null;
+  col.influence.cards.length = 0;
   col.charter.card = null;
 }
 
 export function columnCards(col: Column): Card[] {
   const out: Card[] = [...col.lands.cards];
-  if (col.influence.card) out.push(col.influence.card);
+  out.push(...col.influence.cards);
   if (col.charter.card) out.push(col.charter.card);
   return out;
 }
@@ -97,7 +96,9 @@ export function columnLandRank(col: Column): number | null {
 }
 
 export function isBuildable(col: Column): boolean {
-  return col.lands.cards.length >= 1 && col.influence.card !== null && col.charter.card !== null;
+  return (
+    col.lands.cards.length >= 1 && col.influence.cards.length >= 1 && col.charter.card !== null
+  );
 }
 
 export function columnFromConfig(
@@ -109,9 +110,9 @@ export function columnFromConfig(
     const c = resolve(id);
     if (c) col.lands.cards.push(c);
   }
-  if (cfg.influence) {
-    const c = resolve(cfg.influence);
-    if (c) col.influence.card = c;
+  for (const id of cfg.influence ?? []) {
+    const c = resolve(id);
+    if (c) col.influence.cards.push(c);
   }
   if (cfg.charter) {
     const c = resolve(cfg.charter);

@@ -46,3 +46,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Playwright / browser smoke-test artifacts
 .playwright-mcp
 *.png
+
+# Superpowers brainstorm session files
+.superpowers

@@ -33,19 +33,9 @@
     </div>
 
     <div class="app-main">
+      <Rail side="left" :items="leftRailItems" :active-key="leftRailActive" @toggle="toggleLeft" />
+
       <div class="play-area">
-        <UnlockedProjectsPanel
-          :unlocks="epoch.unlockedProjects"
-          :projects="setting.projects"
-          :breakdown="snapshot.ideologyBreakdown"
-        />
-
-        <IdeologyDisplay
-          :vector="snapshot.vector"
-          :terrain="snapshot.campaign.terrain"
-          :demonym-label="demonymLabel"
-        />
-
         <TableauPanel
           :columns="epoch.columns"
           :production="landProduction"
@@ -60,28 +50,28 @@
           @build="onBuild"
         />
 
-        <HandPanel
-          :hand="epoch.hand"
-          :selected-ids="selectedIds"
-          :influence="epoch.influence"
-          :columns="epoch.columns"
-          :get-effective-cost="getEffectiveCost"
-          :get-alignment="getAlignment"
-          :valid-columns-for="validColumnsFor"
-          @toggle-select="onToggleSelect"
-          @clear-selection="onClearSelection"
-          @place-cards="onPlaceCards"
-          @discard-from-hand="onDiscardFromHand"
-        />
-        <DeckDiscardPanel
-          :draw-count="epoch.draw.length"
-          :discard-count="epoch.discard.length"
-          :ended="epoch.status.kind !== 'in-progress'"
-          @view="onViewPile"
-          @open-market="marketOpen = true"
-          @end-turn="onEndTurn"
-          @drop-card="onDiscardFromHand"
-        />
+        <div class="hand-row">
+          <HandPanel
+            :hand="epoch.hand"
+            :selected-ids="selectedIds"
+            :influence="epoch.influence"
+            :columns="epoch.columns"
+            :valid-columns-for="validColumnsFor"
+            @toggle-select="onToggleSelect"
+            @clear-selection="onClearSelection"
+            @place-cards="onPlaceCards"
+            @commit-to-row="onCommitToRow"
+          />
+          <DeckDiscardPanel
+            :draw-count="epoch.draw.length"
+            :discard-count="epoch.discard.length"
+            :ended="epoch.status.kind !== 'in-progress'"
+            @view="onViewPile"
+            @open-market="marketOpen = true"
+            @end-turn="onEndTurn"
+            @drop-card="onDiscardFromHand"
+          />
+        </div>
 
         <button
           v-if="!eoe && epoch.phase === 'crisis'"
@@ -92,15 +82,92 @@
         </button>
 
         <div v-if="lastError" class="error-bar">{{ lastError }}</div>
+
+        <RailFlyout
+          v-if="leftRailActive === 'projects'"
+          side="left"
+          title="Keystone Projects"
+          @close="leftRailActive = null"
+        >
+          <UnlockedProjectsPanel
+            :unlocks="epoch.unlockedProjects"
+            :projects="setting.projects"
+            :breakdown="snapshot.ideologyBreakdown"
+          />
+        </RailFlyout>
+        <RailFlyout
+          v-else-if="leftRailActive === 'crisis'"
+          side="left"
+          title="Crisis"
+          @close="leftRailActive = null"
+        >
+          <CrisisCounterPanel
+            :crisis="setting.crisis"
+            :unlocks="epoch.unlockedProjects"
+            :projects="setting.projects"
+            :turn="epoch.turn"
+            :max-turns="setting.rules.maxTurns"
+          />
+        </RailFlyout>
+        <RailFlyout
+          v-else-if="leftRailActive === 'ideology'"
+          side="left"
+          title="Ideology"
+          @close="leftRailActive = null"
+        >
+          <IdeologyDisplay :vector="snapshot.vector" />
+        </RailFlyout>
+
+        <RailFlyout
+          v-if="rightRailActive === 'terrain'"
+          side="right"
+          title="Terrain"
+          @close="rightRailActive = null"
+        >
+          <TerrainSection :terrain="snapshot.campaign.terrain" />
+        </RailFlyout>
+        <RailFlyout
+          v-else-if="rightRailActive === 'monuments'"
+          side="right"
+          title="Monuments"
+          @close="rightRailActive = null"
+        >
+          <MonumentsSection :monuments="snapshot.campaign.monuments" />
+        </RailFlyout>
+        <RailFlyout
+          v-else-if="rightRailActive === 'legacy'"
+          side="right"
+          title="Legacy Cards"
+          @close="rightRailActive = null"
+        >
+          <LegacyCardsSection :cards="snapshot.campaign.legacyCards" />
+        </RailFlyout>
+        <RailFlyout
+          v-else-if="rightRailActive === 'counts'"
+          side="right"
+          title="Deck Counts"
+          @close="rightRailActive = null"
+        >
+          <DeckCountsSection
+            :counts="snapshot.deckCounts"
+            :dissent-threshold="setting.rules.dissentLossThreshold"
+          />
+        </RailFlyout>
+        <RailFlyout
+          v-else-if="rightRailActive === 'log'"
+          side="right"
+          title="Event Log"
+          @close="rightRailActive = null"
+        >
+          <EventLogSection :events="epoch.eventLog" />
+        </RailFlyout>
       </div>
 
-      <LegacySidebar
-        :terrain="snapshot.campaign.terrain"
-        :monuments="snapshot.campaign.monuments"
-        :legacy-cards="snapshot.campaign.legacyCards"
-        :counts="snapshot.deckCounts"
-        :events="epoch.eventLog"
-        :dissent-threshold="setting.rules.dissentLossThreshold"
+      <Rail
+        side="right"
+        :items="rightRailItems"
+        :active-key="rightRailActive"
+        @toggle="toggleRight"
       />
     </div>
 
@@ -136,7 +203,6 @@ import HandPanel from "./components/game/HandPanel.vue";
 import TableauPanel from "./components/game/TableauPanel.vue";
 import UnlockedProjectsPanel from "./components/game/UnlockedProjectsPanel.vue";
 import IdeologyDisplay from "./components/game/IdeologyDisplay.vue";
-import LegacySidebar from "./components/shell/LegacySidebar.vue";
 import CrisisScreen from "./components/game/CrisisScreen.vue";
 import CampaignEnd from "./components/shell/CampaignEnd.vue";
 import DeckDiscardPanel from "./components/game/DeckDiscardPanel.vue";
@@ -144,16 +210,49 @@ import CardListModal from "./components/shell/CardListModal.vue";
 import MarketModal from "./components/shell/MarketModal.vue";
 import SaveSlotMenu from "./components/shell/SaveSlotMenu.vue";
 import ThemeToggle from "./components/shell/ThemeToggle.vue";
+import CrisisCounterPanel from "./components/game/CrisisCounterPanel.vue";
+import Rail, { type RailItem } from "./components/shell/Rail.vue";
+import RailFlyout from "./components/shell/RailFlyout.vue";
+import TerrainSection from "./components/shell/sidebar/TerrainSection.vue";
+import MonumentsSection from "./components/shell/sidebar/MonumentsSection.vue";
+import LegacyCardsSection from "./components/shell/sidebar/LegacyCardsSection.vue";
+import DeckCountsSection from "./components/shell/sidebar/DeckCountsSection.vue";
+import EventLogSection from "./components/shell/sidebar/EventLogSection.vue";
 import type { Card } from "../core/types.ts";
 import { SETTING_BY_ID } from "../core/settings/index.ts";
 import { MAX_SLOTS } from "../facade/persistence.ts";
 import { evaluateColumn } from "../core/engine/columnPatterns.ts";
+import { patternLabel } from "./util/labels.ts";
 
 const game = getGameService();
 
 const selectedIds = ref<string[]>([]);
 const pileView = ref<"deck" | "discard" | null>(null);
 const marketOpen = ref(false);
+
+const leftRailActive = ref<string | null>(null);
+const rightRailActive = ref<string | null>(null);
+
+const leftRailItems: RailItem[] = [
+  { key: "projects", label: "Keystone Projects", icon: "projects" },
+  { key: "crisis", label: "Crisis Counter", icon: "crisis" },
+  { key: "ideology", label: "Ideology", icon: "ideology" },
+];
+
+const rightRailItems: RailItem[] = [
+  { key: "terrain", label: "Terrain", icon: "terrain" },
+  { key: "monuments", label: "Monuments", icon: "monuments" },
+  { key: "legacy", label: "Legacy Cards", icon: "legacy" },
+  { key: "counts", label: "Deck Counts", icon: "counts" },
+  { key: "log", label: "Event Log", icon: "log" },
+];
+
+function toggleLeft(key: string): void {
+  leftRailActive.value = leftRailActive.value === key ? null : key;
+}
+function toggleRight(key: string): void {
+  rightRailActive.value = rightRailActive.value === key ? null : key;
+}
 
 const snapshot = computed(() => game.snapshot.value);
 const setting = computed(() => snapshot.value.setting);
@@ -208,19 +307,6 @@ function getCardFromHand(cardId: string): Card | null {
   return epoch.value.hand.find((c) => c.id === cardId) ?? null;
 }
 
-function patternLabel(p: string): string {
-  return p
-    .split("-")
-    .map((s) => s[0].toUpperCase() + s.slice(1))
-    .join(" ");
-}
-
-function getEffectiveCost(card: Card): number {
-  return game.getEffectiveCost(card);
-}
-function getAlignment(card: Card): "aligned" | "opposed" | "neutral" {
-  return game.getAlignment(card);
-}
 function validColumnsFor(cardId: string): number[] {
   return game.validColumns(cardId);
 }
@@ -241,6 +327,15 @@ function onPlaceCards(ids: string[], i: number): void {
     if (game.validColumns(id).includes(i)) game.placeCard(id, i);
   }
   selectedIds.value = [];
+}
+function onCommitToRow(columnIndex: number, row: "land" | "influence"): void {
+  // Sync the service's commitBuffer with the current selection, then commit.
+  game.commitBuffer.value = [...selectedIds.value];
+  game.commitToRow(columnIndex, row);
+  // commitToRow calls clearBuffer on success; mirror that in selectedIds.
+  if (game.commitBuffer.value.length === 0) {
+    selectedIds.value = [];
+  }
 }
 function onDiscardLand(i: number): void {
   game.discardLand(i);

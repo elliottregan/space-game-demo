@@ -1,14 +1,9 @@
 import { describe, test, expect } from "bun:test";
-import {
-  deriveVector,
-  checkAlignment,
-  influenceCostAdjustment,
-  demonym,
-} from "../src/core/engine/ideology.ts";
+import { deriveVector, demonym } from "../src/core/engine/ideology.ts";
 import { unlockedIdeologyBreakdown } from "../src/core/data/projects.ts";
 import { getCard, landId, roleId } from "../src/core/data/cards.ts";
 import { createEmptyColumn, placeLand, placeInfluence } from "../src/core/engine/column.ts";
-import type { Column, ProjectUnlock } from "../src/core/types.ts";
+import type { Column, KeystoneProject, ProjectUnlock } from "../src/core/types.ts";
 
 function col(lands: string[], topper?: string): Column {
   const c = createEmptyColumn();
@@ -21,77 +16,97 @@ function col(lands: string[], topper?: string): Column {
 }
 
 describe("deriveVector", () => {
-  test("empty board with zero terrain yields zero vector", () => {
-    const v = deriveVector([], { axis1: 0, axis2: 0 });
+  test("empty board with no unlocks yields zero vector", () => {
+    const v = deriveVector([], [], []);
     expect(v).toEqual({ axis1: 0, axis2: 0 });
   });
 
-  test("tableau of Solidarity 2 + 3 tilts axis1 negative", () => {
-    // Two separate columns — rank mismatch means they can't share a column,
-    // but deriveVector is a pure function and accepts any columns.
+  test("two solidarity lands contribute -2 to axis1 (flat ±1, rank-independent)", () => {
     const cols: Column[] = [col([landId(2, "solidarity")]), col([landId(3, "solidarity")])];
-    const v = deriveVector(cols, { axis1: 0, axis2: 0 });
-    expect(v.axis1).toBe(-5);
+    const v = deriveVector(cols, [], []);
+    expect(v.axis1).toBe(-2);
     expect(v.axis2).toBe(0);
   });
 
-  test("stacked matching-rank Lands both contribute to ideology", () => {
-    const c = createEmptyColumn();
-    placeLand(c, getCard(landId(3, "solidarity")));
-    placeLand(c, getCard(landId(3, "solidarity")));
-    const v = deriveVector([c], { axis1: 0, axis2: 0 });
-    expect(v.axis1).toBe(-6);
+  test("one solidarity + one sovereignty land cancel on axis1", () => {
+    // Each non-wild card adds ±1; opposite sides cancel out regardless of rank.
+    const cols: Column[] = [col([landId(5, "solidarity")]), col([landId(3, "sovereignty")])];
+    const v = deriveVector(cols, [], []);
+    expect(v.axis1).toBe(0);
+    expect(v.axis2).toBe(0);
   });
 
-  test("topper contributes alongside lands", () => {
+  test("topper contributes ±1 alongside lands", () => {
     const c = createEmptyColumn();
     placeLand(c, getCard(landId(3, "solidarity")));
     placeLand(c, getCard(landId(3, "solidarity")));
     placeInfluence(c, getCard(roleId("preacher", "solidarity")));
-    const v = deriveVector([c], { axis1: 0, axis2: 0 });
-    // 3+3 (Sol lands, axis1 -6) + 12 (Preacher Sol, axis1 -12) = -18
-    expect(v.axis1).toBe(-18);
+    const v = deriveVector([c], [], []);
+    // 2 solidarity lands + 1 solidarity topper = -3 on axis1.
+    expect(v.axis1).toBe(-3);
   });
 
-  test("wild topper contributes nothing", () => {
+  test("wild cards in columns contribute nothing", () => {
     const c = createEmptyColumn();
     placeLand(c, getCard(landId(3, "solidarity")));
     placeLand(c, getCard(landId(3, "solidarity")));
-    // keystone-pioneer is wild — use placeInfluence only if it's a role;
-    // wild keystones aren't roles in the column sense, so skip placing it
-    // and verify that just the two lands contribute.
-    const v = deriveVector([c], { axis1: 0, axis2: 0 });
-    expect(v.axis1).toBe(-6);
+    const v = deriveVector([c], [], []);
+    expect(v.axis1).toBe(-2);
   });
 
-  test("terrain pre-loads the vector", () => {
-    const v = deriveVector([], { axis1: -3, axis2: 2 });
-    expect(v).toEqual({ axis1: -3, axis2: 2 });
+  test("project unlock contributes sign(net cards on axis) × project.value", () => {
+    // Mono-sovereignty flush unlock with project.value = 4 → axis1 = +4.
+    const project: KeystoneProject = {
+      id: "p-flush",
+      pattern: "flush",
+      name: "Flush",
+      flavor: "",
+      value: 4,
+    };
+    const unlock: ProjectUnlock = {
+      projectId: "p-flush",
+      pattern: "flush",
+      turn: 1,
+      cards: [
+        getCard(landId(4, "sovereignty")),
+        getCard(landId(4, "sovereignty")),
+        getCard(roleId("agitator", "sovereignty")),
+      ],
+    };
+    const v = deriveVector([], [unlock], [project]);
+    expect(v.axis1).toBe(4);
+    expect(v.axis2).toBe(0);
   });
-});
 
-describe("checkAlignment", () => {
-  test("neutral when no axis is active", () => {
-    const card = getCard(roleId("agitator", "solidarity"));
-    expect(checkAlignment(card, { axis1: 2, axis2: 0 })).toBe("neutral");
+  test("project with balanced ideologies on an axis contributes 0 there", () => {
+    const project: KeystoneProject = {
+      id: "p-pair",
+      pattern: "pair",
+      name: "Pair",
+      flavor: "",
+      value: 2,
+    };
+    // One solidarity, one sovereignty on axis1 → net = 0 → sign(0) × value = 0.
+    const unlock: ProjectUnlock = {
+      projectId: "p-pair",
+      pattern: "pair",
+      turn: 1,
+      cards: [getCard(landId(3, "solidarity")), getCard(landId(3, "sovereignty"))],
+    };
+    const v = deriveVector([], [unlock], [project]);
+    expect(v.axis1).toBe(0);
+    expect(v.axis2).toBe(0);
   });
 
-  test("aligned when suit matches dominant side", () => {
-    const card = getCard(roleId("agitator", "solidarity"));
-    expect(checkAlignment(card, { axis1: -5, axis2: 0 })).toBe("aligned");
-  });
-
-  test("opposed when suit matches inferior side", () => {
-    const card = getCard(roleId("agitator", "sovereignty"));
-    expect(checkAlignment(card, { axis1: -5, axis2: 0 })).toBe("opposed");
-  });
-});
-
-describe("influenceCostAdjustment", () => {
-  test("aligned -> -1, opposed -> +1, neutral -> 0", () => {
-    expect(influenceCostAdjustment("aligned")).toBe(-1);
-    expect(influenceCostAdjustment("opposed")).toBe(1);
-    expect(influenceCostAdjustment("neutral")).toBe(0);
+  test("missing project lookup contributes 0 (graceful fallback)", () => {
+    const unlock: ProjectUnlock = {
+      projectId: "unknown",
+      pattern: "pair",
+      turn: 1,
+      cards: [getCard(landId(3, "sovereignty")), getCard(landId(3, "sovereignty"))],
+    };
+    const v = deriveVector([], [unlock], []);
+    expect(v).toEqual({ axis1: 0, axis2: 0 });
   });
 });
 

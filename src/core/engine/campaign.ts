@@ -14,6 +14,7 @@ import {
   type MintingResult,
 } from "./legacy.ts";
 import { unlockedIdeologyBreakdown } from "../data/projects.ts";
+import { zeroIdeologyBreakdown } from "../data/ideologies.ts";
 import { HOMEWORLD } from "../settings/homeworld.ts";
 import { currentVector, createEpoch } from "./epoch.ts";
 import { getSetting } from "../settings/index.ts";
@@ -110,7 +111,7 @@ export function prepareEndOfEpoch(
       nextSettingId: "campaign-end",
       outcome: "loss",
       crisis: { totalValue: 0, cleared: false, contributingUnlocks: [] },
-      ideologyBreakdown: { solidarity: 0, sovereignty: 0, transformation: 0, heritage: 0 },
+      ideologyBreakdown: zeroIdeologyBreakdown(),
     };
   }
   const result =
@@ -148,7 +149,7 @@ export function finalizeEpoch(
   campaign.legacyCards.push(...legacyCards);
   if (state.monument) addMonumentToCampaign(campaign, state.monument);
   if (state.outcome === "loss") {
-    applyLossTerrainScar(campaign, state.crisis, currentVector(epoch, campaign));
+    applyLossTerrainScar(campaign, state.crisis, currentVector(epoch, setting));
   }
 
   const result: EpochResult = {
@@ -158,7 +159,7 @@ export function finalizeEpoch(
     totalValue: state.crisis.totalValue,
     unlockCount: epoch.unlockedProjects.length,
     mintedLegacyIds: legacyCards.map((l) => l.id),
-    finalIdeology: currentVector(epoch, campaign),
+    finalIdeology: currentVector(epoch, setting),
   };
   campaign.epochHistory.push(result);
   campaign.epochCount = epoch.epochNumber;

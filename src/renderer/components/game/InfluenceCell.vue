@@ -2,29 +2,33 @@
   <div
     :class="[
       'cell influence-cell',
-      { occupied: !!card, locked: locked, 'drop-target': isDropTarget, 'drag-over': isDragOver },
+      {
+        occupied: cards.length > 0,
+        locked: locked,
+        'drop-target': isDropTarget,
+        'drag-over': isDragOver,
+      },
     ]"
   >
     <div v-if="locked" class="cell-locked">
       <span class="lock-glyph">🔒</span>
       <span class="lock-hint">place a Land first</span>
     </div>
-    <div v-else-if="!card" class="cell-empty">
+    <div v-else-if="cards.length === 0" class="cell-empty">
       <span class="cell-empty-label">Influence</span>
     </div>
-    <div v-else class="cell-content">
-      <Card :card="card" :selectable="false" />
+    <CardStack v-else :cards="cards" direction="horizontal">
       <button class="cell-action" @click.stop="$emit('recall')">Recall</button>
-    </div>
+    </CardStack>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { Card as CardT } from "../../../core/types.ts";
-import Card from "../core/Card.vue";
+import CardStack from "../core/CardStack.vue";
 
 defineProps<{
-  card: CardT | null;
+  cards: CardT[];
   locked: boolean;
   isDropTarget: boolean;
   isDragOver: boolean;

@@ -1,6 +1,5 @@
 <template>
-  <section class="section deck-discard-panel">
-    <h2>Piles</h2>
+  <Panel class="deck-discard-panel" title="Deck & Discard">
     <div class="pile-row">
       <button
         class="pile-stack pile-deck"
@@ -34,12 +33,13 @@
     <button class="end-turn-big primary" :disabled="ended" @click="$emit('endTurn')">
       End Turn
     </button>
-  </section>
+  </Panel>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { dragging, endDrag, readDragPayload } from "../../util/dragState.ts";
+import Panel from "../core/Panel.vue";
 
 defineProps<{
   drawCount: number;

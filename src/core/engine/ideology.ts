@@ -1,7 +1,8 @@
-// Ideology vector derivation + alignment + demonym.
+// Ideology vector derivation + demonym.
 // Vector is derived from the column contents each call — never stored.
 
-import type { Card, Ideology } from "../data/cards.ts";
+import type { KeystoneProject, ProjectUnlock } from "../data/projects.ts";
+import { IDEOLOGIES, type Ideology } from "../data/ideologies.ts";
 import { type Column, columnCards } from "./column.ts";
 
 // -------------------------------------------------------------------------
@@ -22,105 +23,85 @@ export interface IdeologyTerrain {
 
 export type Demonym = "collective" | "dominion" | "ascendancy" | "keepers" | null;
 
-export function deriveVector(columns: Column[], terrain: IdeologyTerrain): IdeologyVector {
-  let axis1 = terrain.axis1;
-  let axis2 = terrain.axis2;
+// -------------------------------------------------------------------------
+// Mechanical config — links each ideology to its axis/sign and to its
+// demonym. Lookup tables replace the inline switches that used to live in
+// deriveVector / demonym.
+// -------------------------------------------------------------------------
 
+export const IDEOLOGY_AXIS: Record<Ideology, { axis: "axis1" | "axis2"; sign: -1 | 1 }> = {
+  solidarity: { axis: "axis1", sign: -1 },
+  sovereignty: { axis: "axis1", sign: 1 },
+  transformation: { axis: "axis2", sign: 1 },
+  heritage: { axis: "axis2", sign: -1 },
+};
+
+export const DEMONYM_BY_IDEOLOGY: Record<Ideology, NonNullable<Demonym>> = {
+  solidarity: "collective",
+  sovereignty: "dominion",
+  transformation: "ascendancy",
+  heritage: "keepers",
+};
+
+export const IDEOLOGY_BY_DEMONYM: Record<NonNullable<Demonym>, Ideology> = {
+  collective: "solidarity",
+  dominion: "sovereignty",
+  ascendancy: "transformation",
+  keepers: "heritage",
+};
+
+// -------------------------------------------------------------------------
+// Vector derivation
+// -------------------------------------------------------------------------
+
+export function deriveVector(
+  columns: Column[],
+  unlockedProjects: ProjectUnlock[],
+  projects: KeystoneProject[],
+): IdeologyVector {
+  const v = { axis1: 0, axis2: 0 };
   for (const col of columns) {
-    for (const card of columnCards(col)) {
-      if (card.ideology === "wild") continue;
-      const r = card.rank;
-      switch (card.ideology) {
-        case "solidarity":
-          axis1 -= r;
-          break;
-        case "sovereignty":
-          axis1 += r;
-          break;
-        case "transformation":
-          axis2 += r;
-          break;
-        case "heritage":
-          axis2 -= r;
-          break;
-      }
+    for (const c of columnCards(col)) {
+      if (c.ideology === "wild") continue;
+      const { axis, sign } = IDEOLOGY_AXIS[c.ideology];
+      v[axis] += sign;
     }
   }
-
-  return { axis1, axis2 };
-}
-
-export type Alignment = "aligned" | "opposed" | "neutral";
-
-export function checkAlignment(card: Card, vector: IdeologyVector): Alignment {
-  if (card.ideology === "wild") return "neutral";
-
-  const a1Active = Math.abs(vector.axis1) >= 3;
-  const a2Active = Math.abs(vector.axis2) >= 3;
-
-  const a1Verdict = axisVerdict(card.ideology, "axis1", vector.axis1);
-  const a2Verdict = axisVerdict(card.ideology, "axis2", vector.axis2);
-
-  if (!a1Active && !a2Active) return "neutral";
-
-  const candidates: { verdict: Alignment; magnitude: number }[] = [];
-  if (a1Active && a1Verdict !== "neutral") {
-    candidates.push({ verdict: a1Verdict, magnitude: Math.abs(vector.axis1) });
+  for (const u of unlockedProjects) {
+    const value = projects.find((p) => p.id === u.projectId)?.value ?? 0;
+    const net = { axis1: 0, axis2: 0 };
+    for (const c of u.cards) {
+      if (c.ideology === "wild") continue;
+      const { axis, sign } = IDEOLOGY_AXIS[c.ideology];
+      net[axis] += sign;
+    }
+    v.axis1 += Math.sign(net.axis1) * value;
+    v.axis2 += Math.sign(net.axis2) * value;
   }
-  if (a2Active && a2Verdict !== "neutral") {
-    candidates.push({ verdict: a2Verdict, magnitude: Math.abs(vector.axis2) });
-  }
-
-  if (candidates.length === 0) return "neutral";
-  candidates.sort((a, b) => b.magnitude - a.magnitude);
-  return candidates[0].verdict;
-}
-
-function axisVerdict(ideology: Ideology, axis: "axis1" | "axis2", value: number): Alignment {
-  if (axis === "axis1") {
-    if (ideology === "solidarity") return value < 0 ? "aligned" : value > 0 ? "opposed" : "neutral";
-    if (ideology === "sovereignty")
-      return value > 0 ? "aligned" : value < 0 ? "opposed" : "neutral";
-    return "neutral";
-  }
-  if (ideology === "transformation")
-    return value > 0 ? "aligned" : value < 0 ? "opposed" : "neutral";
-  if (ideology === "heritage") return value < 0 ? "aligned" : value > 0 ? "opposed" : "neutral";
-  return "neutral";
-}
-
-export function influenceCostAdjustment(alignment: Alignment): number {
-  if (alignment === "aligned") return -1;
-  if (alignment === "opposed") return 1;
-  return 0;
+  return v;
 }
 
 export function demonym(vector: IdeologyVector): Demonym {
-  const a1 = vector.axis1;
-  const a2 = vector.axis2;
-
-  const candidates: { d: Demonym; mag: number }[] = [];
-  if (a1 <= -6) candidates.push({ d: "collective", mag: Math.abs(a1) });
-  if (a1 >= 6) candidates.push({ d: "dominion", mag: Math.abs(a1) });
-  if (a2 >= 6) candidates.push({ d: "ascendancy", mag: Math.abs(a2) });
-  if (a2 <= -6) candidates.push({ d: "keepers", mag: Math.abs(a2) });
-
+  const candidates: { d: NonNullable<Demonym>; mag: number }[] = [];
+  for (const id of IDEOLOGIES) {
+    const { axis, sign } = IDEOLOGY_AXIS[id];
+    const projection = sign * vector[axis];
+    if (projection >= 6) {
+      candidates.push({ d: DEMONYM_BY_IDEOLOGY[id], mag: projection });
+    }
+  }
   if (candidates.length === 0) return null;
   candidates.sort((a, b) => b.mag - a.mag);
   return candidates[0].d;
 }
 
+const DEMONYM_NAMES: Record<NonNullable<Demonym>, string> = {
+  collective: "The Collective",
+  dominion: "The Dominion",
+  ascendancy: "The Ascendancy",
+  keepers: "The Keepers",
+};
+
 export function demonymName(d: Demonym): string {
-  switch (d) {
-    case "collective":
-      return "The Collective";
-    case "dominion":
-      return "The Dominion";
-    case "ascendancy":
-      return "The Ascendancy";
-    case "keepers":
-      return "The Keepers";
-    default:
-      return "Unaligned";
-  }
+  return d ? DEMONYM_NAMES[d] : "Unaligned";
 }

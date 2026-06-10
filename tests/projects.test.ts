@@ -17,12 +17,49 @@ const sample: KeystoneProject[] = [
   { id: "p-four", pattern: "four-of-a-kind", name: "4", flavor: "", value: 8 },
 ];
 
+describe("PatternKind extension", () => {
+  test("PATTERNS_IN_ORDER lists all ten patterns ascending", () => {
+    expect(PATTERNS_IN_ORDER).toEqual([
+      "high-card",
+      "pair",
+      "two-pair",
+      "three-of-a-kind",
+      "straight",
+      "flush",
+      "full-house",
+      "four-of-a-kind",
+      "straight-flush",
+      "royal-flush",
+    ]);
+  });
+
+  test("DEFAULT_PROJECT_VALUE has an entry per pattern with poker-strength scaling", () => {
+    expect(DEFAULT_PROJECT_VALUE).toEqual({
+      "high-card": 1,
+      pair: 2,
+      "two-pair": 3,
+      "three-of-a-kind": 4,
+      straight: 5,
+      flush: 6,
+      "full-house": 7,
+      "four-of-a-kind": 8,
+      "straight-flush": 10,
+      "royal-flush": 12,
+    });
+  });
+
+  test("reversePatternOrder walks royal-flush → ... → high-card", () => {
+    expect(reversePatternOrder()[0]).toBe("royal-flush");
+    expect(reversePatternOrder().at(-1)).toBe("high-card");
+  });
+});
+
 describe("projects helpers", () => {
   test("DEFAULT_PROJECT_VALUE returns the spec-default scale", () => {
     expect(DEFAULT_PROJECT_VALUE["high-card"]).toBe(1);
     expect(DEFAULT_PROJECT_VALUE["pair"]).toBe(2);
     expect(DEFAULT_PROJECT_VALUE["three-of-a-kind"]).toBe(4);
-    expect(DEFAULT_PROJECT_VALUE["flush"]).toBe(5);
+    expect(DEFAULT_PROJECT_VALUE["flush"]).toBe(6);
     expect(DEFAULT_PROJECT_VALUE["four-of-a-kind"]).toBe(8);
   });
 
@@ -30,17 +67,27 @@ describe("projects helpers", () => {
     expect(PATTERNS_IN_ORDER).toEqual([
       "high-card",
       "pair",
+      "two-pair",
       "three-of-a-kind",
+      "straight",
       "flush",
+      "full-house",
       "four-of-a-kind",
+      "straight-flush",
+      "royal-flush",
     ]);
   });
 
   test("reversePatternOrder is four → high", () => {
     expect(reversePatternOrder()).toEqual([
+      "royal-flush",
+      "straight-flush",
       "four-of-a-kind",
+      "full-house",
       "flush",
+      "straight",
       "three-of-a-kind",
+      "two-pair",
       "pair",
       "high-card",
     ]);

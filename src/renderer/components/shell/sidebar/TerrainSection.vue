@@ -1,6 +1,5 @@
 <template>
-  <section class="section">
-    <h2>Terrain (persisted)</h2>
+  <Panel title="Terrain (persisted)">
     <div class="terrain-row">
       <span>axis1 (Sol↔Sov)</span>
       <span class="value">{{ fmt(terrain.axis1) }}</span>
@@ -9,11 +8,12 @@
       <span>axis2 (Her↔Trn)</span>
       <span class="value">{{ fmt(terrain.axis2) }}</span>
     </div>
-  </section>
+  </Panel>
 </template>
 
 <script setup lang="ts">
 import type { IdeologyTerrain } from "../../../../core/types.ts";
+import Panel from "../../core/Panel.vue";
 
 defineProps<{ terrain: IdeologyTerrain }>();
 
