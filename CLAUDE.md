@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## The project
 
-A deck-building roguelike strategy game. Vue 3 + TypeScript + Vite + Bun. Latest design spec is `docs/superpowers/specs/2026-05-12-tableau-three-tier-redesign-design.md`; the earlier `docs/specs/DECK-BUILDING-REDESIGN.md` is partly superseded.
+A deck-building roguelike strategy game. Vue 3 + TypeScript + Vite + Bun. Design specs live in `docs/superpowers/specs/` (dated; later specs supersede earlier ones — e.g. the 2026-05-13 row-hand-stacking spec replaced the 2026-05-12 spec's 5-pattern model with the current 10-pattern ladder). `docs/specs/DECK-BUILDING-REDESIGN.md` is largely superseded.
 
 Each run (an "Epoch") is a single card-play session on a `Setting` (Homeworld, Generation Ship, Ruined Homeworld). Players build a 3-row column tableau — Land, Influence (Role), Charter — and press **Build** to unlock a Keystone Project whose pattern matches the column's poker shape (a 10-pattern ladder from high-card to royal-flush; see Invariants). The Epoch ends at the turn cap with the **Crisis**: cumulative project values are summed against the Crisis difficulty. Pass → mint Legacy + transition to next Setting. Monuments (records of the strongest project built) and Legacy Cards carry across Epochs.
 

@@ -7,6 +7,7 @@
 
 import { GameAPI } from "../src/facade/GameAPI.ts";
 import { evaluateColumn } from "../src/core/engine/columnPatterns.ts";
+import { PATTERNS_IN_ORDER } from "../src/core/data/projects.ts";
 import type { PatternKind } from "../src/core/types.ts";
 
 const runs = Number(process.argv[2] ?? 50);
@@ -25,13 +26,10 @@ interface RunResult {
 
 function runEpoch(api: GameAPI): RunResult {
   const firstByPattern: Partial<Record<PatternKind, number>> = {};
-  const unlocksByPattern: Record<PatternKind, number> = {
-    "high-card": 0,
-    pair: 0,
-    "three-of-a-kind": 0,
-    flush: 0,
-    "four-of-a-kind": 0,
-  };
+  const unlocksByPattern = Object.fromEntries(PATTERNS_IN_ORDER.map((p) => [p, 0])) as Record<
+    PatternKind,
+    number
+  >;
   let steps = 0;
   const MAX_STEPS = 1000;
   while (api.snapshot().epoch.phase === "play" && steps < MAX_STEPS) {
@@ -118,17 +116,9 @@ function reportFor(settingId: string, runs: number): unknown {
   const totals = results.map((r) => r.totalValue);
   const wins = results.filter((r) => r.won).length;
 
-  const patternKinds: PatternKind[] = [
-    "high-card",
-    "pair",
-    "three-of-a-kind",
-    "flush",
-    "four-of-a-kind",
-  ];
-
   const avgUnlocks: Record<string, number | null> = {};
   const avgFirst: Record<string, number | null> = {};
-  for (const p of patternKinds) {
+  for (const p of PATTERNS_IN_ORDER) {
     avgUnlocks[p] = round(mean(results.map((r) => r.unlocksByPattern[p])));
     const firsts = results
       .map((r) => r.firstByPattern[p])
