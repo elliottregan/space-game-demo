@@ -99,7 +99,7 @@ function onChoose(id: string, u: "potency" | "pliability" | "persistence"): void
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: var(--shadow-overlay);
+  background: var(--scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -107,10 +107,8 @@ function onChoose(id: string, u: "potency" | "pliability" | "persistence"): void
   z-index: 100;
 }
 .modal.crisis-screen {
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--elev-3);
+  background: var(--paper);
+  box-shadow: var(--shadow-lifted);
   padding: var(--space-5);
   max-width: 640px;
   max-height: 90vh;
@@ -123,11 +121,10 @@ function onChoose(id: string, u: "potency" | "pliability" | "persistence"): void
 .modal.crisis-screen h1 {
   margin: 0;
   font-size: 18px;
-  letter-spacing: 0.04em;
 }
 .modal.crisis-screen .flavor {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--ink-muted);
   font-style: italic;
 }
 .modal.crisis-screen .difficulty,
@@ -149,22 +146,19 @@ function onChoose(id: string, u: "potency" | "pliability" | "persistence"): void
   grid-template-columns: 60px 1fr auto auto;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--surface-card);
+  background: var(--mat);
 }
 .step-pattern {
-  color: var(--text-muted);
-  text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  font-size: 11px;
   align-self: center;
 }
 .step-value {
-  color: var(--accent);
+  color: var(--status-positive);
   font-weight: 600;
 }
 .step-running {
-  color: var(--text-subtle);
+  color: var(--ink-subtle);
 }
 .modal.crisis-screen .primary {
   align-self: flex-end;

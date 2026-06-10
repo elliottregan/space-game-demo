@@ -940,3 +940,129 @@
     color: var(--status-info);
   }
 }
+
+@layer components {
+  /* -------------------- Overlays: card list, market, campaign end -------------------- */
+  .eoe-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--scrim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  .eoe-panel {
+    background: var(--paper);
+    box-shadow: var(--shadow-lifted);
+    padding: 24px;
+    width: 680px;
+    max-width: 92vw;
+    max-height: 90vh;
+    overflow: auto;
+  }
+  .eoe-panel h2 {
+    margin: 0 0 8px 0;
+    font-size: 22px;
+  }
+  .eoe-subtitle {
+    color: var(--ink-muted);
+    margin-bottom: 18px;
+  }
+  .eoe-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .card-list-panel {
+    background: var(--paper);
+    box-shadow: var(--shadow-lifted);
+    padding: 20px;
+    width: 780px;
+    max-width: 92vw;
+    max-height: 82vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .card-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .card-list-header h2 {
+    margin: 0;
+    font-size: 16px;
+  }
+  .card-list-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    gap: 8px;
+    overflow: auto;
+    padding: 4px;
+    flex: 1;
+  }
+  .card-list-empty {
+    color: var(--ink-muted);
+    text-align: center;
+    padding: 40px;
+  }
+  .card-list-footer {
+    margin-top: 12px;
+    border-top: 1px solid var(--rule);
+    padding-top: 8px;
+  }
+  .card-list-hint {
+    font-size: 11px;
+    color: var(--ink-subtle);
+  }
+
+  /* -------------------- Legacy choice rows -------------------- */
+  .legacy-choice {
+    background: var(--mat);
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  .legacy-choice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .legacy-choice-header h3 {
+    margin: 0;
+    font-size: 14px;
+  }
+  .legacy-choice-source {
+    font-size: 11px;
+    color: var(--ink-muted);
+  }
+  .upgrade-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .upgrade-option {
+    padding: 8px;
+    text-align: left;
+    font-size: 11px;
+    background: var(--paper);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+  }
+  .upgrade-option.selected {
+    background: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    border-bottom: 3px solid var(--accent);
+  }
+  .upgrade-option .upgrade-name {
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 3px;
+  }
+  .upgrade-option .upgrade-desc {
+    color: var(--ink-muted);
+    font-size: 10px;
+  }
+}
