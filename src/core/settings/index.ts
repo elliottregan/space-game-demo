@@ -14,11 +14,8 @@ export interface SettingRules {
   handSize: number;
   columnCount: number;
   influenceBaseline: number;
-  materialsPerLandBase: number;
-  deckStartMinSize: number;
   /** Turn budget. Crisis fires once `epoch.turn` exceeds this. */
   maxTurns: number;
-  dissentLossThreshold: number;
 }
 
 export interface Setting {
@@ -29,7 +26,7 @@ export interface Setting {
   rules: SettingRules;
   startingDeck: string[];
   startingColumns: ColumnConfig[];
-  /** Exactly one project per pattern (high-card, pair, three, flush, four). */
+  /** Exactly one project per pattern (see PATTERNS_IN_ORDER in data/projects.ts). */
   projects: KeystoneProject[];
   crisis: Crisis;
   transitions: {

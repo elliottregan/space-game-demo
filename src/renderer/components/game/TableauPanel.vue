@@ -1,5 +1,5 @@
 <template>
-  <Panel class="tableau-panel" :title="`Tableau · produces ${production} Mat / turn`">
+  <Panel class="tableau-panel" title="Tableau">
     <div class="tableau-scroll">
       <div
         class="tableau-grid"
@@ -43,7 +43,6 @@ const CARD_WIDTH = 112;
 
 const props = defineProps<{
   columns: Column[];
-  production: number;
   columnBuildable: boolean[];
   buildableLabels: string[]; // one label per column (e.g., "Pair → The Commons (+2)")
   getCardFromHand: (cardId: string) => Card | null;

@@ -8,7 +8,7 @@ import { validateRowHand } from "./rowHands.ts";
 // -------------------------------------------------------------------------
 
 export interface LandRow {
-  /** All same rank when non-empty; max 4 cards. */
+  /** Always forms a valid row-hand (see rowHands.ts); up to 5 cards (straight / full house). */
   cards: Card[];
 }
 
@@ -38,8 +38,6 @@ export interface ColumnConfig {
 // -------------------------------------------------------------------------
 // Placement helpers
 // -------------------------------------------------------------------------
-
-export const MAX_LAND_DEPTH = 4;
 
 export function createEmptyColumn(): Column {
   return {

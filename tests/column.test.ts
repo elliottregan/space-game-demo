@@ -10,7 +10,6 @@ import {
   clearColumn,
   columnCards,
   columnLandRank,
-  MAX_LAND_DEPTH,
 } from "../src/core/engine/column.ts";
 import { getCard, landId, roleId } from "../src/core/data/cards.ts";
 
@@ -37,9 +36,9 @@ describe("column placement", () => {
     expect(canPlaceLand(col, land(7, "heritage"))).toBe(true);
   });
 
-  test("land row caps at MAX_LAND_DEPTH", () => {
+  test("land row rejects a fifth same-rank land (no valid hand beyond four-of-a-kind)", () => {
     const col = createEmptyColumn();
-    for (let i = 0; i < MAX_LAND_DEPTH; i++) placeLand(col, land(7, "solidarity"));
+    for (let i = 0; i < 4; i++) placeLand(col, land(7, "solidarity"));
     expect(canPlaceLand(col, land(7, "solidarity"))).toBe(false);
   });
 

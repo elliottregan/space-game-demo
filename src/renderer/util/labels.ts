@@ -34,12 +34,6 @@ export function suitLabel(ideology: CardIdeology): string {
   return IDEOLOGY_DISPLAY[ideology].abbrev;
 }
 
-export function landMaterialPerTurn(rank: number): number {
-  if (rank <= 5) return 1;
-  if (rank <= 7) return 2;
-  return 3;
-}
-
 export function isDissent(card: Card): boolean {
   return card.tags.includes("dissent");
 }

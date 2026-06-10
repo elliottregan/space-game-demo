@@ -23,28 +23,26 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { LegacyCandidate } from "../../../core/types.ts";
+import type { LegacyCandidate, LegacyUpgrade } from "../../../core/types.ts";
 import { describeEffectSpec } from "../../util/effects.ts";
 
 const props = defineProps<{
   candidate: LegacyCandidate;
-  modelValue: "potency" | "pliability" | "persistence";
+  modelValue: LegacyUpgrade;
 }>();
 
 defineEmits<{
-  "update:modelValue": [value: "potency" | "pliability" | "persistence"];
+  "update:modelValue": [value: LegacyUpgrade];
 }>();
 
 const effectText = computed(() => describeEffectSpec(props.candidate.baseCard.effect));
 
-function upgradeDescription(opt: "potency" | "pliability" | "persistence"): string {
+function upgradeDescription(opt: LegacyUpgrade): string {
   switch (opt) {
     case "potency":
       return "Primary effect +1";
     case "pliability":
       return "Influence cost −1";
-    case "persistence":
-      return "Passive: +1 Mat. when top";
   }
 }
 </script>

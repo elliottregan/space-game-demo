@@ -3,12 +3,10 @@
 import type { Card, Ideology } from "../data/cards.ts";
 import type { CrisisOutcome } from "../data/projects.ts";
 import type { Epoch } from "./epoch.ts";
-import type { IdeologyTerrain, IdeologyVector } from "./ideology.ts";
+import type { IdeologyVector } from "./ideology.ts";
 import type { Setting } from "../settings/index.ts";
 import {
   applyUpgrade,
-  addMonumentToCampaign,
-  applyLossTerrainScar,
   mintCandidatesOnLoss,
   mintCandidatesOnWin,
   type MintingResult,
@@ -24,20 +22,20 @@ import { createRng, type RNG } from "./rng.ts";
 // Campaign-scoped types: minted artifacts, history, the campaign itself.
 // -------------------------------------------------------------------------
 
+/** A record of the strongest project built in a won Epoch. */
 export interface Monument {
   id: string;
-  /** Matches the strongest unlock that triggered it. */
   projectId: string;
   projectName: string;
   mintedOnEpoch: number;
-  terrainDelta: Partial<IdeologyTerrain>;
-  active: boolean;
 }
+
+export type LegacyUpgrade = "potency" | "pliability";
 
 export interface LegacyCard {
   id: string;
   baseCard: Card;
-  upgradePath: "potency" | "pliability" | "persistence";
+  upgradePath: LegacyUpgrade;
   mintedOnEpoch: number;
   mintedFrom: "unlock" | "consolation";
 }
@@ -46,7 +44,7 @@ export interface LegacyCandidate {
   id: string;
   baseCard: Card;
   source: "unlock" | "consolation";
-  suggestedUpgrades: ("potency" | "pliability" | "persistence")[];
+  suggestedUpgrades: LegacyUpgrade[];
 }
 
 export interface EpochResult {
@@ -65,7 +63,6 @@ export interface Campaign {
   currentSettingId: string;
   legacyCards: LegacyCard[];
   monuments: Monument[];
-  terrain: IdeologyTerrain;
   epochHistory: EpochResult[];
   epochCount: number;
 }
@@ -77,7 +74,6 @@ export function createCampaign(seed: number): Campaign {
     currentSettingId: HOMEWORLD.id,
     legacyCards: [],
     monuments: [],
-    terrain: { axis1: 0, axis2: 0 },
     epochHistory: [],
     epochCount: 0,
   };
@@ -129,7 +125,7 @@ export function prepareEndOfEpoch(
 }
 
 /**
- * Finalize an Epoch with chosen upgrade paths. Applies Monument, terrain,
+ * Finalize an Epoch with chosen upgrade paths. Applies Monument,
  * legacy cards, epoch history. Returns the next-Epoch setup or campaign-end.
  */
 export function finalizeEpoch(
@@ -137,7 +133,7 @@ export function finalizeEpoch(
   setting: Setting,
   campaign: Campaign,
   state: EndOfEpochState,
-  upgradeChoices: Record<string, "potency" | "pliability" | "persistence">,
+  upgradeChoices: Record<string, LegacyUpgrade>,
 ): { kind: "next"; epoch: Epoch; setting: Setting } | { kind: "campaign-end" } {
   const legacyCards: LegacyCard[] = state.candidates.map((cand) =>
     applyUpgrade(
@@ -147,10 +143,7 @@ export function finalizeEpoch(
     ),
   );
   campaign.legacyCards.push(...legacyCards);
-  if (state.monument) addMonumentToCampaign(campaign, state.monument);
-  if (state.outcome === "loss") {
-    applyLossTerrainScar(campaign, state.crisis, currentVector(epoch, setting));
-  }
+  if (state.monument) campaign.monuments.push(state.monument);
 
   const result: EpochResult = {
     epochNumber: epoch.epochNumber,

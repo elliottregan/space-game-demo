@@ -45,7 +45,6 @@
       </span>
       <span v-else-if="card.kind === 'land'" class="card-inf-cost">Land</span>
       <span v-else-if="card.kind === 'dissent'" class="card-inf-cost">—</span>
-      <span v-if="showMarketCost" class="card-market-cost">{{ card.marketCost }} Mat</span>
     </div>
   </div>
 </template>
@@ -53,8 +52,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Card } from "../../../core/types.ts";
-import { flattenEffect, describeEffectSpec } from "../../util/effects.ts";
-import { rankLabel, suitLabel, landMaterialPerTurn } from "../../util/labels.ts";
+import { flattenEffect } from "../../util/effects.ts";
+import { rankLabel, suitLabel } from "../../util/labels.ts";
 import SuitGlyph from "./SuitGlyph.vue";
 
 const props = withDefaults(
@@ -64,7 +63,6 @@ const props = withDefaults(
     selected?: boolean;
     unaffordable?: boolean;
     showInfluence?: boolean;
-    showMarketCost?: boolean;
     compact?: boolean;
     draggable?: boolean;
     isDragging?: boolean;
@@ -74,7 +72,6 @@ const props = withDefaults(
     selected: false,
     unaffordable: false,
     showInfluence: true,
-    showMarketCost: false,
     compact: false,
     draggable: false,
     isDragging: false,
@@ -94,19 +91,6 @@ function describeCard(card: Card): string[] {
     const txt = card.flavor ?? "Unplayable.";
     return txt ? [txt] : [];
   }
-  if (card.kind === "land") {
-    const lines: string[] = [`+${landMaterialPerTurn(card.rank)} Mat/turn`];
-    if (card.slotPassive) {
-      const p = describeEffectSpec(card.slotPassive);
-      if (p) lines.push(`${p} (when top)`);
-    }
-    return lines;
-  }
-  const lines = flattenEffect(card.effect);
-  if (card.slotPassive) {
-    const p = describeEffectSpec(card.slotPassive);
-    if (p) lines.push(`On slot: ${p}`);
-  }
-  return lines;
+  return flattenEffect(card.effect);
 }
 </script>

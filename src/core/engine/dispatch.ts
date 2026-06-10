@@ -33,9 +33,9 @@ export function dispatch(epoch: Epoch, ev: GameEvent): void {
     case "card-discarded": {
       epoch.discard.push(ev.card);
       epoch.eventLog.push(ev);
-      // Centralized rule: every discard adds one Quiet Dissent. Recurse
+      // Centralized rule: every discard adds one Dissent. Recurse
       // through dispatch so any future hooks on `dissent-added` apply.
-      dispatch(epoch, { type: "dissent-added", variant: "quiet" });
+      dispatch(epoch, { type: "dissent-added" });
       return; // eventLog already appended above
     }
     case "column-built": {
@@ -54,8 +54,7 @@ export function dispatch(epoch: Epoch, ev: GameEvent): void {
       return;
     }
     case "dissent-added": {
-      const card = makeDissent(ev.variant, ev.ideology);
-      epoch.draw.unshift(card);
+      epoch.draw.unshift(makeDissent());
       break;
     }
     case "turn-ended":

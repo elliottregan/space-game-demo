@@ -29,7 +29,6 @@
         </div>
       </button>
     </div>
-    <button class="market-button" @click="$emit('openMarket')">Market</button>
     <button class="end-turn-big primary" :disabled="ended" @click="$emit('endTurn')">
       End turn
     </button>
@@ -49,7 +48,6 @@ defineProps<{
 
 const emit = defineEmits<{
   view: [which: "deck" | "discard"];
-  openMarket: [];
   endTurn: [];
   dropCard: [cardId: string];
 }>();

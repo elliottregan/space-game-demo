@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A deck-building roguelike strategy game. Vue 3 + TypeScript + Vite + Bun. Latest design spec is `docs/superpowers/specs/2026-05-12-tableau-three-tier-redesign-design.md`; the earlier `docs/specs/DECK-BUILDING-REDESIGN.md` is partly superseded.
 
-Each run (an "Epoch") is a single card-play session on a `Setting` (Homeworld, Generation Ship, Ruined Homeworld). Players build a 3-row column tableau — Land, Influence (Role), Charter — and press **Build** to unlock a Keystone Project whose pattern matches the column's poker shape (high-card / pair / three / flush / four). The Epoch ends at the turn cap with the **Crisis**: cumulative project values are summed against the Crisis difficulty. Pass → mint Legacy + transition to next Setting. Monuments, Legacy Cards, and ideology terrain carry across Epochs.
+Each run (an "Epoch") is a single card-play session on a `Setting` (Homeworld, Generation Ship, Ruined Homeworld). Players build a 3-row column tableau — Land, Influence (Role), Charter — and press **Build** to unlock a Keystone Project whose pattern matches the column's poker shape (a 10-pattern ladder from high-card to royal-flush; see Invariants). The Epoch ends at the turn cap with the **Crisis**: cumulative project values are summed against the Crisis difficulty. Pass → mint Legacy + transition to next Setting. Monuments (records of the strongest project built) and Legacy Cards carry across Epochs.
 
 ## Commands
 
@@ -31,35 +31,37 @@ Organized into three buckets. Each type lives next to the concept it describes; 
 - **Type homes:**
   - `Card`, `EffectSpec`, `Ideology`, `Role`, `Rank`, `CardKind`, etc. → `data/cards.ts`
   - `PatternKind`, `KeystoneProject`, `ProjectUnlock`, `Crisis`, `CrisisOutcome` → `data/projects.ts`
-  - `IdeologyVector`, `IdeologyTerrain`, `Demonym`, `Alignment` → `engine/ideology.ts`
+  - `IdeologyVector`, `Demonym` → `engine/ideology.ts`
   - `Column`, `LandRow`, `InfluenceRow`, `CharterRow`, `ColumnConfig` → `engine/column.ts`
+  - `RowHand` → `engine/rowHands.ts`
   - `GameEvent`, `DiscardSource` → `engine/events.ts`
   - `Epoch`, `EpochPhase`, `EpochStatus` → `engine/epoch.ts`
-  - `Campaign`, `Monument`, `LegacyCard`, `LegacyCandidate`, `EpochResult` → `engine/campaign.ts`
+  - `Campaign`, `Monument`, `LegacyCard`, `LegacyCandidate`, `LegacyUpgrade`, `EpochResult` → `engine/campaign.ts`
   - `Setting`, `SettingRules` → `settings/index.ts`
 - **`data/`** — static content + tunable defaults. Edit here for balance.
   - `cards.ts` — the card pool (Lands, Roles, Charters) + builders + id helpers + `makeDissent()` + all card-related types.
   - `projects.ts` — `DEFAULT_PROJECT_VALUE` (per-pattern value scale), `PATTERNS_IN_ORDER`, `reversePatternOrder`, `getProjectForPattern`, `unlockedIdeologyBreakdown` + project / crisis types.
 - **`settings/`** — one file per scenario. Add a new scenario here.
   - `index.ts` — `Setting` / `SettingRules` types + registry (`SETTINGS`, `SETTING_BY_ID`, `getSetting`).
-  - `homeworld.ts`, `generationShip.ts`, `ruinedHomeworld.ts` — `Setting` definitions. Each owns its `rules` (handSize, columnCount, maxTurns, influenceBaseline, dissentLossThreshold), `startingDeck` (card-id filter), `projects` (one per pattern; per-Setting `value`), `crisis` (id + difficulty + flavor), `transitions`.
+  - `homeworld.ts`, `generationShip.ts`, `ruinedHomeworld.ts` — `Setting` definitions. Each owns its `rules` (handSize, columnCount, maxTurns, influenceBaseline), `startingDeck` (card-id filter), `projects` (one per pattern; per-Setting `value`), `crisis` (id + difficulty + flavor), `transitions`.
 - **`engine/`** — pure logic; no Vue.
   - `rng.ts` — seedable mulberry32 PRNG with `shuffle`.
   - `column.ts` — `Column` types + placement helpers (`canPlaceLand`/`Influence`/`Charter`, `placeLand`/…, `columnFromConfig`, `isBuildable`, `columnCards`).
+  - `rowHands.ts` — row-hand classification (`identifyRowHand`, `validateRowHand`, `canCommitHand`): which poker hand a Land/Influence row forms.
   - `columnPatterns.ts` — `evaluateColumn(col, projects)` returns the highest poker pattern match.
   - `dispatch.ts` — single state-mutation entry point. Every event flows through `dispatch(epoch, event)`. The "every discard adds Dissent" rule lives in the `card-discarded` handler.
   - `events.ts` — `GameEvent` / `DiscardSource` types.
   - `effects.ts` — `applyEffect` (immediate) + `resolveEndOfTurn` (queued) + `drawToHandSize`, `purgeDissent`, `countDissentInDeck`.
-  - `ideology.ts` — ideology types + `deriveVector(columns, terrain)`, `checkAlignment`, `demonym`.
-  - `epoch.ts` — `Epoch` type + lifecycle: `createEpoch`, `currentVector`, `effectiveInfluenceCost`.
-  - `commands.ts` — per-turn player verbs: `placeCard`, `discardLand`, `discardCharter`, `recallInfluence`, `discardColumn`, `discardFromHand`, `buildColumn`.
+  - `ideology.ts` — ideology types + `deriveVector(columns, unlockedProjects, projects)`, `demonym`.
+  - `epoch.ts` — `Epoch` type + lifecycle: `createEpoch`, `currentVector`.
+  - `commands.ts` — per-turn player verbs: `placeCard`, `commitHand` (multi-card lay-down), `discardLand`, `discardCharter`, `recallInfluence`, `discardColumn`, `discardFromHand`, `buildColumn`.
   - `turn.ts` — `endTurn`, `resolveCrisis`.
-  - `legacy.ts` — Legacy minting from `CrisisOutcome`; Monument creation; terrain effects.
+  - `legacy.ts` — Legacy minting from `CrisisOutcome`; Monument record creation.
   - `campaign.ts` — `Campaign` / `Monument` / `LegacyCard` types + `createCampaign`, `prepareEndOfEpoch`, `finalizeEpoch` (Setting transitions).
 
 ### `src/facade/` — command/query API between core and renderer
 
-- `GameAPI.ts` — class that owns `Campaign` + `Setting` + `Epoch` + `RNG`. Commands return `CommandResult<T>`; queries (`snapshot`, `validColumns`, `getEffectiveCost`, …) return immutable-shaped views. `snapshot()` deep-clones mutable collections so shallow-reactive Vue refs see new references after every mutation. Constructor accepts `{ skipLoad?, forceSettingId? }` for testing.
+- `GameAPI.ts` — class that owns `Campaign` + `Setting` + `Epoch` + `RNG`. Commands return `CommandResult<T>`; queries (`snapshot`, `validColumns`, …) return immutable-shaped views. `snapshot()` deep-clones mutable collections so shallow-reactive Vue refs see new references after every mutation. Constructor accepts `{ skipLoad?, forceSettingId? }` for testing.
 - `persistence.ts` — 10-slot save store at `localStorage[deck-demo-saves-v3]`. Auto-archives v2 saves to `deck-demo-saves-v2-archive` on first load (no automatic migration).
 
 ### `src/renderer/` — Vue 3 UI
@@ -68,7 +70,7 @@ Organized into three buckets. Each type lives next to the concept it describes; 
 - `GameService.ts` — reactive bridge. `shallowRef<Snapshot>`, `shallowRef<SaveSlot[]>`, `ref<string | null>` for errors. Every command calls `api.persist()`.
 - `components/` — SFCs, three buckets mirroring `core/`:
   - **`core/`** — pure visual primitives with no game-state knowledge. `Card`, `AxisBar`.
-  - **`shell/`** — chrome and framing around the play area: header (`TurnBar`, `SaveSlotMenu`, `ThemeToggle`), modals (`CampaignEnd`, `CardListModal`, `MarketModal`), sidebar scaffold (`LegacySidebar` + `sidebar/` sections).
+  - **`shell/`** — chrome and framing around the play area: header (`TurnBar`, `SaveSlotMenu`, `ThemeToggle`), modals (`CampaignEnd`, `CardListModal`), rails (`Rail`, `RailFlyout` + `sidebar/` sections).
   - **`game/`** — gameplay-bound UI: tableau (`TableauPanel`, `TableauColumn`, `LandCell`, `InfluenceCell`, `CharterCell`, `ColumnFooter`), hand (`HandPanel`), piles (`DeckDiscardPanel`), info panels (`IdeologyDisplay`, `UnlockedProjectsPanel`), Crisis flow (`CrisisScreen`, `LegacyChoiceRow`).
 
 ### Scripts
@@ -77,12 +79,15 @@ Organized into three buckets. Each type lives next to the concept it describes; 
 
 ## Invariants worth remembering
 
-- **A column is buildable when** all three rows are filled: ≥1 Land + Role + Charter. The poker pattern is the column's land count (1 = high-card, 2 = pair, 3 = three, 4 = four-of-a-kind), upgraded to **Flush** if every card in the column shares one ideology. Four > Flush > Three > Pair > High Card.
+- **A column is buildable when** all three rows are filled: ≥1 Land + ≥1 Role + Charter.
+- **The pattern is a 10-rung poker ladder** (`PATTERNS_IN_ORDER`): high-card < pair < two-pair < three-of-a-kind < straight < flush < full-house < four-of-a-kind < straight-flush < royal-flush. The Land row and Influence row are each classified as a row-hand (`rowHands.ts`); the column resolves to the highest applicable pattern (`columnPatterns.ts`). **Flush** = every card in the column (charter included) shares one non-wild ideology; **straight-flush** = land-row straight + flush; **royal-flush** = role-row straight + flush. Full-house can also be trips in one row + a pair in the other; two-pair can be a pair in each row.
+- **Every intermediate row state must itself be a valid row-hand.** Single cards placed one at a time can only grow same-rank stacks (high-card → pair → trips → quads). Straights, two-pairs, and full houses are laid down via `commitHand` (multi-card commit from hand).
 - **A Setting's `startingDeck` is just a list of card ids.** Filter `ALL_CARDS` however you like (by ideology, by rank, by tag) — see Generation Ship for an example of a 2-ideology constrained deck.
-- **Three-of-a-Kind and Four-of-a-Kind are gated by deck composition.** They require N Lands of the same rank in the deck. A 2-ideology filter caps you at Pair / Flush.
-- **Every discard adds 1 Quiet Dissent** (deliberate hand discards, tableau discards, column discards). End-of-turn hand cycling is *not* a discard — it does not add Dissent.
-- **Crisis fires when `turn > rules.maxTurns`.** `resolveCrisis` walks unlocked projects in `four → flush → three → pair → high-card` order, sums their `value`, compares to `crisis.difficulty`. Pass → win + Legacy mint. Fail → loss.
-- **Ideology is derived**, never stored as a drifting float. `deriveVector(columns, terrain)` sums `card.rank` over every card in every column and adds the persisted terrain offset.
+- **Same-rank patterns are gated by deck composition.** N-of-a-kind requires N cards of one rank in the deck. A 2-ideology filter caps any rank at 2 copies, ruling out trips / quads / full-house but not straights or flushes.
+- **Dissent is pure deck clog.** Every deliberate discard (hand, tableau, column, recall, and the cascade after a Build) shuffles one unplayable Dissent card into the draw pile. End-of-turn hand cycling is *not* a discard — it does not add Dissent. There is no dissent-based loss condition.
+- **Crisis fires when `turn > rules.maxTurns`.** `resolveCrisis` sums the `value` of every unlocked project (duplicates count) and compares to `crisis.difficulty`. Pass → win + Legacy mint. Fail → loss.
+- **Influence resets to `rules.influenceBaseline` every turn** — unspent Influence does not carry over.
+- **Ideology is derived**, never stored as a drifting float. `deriveVector(columns, unlockedProjects, projects)` sums per-card axis contributions plus a per-unlock contribution scaled by project value.
 - **State mutation goes through `dispatch(epoch, event)`** so rules like "discard → Dissent" stay in one place.
 - **Vue reactivity** is driven via `shallowRef` + `GameAPI.snapshot()` returning fresh array/object references each call. Do **not** mutate nested state and expect Vue to notice — rebuild the snapshot.
 
@@ -103,7 +108,7 @@ After tweaking, run `bun run scripts/analyze-crisis.ts 300 <settingId>` to see t
 Bun test runner, tests in `tests/`:
 
 - `column.test.ts` — column placement rules
-- `columnPatterns.test.ts` — pattern evaluator (high-card / pair / three / flush / four)
+- `columnPatterns.test.ts` — pattern evaluator (full 10-pattern ladder)
 - `dispatch.test.ts` — event dispatch + side-effect rules
 - `projects.test.ts` — project helpers + ideology breakdown
 - `ideology.test.ts` — vector derivation

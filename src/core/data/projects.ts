@@ -51,7 +51,7 @@ export interface Crisis {
 export interface CrisisOutcome {
   totalValue: number;
   cleared: boolean;
-  /** Ordered: four → flush → three → pair → high-card, then by turn. */
+  /** Ordered highest pattern first (reverse of PATTERNS_IN_ORDER), then by turn. */
   contributingUnlocks: ProjectUnlock[];
 }
 
