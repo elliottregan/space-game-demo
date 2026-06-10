@@ -96,7 +96,7 @@ const CRISIS: Crisis = {
   id: "ship-deep-cold",
   name: "Deep Cold",
   flavor: "The ship enters a silent corridor between stars.",
-  difficulty: 10,
+  difficulty: 16,
 };
 
 export const GENERATION_SHIP: Setting = {
