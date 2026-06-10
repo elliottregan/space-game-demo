@@ -863,7 +863,8 @@ The dropdown is a floating paper sheet; rows separated by rules. Append:
     background: var(--paper-hover);
   }
   .slot-row.active .slot-switch {
-    color: var(--accent);
+    /* accent-deep, not accent: accent fails contrast as a text color in light theme */
+    color: var(--accent-deep);
     font-weight: 600;
   }
   .slot-row-label {
