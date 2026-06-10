@@ -8,7 +8,6 @@
         selectable,
         selected,
         unaffordable,
-        wild: card.ideology === 'wild',
         compact,
         dragging: isDragging,
       },
@@ -30,7 +29,7 @@
       <SuitGlyph
         :variant="card.kind === 'dissent' ? 'dissent' : card.ideology"
         :size="14"
-        :title="suitLabel(card.ideology)"
+        :title="card.kind === 'dissent' ? 'Dissent' : suitLabel(card.ideology)"
       />
     </div>
     <div class="card-name">{{ card.name }}</div>

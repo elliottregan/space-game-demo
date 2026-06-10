@@ -370,6 +370,9 @@
   .card.selectable,
   .card[draggable="true"] {
     box-shadow: var(--shadow-interactive);
+    transition:
+      background 0.08s,
+      box-shadow 0.1s;
   }
   .card.selectable {
     cursor: pointer;
