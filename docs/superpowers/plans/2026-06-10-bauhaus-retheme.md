@@ -957,10 +957,14 @@ don't exist):
 - [ ] **Step 4.5: Fix App.vue inline style + SaveSlotMenu trigger contrast**
 
 In `App.vue`, the header subtitle uses `var(--text-muted)`; on the ink band
-that's wrong now. Change the inline style to:
+that's wrong now (mat-oriented grays lack contrast on ink). Change the inline
+style to a ground-tinted mix:
 
 ```html
-<span class="app-sub" style="color: var(--ink-subtle); font-size: 12px">
+<span
+  class="app-sub"
+  style="color: color-mix(in srgb, var(--ground) 72%, var(--ink)); font-size: 12px"
+>
 ```
 
 Check `src/renderer/components/shell/SaveSlotMenu.vue`'s template: the
