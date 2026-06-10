@@ -71,8 +71,6 @@
     --shadow-interactive: 2px 3px 7px rgba(0, 0, 0, 0.35);
     --shadow-lifted: 5px 8px 18px rgba(0, 0, 0, 0.45);
     --shadow-pressed: 1px 1px 3px rgba(0, 0, 0, 0.25);
-    /* Inset recess for empty card slots — absence, not elevation. */
-    --shadow-slot: inset 2px 3px 6px rgba(0, 0, 0, 0.4);
     --scrim: rgba(10, 9, 8, 0.7);
 
     /* Spacing scale */
@@ -120,7 +118,6 @@
       --shadow-interactive: 2px 3px 7px rgba(20, 19, 15, 0.16);
       --shadow-lifted: 5px 8px 18px rgba(20, 19, 15, 0.22);
       --shadow-pressed: 1px 1px 3px rgba(20, 19, 15, 0.14);
-      --shadow-slot: inset 2px 3px 6px rgba(20, 19, 15, 0.18);
       --scrim: rgba(20, 19, 15, 0.45);
     }
   }
@@ -157,7 +154,6 @@
     --shadow-interactive: 2px 3px 7px rgba(20, 19, 15, 0.16);
     --shadow-lifted: 5px 8px 18px rgba(20, 19, 15, 0.22);
     --shadow-pressed: 1px 1px 3px rgba(20, 19, 15, 0.14);
-    --shadow-slot: inset 2px 3px 6px rgba(20, 19, 15, 0.18);
     --scrim: rgba(20, 19, 15, 0.45);
   }
 }
@@ -628,8 +624,8 @@
     color: var(--ink-subtle);
   }
 
-  /* Empty / locked slots read as a card-shaped recess in the table — same
-     footprint as a card, telling the player a card goes here. */
+  /* An empty slot is a flat card-shaped block — same footprint as a card,
+     telling the player a card goes here. */
   .cell-empty,
   .cell-locked {
     display: flex;
@@ -640,13 +636,15 @@
     width: 112px;
     height: 144px;
     margin: auto;
-    background: color-mix(in srgb, var(--mat-strong) 70%, transparent);
-    box-shadow: var(--shadow-slot);
     color: var(--ink-subtle);
     font-size: 11px;
     text-align: center;
   }
-  /* Locked slots are fainter: the spot exists but isn't available yet. */
+  .cell-empty {
+    background: color-mix(in srgb, var(--mat-strong) 70%, transparent);
+  }
+  /* Locked spots stay bare ground — only faint text marks them until the
+     prerequisite row is filled. */
   .cell-locked {
     opacity: 0.55;
   }
