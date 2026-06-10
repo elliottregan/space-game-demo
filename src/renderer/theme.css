@@ -265,6 +265,85 @@
   }
 }
 
+@layer layout {
+  .app-root {
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    height: 100%;
+  }
+
+  /* Header: solid ink block — the one inverted band in the frame. */
+  .app-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 16px;
+    background: var(--ink);
+    color: var(--ground);
+  }
+  .app-header h1 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .app-header .spacer {
+    flex: 1;
+  }
+
+  .stats-bar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 6px 16px;
+    border-bottom: 1px solid var(--rule-strong);
+    background: var(--ground);
+  }
+  .turn-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .app-main {
+    display: grid;
+    grid-template-columns: var(--rail-width) minmax(0, 1fr) var(--rail-width);
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .play-area {
+    position: relative;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto auto;
+    padding: var(--space-3);
+    gap: var(--space-3);
+    /* Hidden so the 1fr row truly bounds the TableauPanel's height — the
+       panel becomes the scroll container for overflowing tableau columns
+       rather than dumping the overflow up to the play area. */
+    overflow: hidden;
+    min-width: 0;
+    min-height: 0;
+  }
+  .hand-panel {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .hand-row {
+    display: flex;
+    gap: var(--space-3);
+    align-items: stretch;
+    min-width: 0;
+  }
+
+  .error-bar {
+    background: color-mix(in srgb, var(--status-negative) 14%, var(--ground));
+    color: var(--status-negative);
+    padding: 6px 12px;
+    border-top: 2px solid var(--status-negative);
+    font-size: 12px;
+  }
+}
+
 @layer components {
   /* -------------------- Card -------------------- */
   /* A card is paper on the table: square, flat face, suit bar on top.
@@ -397,5 +476,139 @@
   }
   .card[draggable="true"]:active {
     cursor: grabbing;
+  }
+}
+
+@layer components {
+  /* -------------------- Save slot menu -------------------- */
+  .save-slot-menu {
+    position: relative;
+  }
+  .slot-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 240px;
+    padding: 6px 12px;
+    background: var(--paper);
+    border: none;
+    box-shadow: var(--shadow-interactive);
+    color: var(--ink);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .slot-trigger:hover {
+    background: var(--paper-hover);
+  }
+  .slot-label {
+    flex: 1;
+    text-align: left;
+  }
+  .slot-caret {
+    color: var(--ink-muted);
+    font-size: 10px;
+  }
+
+  .slot-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 320px;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: var(--shadow-lifted);
+    z-index: 20;
+    overflow: hidden;
+  }
+  .slot-header {
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--ink-muted);
+    border-bottom: 1px solid var(--rule);
+  }
+  .slot-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 320px;
+    overflow: auto;
+  }
+  .slot-row {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--rule);
+  }
+  .slot-row:last-child {
+    border-bottom: 0;
+  }
+  .slot-row.empty {
+    padding: 12px;
+    color: var(--ink-subtle);
+    font-size: 12px;
+    justify-content: center;
+  }
+  .slot-row.active {
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  .slot-switch {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--ink);
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .slot-switch:hover {
+    background: var(--paper-hover);
+  }
+  .slot-row.active .slot-switch {
+    /* accent-deep, not accent: accent fails contrast as a text color in light theme */
+    color: var(--accent-deep);
+    font-weight: 600;
+  }
+  .slot-row-label {
+    flex: 1;
+  }
+  .slot-row-time {
+    color: var(--ink-subtle);
+    font-size: 10px;
+    margin-left: 8px;
+  }
+  .slot-delete {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--ink-subtle);
+    font-size: 16px;
+    line-height: 1;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  .slot-delete:hover:not(:disabled) {
+    color: var(--status-negative);
+  }
+  .slot-delete:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .slot-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--rule);
+  }
+  .slot-footer button.primary {
+    flex: 1;
+  }
+  .slot-hint {
+    font-size: 10px;
+    color: var(--ink-subtle);
   }
 }

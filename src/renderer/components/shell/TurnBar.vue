@@ -33,9 +33,9 @@ defineEmits<{ "end-turn": [] }>();
 
 <style scoped>
 .turn-progress.near {
-  color: var(--warn, #c80);
+  color: var(--status-warning);
 }
 .turn-progress.edge {
-  color: var(--danger, #c33);
+  color: var(--status-negative);
 }
 </style>
