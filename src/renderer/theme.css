@@ -289,6 +289,10 @@
   .app-header .spacer {
     flex: 1;
   }
+  .app-header .app-sub {
+    color: color-mix(in srgb, var(--ground) 72%, var(--ink));
+    font-size: 12px;
+  }
 
   .stats-bar {
     display: flex;
@@ -336,7 +340,7 @@
   }
 
   .error-bar {
-    background: color-mix(in srgb, var(--status-negative) 14%, var(--ground));
+    background: color-mix(in srgb, var(--status-negative) 8%, var(--ground));
     color: var(--status-negative);
     padding: 6px 12px;
     border-top: 2px solid var(--status-negative);
@@ -517,7 +521,7 @@
     background: var(--paper);
     color: var(--ink);
     box-shadow: var(--shadow-lifted);
-    z-index: 20;
+    z-index: 60; /* above rail flyouts (50) */
     overflow: hidden;
   }
   .slot-header {
@@ -603,6 +607,7 @@
     gap: 8px;
     padding: 8px 12px;
     border-top: 1px solid var(--rule);
+    background: color-mix(in srgb, var(--rule) 30%, var(--paper));
   }
   .slot-footer button.primary {
     flex: 1;

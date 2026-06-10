@@ -2,12 +2,7 @@
   <div class="app-root">
     <header class="app-header">
       <h1>Deck-Building Demo</h1>
-      <span
-        class="app-sub"
-        style="color: color-mix(in srgb, var(--ground) 72%, var(--ink)); font-size: 12px"
-      >
-        Throwaway prototype · {{ demonymLabel }}
-      </span>
+      <span class="app-sub"> Throwaway prototype · {{ demonymLabel }} </span>
       <div class="spacer"></div>
       <SaveSlotMenu
         :slots="slots"
