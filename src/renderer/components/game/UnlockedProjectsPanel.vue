@@ -1,7 +1,7 @@
 <template>
   <Panel
     class="unlocked-projects"
-    :title="`Keystone Projects (${unlocks.length}/${PATTERNS_IN_ORDER.length})`"
+    :title="`Keystone projects (${unlocks.length}/${PATTERNS_IN_ORDER.length})`"
   >
     <div class="project-list">
       <div
@@ -10,19 +10,19 @@
         class="project-card"
         :class="{ unlocked: findUnlock(pattern) }"
       >
-        <span class="project-star" v-if="findUnlock(pattern)">★</span>
-        <span class="project-star empty" v-else>○</span>
+        <span class="project-mark" :class="{ filled: findUnlock(pattern) }"></span>
         <span class="project-name">{{ getProjectName(pattern) }}</span>
         <span class="project-pattern">{{ patternLabel(pattern) }}</span>
-        <template v-if="findUnlock(pattern)">
+        <span v-if="findUnlock(pattern)" class="project-ideologies">
           <span
             v-for="(count, ideology) in ideologyBreakdown(findUnlock(pattern)!)"
             :key="ideology"
             class="project-ideology"
+            :title="`${ideology}: ${count}`"
           >
-            {{ ideology }}: {{ count }}
+            <SuitGlyph :variant="ideology" :size="10" /> {{ count }}
           </span>
-        </template>
+        </span>
       </div>
     </div>
   </Panel>
@@ -33,6 +33,7 @@ import type { Ideology, KeystoneProject, ProjectUnlock, PatternKind } from "../.
 import { PATTERNS_IN_ORDER } from "../../../core/data/projects.ts";
 import { zeroIdeologyBreakdown } from "../../../core/data/ideologies.ts";
 import Panel from "../core/Panel.vue";
+import SuitGlyph from "../core/SuitGlyph.vue";
 import { patternLabel } from "../../util/labels.ts";
 
 const props = defineProps<{
@@ -70,50 +71,47 @@ function ideologyBreakdown(u: ProjectUnlock): Partial<Record<Ideology, number>> 
   flex-wrap: wrap;
   gap: var(--space-2);
 }
-
 .project-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-card);
+  background: var(--mat-strong);
   min-width: 120px;
   opacity: 0.6;
 }
-
 .project-card.unlocked {
   opacity: 1;
-  border-color: var(--accent, gold);
-  background: var(--surface-3, var(--surface));
+  border-top: 3px solid var(--accent);
 }
-
-.project-star {
-  font-size: 1rem;
-  color: var(--accent, gold);
+/* status glyph, not a container — the one sanctioned 4-side border */
+.project-mark {
+  width: 10px;
+  height: 10px;
+  background: transparent;
+  border: 1px solid var(--ink-subtle);
 }
-
-.project-star.empty {
-  opacity: 0.3;
-  color: var(--text-subtle);
+.project-mark.filled {
+  background: var(--accent);
+  border-color: var(--accent);
 }
-
 .project-name {
   font-weight: 600;
   font-size: 0.85rem;
 }
-
 .project-pattern {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-subtle);
+  font-size: 0.75rem;
+  color: var(--ink-subtle);
 }
-
+.project-ideologies {
+  display: flex;
+  gap: var(--space-2);
+}
 .project-ideology {
   font-size: 0.75rem;
-  color: var(--text-subtle);
-  text-transform: capitalize;
+  color: var(--ink-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 </style>

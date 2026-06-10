@@ -21,9 +21,11 @@ const icon = computed(() => {
 
 <style scoped>
 .theme-toggle {
-  background: var(--surface-card);
-  color: var(--text);
-  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--ground);
+  border: none;
+  box-shadow: none;
+  border-bottom: 2px solid var(--ground);
   padding: 6px 10px;
   font-size: 12px;
   display: flex;
@@ -33,6 +35,6 @@ const icon = computed(() => {
   justify-content: center;
 }
 .theme-toggle:hover {
-  background: var(--surface-card-hover);
+  background: color-mix(in srgb, var(--ground) 15%, transparent);
 }
 </style>

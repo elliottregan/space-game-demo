@@ -1,0 +1,1016 @@
+/* ------------------------------------------------------------------
+ * Flat Bauhaus theme. See docs/superpowers/specs/2026-06-10-bauhaus-retheme-design.md
+ *
+ * Layers: reset < tokens < base < layout < components.
+ * Dark ("Dark Bauhaus") values live on :root (the default).
+ * Light ("Classic Bauhaus") overrides live under :root[data-theme="light"]
+ * and under prefers-color-scheme: light when no explicit theme is set.
+ * The theme attribute is set on <html> by src/renderer/util/theme.ts.
+ *
+ * Hard rules enforced by this file's vocabulary:
+ *  - no radius tokens (square corners everywhere)
+ *  - no uppercase / letter-spacing utilities (sentence case everywhere)
+ *  - shadows are semantic: interactive elements and floating sheets only
+ * ------------------------------------------------------------------ */
+
+@import "@fontsource-variable/space-grotesk";
+
+@layer reset, tokens, base, layout, components;
+
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+}
+
+@layer tokens {
+  :root {
+    /* The table */
+    --ground: #161513;
+    --mat: #1e1c18;
+    --mat-strong: #26231d;
+
+    /* Physical objects (cards, piles, buttons, sheets) */
+    --paper: #2b2823;
+    --paper-hover: #332f28;
+    --paper-dissent: #3a2422;
+
+    /* Ink */
+    --ink: #f0ede6;
+    --ink-muted: #a8a399;
+    --ink-subtle: #8d887c;
+
+    /* Structural rules (lines that separate, never enclose) */
+    --rule: #3c3830;
+    --rule-strong: #57524a;
+
+    /* Primary action */
+    --accent: #eebf2e;
+    --accent-hover: #f6cd4d;
+    --accent-ink: #161513;
+    --accent-deep: #eebf2e; /* accent usable as ink on paper/mat */
+
+    /* Ideology suits */
+    --suit-solidarity: #3f74c9;
+    --suit-sovereignty: #e23b30;
+    --suit-transformation: #44a04e;
+    --suit-heritage: #a76bd6;
+    --suit-wild: var(--accent);
+    --suit-dissent: var(--suit-sovereignty);
+
+    /* Status */
+    --status-positive: #44a04e;
+    --status-negative: #e23b30;
+    --status-warning: #eebf2e;
+    --status-info: #3f74c9;
+
+    /* Semantic shadows — hard offset blocks, no blur (paper cutout), kept
+       quiet via low alpha. Interactive = "you can move or click this";
+       lifted = hover/drag/floating sheet. */
+    --shadow-interactive: 2px 3px 0 rgba(0, 0, 0, 0.45);
+    --shadow-lifted: 5px 7px 0 rgba(0, 0, 0, 0.55);
+    --shadow-pressed: 1px 1px 0 rgba(0, 0, 0, 0.35);
+    --scrim: rgba(10, 9, 8, 0.7);
+
+    /* Spacing scale */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+
+    /* Layout */
+    --rail-width: 44px;
+  }
+
+  /* Light theme — follows OS when user hasn't chosen. */
+  /* NOTE: keep in sync with the other light block (media-query/explicit pair). */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --ground: #f4f1ea;
+      --mat: #e9e4d8;
+      --mat-strong: #ddd6c4;
+      --paper: #fbf9f4;
+      --paper-hover: #f0ece1;
+      --paper-dissent: #f3ddd9;
+      --ink: #14130f;
+      --ink-muted: #5a5648;
+      --ink-subtle: #6f6a5c;
+      --rule: #cbc4b2;
+      --rule-strong: #14130f;
+      --accent: #e9b400;
+      --accent-hover: #f5c41a;
+      --accent-ink: #14130f;
+      --accent-deep: #8a6d00;
+      --suit-solidarity: #1c4fa0;
+      --suit-sovereignty: #d02e26;
+      --suit-transformation: #1f7d33;
+      --suit-heritage: #7b2fa3;
+      /* darker than --accent: suit colors render as text on paper */
+      --suit-wild: #c79a00;
+      --suit-dissent: var(--suit-sovereignty);
+      --status-positive: #1f7d33;
+      --status-negative: #d02e26;
+      --status-warning: #a87a00;
+      --status-info: #1c4fa0;
+      --shadow-interactive: 2px 3px 0 rgba(20, 19, 15, 0.2);
+      --shadow-lifted: 5px 7px 0 rgba(20, 19, 15, 0.26);
+      --shadow-pressed: 1px 1px 0 rgba(20, 19, 15, 0.16);
+      --scrim: rgba(20, 19, 15, 0.45);
+    }
+  }
+
+  /* Explicit light — overrides even when OS is dark. */
+  /* NOTE: keep in sync with the other light block (media-query/explicit pair). */
+  :root[data-theme="light"] {
+    --ground: #f4f1ea;
+    --mat: #e9e4d8;
+    --mat-strong: #ddd6c4;
+    --paper: #fbf9f4;
+    --paper-hover: #f0ece1;
+    --paper-dissent: #f3ddd9;
+    --ink: #14130f;
+    --ink-muted: #5a5648;
+    --ink-subtle: #6f6a5c;
+    --rule: #cbc4b2;
+    --rule-strong: #14130f;
+    --accent: #e9b400;
+    --accent-hover: #f5c41a;
+    --accent-ink: #14130f;
+    --accent-deep: #8a6d00;
+    --suit-solidarity: #1c4fa0;
+    --suit-sovereignty: #d02e26;
+    --suit-transformation: #1f7d33;
+    --suit-heritage: #7b2fa3;
+    /* darker than --accent: suit colors render as text on paper */
+    --suit-wild: #c79a00;
+    --suit-dissent: var(--suit-sovereignty);
+    --status-positive: #1f7d33;
+    --status-negative: #d02e26;
+    --status-warning: #a87a00;
+    --status-info: #1c4fa0;
+    --shadow-interactive: 2px 3px 0 rgba(20, 19, 15, 0.2);
+    --shadow-lifted: 5px 7px 0 rgba(20, 19, 15, 0.26);
+    --shadow-pressed: 1px 1px 0 rgba(20, 19, 15, 0.16);
+    --scrim: rgba(20, 19, 15, 0.45);
+  }
+}
+
+@layer base {
+  html,
+  body,
+  #app {
+    height: 100%;
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Space Grotesk Variable", "Space Grotesk", system-ui, sans-serif;
+    font-size: 13px;
+    scrollbar-color: var(--rule-strong) transparent;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 700;
+  }
+
+  button {
+    background: var(--paper);
+    color: var(--ink);
+    border: none;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: var(--shadow-interactive);
+    transition:
+      background 0.1s,
+      box-shadow 0.1s,
+      translate 0.1s;
+  }
+  button:hover:not(:disabled) {
+    background: var(--paper-hover);
+  }
+  button:active:not(:disabled) {
+    translate: 1px 1px;
+    box-shadow: var(--shadow-pressed);
+  }
+  /* Not clickable → not physical → no shadow. */
+  button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  button.primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+  button.primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+  button.linklike {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--accent-deep);
+    font-size: 11px;
+    padding: 0;
+    text-decoration: underline;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--rule-strong);
+  }
+}
+
+@layer layout {
+  .app-root {
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    height: 100%;
+  }
+
+  /* Header: solid ink block — the one inverted band in the frame. */
+  .app-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 16px;
+    background: var(--ink);
+    color: var(--ground);
+  }
+  .app-header h1 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .app-header .spacer {
+    flex: 1;
+  }
+  .app-header .app-sub {
+    color: color-mix(in srgb, var(--ground) 72%, var(--ink));
+    font-size: 12px;
+  }
+
+  .stats-bar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 6px 16px;
+    border-bottom: 1px solid var(--rule-strong);
+    background: var(--ground);
+  }
+  .turn-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .app-main {
+    display: grid;
+    grid-template-columns: var(--rail-width) minmax(0, 1fr) var(--rail-width);
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .play-area {
+    position: relative;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto auto;
+    padding: var(--space-3);
+    gap: var(--space-3);
+    /* Hidden so the 1fr row truly bounds the TableauPanel's height — the
+       panel becomes the scroll container for overflowing tableau columns
+       rather than dumping the overflow up to the play area. */
+    overflow: hidden;
+    min-width: 0;
+    min-height: 0;
+  }
+  .hand-panel {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  /* Tableau and hand sit directly on the table — no mat behind them. The
+     ground itself is the playing surface; only the pile zone keeps a mat. */
+  .tableau-panel,
+  .hand-panel {
+    --panel-bg: transparent;
+  }
+  .hand-row {
+    display: flex;
+    gap: var(--space-3);
+    align-items: stretch;
+    min-width: 0;
+  }
+
+  .error-bar {
+    background: color-mix(in srgb, var(--status-negative) 8%, var(--ground));
+    color: var(--status-negative);
+    padding: 6px 12px;
+    border-top: 2px solid var(--status-negative);
+    font-size: 12px;
+  }
+}
+
+@layer components {
+  /* -------------------- Card -------------------- */
+  /* A card is paper on the table: square, flat face, suit bar on top.
+     Shadow only when it can be picked up (selectable/draggable). */
+  .card {
+    --suit: var(--ink-subtle);
+    position: relative;
+    width: 112px;
+    height: 150px;
+    background: var(--paper);
+    border-top: 5px solid var(--suit);
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    font-size: 11px;
+    flex-shrink: 0;
+    overflow: hidden;
+    user-select: none;
+  }
+  .card.suit-solidarity {
+    --suit: var(--suit-solidarity);
+  }
+  .card.suit-sovereignty {
+    --suit: var(--suit-sovereignty);
+  }
+  .card.suit-transformation {
+    --suit: var(--suit-transformation);
+  }
+  .card.suit-heritage {
+    --suit: var(--suit-heritage);
+  }
+  .card.suit-wild {
+    --suit: var(--suit-wild);
+  }
+  .card.kind-dissent {
+    --suit: var(--suit-dissent);
+    background: var(--paper-dissent);
+  }
+
+  .card-watermark {
+    position: absolute;
+    right: -28px;
+    bottom: -28px;
+    opacity: 0.13;
+    pointer-events: none;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    color: var(--suit);
+  }
+  .card-rank {
+    font-size: 16px;
+    line-height: 1;
+  }
+  .card-name {
+    font-size: 11px;
+    font-weight: 600;
+    margin: 4px 0;
+    line-height: 1.2;
+    color: var(--ink);
+  }
+  .card-effect-list {
+    list-style: none;
+    padding: 0;
+    margin: 4px 0 0 0;
+    font-size: 10px;
+    color: var(--ink-muted);
+    line-height: 1.35;
+    flex: 1;
+    overflow: hidden;
+  }
+  .card-effect-list li {
+    padding-left: 8px;
+    position: relative;
+  }
+  .card-effect-list li::before {
+    content: "·";
+    position: absolute;
+    left: 0;
+    color: var(--ink-subtle);
+  }
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 4px;
+    font-size: 10px;
+    color: var(--ink-muted);
+  }
+  .card-inf-cost {
+    color: var(--suit);
+    font-weight: 700;
+  }
+  .card-market-cost {
+    color: var(--ink-muted);
+  }
+
+  .card.selectable,
+  .card[draggable="true"] {
+    box-shadow: var(--shadow-interactive);
+    transition:
+      background 0.08s,
+      box-shadow 0.1s;
+  }
+  .card.selectable {
+    cursor: pointer;
+  }
+  .card.selectable:hover {
+    background: var(--paper-hover);
+    box-shadow: var(--shadow-lifted);
+  }
+  .card.selected {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+    box-shadow: var(--shadow-lifted);
+  }
+  .card.unaffordable {
+    opacity: 0.55;
+  }
+  .card.dragging {
+    opacity: 0.35;
+  }
+  .card[draggable="true"] {
+    cursor: grab;
+  }
+  .card[draggable="true"]:active {
+    cursor: grabbing;
+  }
+}
+
+@layer components {
+  /* -------------------- Save slot menu -------------------- */
+  .save-slot-menu {
+    position: relative;
+  }
+  .slot-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 240px;
+    padding: 6px 12px;
+    background: var(--paper);
+    border: none;
+    box-shadow: var(--shadow-interactive);
+    color: var(--ink);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .slot-trigger:hover {
+    background: var(--paper-hover);
+  }
+  .slot-label {
+    flex: 1;
+    text-align: left;
+  }
+  .slot-caret {
+    color: var(--ink-muted);
+    font-size: 10px;
+  }
+
+  .slot-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 320px;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: var(--shadow-lifted);
+    z-index: 60; /* above rail flyouts (50) */
+    overflow: hidden;
+  }
+  .slot-header {
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--ink-muted);
+    border-bottom: 1px solid var(--rule);
+  }
+  .slot-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 320px;
+    overflow: auto;
+  }
+  .slot-row {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--rule);
+  }
+  .slot-row:last-child {
+    border-bottom: 0;
+  }
+  .slot-row.empty {
+    padding: 12px;
+    color: var(--ink-subtle);
+    font-size: 12px;
+    justify-content: center;
+  }
+  .slot-row.active {
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  .slot-switch {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--ink);
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .slot-switch:hover {
+    background: var(--paper-hover);
+  }
+  .slot-row.active .slot-switch {
+    /* accent-deep, not accent: accent fails contrast as a text color in light theme */
+    color: var(--accent-deep);
+    font-weight: 600;
+  }
+  .slot-row-label {
+    flex: 1;
+  }
+  .slot-row-time {
+    color: var(--ink-subtle);
+    font-size: 10px;
+    margin-left: 8px;
+  }
+  .slot-delete {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--ink-subtle);
+    font-size: 16px;
+    line-height: 1;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  .slot-delete:hover:not(:disabled) {
+    color: var(--status-negative);
+  }
+  .slot-delete:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .slot-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--rule);
+    background: color-mix(in srgb, var(--rule) 30%, var(--paper));
+  }
+  .slot-footer button.primary {
+    flex: 1;
+  }
+  .slot-hint {
+    font-size: 10px;
+    color: var(--ink-subtle);
+  }
+}
+
+@layer components {
+  /* -------------------- Tableau cells -------------------- */
+  .cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    position: relative;
+    min-width: 112px;
+    width: 112px;
+    margin-inline: auto;
+  }
+  .cell.land-cell,
+  .cell.influence-cell,
+  .cell.charter-cell {
+    height: 150px;
+  }
+  /* Land and Influence cells grow horizontally with their CardStacks. */
+  .cell.land-cell,
+  .cell.influence-cell {
+    width: 100%;
+  }
+  .cell.locked {
+    color: var(--ink-subtle);
+  }
+
+  /* An empty slot is a flat card-shaped block — same footprint as a card,
+     telling the player a card goes here. */
+  .cell-empty,
+  .cell-locked {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 112px;
+    height: 144px;
+    margin: auto;
+    color: var(--ink-subtle);
+    font-size: 11px;
+    text-align: center;
+  }
+  .cell-empty {
+    background: color-mix(in srgb, var(--mat-strong) 70%, transparent);
+  }
+  /* Locked spots stay bare ground — only faint text marks them until the
+     prerequisite row is filled. */
+  .cell-locked {
+    opacity: 0.55;
+  }
+  .lock-hint {
+    font-size: 10px;
+    color: var(--ink-subtle);
+    padding: 0 8px;
+  }
+
+  .cell-content {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .cell-content .card {
+    margin-bottom: 0;
+  }
+  .cell-action {
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    padding: 2px 8px;
+    /* Above stacked cards (max ~stack-size) and above the hover-pop value
+       (9999) so the button stays clickable even while inspecting a card. */
+    z-index: 10000;
+  }
+
+  /* Drop targets: solid accent-tinted fill, 2px accent rule on the bottom
+     edge. No dashed outlines anywhere. */
+  .cell.drop-target {
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    border-bottom: 2px solid var(--accent);
+  }
+  .cell.drag-over {
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    border-bottom: 2px solid var(--accent);
+  }
+
+  .column-footer {
+    display: flex;
+    gap: 4px;
+    flex-direction: column;
+  }
+  .column-footer button {
+    font-size: 11px;
+    padding: 4px 6px;
+  }
+}
+
+@layer components {
+  /* -------------------- Hand -------------------- */
+  .hand-cards {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--space-2);
+    min-height: 160px;
+    overflow-x: auto;
+    padding: var(--space-1);
+    scrollbar-width: thin;
+  }
+  .hand-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin-top: var(--space-2);
+    /* Reserve enough vertical space for the meta line + a row of buttons so
+       the panel size stays put when a selection toggles. */
+    min-height: 56px;
+  }
+  .hand-hint {
+    color: var(--ink-subtle);
+    font-size: 12px;
+    margin: auto 0;
+  }
+  .action-meta {
+    font-size: 11px;
+    color: var(--ink-muted);
+    display: flex;
+    gap: var(--space-1);
+    align-items: center;
+  }
+  .action-handlabel {
+    color: var(--ink);
+  }
+  .action-buttons {
+    display: flex;
+    gap: var(--space-1);
+    flex-wrap: wrap;
+  }
+  .action-empty {
+    color: var(--ink-muted);
+    font-size: 12px;
+  }
+
+  /* -------------------- Deck / Discard piles -------------------- */
+  /* A pile is a small stack of paper: the button is the top sheet, one
+     offset pseudo-element suggests the sheets beneath. */
+  .deck-discard-panel {
+    --panel-bg: var(--mat-strong);
+  }
+  .pile-row {
+    display: flex;
+    gap: 8px;
+  }
+  .pile-stack {
+    position: relative;
+    /* Keep the ::after stack edge inside this element's own stacking
+       context so z-index: -1 can't drop it behind ancestors. */
+    isolation: isolate;
+    flex: 1 1 0;
+    height: 106px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    font-family: inherit;
+    color: var(--ink);
+    background: var(--paper);
+    box-shadow: var(--shadow-interactive);
+    transition:
+      translate 0.1s,
+      box-shadow 0.1s;
+  }
+  .pile-stack:hover:not(:disabled) {
+    translate: 0 -2px;
+    box-shadow: var(--shadow-lifted);
+  }
+  .pile-stack:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .pile-stack::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    translate: 4px 4px;
+    /* Ground, not mat-strong: the edge must contrast with the pile zone's
+       mat-strong panel or the stack depth disappears. */
+    background: var(--ground);
+    z-index: -1;
+  }
+  .pile-deck {
+    background: repeating-linear-gradient(135deg, var(--paper) 0 6px, var(--mat-strong) 6px 12px);
+  }
+  .pile-discard {
+    background: var(--paper);
+  }
+  .pile-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+  .pile-count {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1;
+    margin: 4px 0;
+  }
+  .pile-hint {
+    font-size: 9px;
+    color: var(--ink-subtle);
+  }
+  .pile-stack.drop-target {
+    background: color-mix(in srgb, var(--accent) 10%, var(--paper));
+    border-bottom: 2px solid var(--accent);
+  }
+  .pile-stack.drag-over {
+    background: color-mix(in srgb, var(--accent) 22%, var(--paper));
+    border-bottom: 2px solid var(--accent);
+  }
+  .market-button {
+    margin-top: 8px;
+    width: 100%;
+  }
+  .end-turn-big {
+    margin-top: 8px;
+    width: 100%;
+  }
+}
+
+@layer components {
+  /* -------------------- Sidebar sections -------------------- */
+  .monument-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 11px;
+  }
+  .monument-item:last-child {
+    border-bottom: 0;
+  }
+  .monument-item.echo {
+    opacity: 0.55;
+  }
+  .legacy-item {
+    padding: 3px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 11px;
+  }
+  .legacy-item:last-child {
+    border-bottom: 0;
+  }
+  .deck-counts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--ink-muted);
+  }
+  .deck-counts .danger {
+    color: var(--status-negative);
+  }
+  .event-log {
+    max-height: 200px;
+    overflow: auto;
+    font-size: 11px;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+    padding: 4px;
+    background: var(--mat-strong);
+  }
+  .event-entry {
+    color: var(--ink-muted);
+  }
+  .event-entry.warn {
+    color: var(--status-warning);
+  }
+  .event-entry.danger {
+    color: var(--status-negative);
+  }
+  .event-entry.info {
+    color: var(--status-info);
+  }
+}
+
+@layer components {
+  /* -------------------- Overlays: card list, market, campaign end -------------------- */
+  .eoe-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--scrim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  .eoe-panel {
+    background: var(--paper);
+    box-shadow: var(--shadow-lifted);
+    padding: 24px;
+    width: 680px;
+    max-width: 92vw;
+    max-height: 90vh;
+    overflow: auto;
+  }
+  .eoe-panel h2 {
+    margin: 0 0 8px 0;
+    font-size: 22px;
+  }
+  .eoe-subtitle {
+    color: var(--ink-muted);
+    margin-bottom: 18px;
+  }
+  .eoe-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .card-list-panel {
+    background: var(--paper);
+    box-shadow: var(--shadow-lifted);
+    padding: 20px;
+    width: 780px;
+    max-width: 92vw;
+    max-height: 82vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .card-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .card-list-header h2 {
+    margin: 0;
+    font-size: 16px;
+  }
+  .card-list-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    gap: 8px;
+    overflow: auto;
+    padding: 4px;
+    flex: 1;
+  }
+  .card-list-empty {
+    color: var(--ink-muted);
+    text-align: center;
+    padding: 40px;
+  }
+  .card-list-footer {
+    margin-top: 12px;
+    border-top: 1px solid var(--rule);
+    padding-top: 8px;
+  }
+  .card-list-hint {
+    font-size: 11px;
+    color: var(--ink-subtle);
+  }
+
+  /* -------------------- Legacy choice rows -------------------- */
+  .legacy-choice {
+    background: var(--mat);
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  .legacy-choice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .legacy-choice-header h3 {
+    margin: 0;
+    font-size: 14px;
+  }
+  .legacy-choice-source {
+    font-size: 11px;
+    color: var(--ink-muted);
+  }
+  .upgrade-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .upgrade-option {
+    padding: 8px;
+    text-align: left;
+    font-size: 11px;
+    background: var(--paper);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+  }
+  .upgrade-option.selected {
+    background: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    border-bottom: 3px solid var(--accent);
+  }
+  .upgrade-option .upgrade-name {
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 3px;
+  }
+  .upgrade-option .upgrade-desc {
+    color: var(--ink-muted);
+    font-size: 10px;
+  }
+}

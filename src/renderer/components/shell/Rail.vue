@@ -35,13 +35,13 @@ defineEmits<{ toggle: [key: string] }>();
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-2) 0;
-  background: var(--rail-bg);
-  border-right: 1px solid var(--border);
+  background: var(--ground);
+  border-right: 1px solid var(--rule);
   align-items: center;
 }
 .rail-right {
   border-right: none;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid var(--rule);
 }
 .rail-icon {
   width: 32px;
@@ -50,24 +50,22 @@ defineEmits<{ toggle: [key: string] }>();
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
+  border: none;
+  box-shadow: none;
+  color: var(--ink-muted);
   cursor: pointer;
   padding: 0;
   transition:
     color 120ms ease,
-    background 120ms ease,
-    border-color 120ms ease;
+    background 120ms ease;
 }
 .rail-icon:hover {
-  color: var(--text);
-  background: var(--surface-card-hover);
+  color: var(--ink);
+  background: var(--mat);
 }
 .rail-icon.active {
-  color: var(--accent);
-  background: var(--surface-card);
-  border-color: var(--border-strong);
+  color: var(--accent-ink);
+  background: var(--accent);
 }
 .rail-icon:focus-visible {
   outline: 2px solid var(--accent);

@@ -105,18 +105,20 @@ function validForDrag(i: number): { land: boolean; influence: boolean; charter: 
 .row-labels {
   display: grid;
   grid-template-rows: 150px 150px 150px auto;
-  gap: var(--space-1);
+  /* Must match .tableau-column's row gap exactly or labels drift downward
+     row by row. */
+  gap: 6px;
   font-size: 11px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
+  color: var(--ink-muted);
   /* Pin to the left edge as the tableau scrolls horizontally, and keep
      them above stacked cards (max ~hover 9999) and cell buttons (10000). */
   position: sticky;
   left: 0;
   z-index: 10001;
-  background: var(--surface-raised);
+  /* Ground, not mat: the tableau panel is transparent, so the sticky mask
+     must match the table surface behind it. */
+  background: var(--ground);
 }
 .row-label {
   display: flex;

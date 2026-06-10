@@ -14,9 +14,7 @@
         @dragstart="onCardDragStart(card, $event)"
         @dragend="onCardDragEnd"
       />
-      <div v-if="hand.length === 0" style="color: var(--text-subtle); padding: 40px">
-        Empty hand
-      </div>
+      <div v-if="hand.length === 0" style="color: var(--ink-subtle); padding: 40px">Empty hand</div>
     </div>
 
     <!-- Fixed-height action area. Reserves vertical space whether or not a

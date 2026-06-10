@@ -15,9 +15,7 @@ defineProps<{ title: string }>();
 
 <style scoped>
 .panel {
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  background: var(--panel-bg, var(--mat));
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -26,17 +24,14 @@ defineProps<{ title: string }>();
   min-height: 0;
 }
 .panel-header {
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--border);
+  padding: var(--space-2) var(--space-3) 0;
   flex: 0 0 auto;
 }
 .panel-title {
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 .panel-body {
   padding: var(--space-3);

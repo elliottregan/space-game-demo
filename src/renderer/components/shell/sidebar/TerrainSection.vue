@@ -29,6 +29,6 @@ function fmt(n: number): string {
   font-size: 11px;
 }
 .value {
-  color: var(--accent);
+  color: var(--accent-deep);
 }
 </style>

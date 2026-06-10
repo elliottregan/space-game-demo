@@ -2,9 +2,7 @@
   <div class="app-root">
     <header class="app-header">
       <h1>Deck-Building Demo</h1>
-      <span class="app-sub" style="color: var(--text-muted); font-size: 12px">
-        Throwaway prototype · {{ demonymLabel }}
-      </span>
+      <span class="app-sub"> Throwaway prototype · {{ demonymLabel }} </span>
       <div class="spacer"></div>
       <SaveSlotMenu
         :slots="slots"
@@ -86,7 +84,7 @@
         <RailFlyout
           v-if="leftRailActive === 'projects'"
           side="left"
-          title="Keystone Projects"
+          title="Keystone projects"
           @close="leftRailActive = null"
         >
           <UnlockedProjectsPanel
@@ -98,7 +96,7 @@
         <RailFlyout
           v-else-if="leftRailActive === 'crisis'"
           side="left"
-          title="Crisis"
+          title="Crisis counter"
           @close="leftRailActive = null"
         >
           <CrisisCounterPanel
@@ -137,7 +135,7 @@
         <RailFlyout
           v-else-if="rightRailActive === 'legacy'"
           side="right"
-          title="Legacy Cards"
+          title="Legacy cards"
           @close="rightRailActive = null"
         >
           <LegacyCardsSection :cards="snapshot.campaign.legacyCards" />
@@ -145,7 +143,7 @@
         <RailFlyout
           v-else-if="rightRailActive === 'counts'"
           side="right"
-          title="Deck Counts"
+          title="Deck counts"
           @close="rightRailActive = null"
         >
           <DeckCountsSection
@@ -156,7 +154,7 @@
         <RailFlyout
           v-else-if="rightRailActive === 'log'"
           side="right"
-          title="Event Log"
+          title="Event log"
           @close="rightRailActive = null"
         >
           <EventLogSection :events="epoch.eventLog" />
@@ -234,17 +232,17 @@ const leftRailActive = ref<string | null>(null);
 const rightRailActive = ref<string | null>(null);
 
 const leftRailItems: RailItem[] = [
-  { key: "projects", label: "Keystone Projects", icon: "projects" },
-  { key: "crisis", label: "Crisis Counter", icon: "crisis" },
+  { key: "projects", label: "Keystone projects", icon: "projects" },
+  { key: "crisis", label: "Crisis counter", icon: "crisis" },
   { key: "ideology", label: "Ideology", icon: "ideology" },
 ];
 
 const rightRailItems: RailItem[] = [
   { key: "terrain", label: "Terrain", icon: "terrain" },
   { key: "monuments", label: "Monuments", icon: "monuments" },
-  { key: "legacy", label: "Legacy Cards", icon: "legacy" },
-  { key: "counts", label: "Deck Counts", icon: "counts" },
-  { key: "log", label: "Event Log", icon: "log" },
+  { key: "legacy", label: "Legacy cards", icon: "legacy" },
+  { key: "counts", label: "Deck counts", icon: "counts" },
+  { key: "log", label: "Event log", icon: "log" },
 ];
 
 function toggleLeft(key: string): void {

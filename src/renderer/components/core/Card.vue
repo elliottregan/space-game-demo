@@ -8,7 +8,6 @@
         selectable,
         selected,
         unaffordable,
-        wild: card.ideology === 'wild',
         compact,
         dragging: isDragging,
       },
@@ -18,9 +17,20 @@
     @dragstart="$emit('dragstart', $event)"
     @dragend="$emit('dragend', $event)"
   >
+    <SuitGlyph
+      v-if="!compact && card.kind !== 'dissent'"
+      class="card-watermark"
+      :variant="card.ideology"
+      :size="96"
+      :aria-hidden="true"
+    />
     <div class="card-header">
       <span class="card-rank">{{ rankLabel(card.rank) }}</span>
-      <span class="card-suit-chip">{{ suitLabel(card.ideology) }}</span>
+      <SuitGlyph
+        :variant="card.kind === 'dissent' ? 'dissent' : card.ideology"
+        :size="14"
+        :title="card.kind === 'dissent' ? 'Dissent' : suitLabel(card.ideology)"
+      />
     </div>
     <div class="card-name">{{ card.name }}</div>
     <ul v-if="!compact && effectLines.length > 0" class="card-effect-list">
@@ -45,6 +55,7 @@ import { computed } from "vue";
 import type { Card } from "../../../core/types.ts";
 import { flattenEffect, describeEffectSpec } from "../../util/effects.ts";
 import { rankLabel, suitLabel, landMaterialPerTurn } from "../../util/labels.ts";
+import SuitGlyph from "./SuitGlyph.vue";
 
 const props = withDefaults(
   defineProps<{
