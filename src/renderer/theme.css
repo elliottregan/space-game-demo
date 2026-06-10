@@ -264,3 +264,135 @@
     background: var(--rule-strong);
   }
 }
+
+@layer components {
+  /* -------------------- Card -------------------- */
+  /* A card is paper on the table: square, flat face, suit bar on top.
+     Shadow only when it can be picked up (selectable/draggable). */
+  .card {
+    --suit: var(--ink-subtle);
+    position: relative;
+    width: 112px;
+    height: 150px;
+    background: var(--paper);
+    border-top: 5px solid var(--suit);
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    font-size: 11px;
+    flex-shrink: 0;
+    overflow: hidden;
+    user-select: none;
+  }
+  .card.suit-solidarity {
+    --suit: var(--suit-solidarity);
+  }
+  .card.suit-sovereignty {
+    --suit: var(--suit-sovereignty);
+  }
+  .card.suit-transformation {
+    --suit: var(--suit-transformation);
+  }
+  .card.suit-heritage {
+    --suit: var(--suit-heritage);
+  }
+  .card.suit-wild {
+    --suit: var(--suit-wild);
+  }
+  .card.kind-dissent {
+    --suit: var(--suit-dissent);
+    background: var(--paper-dissent);
+  }
+
+  .card-watermark {
+    position: absolute;
+    right: -28px;
+    bottom: -28px;
+    opacity: 0.13;
+    pointer-events: none;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    color: var(--suit);
+  }
+  .card-rank {
+    font-size: 16px;
+    line-height: 1;
+  }
+  .card-name {
+    font-size: 11px;
+    font-weight: 600;
+    margin: 4px 0;
+    line-height: 1.2;
+    color: var(--ink);
+  }
+  .card-effect-list {
+    list-style: none;
+    padding: 0;
+    margin: 4px 0 0 0;
+    font-size: 10px;
+    color: var(--ink-muted);
+    line-height: 1.35;
+    flex: 1;
+    overflow: hidden;
+  }
+  .card-effect-list li {
+    padding-left: 8px;
+    position: relative;
+  }
+  .card-effect-list li::before {
+    content: "·";
+    position: absolute;
+    left: 0;
+    color: var(--ink-subtle);
+  }
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 4px;
+    font-size: 10px;
+    color: var(--ink-muted);
+  }
+  .card-inf-cost {
+    color: var(--suit);
+    font-weight: 700;
+  }
+  .card-market-cost {
+    color: var(--ink-muted);
+  }
+
+  .card.selectable,
+  .card[draggable="true"] {
+    box-shadow: var(--shadow-interactive);
+  }
+  .card.selectable {
+    cursor: pointer;
+  }
+  .card.selectable:hover {
+    background: var(--paper-hover);
+    box-shadow: var(--shadow-lifted);
+  }
+  .card.selected {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+    box-shadow: var(--shadow-lifted);
+  }
+  .card.unaffordable {
+    opacity: 0.55;
+  }
+  .card.dragging {
+    opacity: 0.35;
+  }
+  .card[draggable="true"] {
+    cursor: grab;
+  }
+  .card[draggable="true"]:active {
+    cursor: grabbing;
+  }
+}
