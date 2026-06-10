@@ -156,36 +156,6 @@
     --shadow-pressed: 1px 1px 3px rgba(20, 19, 15, 0.14);
     --scrim: rgba(20, 19, 15, 0.45);
   }
-
-  /* ---- LEGACY COMPATIBILITY ALIASES ------------------------------
-   * Old token names mapped onto the new vocabulary so un-migrated
-   * styles keep working during the rewrite.
-   * DELETED in the final task. Do not add new consumers.
-   * ---------------------------------------------------------------- */
-  :root {
-    --surface-base: var(--ground);
-    --surface-raised: var(--mat);
-    --surface-sunken: var(--mat-strong);
-    --surface-card: var(--paper);
-    --surface-card-hover: var(--paper-hover);
-    --surface-dissent: var(--paper-dissent);
-    --text: var(--ink);
-    --text-muted: var(--ink-muted);
-    --text-subtle: var(--ink-subtle);
-    --border: var(--rule);
-    --border-strong: var(--rule);
-    --accent-text: var(--accent-ink);
-    --radius-sm: 0px;
-    --radius-md: 0px;
-    --radius-lg: 0px;
-    --shadow-card: var(--shadow-interactive);
-    --shadow-dropdown: var(--shadow-lifted);
-    --shadow-overlay: var(--scrim);
-    --elev-1: var(--shadow-interactive);
-    --elev-2: var(--shadow-lifted);
-    --elev-3: var(--shadow-lifted);
-    --rail-bg: var(--ground);
-  }
 }
 
 @layer base {
