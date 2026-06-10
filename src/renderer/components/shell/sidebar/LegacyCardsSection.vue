@@ -19,11 +19,11 @@ defineProps<{ cards: LegacyCard[] }>();
 
 <style scoped>
 .empty {
-  color: var(--text-subtle);
+  color: var(--ink-subtle);
   font-size: 11px;
 }
 .legacy-meta {
   font-size: 10px;
-  color: var(--text-subtle);
+  color: var(--ink-subtle);
 }
 </style>
