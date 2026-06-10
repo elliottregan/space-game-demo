@@ -6,7 +6,8 @@
     :height="size"
     :style="{ color: colorVar }"
     role="img"
-    :aria-label="variant"
+    :aria-label="ariaLabel"
+    :aria-hidden="ariaHidden || undefined"
   >
     <!-- Solidarity: circle -->
     <circle v-if="variant === 'solidarity'" cx="12" cy="12" r="10" fill="currentColor" />
@@ -50,7 +51,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Ideology } from "../../../core/types.ts";
-import { IDEOLOGY_DISPLAY } from "../../../core/data/ideologies.ts";
+import { IDEOLOGY_DISPLAY, cssColorFor } from "../../../core/data/ideologies.ts";
 
 export type SuitGlyphVariant = Ideology | "wild" | "dissent";
 
@@ -58,14 +59,21 @@ const props = withDefaults(
   defineProps<{
     variant: SuitGlyphVariant;
     size?: number;
+    ariaHidden?: boolean;
   }>(),
-  { size: 14 },
+  { size: 14, ariaHidden: false },
 );
+
+const ariaLabel = computed(() => {
+  if (props.variant === "wild") return "Wild";
+  if (props.variant === "dissent") return "Dissent";
+  return IDEOLOGY_DISPLAY[props.variant].name;
+});
 
 const colorVar = computed(() => {
   if (props.variant === "wild") return "var(--suit-wild)";
   if (props.variant === "dissent") return "var(--suit-dissent)";
-  return `var(${IDEOLOGY_DISPLAY[props.variant].cssColorVar})`;
+  return cssColorFor(props.variant);
 });
 </script>
 
