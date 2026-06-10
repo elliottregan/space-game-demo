@@ -124,8 +124,6 @@ const HALO_OFFSET = 6;
 interface PoleAnchor {
   x: number;
   y: number;
-  textAnchor: "middle" | "start" | "end";
-  dominantBaseline: "hanging" | "auto" | "middle";
 }
 
 // Maps a pole to its SVG-edge position. Note: SVG y grows downward,
@@ -134,14 +132,10 @@ function poleAnchor(id: Ideology): PoleAnchor {
   const { axis, sign } = IDEOLOGY_AXIS[id];
   if (axis === "axis2") {
     // sign +1 → top, sign -1 → bottom
-    return sign > 0
-      ? { x: CENTER, y: LABEL_INSET, textAnchor: "middle", dominantBaseline: "hanging" }
-      : { x: CENTER, y: SIZE - LABEL_INSET, textAnchor: "middle", dominantBaseline: "auto" };
+    return sign > 0 ? { x: CENTER, y: LABEL_INSET } : { x: CENTER, y: SIZE - LABEL_INSET };
   }
   // axis1: sign +1 → right, sign -1 → left
-  return sign > 0
-    ? { x: SIZE - LABEL_INSET, y: CENTER, textAnchor: "end", dominantBaseline: "middle" }
-    : { x: LABEL_INSET, y: CENTER, textAnchor: "start", dominantBaseline: "middle" };
+  return sign > 0 ? { x: SIZE - LABEL_INSET, y: CENTER } : { x: LABEL_INSET, y: CENTER };
 }
 
 /** Equilateral-ish triangle centered on (x, y), apex up, ~9px tall. */
