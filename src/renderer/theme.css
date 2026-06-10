@@ -1,0 +1,255 @@
+/* ------------------------------------------------------------------
+ * Flat Bauhaus theme. See docs/superpowers/specs/2026-06-10-bauhaus-retheme-design.md
+ *
+ * Layers: reset < tokens < base < layout < components.
+ * Dark ("Dark Bauhaus") values live on :root (the default).
+ * Light ("Classic Bauhaus") overrides live under :root[data-theme="light"]
+ * and under prefers-color-scheme: light when no explicit theme is set.
+ * The theme attribute is set on <html> by src/renderer/util/theme.ts.
+ *
+ * Hard rules enforced by this file's vocabulary:
+ *  - no radius tokens (square corners everywhere)
+ *  - no uppercase / letter-spacing utilities (sentence case everywhere)
+ *  - shadows are semantic: interactive elements and floating sheets only
+ * ------------------------------------------------------------------ */
+
+@import "@fontsource-variable/space-grotesk";
+
+@layer reset, tokens, base, layout, components;
+
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+}
+
+@layer tokens {
+  :root {
+    /* The table */
+    --ground: #161513;
+    --mat: #1e1c18;
+    --mat-strong: #26231d;
+
+    /* Physical objects (cards, piles, buttons, sheets) */
+    --paper: #2b2823;
+    --paper-hover: #332f28;
+    --paper-dissent: #3a2422;
+
+    /* Ink */
+    --ink: #f0ede6;
+    --ink-muted: #a8a399;
+    --ink-subtle: #7a766d;
+
+    /* Structural rules (lines that separate, never enclose) */
+    --rule: #3c3830;
+    --rule-strong: #57524a;
+
+    /* Primary action */
+    --accent: #eebf2e;
+    --accent-hover: #f6cd4d;
+    --accent-ink: #161513;
+
+    /* Ideology suits */
+    --suit-solidarity: #3f74c9;
+    --suit-sovereignty: #e23b30;
+    --suit-transformation: #44a04e;
+    --suit-heritage: #a76bd6;
+    --suit-wild: #eebf2e;
+    --suit-dissent: #e23b30;
+
+    /* Status */
+    --status-positive: #44a04e;
+    --status-negative: #e23b30;
+    --status-warning: #eebf2e;
+    --status-info: #3f74c9;
+
+    /* Semantic shadows — soft, offset, quiet. Interactive = "you can move
+       or click this"; lifted = hover/drag/floating sheet. */
+    --shadow-interactive: 2px 3px 7px rgba(0, 0, 0, 0.35);
+    --shadow-lifted: 5px 8px 18px rgba(0, 0, 0, 0.45);
+    --scrim: rgba(10, 9, 8, 0.7);
+
+    /* Spacing scale */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+
+    /* Layout */
+    --rail-width: 44px;
+  }
+
+  /* Light theme — follows OS when user hasn't chosen. */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --ground: #f4f1ea;
+      --mat: #e9e4d8;
+      --mat-strong: #ddd6c4;
+      --paper: #fbf9f4;
+      --paper-hover: #f0ece1;
+      --paper-dissent: #f3ddd9;
+      --ink: #14130f;
+      --ink-muted: #5a5648;
+      --ink-subtle: #8a8578;
+      --rule: #cbc4b2;
+      --rule-strong: #14130f;
+      --accent: #e9b400;
+      --accent-hover: #f5c41a;
+      --accent-ink: #14130f;
+      --suit-solidarity: #1c4fa0;
+      --suit-sovereignty: #d02e26;
+      --suit-transformation: #1f7d33;
+      --suit-heritage: #7b2fa3;
+      --suit-wild: #c79a00;
+      --suit-dissent: #d02e26;
+      --status-positive: #1f7d33;
+      --status-negative: #d02e26;
+      --status-warning: #a87a00;
+      --status-info: #1c4fa0;
+      --shadow-interactive: 2px 3px 7px rgba(20, 19, 15, 0.16);
+      --shadow-lifted: 5px 8px 18px rgba(20, 19, 15, 0.22);
+      --scrim: rgba(20, 19, 15, 0.45);
+    }
+  }
+
+  /* Explicit light — overrides even when OS is dark. */
+  :root[data-theme="light"] {
+    --ground: #f4f1ea;
+    --mat: #e9e4d8;
+    --mat-strong: #ddd6c4;
+    --paper: #fbf9f4;
+    --paper-hover: #f0ece1;
+    --paper-dissent: #f3ddd9;
+    --ink: #14130f;
+    --ink-muted: #5a5648;
+    --ink-subtle: #8a8578;
+    --rule: #cbc4b2;
+    --rule-strong: #14130f;
+    --accent: #e9b400;
+    --accent-hover: #f5c41a;
+    --accent-ink: #14130f;
+    --suit-solidarity: #1c4fa0;
+    --suit-sovereignty: #d02e26;
+    --suit-transformation: #1f7d33;
+    --suit-heritage: #7b2fa3;
+    --suit-wild: #c79a00;
+    --suit-dissent: #d02e26;
+    --status-positive: #1f7d33;
+    --status-negative: #d02e26;
+    --status-warning: #a87a00;
+    --status-info: #1c4fa0;
+    --shadow-interactive: 2px 3px 7px rgba(20, 19, 15, 0.16);
+    --shadow-lifted: 5px 8px 18px rgba(20, 19, 15, 0.22);
+    --scrim: rgba(20, 19, 15, 0.45);
+  }
+
+  /* ---- LEGACY COMPATIBILITY ALIASES ------------------------------
+   * Old token names mapped onto the new vocabulary so un-migrated
+   * styles keep working during the rewrite.
+   * DELETED in the final task. Do not add new consumers.
+   * ---------------------------------------------------------------- */
+  :root {
+    --surface-base: var(--ground);
+    --surface-raised: var(--mat);
+    --surface-sunken: var(--mat-strong);
+    --surface-card: var(--paper);
+    --surface-card-hover: var(--paper-hover);
+    --surface-dissent: var(--paper-dissent);
+    --text: var(--ink);
+    --text-muted: var(--ink-muted);
+    --text-subtle: var(--ink-subtle);
+    --border: var(--rule);
+    --border-strong: var(--rule);
+    --accent-text: var(--accent-ink);
+    --radius-sm: 0px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    --shadow-card: var(--shadow-interactive);
+    --shadow-dropdown: var(--shadow-lifted);
+    --shadow-overlay: var(--scrim);
+    --elev-1: var(--shadow-interactive);
+    --elev-2: var(--shadow-lifted);
+    --elev-3: var(--shadow-lifted);
+    --rail-bg: var(--ground);
+  }
+}
+
+@layer base {
+  html,
+  body,
+  #app {
+    height: 100%;
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Space Grotesk Variable", "Space Grotesk", system-ui, sans-serif;
+    font-size: 13px;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 700;
+  }
+
+  button {
+    background: var(--paper);
+    color: var(--ink);
+    border: none;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: var(--shadow-interactive);
+    transition:
+      background 0.1s,
+      box-shadow 0.1s,
+      translate 0.1s;
+  }
+  button:hover:not(:disabled) {
+    background: var(--paper-hover);
+  }
+  button:active:not(:disabled) {
+    translate: 1px 1px;
+    box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.25);
+  }
+  /* Not clickable → not physical → no shadow. */
+  button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  button.primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+  button.primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+  button.linklike {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--accent);
+    font-size: 11px;
+    padding: 0;
+    text-decoration: underline;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--rule-strong);
+  }
+}
