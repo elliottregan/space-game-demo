@@ -105,7 +105,9 @@ function validForDrag(i: number): { land: boolean; influence: boolean; charter: 
 .row-labels {
   display: grid;
   grid-template-rows: 150px 150px 150px auto;
-  gap: var(--space-1);
+  /* Must match .tableau-column's row gap exactly or labels drift downward
+     row by row. */
+  gap: 6px;
   font-size: 11px;
   font-weight: 600;
   color: var(--ink-muted);
