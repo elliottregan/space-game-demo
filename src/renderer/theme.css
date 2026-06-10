@@ -606,9 +606,6 @@
     min-width: 112px;
     width: 112px;
     margin-inline: auto;
-    /* Thin rule under each band: separates Charter/Influence/Land rows
-       without enclosing anything. */
-    border-bottom: 1px solid var(--rule);
   }
   .cell.land-cell,
   .cell.influence-cell,
