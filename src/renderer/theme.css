@@ -816,18 +816,12 @@
     color: var(--ink-subtle);
   }
   .pile-stack.drop-target {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
+    background: color-mix(in srgb, var(--accent) 10%, var(--paper));
+    border-bottom: 2px solid var(--accent);
   }
   .pile-stack.drag-over {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
-    background: color-mix(in srgb, var(--accent) 14%, var(--paper));
-  }
-  .dissent-note {
-    margin-top: 6px;
-    font-size: 10px;
-    color: var(--suit-dissent);
+    background: color-mix(in srgb, var(--accent) 22%, var(--paper));
+    border-bottom: 2px solid var(--accent);
   }
   .market-button {
     margin-top: 8px;
@@ -836,21 +830,6 @@
   .end-turn-big {
     margin-top: 8px;
     width: 100%;
-  }
-  .discard-end-turn {
-    margin-top: 6px;
-    width: 100%;
-    padding: 8px 10px;
-    font-size: 12px;
-    display: flex;
-    align-items: baseline;
-    justify-content: center;
-    gap: 8px;
-  }
-  .discard-end-turn .btn-sub {
-    color: var(--ink-subtle);
-    font-size: 10px;
-    font-weight: normal;
   }
 }
 

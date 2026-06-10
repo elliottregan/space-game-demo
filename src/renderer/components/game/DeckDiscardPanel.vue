@@ -1,5 +1,5 @@
 <template>
-  <Panel class="deck-discard-panel" title="Deck & Discard">
+  <Panel class="deck-discard-panel" title="Deck & discard">
     <div class="pile-row">
       <button
         class="pile-stack pile-deck"
@@ -31,7 +31,7 @@
     </div>
     <button class="market-button" @click="$emit('openMarket')">Market</button>
     <button class="end-turn-big primary" :disabled="ended" @click="$emit('endTurn')">
-      End Turn
+      End turn
     </button>
   </Panel>
 </template>

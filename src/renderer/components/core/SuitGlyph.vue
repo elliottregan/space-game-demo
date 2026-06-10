@@ -9,6 +9,7 @@
     :aria-label="ariaLabel"
     :aria-hidden="ariaHidden || undefined"
   >
+    <title v-if="title">{{ title }}</title>
     <!-- Solidarity: circle -->
     <circle v-if="variant === 'solidarity'" cx="12" cy="12" r="10" fill="currentColor" />
     <!-- Sovereignty: triangle -->
@@ -60,6 +61,7 @@ const props = withDefaults(
     variant: SuitGlyphVariant;
     size?: number;
     ariaHidden?: boolean;
+    title?: string;
   }>(),
   { size: 14, ariaHidden: false },
 );

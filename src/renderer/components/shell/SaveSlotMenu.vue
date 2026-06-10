@@ -33,7 +33,7 @@
       </ul>
       <div class="slot-footer">
         <button class="primary" :disabled="slots.length >= maxSlots" @click="onNew">
-          + New Campaign
+          + New campaign
         </button>
         <span v-if="slots.length >= maxSlots" class="slot-hint">
           Max {{ maxSlots }} saves — delete one first.
