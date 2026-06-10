@@ -43,7 +43,8 @@ defineEmits<{ close: [] }>();
   display: flex;
 }
 .flyout-panel {
-  box-shadow: var(--elev-2);
+  --panel-bg: var(--paper);
+  box-shadow: var(--shadow-lifted);
   max-height: 100%;
   overflow: auto;
 }
