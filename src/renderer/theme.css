@@ -66,11 +66,12 @@
     --status-warning: #eebf2e;
     --status-info: #3f74c9;
 
-    /* Semantic shadows — soft, offset, quiet. Interactive = "you can move
-       or click this"; lifted = hover/drag/floating sheet. */
-    --shadow-interactive: 2px 3px 7px rgba(0, 0, 0, 0.35);
-    --shadow-lifted: 5px 8px 18px rgba(0, 0, 0, 0.45);
-    --shadow-pressed: 1px 1px 3px rgba(0, 0, 0, 0.25);
+    /* Semantic shadows — hard offset blocks, no blur (paper cutout), kept
+       quiet via low alpha. Interactive = "you can move or click this";
+       lifted = hover/drag/floating sheet. */
+    --shadow-interactive: 2px 3px 0 rgba(0, 0, 0, 0.45);
+    --shadow-lifted: 5px 7px 0 rgba(0, 0, 0, 0.55);
+    --shadow-pressed: 1px 1px 0 rgba(0, 0, 0, 0.35);
     --scrim: rgba(10, 9, 8, 0.7);
 
     /* Spacing scale */
@@ -115,9 +116,9 @@
       --status-negative: #d02e26;
       --status-warning: #a87a00;
       --status-info: #1c4fa0;
-      --shadow-interactive: 2px 3px 7px rgba(20, 19, 15, 0.16);
-      --shadow-lifted: 5px 8px 18px rgba(20, 19, 15, 0.22);
-      --shadow-pressed: 1px 1px 3px rgba(20, 19, 15, 0.14);
+      --shadow-interactive: 2px 3px 0 rgba(20, 19, 15, 0.2);
+      --shadow-lifted: 5px 7px 0 rgba(20, 19, 15, 0.26);
+      --shadow-pressed: 1px 1px 0 rgba(20, 19, 15, 0.16);
       --scrim: rgba(20, 19, 15, 0.45);
     }
   }
@@ -151,9 +152,9 @@
     --status-negative: #d02e26;
     --status-warning: #a87a00;
     --status-info: #1c4fa0;
-    --shadow-interactive: 2px 3px 7px rgba(20, 19, 15, 0.16);
-    --shadow-lifted: 5px 8px 18px rgba(20, 19, 15, 0.22);
-    --shadow-pressed: 1px 1px 3px rgba(20, 19, 15, 0.14);
+    --shadow-interactive: 2px 3px 0 rgba(20, 19, 15, 0.2);
+    --shadow-lifted: 5px 7px 0 rgba(20, 19, 15, 0.26);
+    --shadow-pressed: 1px 1px 0 rgba(20, 19, 15, 0.16);
     --scrim: rgba(20, 19, 15, 0.45);
   }
 }
