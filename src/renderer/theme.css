@@ -108,7 +108,8 @@
       --suit-sovereignty: #d02e26;
       --suit-transformation: #1f7d33;
       --suit-heritage: #7b2fa3;
-      --suit-wild: var(--accent);
+      /* darker than --accent: suit colors render as text on paper */
+      --suit-wild: #c79a00;
       --suit-dissent: var(--suit-sovereignty);
       --status-positive: #1f7d33;
       --status-negative: #d02e26;
@@ -143,7 +144,8 @@
     --suit-sovereignty: #d02e26;
     --suit-transformation: #1f7d33;
     --suit-heritage: #7b2fa3;
-    --suit-wild: var(--accent);
+    /* darker than --accent: suit colors render as text on paper */
+    --suit-wild: #c79a00;
     --suit-dissent: var(--suit-sovereignty);
     --status-positive: #1f7d33;
     --status-negative: #d02e26;
