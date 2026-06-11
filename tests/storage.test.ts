@@ -111,6 +111,30 @@ describe("storeCard command", () => {
     expect(ep.draw.filter((c) => c.tags.includes("dissent")).length).toBe(1);
   });
 
+  test("replaceId with room still evicts the named card (explicit swap)", () => {
+    const ep = freshEpoch();
+    const stored = land(3, "heritage");
+    ep.columns[0].storage = [stored];
+    // Pretend capacity were larger: replaceId is honored regardless of fullness.
+    const incoming = land(9, "solidarity");
+    ep.hand = [incoming];
+    const r = storeCard(ep, SETTING, incoming.id, 0, stored.id);
+    expect(r.ok).toBe(true);
+    expect(ep.columns[0].storage).toEqual([incoming]);
+    expect(ep.discard).toContain(stored);
+  });
+
+  test("replaceId naming a card not in storage errors with no mutation", () => {
+    const ep = freshEpoch();
+    const incoming = land(9, "solidarity");
+    ep.hand = [incoming];
+    const r = storeCard(ep, SETTING, incoming.id, 0, "ghost");
+    expect(r.ok).toBe(false);
+    expect(ep.hand).toContain(incoming);
+    expect(ep.columns[0].storage.length).toBe(0);
+    expect(ep.draw.length).toBe(0); // no dissent side-effects
+  });
+
   test("guards: ended epoch, wrong phase, unknown card, invalid column", () => {
     const ep = freshEpoch();
     const card = land(6, "sovereignty");

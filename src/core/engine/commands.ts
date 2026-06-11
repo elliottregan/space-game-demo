@@ -186,8 +186,16 @@ export function buildColumn(
 
 /**
  * Store a card from hand into a column's storage. Free; any card kind.
- * Storage is capacity-limited; at capacity the caller must name a stored
- * card to replace — the replaced card is discarded (and breeds Dissent).
+ *
+ * @param replaceId - When provided, the named card MUST already be in this
+ *   column's storage; it is evicted (dispatched as `card-discarded` with
+ *   `source: "storage"`, which breeds Dissent) and the new card takes its
+ *   place. This eviction happens regardless of whether storage is full — the
+ *   caller is making an explicit swap, not an overflow check. If the named
+ *   card is not found, the command returns an error with no mutation.
+ *
+ *   When omitted, the command requires a free slot. If storage is already at
+ *   capacity the command returns an error with no mutation.
  */
 export function storeCard(
   epoch: Epoch,
@@ -203,14 +211,18 @@ export function storeCard(
   const handIdx = epoch.hand.findIndex((c) => c.id === cardId);
   if (handIdx === -1) return { ok: false, error: "Card not in hand." };
 
-  const capacity = setting.rules.storageCapacity;
-  if (col.storage.length >= capacity) {
-    const replaceIdx = replaceId ? col.storage.findIndex((c) => c.id === replaceId) : -1;
+  if (replaceId !== undefined) {
+    const replaceIdx = col.storage.findIndex((c) => c.id === replaceId);
     if (replaceIdx === -1) {
-      return { ok: false, error: "Storage is full — choose a stored card to replace." };
+      return { ok: false, error: "Card to replace not found in storage." };
     }
     const [replaced] = col.storage.splice(replaceIdx, 1);
     dispatch(epoch, { type: "card-discarded", card: replaced, source: "storage" });
+  } else {
+    const capacity = setting.rules.storageCapacity;
+    if (col.storage.length >= capacity) {
+      return { ok: false, error: "Storage is full." };
+    }
   }
 
   const card = epoch.hand[handIdx];
