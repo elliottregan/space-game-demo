@@ -27,7 +27,8 @@ export interface Column {
   influence: InfluenceRow;
   charter: CharterRow;
   /** Inert staging area: any card kind, capacity-limited, invisible to
-   *  pattern/ideology evaluation. Survives Build. See M1 design spec. */
+   *  pattern/ideology evaluation (columnCards() excludes it, which is how
+   *  evaluation ignores it). Survives Build. See the M1 design spec. */
   storage: Card[];
 }
 

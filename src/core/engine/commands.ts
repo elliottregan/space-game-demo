@@ -184,6 +184,41 @@ export function buildColumn(
   return { ok: true, value: unlock };
 }
 
+/**
+ * Store a card from hand into a column's storage. Free; any card kind.
+ * Storage is capacity-limited; at capacity the caller must name a stored
+ * card to replace — the replaced card is discarded (and breeds Dissent).
+ */
+export function storeCard(
+  epoch: Epoch,
+  setting: Setting,
+  cardId: string,
+  columnIndex: number,
+  replaceId?: string,
+): CmdResult<Card> {
+  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
+  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  const col = epoch.columns[columnIndex];
+  if (!col) return { ok: false, error: "Invalid column." };
+  const handIdx = epoch.hand.findIndex((c) => c.id === cardId);
+  if (handIdx === -1) return { ok: false, error: "Card not in hand." };
+
+  const capacity = setting.rules.storageCapacity;
+  if (col.storage.length >= capacity) {
+    const replaceIdx = replaceId ? col.storage.findIndex((c) => c.id === replaceId) : -1;
+    if (replaceIdx === -1) {
+      return { ok: false, error: "Storage is full — choose a stored card to replace." };
+    }
+    const [replaced] = col.storage.splice(replaceIdx, 1);
+    dispatch(epoch, { type: "card-discarded", card: replaced, source: "storage" });
+  }
+
+  const card = epoch.hand[handIdx];
+  epoch.hand.splice(handIdx, 1);
+  dispatch(epoch, { type: "card-stored", card, columnIndex });
+  return { ok: true, value: card };
+}
+
 export function commitHand(
   epoch: Epoch,
   columnIndex: number,
