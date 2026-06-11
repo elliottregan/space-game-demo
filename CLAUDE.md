@@ -54,7 +54,7 @@ Organized into three buckets. Each type lives next to the concept it describes; 
   - `effects.ts` — `applyEffect` (immediate) + `resolveEndOfTurn` (queued) + `drawToHandSize`, `purgeDissent`, `countDissentInDeck`.
   - `ideology.ts` — ideology types + `deriveVector(columns, unlockedProjects, projects)`, `demonym`.
   - `epoch.ts` — `Epoch` type + lifecycle: `createEpoch`, `currentVector`.
-  - `commands.ts` — per-turn player verbs: `placeCard`, `commitHand` (multi-card lay-down), `discardLand`, `discardCharter`, `recallInfluence`, `discardColumn`, `discardFromHand`, `buildColumn`.
+  - `commands.ts` — per-turn player verbs: `placeCard`, `commitHand` (multi-card lay-down, may pull from storage), `storeCard`, `discardLand`, `discardCharter`, `recallInfluence`, `discardColumn`, `discardFromHand`, `buildColumn`.
   - `turn.ts` — `endTurn`, `resolveCrisis`.
   - `legacy.ts` — Legacy minting from `CrisisOutcome`; Monument record creation.
   - `campaign.ts` — `Campaign` / `Monument` / `LegacyCard` types + `createCampaign`, `prepareEndOfEpoch`, `finalizeEpoch` (Setting transitions).
@@ -62,7 +62,7 @@ Organized into three buckets. Each type lives next to the concept it describes; 
 ### `src/facade/` — command/query API between core and renderer
 
 - `GameAPI.ts` — class that owns `Campaign` + `Setting` + `Epoch` + `RNG`. Commands return `CommandResult<T>`; queries (`snapshot`, `validColumns`, …) return immutable-shaped views. `snapshot()` deep-clones mutable collections so shallow-reactive Vue refs see new references after every mutation. Constructor accepts `{ skipLoad?, forceSettingId? }` for testing.
-- `persistence.ts` — 10-slot save store at `localStorage[deck-demo-saves-v3]`. Auto-archives v2 saves to `deck-demo-saves-v2-archive` on first load (no automatic migration).
+- `persistence.ts` — 10-slot save store at `localStorage[deck-demo-saves-v5]`. Auto-archives v4 saves to `deck-demo-saves-v4-archive` on first load (no automatic migration).
 
 ### `src/renderer/` — Vue 3 UI
 
@@ -84,7 +84,8 @@ Organized into three buckets. Each type lives next to the concept it describes; 
 - **Every intermediate row state must itself be a valid row-hand.** Single cards placed one at a time can only grow same-rank stacks (high-card → pair → trips → quads). Straights, two-pairs, and full houses are laid down via `commitHand` (multi-card commit from hand).
 - **A Setting's `startingDeck` is just a list of card ids.** Filter `ALL_CARDS` however you like (by ideology, by rank, by tag) — see Generation Ship for an example of a 2-ideology constrained deck.
 - **Same-rank patterns are gated by deck composition.** N-of-a-kind requires N cards of one rank in the deck. A 2-ideology filter caps any rank at 2 copies, ruling out trips / quads / full-house but not straights or flushes.
-- **Dissent is pure deck clog.** Every deliberate discard (hand, tableau, column, recall, and the cascade after a Build) shuffles one unplayable Dissent card into the draw pile. End-of-turn hand cycling is *not* a discard — it does not add Dissent. There is no dissent-based loss condition.
+- **Dissent is pure deck clog.** Every deliberate discard (hand, tableau, column, recall, storage replacement, and the cascade after a Build) shuffles one unplayable Dissent card into the draw pile. End-of-turn hand cycling is *not* a discard — it does not add Dissent. There is no dissent-based loss condition.
+- **Each column has an inert storage area** (capacity `rules.storageCapacity`, base 1): any card may be stored for free, even Dissent. Stored cards are invisible to pattern/ideology evaluation (`columnCards` excludes them), pay no costs and fire no effects until played, and survive Build. Removal is replacement-only — the replaced card's discard adds Dissent. `placeCard` (with `source: "storage"`) and `commitHand` (with `fromStorageIds`) pull stored cards into the column's rows, paying costs at play time.
 - **Crisis fires when `turn > rules.maxTurns`.** `resolveCrisis` sums the `value` of every unlocked project (duplicates count) and compares to `crisis.difficulty`. Pass → win + Legacy mint. Fail → loss.
 - **Influence resets to `rules.influenceBaseline` every turn** — unspent Influence does not carry over.
 - **Ideology is derived**, never stored as a drifting float. `deriveVector(columns, unlockedProjects, projects)` sums per-card axis contributions plus a per-unlock contribution scaled by project value.
