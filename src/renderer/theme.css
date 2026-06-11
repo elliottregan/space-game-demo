@@ -683,11 +683,14 @@
   }
 
   /* Drop targets: solid accent-tinted fill, 2px accent rule on the bottom
-     edge. No dashed outlines anywhere. */
+     edge. No dashed outlines anywhere. Matches stacks/placeholders inside
+     cells (directive-driven) as well as the legacy cell-root form. */
+  .cell .drop-target,
   .cell.drop-target {
     background: color-mix(in srgb, var(--accent) 10%, transparent);
     border-bottom: 2px solid var(--accent);
   }
+  .cell .drag-over,
   .cell.drag-over {
     background: color-mix(in srgb, var(--accent) 22%, transparent);
     border-bottom: 2px solid var(--accent);

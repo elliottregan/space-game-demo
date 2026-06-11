@@ -9,7 +9,6 @@
           <div class="row-label">Charter</div>
           <div class="row-label">Influence</div>
           <div class="row-label">Land</div>
-          <div class="row-label">Storage</div>
           <div class="row-label"></div>
         </div>
         <TableauColumn
@@ -114,7 +113,7 @@ function validForDrag(i: number): { land: boolean; influence: boolean; charter: 
 }
 .row-labels {
   display: grid;
-  grid-template-rows: 150px 150px 150px auto auto;
+  grid-template-rows: 150px 150px 150px auto;
   /* Must match .tableau-column's row gap exactly or labels drift downward
      row by row. */
   gap: 6px;
