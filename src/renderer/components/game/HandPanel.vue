@@ -1,9 +1,17 @@
 <template>
   <Panel class="hand-panel" :title="`Hand (${hand.length})`">
-    <div class="hand-cards">
+    <TransitionGroup
+      tag="div"
+      class="hand-cards"
+      :css="false"
+      move-class="hand-move"
+      @enter="onCardEnter"
+      @leave="onCardLeave"
+    >
       <Card
         v-for="card in hand"
         :key="card.id"
+        :data-card-id="card.id"
         :card="card"
         :selectable="true"
         :selected="selectedIds.includes(card.id)"
@@ -14,8 +22,8 @@
         @dragstart="onCardDragStart(card, $event)"
         @dragend="onCardDragEnd"
       />
-      <div v-if="hand.length === 0" style="color: var(--ink-subtle); padding: 40px">Empty hand</div>
-    </div>
+      <div v-if="hand.length === 0" key="empty-hand" class="hand-empty">Empty hand</div>
+    </TransitionGroup>
 
     <!-- Fixed-height action area. Reserves vertical space whether or not a
          selection is active, so the panel itself never resizes and pushes
@@ -78,6 +86,7 @@ import Card from "../core/Card.vue";
 import Panel from "../core/Panel.vue";
 import { beginDrag, endDrag, dragging } from "../../util/dragState.ts";
 import { identifyRowHand, canCommitHand } from "../../../core/engine/rowHands.ts";
+import { animateDiscard, animateDraw, animatePlaced } from "../../animation/cardFlight.ts";
 
 const props = defineProps<{
   hand: CardT[];
@@ -85,6 +94,9 @@ const props = defineProps<{
   influence: number;
   columns: Column[];
   validColumnsFor: (cardId: string) => number[];
+  /** Ids currently in the discard pile — tells the leave hook whether a
+   * departing card flies to the discard or was placed on the tableau. */
+  discardIds: string[];
 }>();
 
 defineEmits<{
@@ -227,5 +239,16 @@ function onCardDragStart(card: CardT, e: DragEvent): void {
 
 function onCardDragEnd(): void {
   endDrag();
+}
+
+function onCardEnter(el: Element, done: () => void): void {
+  if (!(el instanceof HTMLElement) || !el.dataset.cardId) return done();
+  animateDraw(el, done);
+}
+
+function onCardLeave(el: Element, done: () => void): void {
+  if (!(el instanceof HTMLElement) || !el.dataset.cardId) return done();
+  if (props.discardIds.includes(el.dataset.cardId)) animateDiscard(el, done);
+  else animatePlaced(el, done);
 }
 </script>

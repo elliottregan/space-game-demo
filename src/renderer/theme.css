@@ -309,11 +309,17 @@
   .hand-panel {
     --panel-bg: transparent;
   }
+  /* Discard pile · hand · deck pile. The hand stretches and centers its
+     cards so draws fly in from the deck on the right and discards land on
+     the pile to the left. */
   .hand-row {
     display: flex;
     gap: var(--space-3);
     align-items: stretch;
     min-width: 0;
+  }
+  .hand-row .pile-panel {
+    flex: 0 0 140px;
   }
 
   .error-bar {
@@ -707,6 +713,24 @@
     overflow-x: auto;
     padding: var(--space-1);
     scrollbar-width: thin;
+    /* Center the hand between the piles; `safe` keeps the left edge
+       reachable when the hand overflows. */
+    justify-content: safe center;
+  }
+  .hand-empty {
+    color: var(--ink-subtle);
+    padding: 40px;
+  }
+  /* FLIP move transition for cards reflowing around a draw/discard. The
+     flight itself is driven by the Web Animations API — tune it in
+     src/renderer/animation/cardFlight.ts (duration, easing, stagger, arc). */
+  .hand-move {
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hand-move {
+      transition: none;
+    }
   }
   .hand-actions {
     display: flex;
@@ -745,19 +769,15 @@
   /* -------------------- Deck / Discard piles -------------------- */
   /* A pile is a small stack of paper: the button is the top sheet, one
      offset pseudo-element suggests the sheets beneath. */
-  .deck-discard-panel {
+  .pile-panel {
     --panel-bg: var(--mat-strong);
-  }
-  .pile-row {
-    display: flex;
-    gap: 8px;
   }
   .pile-stack {
     position: relative;
     /* Keep the ::after stack edge inside this element's own stacking
        context so z-index: -1 can't drop it behind ancestors. */
     isolation: isolate;
-    flex: 1 1 0;
+    flex: 0 0 auto;
     height: 106px;
     display: flex;
     flex-direction: column;
@@ -797,11 +817,6 @@
   }
   .pile-discard {
     background: var(--paper);
-  }
-  .pile-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--ink-muted);
   }
   .pile-count {
     font-size: 26px;
