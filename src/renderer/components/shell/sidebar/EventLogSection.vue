@@ -34,6 +34,8 @@ function formatEvent(e: GameEvent): string {
       return `column ${e.columnIndex + 1} built → ${e.unlock.projectId}`;
     case "dissent-added":
       return "dissent added";
+    case "card-stored":
+      return `card stored (col ${e.columnIndex + 1}): ${e.card.name}`;
     case "turn-ended":
       return `turn ${e.turn} ended`;
     case "crisis-resolved":

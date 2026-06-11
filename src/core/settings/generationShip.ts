@@ -109,6 +109,7 @@ export const GENERATION_SHIP: Setting = {
     columnCount: 4,
     influenceBaseline: 8,
     maxTurns: 14,
+    storageCapacity: 1,
   },
   startingDeck: STARTING_DECK,
   startingColumns: [],

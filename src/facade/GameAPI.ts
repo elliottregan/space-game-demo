@@ -177,6 +177,7 @@ export class GameAPI {
       lands: { cards: [...c.lands.cards] },
       influence: { cards: c.influence.cards.map((card) => ({ ...card })) },
       charter: { card: c.charter.card },
+      storage: [...c.storage],
     }));
     const columnBuildable = columnsView.map(
       (c) => evaluateColumn(c, this.setting.projects) !== null,
