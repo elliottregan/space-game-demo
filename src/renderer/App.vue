@@ -173,12 +173,28 @@
     />
 
     <CampaignEnd v-if="campaignEnded" @restart="onNewSlot" />
+
+    <ConfirmDialog
+      :open="pendingConfirm !== null"
+      :title="pendingConfirm?.title ?? ''"
+      :confirm-label="pendingConfirm?.confirmLabel"
+      danger
+      @confirm="
+        () => {
+          pendingConfirm?.action();
+          pendingConfirm = null;
+        }
+      "
+      @cancel="pendingConfirm = null"
+      >{{ pendingConfirm?.body }}</ConfirmDialog
+    >
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { getGameService } from "./GameService.ts";
+import ConfirmDialog from "./components/core/ConfirmDialog.vue";
 import TurnBar from "./components/shell/TurnBar.vue";
 import HandPanel from "./components/game/HandPanel.vue";
 import TableauPanel from "./components/game/TableauPanel.vue";
@@ -212,6 +228,15 @@ const selectedIds = ref<string[]>([]);
 // storage can participate in a commit at a time.
 const selectedStorage = ref<{ columnIndex: number; ids: string[] } | null>(null);
 const pileView = ref<"deck" | "discard" | null>(null);
+
+// Generic pending confirmation. Set to a descriptor to show the dialog;
+// clear to null on cancel or after the action fires.
+const pendingConfirm = ref<{
+  title: string;
+  body: string;
+  confirmLabel: string;
+  action: () => void;
+} | null>(null);
 
 const leftRailActive = ref<string | null>(null);
 const rightRailActive = ref<string | null>(null);
@@ -295,11 +320,32 @@ function onToggleStorageSelect(columnIndex: number, cardId: string): void {
 }
 
 function onStoreCard(cardId: string, columnIndex: number): void {
-  // Capacity 1: replace the current occupant implicitly when full.
+  // Capacity 1: replace the current occupant when full.
   const capacity = setting.value.rules.storageCapacity;
   const full = (epoch.value.columns[columnIndex]?.storage.length ?? 0) >= capacity;
   const occupant = epoch.value.columns[columnIndex]?.storage[0];
-  game.storeCard(cardId, columnIndex, full ? occupant?.id : undefined);
+
+  if (full && occupant) {
+    // Destructive replace path: ask for confirmation before discarding the occupant.
+    const incomingName = epoch.value.hand.find((c) => c.id === cardId)?.name ?? cardId;
+    const occupantName = occupant.name;
+    pendingConfirm.value = {
+      title: "Replace stored card?",
+      body: `Storing ${incomingName} will discard ${occupantName} and add 1 Dissent.`,
+      confirmLabel: "Replace",
+      action: () => {
+        game.storeCard(cardId, columnIndex, occupant.id);
+        selectedIds.value = selectedIds.value.filter((x) => x !== cardId);
+        if (selectedStorage.value?.columnIndex === columnIndex) {
+          selectedStorage.value = null;
+        }
+      },
+    };
+    return;
+  }
+
+  // Empty-slot path: immediate, no confirmation needed.
+  game.storeCard(cardId, columnIndex, undefined);
   selectedIds.value = selectedIds.value.filter((x) => x !== cardId);
   if (selectedStorage.value?.columnIndex === columnIndex) {
     selectedStorage.value = null;
