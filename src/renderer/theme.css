@@ -281,7 +281,13 @@
 
   .app-main {
     display: grid;
-    grid-template-columns: var(--rail-width) minmax(0, 1fr) var(--rail-width);
+    grid-template-columns: var(--rail-width) 200px minmax(0, 1fr) var(--rail-width);
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .project-tree {
+    border-right: 1px solid var(--rule-strong);
     overflow: hidden;
     min-height: 0;
   }
