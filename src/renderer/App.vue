@@ -31,6 +31,8 @@
     <div class="app-main">
       <Rail side="left" :items="leftRailItems" :active-key="leftRailActive" @toggle="toggleLeft" />
 
+      <ProjectTreePanel :projects="setting.projects" :unlocks="epoch.unlockedProjects" />
+
       <div class="play-area">
         <TableauPanel
           :columns="epoch.columns"
@@ -82,19 +84,7 @@
         <div v-if="lastError" class="error-bar">{{ lastError }}</div>
 
         <RailFlyout
-          v-if="leftRailActive === 'projects'"
-          side="left"
-          title="Keystone projects"
-          @close="leftRailActive = null"
-        >
-          <UnlockedProjectsPanel
-            :unlocks="epoch.unlockedProjects"
-            :projects="setting.projects"
-            :breakdown="snapshot.ideologyBreakdown"
-          />
-        </RailFlyout>
-        <RailFlyout
-          v-else-if="leftRailActive === 'crisis'"
+          v-if="leftRailActive === 'crisis'"
           side="left"
           title="Crisis counter"
           @close="leftRailActive = null"
@@ -186,7 +176,7 @@ import { getGameService } from "./GameService.ts";
 import TurnBar from "./components/shell/TurnBar.vue";
 import HandPanel from "./components/game/HandPanel.vue";
 import TableauPanel from "./components/game/TableauPanel.vue";
-import UnlockedProjectsPanel from "./components/game/UnlockedProjectsPanel.vue";
+import ProjectTreePanel from "./components/game/ProjectTreePanel.vue";
 import IdeologyDisplay from "./components/game/IdeologyDisplay.vue";
 import CrisisScreen from "./components/game/CrisisScreen.vue";
 import CampaignEnd from "./components/shell/CampaignEnd.vue";
@@ -217,7 +207,6 @@ const leftRailActive = ref<string | null>(null);
 const rightRailActive = ref<string | null>(null);
 
 const leftRailItems: RailItem[] = [
-  { key: "projects", label: "Keystone projects", icon: "projects" },
   { key: "crisis", label: "Crisis counter", icon: "crisis" },
   { key: "ideology", label: "Ideology", icon: "ideology" },
 ];
