@@ -21,7 +21,7 @@ bun run scripts/analyze-crisis.ts [runs] [settingId] [seedOffset]
 | ------------ | ------------- | -------------------------------------------------------- |
 | `runs`       | 50            | Use 300–500 for tuning decisions; 50 is noisy (±5%+)     |
 | `settingId`  | `homeworld`   | `homeworld` \| `generation-ship` \| `ruined-homeworld`   |
-| `seedOffset` | 0             | Different offset = independent seed set; use to validate |
+| `seedOffset` | 0             | Added to each seed (`1+offset … runs+offset`). For an INDEPENDENT validation set it must be ≥ `runs` — a small offset mostly overlaps the default set |
 
 No flags, no log files — output is JSON on stdout only.
 
@@ -49,7 +49,7 @@ For a **tuning loop**:
 1. **Baseline first.** Run 300+ runs per affected Setting *before* changing values. To baseline against `main`, use a temp worktree: `git worktree add /tmp/baseline main` → run there → `git worktree remove /tmp/baseline --force`.
 2. Make the change (see CLAUDE.md "Balance tuning quick reference" for where each knob lives).
 3. Re-run with identical `runs`/`seedOffset` and compare.
-4. **Validate with a second seed set** (e.g. `seedOffset 7`) before trusting a number.
+4. **Validate with a second, non-overlapping seed set** (`seedOffset` ≥ `runs`, e.g. 1000) before trusting a number.
 
 **Picking a difficulty:** target ≈ `totalValue.mean − 0.8 × margin.stdev` lands near an 80% win rate; verify by simulation.
 
@@ -61,5 +61,6 @@ For a **tuning loop**:
 ## Common Mistakes
 
 - Comparing runs that used different `runs` or `seedOffset` values.
+- "Validating" with a small seedOffset — offset 7 with 500 runs shares 493 seeds with the default set, so agreement proves nothing.
 - Tuning from a 50-run sample — differences under ~5 points of win rate are noise at that size.
 - Reading the heuristic win rate as the expected human win rate.
