@@ -26,6 +26,12 @@ export interface CardFlightConfig {
   flipDegrees: number;
   /** Perspective distance (px) for the flip — smaller = more dramatic 3D. */
   perspectivePx: number;
+  /**
+   * Pause between the discard wave landing and the draw wave leaving the
+   * deck when both happen in one update (end turn), ms. Negative overlaps
+   * the waves; draws never start before the discards do.
+   */
+  discardThenDrawGapMs: number;
   /** Fade/shrink time for cards leaving the hand to somewhere other than the discard (e.g. placed on the tableau), ms. */
   placedFadeMs: number;
 }
@@ -37,6 +43,7 @@ export const CARD_FLIGHT: CardFlightConfig = {
   arcHeight: 48,
   flipDegrees: 180,
   perspectivePx: 900,
+  discardThenDrawGapMs: 0,
   placedFadeMs: 160,
 };
 
@@ -58,24 +65,45 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 
-/** Per-batch index for staggering: counts calls within one frame, then resets. */
-function batchCounter(): () => number {
-  let n = 0;
-  let resetQueued = false;
-  return () => {
-    if (!resetQueued) {
-      resetQueued = true;
-      requestAnimationFrame(() => {
-        n = 0;
-        resetQueued = false;
-      });
-    }
-    return n++;
-  };
+/**
+ * All flights triggered by one render flush form a batch. Within the batch,
+ * draws and discards each stagger by staggerMs; if the same batch contains
+ * both (end turn: hand cycles out, new hand cycles in), the draw animations
+ * are pushed back so they start only after the discard wave has landed.
+ *
+ * The hook call order within a flush is not guaranteed (enters can fire
+ * before leaves), so draws are scheduled optimistically and their delays
+ * are bumped when the batch closes at the next animation frame — before
+ * the first frame paints.
+ */
+interface FlightBatch {
+  draws: number;
+  discards: number;
+  drawAnims: Animation[];
 }
 
-const nextDrawIndex = batchCounter();
-const nextDiscardIndex = batchCounter();
+let batch: FlightBatch | null = null;
+
+function currentBatch(): FlightBatch {
+  if (batch) return batch;
+  const b: FlightBatch = { draws: 0, discards: 0, drawAnims: [] };
+  batch = b;
+  requestAnimationFrame(() => {
+    batch = null;
+    if (b.discards === 0 || b.drawAnims.length === 0) return;
+    const wave = Math.max(
+      0,
+      (b.discards - 1) * CARD_FLIGHT.staggerMs +
+        CARD_FLIGHT.durationMs +
+        CARD_FLIGHT.discardThenDrawGapMs,
+    );
+    for (const anim of b.drawAnims) {
+      const effect = anim.effect;
+      if (effect) effect.updateTiming({ delay: (effect.getTiming().delay ?? 0) + wave });
+    }
+  });
+  return b;
+}
 
 /** Uniform scale that fits the card into the pile's footprint. */
 function pileScale(pile: DOMRect, card: DOMRect): number {
@@ -118,12 +146,14 @@ export function animateDraw(el: HTMLElement, done: () => void): void {
   if (!from || prefersReducedMotion()) return done();
   const rect = el.getBoundingClientRect();
   const { dx, dy } = centerDelta(from, rect);
+  const b = currentBatch();
   const anim = el.animate(flightFrames(dx, dy, pileScale(from, rect)), {
     duration: CARD_FLIGHT.durationMs,
     easing: CARD_FLIGHT.easing,
-    delay: nextDrawIndex() * CARD_FLIGHT.staggerMs,
+    delay: b.draws++ * CARD_FLIGHT.staggerMs,
     fill: "backwards",
   });
+  b.drawAnims.push(anim);
   finish(anim, done);
 }
 
@@ -141,7 +171,7 @@ export function animateDiscard(el: HTMLElement, done: () => void): void {
   const anim = el.animate(flightFrames(dx, dy, pileScale(to, rect)).reverse(), {
     duration: CARD_FLIGHT.durationMs,
     easing: CARD_FLIGHT.easing,
-    delay: nextDiscardIndex() * CARD_FLIGHT.staggerMs,
+    delay: currentBatch().discards++ * CARD_FLIGHT.staggerMs,
     fill: "both",
   });
   finish(anim, done);
