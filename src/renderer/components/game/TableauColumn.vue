@@ -71,7 +71,6 @@ const props = defineProps<{
   buildTooltip: string;
   validForDrag: { land: boolean; influence: boolean; charter: boolean };
   selectedStorageIds: string[];
-  storageCapacity: number;
   canPlaceFromStorage: (card: CardT) => boolean;
 }>();
 
@@ -122,8 +121,9 @@ function rowAcceptsDrag(row: "land" | "influence" | "charter" | "storage"): bool
 }
 function onDrop(e: DragEvent): void {
   dragOver.value = null;
-  // Any drop in this column routes via card kind (core decides row).
-  if (!anyDropTarget.value) return;
+  // Row drops route via card kind (core decides row). Storage drops are
+  // handled by StorageCell's own drop handler.
+  if (!landDropTarget.value && !influenceDropTarget.value && !charterDropTarget.value) return;
   const payload = readDragPayload(e);
   if (!payload) return;
   emit("place-card", payload.cardId);

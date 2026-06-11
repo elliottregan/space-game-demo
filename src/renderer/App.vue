@@ -40,7 +40,6 @@
           :buildable-labels="buildableLabels"
           :get-card-from-hand="getCardFromHand"
           :selected-storage-for="selectedStorageFor"
-          :storage-capacity="setting.rules.storageCapacity"
           :can-place-stored="canPlaceStored"
           @place-card="onPlaceCard"
           @store-card="onStoreCard"
@@ -275,6 +274,7 @@ function onToggleSelect(id: string): void {
 }
 function onClearSelection(): void {
   selectedIds.value = [];
+  selectedStorage.value = null;
 }
 
 function onToggleStorageSelect(columnIndex: number, cardId: string): void {
@@ -294,6 +294,9 @@ function onStoreCard(cardId: string, columnIndex: number): void {
   const occupant = epoch.value.columns[columnIndex]?.storage[0];
   game.storeCard(cardId, columnIndex, full ? occupant?.id : undefined);
   selectedIds.value = selectedIds.value.filter((x) => x !== cardId);
+  if (selectedStorage.value?.columnIndex === columnIndex) {
+    selectedStorage.value = null;
+  }
 }
 
 function onPlaceFromStorage(cardId: string, columnIndex: number): void {
@@ -339,8 +342,8 @@ function onPlaceCards(ids: string[], i: number): void {
 function onCommitToRow(columnIndex: number, row: "land" | "influence"): void {
   // Sync the service's commitBuffer with the current selection, then commit.
   game.commitBuffer.value = [...selectedIds.value];
-  const sel = selectedStorage.value;
-  const fromStorage = sel && sel.columnIndex === columnIndex ? sel.ids : [];
+  const sel = storageSelection.value;
+  const fromStorage = sel && sel.columnIndex === columnIndex ? sel.cards.map((c) => c.id) : [];
   game.commitToRow(columnIndex, row, fromStorage);
   // commitToRow calls clearBuffer on success; mirror that in selectedIds.
   if (game.commitBuffer.value.length === 0) {

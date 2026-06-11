@@ -20,7 +20,6 @@
           :build-tooltip="buildTooltip(i)"
           :valid-for-drag="validForDrag(i)"
           :selected-storage-ids="selectedStorageFor(i)"
-          :storage-capacity="storageCapacity"
           :can-place-from-storage="(card) => canPlaceStored(i, card)"
           @place-card="(cardId) => $emit('placeCard', cardId, i)"
           @store-card="(cardId) => $emit('storeCard', cardId, i)"
@@ -54,7 +53,6 @@ const props = defineProps<{
   buildableLabels: string[]; // one label per column (e.g., "Pair → The Commons (+2)")
   getCardFromHand: (cardId: string) => Card | null;
   selectedStorageFor: (col: number) => string[];
-  storageCapacity: number;
   canPlaceStored: (col: number, card: Card) => boolean;
 }>();
 
