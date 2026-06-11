@@ -3,8 +3,7 @@
 import { shallowRef, ref, type Ref, type ShallowRef } from "vue";
 import { GameAPI, type Snapshot } from "../facade/GameAPI.ts";
 import type { SaveSlot } from "../facade/persistence.ts";
-import type { Card, LegacyUpgrade } from "../core/types.ts";
-import { canCommitHand } from "../core/engine/rowHands.ts";
+import type { LegacyUpgrade } from "../core/types.ts";
 
 class GameService {
   private api: GameAPI;
@@ -159,28 +158,6 @@ class GameService {
 
   clearBuffer(): void {
     this.commitBuffer.value = [];
-  }
-
-  /**
-   * Validate whether the buffered cards (plus optional storage cards) can be
-   * committed to the given row of the given column WITHOUT performing the commit.
-   */
-  canCommitToRow(
-    columnIndex: number,
-    row: "land" | "influence",
-    storageCards: Card[] = [],
-  ): boolean {
-    const ids = this.commitBuffer.value;
-    if (ids.length + storageCards.length === 0) return false;
-    const snap = this.snapshot.value;
-    const col = snap.epoch.columns[columnIndex];
-    if (!col) return false;
-    const handCards = ids.flatMap((id) => {
-      const c = snap.epoch.hand.find((h) => h.id === id);
-      return c ? [c] : [];
-    });
-    if (handCards.length !== ids.length) return false; // some id not in hand
-    return canCommitHand(col, row, [...handCards, ...storageCards]);
   }
 
   commitToRow(columnIndex: number, row: "land" | "influence", fromStorageIds: string[] = []): void {
