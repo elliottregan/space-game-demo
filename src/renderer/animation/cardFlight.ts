@@ -39,7 +39,7 @@ export interface CardFlightConfig {
 export const CARD_FLIGHT: CardFlightConfig = {
   durationMs: 420,
   easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-  staggerMs: 55,
+  staggerMs: 90,
   arcHeight: 48,
   flipDegrees: 180,
   perspectivePx: 900,
@@ -140,21 +140,38 @@ function finish(anim: Animation, done: () => void): void {
   anim.finished.then(done, done);
 }
 
-/** Fly a freshly drawn card from the deck pile to its slot in the hand. */
+/**
+ * Fly a freshly drawn card from the deck pile to its slot in the hand.
+ *
+ * The flight is performed by a body-level clone: the hand list is a scroll
+ * container (overflow-x: auto), so the real in-flow card transformed out to
+ * the deck would be clipped at the hand's edge and appear from nowhere
+ * instead of rising off the stack. The real element keeps its slot in the
+ * layout (hidden) while the clone flies, so siblings never reflow mid-wave;
+ * while the flight waits its turn, the clone sits on the deck back-side up.
+ */
 export function animateDraw(el: HTMLElement, done: () => void): void {
   const from = pileRect("deck");
   if (!from || prefersReducedMotion()) return done();
   const rect = el.getBoundingClientRect();
+  const clone = el.cloneNode(true) as HTMLElement;
+  pin(clone, rect);
+  el.style.visibility = "hidden";
+  document.body.appendChild(clone);
   const { dx, dy } = centerDelta(from, rect);
   const b = currentBatch();
-  const anim = el.animate(flightFrames(dx, dy, pileScale(from, rect)), {
+  const anim = clone.animate(flightFrames(dx, dy, pileScale(from, rect)), {
     duration: CARD_FLIGHT.durationMs,
     easing: CARD_FLIGHT.easing,
     delay: b.draws++ * CARD_FLIGHT.staggerMs,
     fill: "backwards",
   });
   b.drawAnims.push(anim);
-  finish(anim, done);
+  finish(anim, () => {
+    clone.remove();
+    el.style.visibility = "";
+    done();
+  });
 }
 
 /**
@@ -209,7 +226,9 @@ function pin(el: HTMLElement, rect: DOMRect): void {
     pointerEvents: "none",
     /* A card discarded by drag still carries .dragging (opacity 0.35) on its
        leaving vnode; partial opacity also flattens the 3D context and breaks
-       the backface flip, so force it fully opaque for the flight. */
+       the backface flip, so force it fully opaque for the flight. Visibility
+       likewise: a card can leave while still hidden behind its draw clone. */
     opacity: "1",
+    visibility: "visible",
   });
 }

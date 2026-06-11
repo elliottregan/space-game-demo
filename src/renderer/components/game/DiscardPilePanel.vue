@@ -2,7 +2,6 @@
   <Panel class="pile-panel" title="Discard">
     <div class="pile-zone">
       <button
-        ref="pileEl"
         :class="[
           'pile-stack',
           'pile-discard',
@@ -14,6 +13,9 @@
         @dragleave="onDragLeave"
         @drop.prevent="onDrop"
       >
+        <!-- Flight anchor: the top card's footprint, so discards land
+             exactly on the visible top of the stack. -->
+        <span ref="pileEl" class="pile-card-area" aria-hidden="true"></span>
         <span
           v-for="i in underLayers"
           :key="i"

@@ -1,12 +1,10 @@
 <template>
   <Panel class="pile-panel" title="Deck">
     <div class="pile-zone">
-      <button
-        ref="pileEl"
-        class="pile-stack pile-deck"
-        :disabled="drawCount === 0"
-        @click="$emit('view')"
-      >
+      <button class="pile-stack pile-deck" :disabled="drawCount === 0" @click="$emit('view')">
+        <!-- Flight anchor: the top card's footprint, so draws take off
+             exactly from the visible top of the stack. -->
+        <span ref="pileEl" class="pile-card-area" aria-hidden="true"></span>
         <span
           v-for="i in underLayers"
           :key="i"

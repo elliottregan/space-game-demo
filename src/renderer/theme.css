@@ -866,9 +866,13 @@
   }
   .pile-layer,
   .pile-top-card,
-  .pile-silhouette {
+  .pile-silhouette,
+  .pile-card-area {
     position: absolute;
     inset: 0 8px 8px 0;
+  }
+  .pile-card-area {
+    pointer-events: none;
   }
   .pile-layer {
     background: var(--paper);
