@@ -215,6 +215,7 @@ describe("commitHand command", () => {
     const role0 = getCard(roleId("agitator", "solidarity"));
     const role1 = getCard(roleId("agitator", "heritage"));
     const ep = epochWithHand([role0, role1], 10);
+    placeLand(ep.columns[0], getCard(landId(7, "solidarity"))); // satisfy Land prerequisite
     const before = ep.influence;
     // agitator solidarity effect: gainInfluence(1) costs 1; net per card = 0 influence change
     // agitator heritage effect: gainInfluence(1) + backlash, costs 1
@@ -243,6 +244,7 @@ describe("commitHand command", () => {
     const role0 = getCard(roleId("agitator", "solidarity")); // cost 1, effect: +1 inf
     const role1 = getCard(roleId("agitator", "transformation")); // cost 1, effect: +1 inf
     const ep = epochWithHand([role0, role1], 10);
+    placeLand(ep.columns[0], getCard(landId(7, "solidarity"))); // satisfy Land prerequisite
     const before = ep.influence;
     const result = commitHand(ep, 0, "influence", [role0.id, role1.id], rng);
     expect(result.ok).toBe(true);

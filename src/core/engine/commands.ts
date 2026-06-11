@@ -275,6 +275,12 @@ export function commitHand(
     if (!c) return { ok: false, error: `Card ${id} not in this column's storage.` };
     storageCards.push(c);
   }
+
+  const requestedIds = [...cardIds, ...fromStorageIds];
+  if (new Set(requestedIds).size !== requestedIds.length) {
+    return { ok: false, error: "Duplicate card in commit." };
+  }
+
   const all = [...cards, ...storageCards];
   if (all.some((c) => c.tags.includes("dissent"))) {
     return { ok: false, error: "Dissent cannot be played." };

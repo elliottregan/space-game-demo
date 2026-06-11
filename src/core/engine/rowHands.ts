@@ -54,6 +54,8 @@ export function canCommitHand(col: Column, row: "land" | "influence", newCards: 
   if (newCards.length === 0) return false;
   const requiredKind = row === "land" ? "land" : "role";
   if (newCards.some((c) => c.kind !== requiredKind)) return false;
+  // Influence sits on Land: same prerequisite as single-card placement.
+  if (row === "influence" && col.lands.cards.length === 0) return false;
 
   const existing = row === "land" ? col.lands.cards : col.influence.cards;
   const after = [...existing, ...newCards];

@@ -257,4 +257,24 @@ describe("pulling from storage", () => {
     expect(col.lands.cards.length).toBe(0);
     expect(col.storage).toEqual([kept]);
   });
+
+  test("commitHand rejects duplicate ids instead of duplicating the card", () => {
+    const ep = freshEpoch();
+    const c = land(7, "solidarity");
+    ep.hand = [c];
+    const r = commitHand(ep, 0, "land", [c.id, c.id], rng);
+    expect(r.ok).toBe(false);
+    expect(ep.columns[0].lands.cards.length).toBe(0);
+    expect(ep.hand).toContain(c);
+  });
+
+  test("commitHand cannot put roles into a column with no Lands", () => {
+    const ep = freshEpoch();
+    const r1 = getCard(roleId("agitator", "solidarity"));
+    const r2 = getCard(roleId("agitator", "heritage"));
+    ep.hand = [r1, r2];
+    const r = commitHand(ep, 0, "influence", [r1.id, r2.id], rng);
+    expect(r.ok).toBe(false);
+    expect(ep.columns[0].influence.cards.length).toBe(0);
+  });
 });
