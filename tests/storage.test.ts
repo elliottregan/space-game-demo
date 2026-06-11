@@ -69,9 +69,15 @@ describe("storage model", () => {
 
 const SETTING = getSetting("homeworld"); // storageCapacity: 1
 
+/** Storage is unlocked by play: seed a Land so the column accepts stores. */
+function seedLand(ep: Epoch, col = 0): void {
+  placeLand(ep.columns[col], land(7, "solidarity"));
+}
+
 describe("storeCard command", () => {
   test("stores a card from hand into the column's storage, free of charge", () => {
     const ep = freshEpoch();
+    seedLand(ep);
     const card = land(6, "sovereignty");
     ep.hand = [card];
     const before = ep.influence;
@@ -83,8 +89,21 @@ describe("storeCard command", () => {
     expect(ep.draw.length).toBe(0); // storing is not a discard — no Dissent
   });
 
+  test("storage requires a Land in the column", () => {
+    const ep = freshEpoch();
+    const card = land(6, "sovereignty");
+    ep.hand = [card];
+    const r = storeCard(ep, SETTING, card.id, 0);
+    expect(r.ok).toBe(false);
+    expect(ep.hand).toContain(card);
+    expect(ep.columns[0].storage.length).toBe(0);
+  });
+
   test("any card kind is storable — role, charter, even Dissent", () => {
     const ep = freshEpoch([createEmptyColumn(), createEmptyColumn(), createEmptyColumn()]);
+    seedLand(ep, 0);
+    seedLand(ep, 1);
+    seedLand(ep, 2);
     const role = getCard(roleId("scholar", "heritage"));
     const charter = getCard("keystone-pioneer");
     const dissent = makeDissent();
@@ -96,6 +115,7 @@ describe("storeCard command", () => {
 
   test("at capacity without replaceId → error, nothing changes", () => {
     const ep = freshEpoch();
+    seedLand(ep);
     const stored = land(3, "heritage");
     ep.columns[0].storage = [stored];
     const incoming = land(9, "solidarity");
@@ -108,6 +128,7 @@ describe("storeCard command", () => {
 
   test("replacement discards the old card (→ Dissent) and stores the new one", () => {
     const ep = freshEpoch();
+    seedLand(ep);
     const stored = land(3, "heritage");
     ep.columns[0].storage = [stored];
     const incoming = land(9, "solidarity");
@@ -121,6 +142,7 @@ describe("storeCard command", () => {
 
   test("replaceId with room still evicts the named card (explicit swap)", () => {
     const ep = freshEpoch();
+    seedLand(ep);
     const stored = land(3, "heritage");
     ep.columns[0].storage = [stored];
     // Pretend capacity were larger: replaceId is honored regardless of fullness.
@@ -134,6 +156,7 @@ describe("storeCard command", () => {
 
   test("replaceId naming a card not in storage errors with no mutation", () => {
     const ep = freshEpoch();
+    seedLand(ep);
     const incoming = land(9, "solidarity");
     ep.hand = [incoming];
     const r = storeCard(ep, SETTING, incoming.id, 0, "ghost");
@@ -145,6 +168,7 @@ describe("storeCard command", () => {
 
   test("guards: ended epoch, wrong phase, unknown card, invalid column", () => {
     const ep = freshEpoch();
+    seedLand(ep);
     const card = land(6, "sovereignty");
     ep.hand = [card];
     expect(storeCard(ep, SETTING, "nope", 0).ok).toBe(false);

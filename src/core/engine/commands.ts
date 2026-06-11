@@ -201,6 +201,8 @@ export function buildColumn(
 
 /**
  * Store a card from hand into a column's storage. Free; any card kind.
+ * Requires the column to already hold at least one Land — storage is
+ * infrastructure that play unlocks, not a free-floating stash.
  *
  * @param replaceId - When provided, the named card MUST already be in this
  *   column's storage; it is evicted (dispatched as `card-discarded` with
@@ -225,6 +227,11 @@ export function storeCard(
   if (!col) return { ok: false, error: "Invalid column." };
   const handIdx = epoch.hand.findIndex((c) => c.id === cardId);
   if (handIdx === -1) return { ok: false, error: "Card not in hand." };
+  // Storage is unlocked by play: a column must hold at least one Land
+  // before its warehouse can be used (mirrors the Influence prerequisite).
+  if (col.lands.cards.length === 0) {
+    return { ok: false, error: "Storage needs at least one Land below." };
+  }
 
   if (replaceId !== undefined) {
     const replaceIdx = col.storage.findIndex((c) => c.id === replaceId);

@@ -3,8 +3,15 @@
     <!-- fit-content wrapper: storage anchors to the actual stack/placeholder
          edge, not the (column-wide) cell, so the peek survives wide stacks. -->
     <div class="land-content">
-      <!-- Storage: rotated stack behind the active stack, peeking right. -->
-      <div class="storage-layer" :class="{ empty: storage.length === 0 }" v-drop-zone="storageZone">
+      <!-- Storage: rotated stack behind the active stack, peeking right.
+           Only offered once the column holds a Land (storage is unlocked by
+           play) — but always shown while it still holds cards. -->
+      <div
+        v-if="storage.length > 0 || cards.length > 0"
+        class="storage-layer"
+        :class="{ empty: storage.length === 0 }"
+        v-drop-zone="storageZone"
+      >
         <span v-if="storage.length === 0" class="storage-tab-label">Storage</span>
         <CardStack
           v-else
@@ -68,6 +75,9 @@ const landZone = computed<DropZoneOptions>(() => ({
 }));
 
 const storageZone = computed<DropZoneOptions>(() => ({
+  // Core enforces the Land prerequisite too; this gate keeps the highlight
+  // and drop affordance honest.
+  accepts: () => props.cards.length > 0,
   onDrop: (p) => emit("store", p.cardId),
 }));
 </script>
