@@ -9,6 +9,7 @@
           <div class="row-label">Charter</div>
           <div class="row-label">Influence</div>
           <div class="row-label">Land</div>
+          <div class="row-label">Storage</div>
           <div class="row-label"></div>
         </div>
         <TableauColumn
@@ -18,7 +19,13 @@
           :buildable="columnBuildable[i] ?? false"
           :build-tooltip="buildTooltip(i)"
           :valid-for-drag="validForDrag(i)"
+          :selected-storage-ids="selectedStorageFor(i)"
+          :storage-capacity="storageCapacity"
+          :can-place-from-storage="(card) => canPlaceStored(i, card)"
           @place-card="(cardId) => $emit('placeCard', cardId, i)"
+          @store-card="(cardId) => $emit('storeCard', cardId, i)"
+          @toggle-storage-select="(cardId) => $emit('toggleStorageSelect', i, cardId)"
+          @place-from-storage="(cardId) => $emit('placeFromStorage', cardId, i)"
           @discard-land="$emit('discardLand', i)"
           @discard-charter="$emit('discardCharter', i)"
           @recall-influence="$emit('recallInfluence', i)"
@@ -46,10 +53,16 @@ const props = defineProps<{
   columnBuildable: boolean[];
   buildableLabels: string[]; // one label per column (e.g., "Pair → The Commons (+2)")
   getCardFromHand: (cardId: string) => Card | null;
+  selectedStorageFor: (col: number) => string[];
+  storageCapacity: number;
+  canPlaceStored: (col: number, card: Card) => boolean;
 }>();
 
 defineEmits<{
   placeCard: [cardId: string, columnIndex: number];
+  storeCard: [cardId: string, columnIndex: number];
+  toggleStorageSelect: [columnIndex: number, cardId: string];
+  placeFromStorage: [cardId: string, columnIndex: number];
   discardLand: [columnIndex: number];
   discardCharter: [columnIndex: number];
   recallInfluence: [columnIndex: number];
@@ -103,7 +116,7 @@ function validForDrag(i: number): { land: boolean; influence: boolean; charter: 
 }
 .row-labels {
   display: grid;
-  grid-template-rows: 150px 150px 150px auto;
+  grid-template-rows: 150px 150px 150px auto auto;
   /* Must match .tableau-column's row gap exactly or labels drift downward
      row by row. */
   gap: 6px;

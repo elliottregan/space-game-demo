@@ -21,13 +21,18 @@
          selection is active, so the panel itself never resizes and pushes
          the tableau above. -->
     <div class="hand-actions">
-      <span v-if="selectedCards.length === 0" class="hand-hint">
+      <span v-if="selectedCards.length === 0 && !storageSelection" class="hand-hint">
         Click cards to select. Actions apply to all selected.
       </span>
 
       <template v-else>
         <div class="action-meta">
-          <span>{{ selectedIds.length }} selected</span>
+          <span
+            >{{ selectedIds.length }} selected<template v-if="storageSelection">
+              + {{ storageSelection.cards.length }} stored (Col
+              {{ storageSelection.columnIndex + 1 }})</template
+            ></span
+          >
           <button class="linklike" @click="$emit('clearSelection')">clear</button>
           <span v-if="rowHandLabel" class="action-handlabel">
             · Hand: <strong>{{ rowHandLabel }}</strong>
@@ -85,6 +90,7 @@ const props = defineProps<{
   influence: number;
   columns: Column[];
   validColumnsFor: (cardId: string) => number[];
+  storageSelection: { columnIndex: number; cards: CardT[] } | null;
 }>();
 
 defineEmits<{
@@ -102,6 +108,12 @@ const selectedCards = computed(() =>
 );
 
 const playableSelection = computed(() => selectedCards.value.filter((c) => !isDissent(c)));
+
+/** Combined selection: hand cards + storage cards (storage pre-filtered to non-dissent). */
+const combinedSelection = computed(() => [
+  ...playableSelection.value,
+  ...(props.storageSelection?.cards.filter((c) => !isDissent(c)) ?? []),
+]);
 
 /** Columns where EVERY playable selected card can be placed in order
  * (Land row stacks lands of matching rank; Influence holds one Role;
@@ -122,16 +134,20 @@ const validSharedSlots = computed(() => {
 });
 
 /**
- * For 2+ card selections that form a valid row-hand, return all (columnIndex, row)
- * targets that can accept the hand via commitHand.
+ * For 2+ combined-card selections (hand + storage) that form a valid row-hand,
+ * return all (columnIndex, row) targets that can accept the hand via commitHand.
+ * When storage is selected, only the matching column is tested.
  */
 const commitTargets = computed<{ columnIndex: number; row: "land" | "influence" }[]>(() => {
-  const cards = playableSelection.value;
-  if (cards.length < 2) return [];
+  const all = combinedSelection.value;
+  if (all.length < 2) return [];
+  const storSel = props.storageSelection;
   const out: { columnIndex: number; row: "land" | "influence" }[] = [];
-  for (let i = 0; i < props.columns.length; i++) {
+  // Restrict to the storage column when storage is in play.
+  const colIndices = storSel ? [storSel.columnIndex] : props.columns.map((_, i) => i);
+  for (const i of colIndices) {
     for (const row of ["land", "influence"] as const) {
-      if (canCommitHand(props.columns[i], row, cards)) {
+      if (canCommitHand(props.columns[i], row, all)) {
         out.push({ columnIndex: i, row });
       }
     }
@@ -139,9 +155,9 @@ const commitTargets = computed<{ columnIndex: number; row: "land" | "influence" 
   return out;
 });
 
-/** Label for the row-hand the selection forms (first matching row type). */
+/** Label for the row-hand the combined selection forms (first matching row type). */
 const rowHandLabel = computed<string | null>(() => {
-  const cards = playableSelection.value;
+  const cards = combinedSelection.value;
   if (cards.length === 0) return null;
   const landHand = rowHandForRow("land");
   if (landHand) return formatHand(landHand);
@@ -151,7 +167,7 @@ const rowHandLabel = computed<string | null>(() => {
 });
 
 function rowHandForRow(row: "land" | "influence"): string | null {
-  const cards = playableSelection.value;
+  const cards = combinedSelection.value;
   if (cards.length === 0) return null;
   const requiredKind = row === "land" ? "land" : "role";
   if (cards.some((c) => c.kind !== requiredKind)) return null;

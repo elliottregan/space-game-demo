@@ -3,7 +3,7 @@
 import { shallowRef, ref, type Ref, type ShallowRef } from "vue";
 import { GameAPI, type Snapshot } from "../facade/GameAPI.ts";
 import type { SaveSlot } from "../facade/persistence.ts";
-import type { LegacyUpgrade } from "../core/types.ts";
+import type { Card, LegacyUpgrade } from "../core/types.ts";
 import { canCommitHand } from "../core/engine/rowHands.ts";
 
 class GameService {
@@ -95,6 +95,16 @@ class GameService {
     this.report(r as any);
     this.refresh();
   }
+  storeCard(cardId: string, columnIndex: number, replaceId?: string): void {
+    const r = this.api.storeCard(cardId, columnIndex, replaceId);
+    this.report(r as any);
+    this.refresh();
+  }
+  placeFromStorage(cardId: string, columnIndex: number): void {
+    const r = this.api.placeFromStorage(cardId, columnIndex);
+    this.report(r as any);
+    this.refresh();
+  }
   resolveCrisis(): void {
     const r = this.api.resolveCrisis();
     this.report(r as any);
@@ -152,25 +162,29 @@ class GameService {
   }
 
   /**
-   * Validate whether the buffered cards can be committed to the given row of
-   * the given column WITHOUT performing the commit.
+   * Validate whether the buffered cards (plus optional storage cards) can be
+   * committed to the given row of the given column WITHOUT performing the commit.
    */
-  canCommitToRow(columnIndex: number, row: "land" | "influence"): boolean {
+  canCommitToRow(
+    columnIndex: number,
+    row: "land" | "influence",
+    storageCards: Card[] = [],
+  ): boolean {
     const ids = this.commitBuffer.value;
-    if (ids.length === 0) return false;
+    if (ids.length + storageCards.length === 0) return false;
     const snap = this.snapshot.value;
     const col = snap.epoch.columns[columnIndex];
     if (!col) return false;
-    const cards = ids.flatMap((id) => {
+    const handCards = ids.flatMap((id) => {
       const c = snap.epoch.hand.find((h) => h.id === id);
       return c ? [c] : [];
     });
-    if (cards.length !== ids.length) return false; // some id not in hand
-    return canCommitHand(col, row, cards);
+    if (handCards.length !== ids.length) return false; // some id not in hand
+    return canCommitHand(col, row, [...handCards, ...storageCards]);
   }
 
-  commitToRow(columnIndex: number, row: "land" | "influence"): void {
-    const r = this.api.commitHand(columnIndex, row, [...this.commitBuffer.value]);
+  commitToRow(columnIndex: number, row: "land" | "influence", fromStorageIds: string[] = []): void {
+    const r = this.api.commitHand(columnIndex, row, [...this.commitBuffer.value], fromStorageIds);
     this.report(r as any);
     if (r.ok) this.clearBuffer();
     this.refresh();
