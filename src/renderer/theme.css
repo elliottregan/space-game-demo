@@ -84,6 +84,7 @@
 
     /* Layout */
     --rail-width: 44px;
+    --tree-width: 200px;
   }
 
   /* Light theme — follows OS when user hasn't chosen. */
@@ -281,7 +282,7 @@
 
   .app-main {
     display: grid;
-    grid-template-columns: var(--rail-width) 200px minmax(0, 1fr) var(--rail-width);
+    grid-template-columns: var(--rail-width) var(--tree-width) minmax(0, 1fr) var(--rail-width);
     overflow: hidden;
     min-height: 0;
   }

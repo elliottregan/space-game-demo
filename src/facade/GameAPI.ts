@@ -44,7 +44,6 @@ import { demonym, demonymName } from "../core/engine/ideology.ts";
 import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../core/engine/column.ts";
 import { evaluateColumn } from "../core/engine/columnPatterns.ts";
 import { countDissentInDeck } from "../core/engine/effects.ts";
-import { unlockedIdeologyBreakdown } from "../core/data/projects.ts";
 
 export interface Snapshot {
   campaign: Campaign;
@@ -53,7 +52,6 @@ export interface Snapshot {
   vector: IdeologyVector;
   demonymLabel: string;
   deckCounts: { hand: number; draw: number; discard: number; dissent: number };
-  ideologyBreakdown: Record<"solidarity" | "sovereignty" | "transformation" | "heritage", number>;
   columnBuildable: boolean[]; // parallel to epoch.columns
 }
 
@@ -214,7 +212,6 @@ export class GameAPI {
         discard: this.epoch.discard.length,
         dissent,
       },
-      ideologyBreakdown: unlockedIdeologyBreakdown(this.epoch.unlockedProjects),
       columnBuildable,
     };
   }
