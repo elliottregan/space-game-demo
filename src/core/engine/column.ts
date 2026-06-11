@@ -26,6 +26,10 @@ export interface Column {
   lands: LandRow;
   influence: InfluenceRow;
   charter: CharterRow;
+  /** Inert staging area: any card kind, capacity-limited, invisible to
+   *  pattern/ideology evaluation (columnCards() excludes it, which is how
+   *  evaluation ignores it). Survives Build. See the M1 design spec. */
+  storage: Card[];
 }
 
 export interface ColumnConfig {
@@ -44,6 +48,7 @@ export function createEmptyColumn(): Column {
     lands: { cards: [] },
     influence: { cards: [] },
     charter: { card: null },
+    storage: [],
   };
 }
 

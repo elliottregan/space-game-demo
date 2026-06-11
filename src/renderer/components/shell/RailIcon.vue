@@ -11,15 +11,8 @@
     stroke-linejoin="round"
     :aria-label="name"
   >
-    <!-- Keystone Projects: filled five-point star -->
-    <polygon
-      v-if="name === 'projects'"
-      points="12,3 14.7,9.3 21.5,9.9 16.4,14.4 18,21 12,17.4 6,21 7.6,14.4 2.5,9.9 9.3,9.3"
-      fill="currentColor"
-      stroke="none"
-    />
     <!-- Crisis Counter: warning triangle with exclamation -->
-    <template v-else-if="name === 'crisis'">
+    <template v-if="name === 'crisis'">
       <polygon points="12,3.5 21.5,20.5 2.5,20.5" />
       <line x1="12" y1="10" x2="12" y2="15" />
       <line x1="12" y1="18" x2="12" y2="18" />
@@ -66,7 +59,6 @@
 
 <script setup lang="ts">
 export type RailIconName =
-  | "projects"
   | "crisis"
   | "ideology"
   | "monuments"

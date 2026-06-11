@@ -21,23 +21,27 @@ export function placeCard(
   cardId: string,
   columnIndex: number,
   rng: RNG,
+  source: "hand" | "storage" = "hand",
 ): PlaceResult {
   if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
   if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
 
-  const handIdx = epoch.hand.findIndex((c) => c.id === cardId);
-  if (handIdx === -1) return { ok: false, error: "Card not in hand." };
-  const card = epoch.hand[handIdx];
-  if (card.tags.includes("dissent")) return { ok: false, error: "Dissent cannot be played." };
-
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
+
+  const pool = source === "hand" ? epoch.hand : col.storage;
+  const poolIdx = pool.findIndex((c) => c.id === cardId);
+  if (poolIdx === -1) {
+    return { ok: false, error: source === "hand" ? "Card not in hand." : "Card not in storage." };
+  }
+  const card = pool[poolIdx];
+  if (card.tags.includes("dissent")) return { ok: false, error: "Dissent cannot be played." };
 
   if (card.kind === "land") {
     if (!canPlaceLand(col, card)) {
       return { ok: false, error: "Land cannot be placed there (would not form a valid hand)." };
     }
-    epoch.hand.splice(handIdx, 1);
+    pool.splice(poolIdx, 1);
     dispatch(epoch, { type: "card-played-to-land", card, columnIndex });
     return { ok: true, card };
   }
@@ -51,7 +55,8 @@ export function placeCard(
       setting,
       card,
       columnIndex,
-      handIdx,
+      pool,
+      poolIdx,
       "card-played-to-influence",
       rng,
     );
@@ -61,7 +66,16 @@ export function placeCard(
     if (!canPlaceCharter(col, card)) {
       return { ok: false, error: "Charter row needs the Influence row filled." };
     }
-    return playToTopRow(epoch, setting, card, columnIndex, handIdx, "card-played-to-charter", rng);
+    return playToTopRow(
+      epoch,
+      setting,
+      card,
+      columnIndex,
+      pool,
+      poolIdx,
+      "card-played-to-charter",
+      rng,
+    );
   }
 
   return { ok: false, error: "Card kind cannot be played." };
@@ -72,7 +86,8 @@ function playToTopRow(
   _setting: Setting,
   card: Card,
   columnIndex: number,
-  handIdx: number,
+  pool: Card[],
+  poolIdx: number,
   eventType: GameEvent["type"] & ("card-played-to-influence" | "card-played-to-charter"),
   rng: RNG,
 ): PlaceResult {
@@ -83,7 +98,7 @@ function playToTopRow(
     };
   }
   epoch.influence -= card.influenceCost;
-  epoch.hand.splice(handIdx, 1);
+  pool.splice(poolIdx, 1);
   dispatch(epoch, { type: eventType, card, columnIndex } as GameEvent);
 
   applyEffect(card.effect, { epoch, rng });
@@ -184,55 +199,129 @@ export function buildColumn(
   return { ok: true, value: unlock };
 }
 
+/**
+ * Store a card from hand into a column's storage. Free; any card kind.
+ * Requires the column to already hold at least one Land — storage is
+ * infrastructure that play unlocks, not a free-floating stash.
+ *
+ * @param replaceId - When provided, the named card MUST already be in this
+ *   column's storage; it is evicted (dispatched as `card-discarded` with
+ *   `source: "storage"`, which breeds Dissent) and the new card takes its
+ *   place. This eviction happens regardless of whether storage is full — the
+ *   caller is making an explicit swap, not an overflow check. If the named
+ *   card is not found, the command returns an error with no mutation.
+ *
+ *   When omitted, the command requires a free slot. If storage is already at
+ *   capacity the command returns an error with no mutation.
+ */
+export function storeCard(
+  epoch: Epoch,
+  setting: Setting,
+  cardId: string,
+  columnIndex: number,
+  replaceId?: string,
+): CmdResult<Card> {
+  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
+  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  const col = epoch.columns[columnIndex];
+  if (!col) return { ok: false, error: "Invalid column." };
+  const handIdx = epoch.hand.findIndex((c) => c.id === cardId);
+  if (handIdx === -1) return { ok: false, error: "Card not in hand." };
+  // Storage is unlocked by play: a column must hold at least one Land
+  // before its warehouse can be used (mirrors the Influence prerequisite).
+  if (col.lands.cards.length === 0) {
+    return { ok: false, error: "Storage needs at least one Land below." };
+  }
+
+  if (replaceId !== undefined) {
+    const replaceIdx = col.storage.findIndex((c) => c.id === replaceId);
+    if (replaceIdx === -1) {
+      return { ok: false, error: "Card to replace not found in storage." };
+    }
+    const [replaced] = col.storage.splice(replaceIdx, 1);
+    dispatch(epoch, { type: "card-discarded", card: replaced, source: "storage" });
+  } else {
+    const capacity = setting.rules.storageCapacity;
+    if (col.storage.length >= capacity) {
+      return { ok: false, error: "Storage is full." };
+    }
+  }
+
+  const card = epoch.hand[handIdx];
+  epoch.hand.splice(handIdx, 1);
+  dispatch(epoch, { type: "card-stored", card, columnIndex });
+  return { ok: true, value: card };
+}
+
 export function commitHand(
   epoch: Epoch,
   columnIndex: number,
   row: "land" | "influence",
   cardIds: string[],
   rng: RNG,
+  fromStorageIds: string[] = [],
 ): CmdResult<Card[]> {
   if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
   if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
-  if (cardIds.length === 0) return { ok: false, error: "No cards to commit." };
+  if (cardIds.length + fromStorageIds.length === 0)
+    return { ok: false, error: "No cards to commit." };
 
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
 
-  // 1. Resolve card IDs → Cards in hand, preserving order.
+  // 1. Resolve hand ids → Cards, then storage ids → Cards (this column only).
   const cards: Card[] = [];
   for (const id of cardIds) {
     const c = epoch.hand.find((h) => h.id === id);
     if (!c) return { ok: false, error: `Card ${id} not in hand.` };
     cards.push(c);
   }
+  const storageCards: Card[] = [];
+  for (const id of fromStorageIds) {
+    const c = col.storage.find((s) => s.id === id);
+    if (!c) return { ok: false, error: `Card ${id} not in this column's storage.` };
+    storageCards.push(c);
+  }
 
-  // 2. Kind check + row-hand validation.
-  if (!canCommitHand(col, row, cards)) {
+  const requestedIds = [...cardIds, ...fromStorageIds];
+  if (new Set(requestedIds).size !== requestedIds.length) {
+    return { ok: false, error: "Duplicate card in commit." };
+  }
+
+  const all = [...cards, ...storageCards];
+  if (all.some((c) => c.tags.includes("dissent"))) {
+    return { ok: false, error: "Dissent cannot be played." };
+  }
+
+  // 2. Kind check + row-hand validation over the combined set.
+  if (!canCommitHand(col, row, all)) {
     return { ok: false, error: "Not a valid hand." };
   }
 
-  // 3. For influence row, check affordability and deduct.
+  // 3. For influence row, check affordability over the combined set.
   if (row === "influence") {
-    const totalCost = cards.reduce((sum, c) => sum + c.influenceCost, 0);
+    const totalCost = all.reduce((sum, c) => sum + c.influenceCost, 0);
     if (epoch.influence < totalCost) {
       return { ok: false, error: "Not enough Influence." };
     }
     epoch.influence -= totalCost;
   }
 
-  // 4. Remove the cards from hand.
+  // 4. Remove from hand and from storage.
   const idsSet = new Set(cardIds);
   epoch.hand = epoch.hand.filter((h) => !idsSet.has(h.id));
+  const storageSet = new Set(fromStorageIds);
+  col.storage = col.storage.filter((s) => !storageSet.has(s.id));
 
   // 5. Dispatch — handler appends cards to the row in order.
-  dispatch(epoch, { type: "cards-committed", columnIndex, row, cards });
+  dispatch(epoch, { type: "cards-committed", columnIndex, row, cards: all });
 
-  // 6. Fire per-card effects in placement order, matching placeCard's pattern.
+  // 6. Fire per-card effects in placement order.
   if (row === "influence") {
-    for (const card of cards) {
+    for (const card of all) {
       applyEffect(card.effect, { epoch, rng });
     }
   }
 
-  return { ok: true, value: cards };
+  return { ok: true, value: all };
 }

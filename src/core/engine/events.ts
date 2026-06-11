@@ -9,7 +9,8 @@ export type DiscardSource =
   | "tableau-charter"
   | "column"
   | "hand"
-  | "influence-recall";
+  | "influence-recall"
+  | "storage";
 
 export type GameEvent =
   | { type: "card-played-to-land"; card: Card; columnIndex: number }
@@ -19,5 +20,6 @@ export type GameEvent =
   | { type: "cards-committed"; columnIndex: number; row: "land" | "influence"; cards: Card[] }
   | { type: "column-built"; columnIndex: number; unlock: ProjectUnlock }
   | { type: "dissent-added" }
+  | { type: "card-stored"; card: Card; columnIndex: number }
   | { type: "turn-ended"; turn: number }
   | { type: "crisis-resolved"; outcome: CrisisOutcome };

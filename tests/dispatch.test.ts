@@ -215,6 +215,7 @@ describe("commitHand command", () => {
     const role0 = getCard(roleId("agitator", "solidarity"));
     const role1 = getCard(roleId("agitator", "heritage"));
     const ep = epochWithHand([role0, role1], 10);
+    placeLand(ep.columns[0], getCard(landId(7, "solidarity"))); // satisfy Land prerequisite
     const before = ep.influence;
     // agitator solidarity effect: gainInfluence(1) costs 1; net per card = 0 influence change
     // agitator heritage effect: gainInfluence(1) + backlash, costs 1
@@ -230,6 +231,9 @@ describe("commitHand command", () => {
     const role0 = getCard(roleId("scholar", "solidarity")); // cost 2
     const role1 = getCard(roleId("scholar", "heritage")); // cost 2
     const ep = epochWithHand([role0, role1], 3); // total cost = 4, have 3
+    // A Land must be present so the commit reaches the affordability check
+    // (land-less influence commits are rejected earlier for a different reason).
+    placeLand(ep.columns[0], getCard(landId(7, "solidarity")));
     const influenceBefore = ep.influence;
     const result = commitHand(ep, 0, "influence", [role0.id, role1.id], rng);
     expect(result.ok).toBe(false);
@@ -243,6 +247,7 @@ describe("commitHand command", () => {
     const role0 = getCard(roleId("agitator", "solidarity")); // cost 1, effect: +1 inf
     const role1 = getCard(roleId("agitator", "transformation")); // cost 1, effect: +1 inf
     const ep = epochWithHand([role0, role1], 10);
+    placeLand(ep.columns[0], getCard(landId(7, "solidarity"))); // satisfy Land prerequisite
     const before = ep.influence;
     const result = commitHand(ep, 0, "influence", [role0.id, role1.id], rng);
     expect(result.ok).toBe(true);

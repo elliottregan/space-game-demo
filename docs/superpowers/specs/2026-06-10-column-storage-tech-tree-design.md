@@ -45,7 +45,7 @@ Each column gains a **storage** area (its warehouse / staging yard).
 
 ### Rules
 
-1. **Any card kind can be stored** — land, role, or charter. The only limit is capacity.
+1. **Any card kind can be stored** — land, role, or charter. The only limit is capacity, plus one prerequisite (amended 2026-06-11): **the column must already hold at least one Land** — storage is infrastructure that play unlocks, mirroring the Influence row's prerequisite.
 2. **Base capacity: 1 slot per column** (tunable per Setting). Capacity can be raised by project-upgrade effects and tech-tree rewards.
 3. **Storing is free** — no Influence, no action cost beyond playing the card from hand.
 4. **Stored cards are inert.** Invisible to `evaluateColumn`, excluded from `columnCards` for ideology derivation, no effects fire, roles' Influence costs are *not* paid on storing.

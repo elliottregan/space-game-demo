@@ -30,13 +30,18 @@
          selection is active, so the panel itself never resizes and pushes
          the tableau above. -->
     <div class="hand-actions">
-      <span v-if="selectedCards.length === 0" class="hand-hint">
+      <span v-if="selectedCards.length === 0 && !storageSelection" class="hand-hint">
         Click cards to select. Actions apply to all selected.
       </span>
 
       <template v-else>
         <div class="action-meta">
-          <span>{{ selectedIds.length }} selected</span>
+          <span
+            >{{ selectedIds.length }} selected<template v-if="storageSelection">
+              + {{ storageSelection.cards.length }} stored (Col
+              {{ storageSelection.columnIndex + 1 }})</template
+            ></span
+          >
           <button class="linklike" @click="$emit('clearSelection')">clear</button>
           <span v-if="rowHandLabel" class="action-handlabel">
             · Hand: <strong>{{ rowHandLabel }}</strong>
@@ -87,6 +92,7 @@ import Card from "../core/Card.vue";
 import Panel from "../core/Panel.vue";
 import { beginDrag, endDrag, dragging } from "../../util/dragState.ts";
 import { identifyRowHand, canCommitHand } from "../../../core/engine/rowHands.ts";
+import { canPlaceLand, canPlaceInfluence, canPlaceCharter } from "../../../core/engine/column.ts";
 import { animateDiscard, animateDraw, animatePlaced } from "../../animation/cardFlight.ts";
 
 const props = defineProps<{
@@ -98,6 +104,7 @@ const props = defineProps<{
   /** Ids currently in the discard pile — tells the leave hook whether a
    * departing card flies to the discard or was placed on the tableau. */
   discardIds: string[];
+  storageSelection: { columnIndex: number; cards: CardT[] } | null;
 }>();
 
 defineEmits<{
@@ -116,10 +123,15 @@ const selectedCards = computed(() =>
 
 const playableSelection = computed(() => selectedCards.value.filter((c) => !isDissent(c)));
 
-/** Columns where EVERY playable selected card can be placed in order
- * (Land row stacks lands of matching rank; Influence holds one Role;
- * Charter holds one Charter). Simulating sequential placement avoids
- * promising slots where only the first selected card actually fits. */
+/** Combined selection: hand cards + storage cards (storage pre-filtered to non-dissent). */
+const combinedSelection = computed(() => [
+  ...playableSelection.value,
+  ...(props.storageSelection?.cards.filter((c) => !isDissent(c)) ?? []),
+]);
+
+/** Columns where EVERY playable selected card can be placed in order,
+ * as determined by the core placement rules. Simulating sequential placement
+ * avoids promising slots where only the first selected card actually fits. */
 const validSharedSlots = computed(() => {
   const cards = playableSelection.value;
   if (cards.length === 0) return [];
@@ -135,16 +147,20 @@ const validSharedSlots = computed(() => {
 });
 
 /**
- * For 2+ card selections that form a valid row-hand, return all (columnIndex, row)
- * targets that can accept the hand via commitHand.
+ * For 2+ combined-card selections (hand + storage) that form a valid row-hand,
+ * return all (columnIndex, row) targets that can accept the hand via commitHand.
+ * When storage is selected, only the matching column is tested.
  */
 const commitTargets = computed<{ columnIndex: number; row: "land" | "influence" }[]>(() => {
-  const cards = playableSelection.value;
-  if (cards.length < 2) return [];
+  const all = combinedSelection.value;
+  if (all.length < 2) return [];
+  const storSel = props.storageSelection;
   const out: { columnIndex: number; row: "land" | "influence" }[] = [];
-  for (let i = 0; i < props.columns.length; i++) {
+  // Restrict to the storage column when storage is in play.
+  const colIndices = storSel ? [storSel.columnIndex] : props.columns.map((_, i) => i);
+  for (const i of colIndices) {
     for (const row of ["land", "influence"] as const) {
-      if (canCommitHand(props.columns[i], row, cards)) {
+      if (canCommitHand(props.columns[i], row, all)) {
         out.push({ columnIndex: i, row });
       }
     }
@@ -152,9 +168,9 @@ const commitTargets = computed<{ columnIndex: number; row: "land" | "influence" 
   return out;
 });
 
-/** Label for the row-hand the selection forms (first matching row type). */
+/** Label for the row-hand the combined selection forms (first matching row type). */
 const rowHandLabel = computed<string | null>(() => {
-  const cards = playableSelection.value;
+  const cards = combinedSelection.value;
   if (cards.length === 0) return null;
   const landHand = rowHandForRow("land");
   if (landHand) return formatHand(landHand);
@@ -164,7 +180,7 @@ const rowHandLabel = computed<string | null>(() => {
 });
 
 function rowHandForRow(row: "land" | "influence"): string | null {
-  const cards = playableSelection.value;
+  const cards = combinedSelection.value;
   if (cards.length === 0) return null;
   const requiredKind = row === "land" ? "land" : "role";
   if (cards.some((c) => c.kind !== requiredKind)) return null;
@@ -178,28 +194,25 @@ function formatHand(hand: string): string {
     .join(" ");
 }
 
+/**
+ * Returns true if every card in `cards` can be placed onto `col` one after
+ * another. Delegates to the real core helpers (`canPlaceLand`,
+ * `canPlaceInfluence`, `canPlaceCharter`) on a shallow column copy so this
+ * function can never drift from the authoritative placement rules.
+ */
 function canPlaceAllSequentially(cards: CardT[], col: Column): boolean {
-  let landCount = col.lands.cards.length;
-  let landRank: number | null = col.lands.cards[0]?.rank ?? null;
-  let influenceFilled = col.influence.cards.length > 0;
-  let charterFilled = col.charter.card !== null;
+  // Simulate sequential single-card placement with the real core rules.
+  const sim: Column = {
+    lands: { cards: [...col.lands.cards] },
+    influence: { cards: [...col.influence.cards] },
+    charter: { card: col.charter.card },
+    storage: [...col.storage],
+  };
   for (const c of cards) {
-    if (c.kind === "land") {
-      if (landCount >= 4) return false;
-      if (landRank !== null && landRank !== c.rank) return false;
-      landCount++;
-      landRank = c.rank;
-    } else if (c.kind === "role") {
-      if (influenceFilled) return false;
-      if (landCount < 1) return false;
-      influenceFilled = true;
-    } else if (c.kind === "charter") {
-      if (charterFilled) return false;
-      if (!influenceFilled) return false;
-      charterFilled = true;
-    } else {
-      return false;
-    }
+    if (c.kind === "land" && canPlaceLand(sim, c)) sim.lands.cards.push(c);
+    else if (c.kind === "role" && canPlaceInfluence(sim, c)) sim.influence.cards.push(c);
+    else if (c.kind === "charter" && canPlaceCharter(sim, c)) sim.charter.card = c;
+    else return false;
   }
   return true;
 }

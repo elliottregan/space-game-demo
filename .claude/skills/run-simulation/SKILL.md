@@ -21,7 +21,7 @@ bun run scripts/analyze-crisis.ts [runs] [settingId] [seedOffset]
 | ------------ | ------------- | -------------------------------------------------------- |
 | `runs`       | 50            | Use 300–500 for tuning decisions; 50 is noisy (±5%+)     |
 | `settingId`  | `homeworld`   | `homeworld` \| `generation-ship` \| `ruined-homeworld`   |
-| `seedOffset` | 0             | Different offset = independent seed set; use to validate |
+| `seedOffset` | 0             | Added to each seed (`1+offset … runs+offset`). For an INDEPENDENT validation set it must be ≥ `runs` — a small offset mostly overlaps the default set |
 
 No flags, no log files — output is JSON on stdout only.
 
@@ -49,17 +49,18 @@ For a **tuning loop**:
 1. **Baseline first.** Run 300+ runs per affected Setting *before* changing values. To baseline against `main`, use a temp worktree: `git worktree add /tmp/baseline main` → run there → `git worktree remove /tmp/baseline --force`.
 2. Make the change (see CLAUDE.md "Balance tuning quick reference" for where each knob lives).
 3. Re-run with identical `runs`/`seedOffset` and compare.
-4. **Validate with a second seed set** (e.g. `seedOffset 7`) before trusting a number.
+4. **Validate with a second, non-overlapping seed set** (`seedOffset` ≥ `runs`, e.g. 1000) before trusting a number.
 
 **Picking a difficulty:** target ≈ `totalValue.mean − 0.8 × margin.stdev` lands near an 80% win rate; verify by simulation.
 
 ## Limitations
 
-- The AI plays one card at a time and never uses `commitHand`. It can therefore build high-card, pair, two-pair, three/four-of-a-kind, and flushes (same-rank stacking only) — but **never straights, full-houses, straight-flushes, or royal-flushes**, which all need multi-card commits. Permanent zeros for those patterns are an AI limitation, not a bug; the AI underestimates the score ceiling where they matter. Per-Setting deck filters add their own zeros (e.g. Generation Ship's 2-ideology deck rules out three/four-of-a-kind entirely).
+- The AI uses a multi-step greedy policy each turn: (1) build best column, (2) multi-card commit (straight, full-house, four-of-a-kind, three-of-a-kind, two-pair, pair — lands first, then roles), (3) single-card placement, (4) store one land toward a straight, (5) end turn. It never replaces stored cards (no-churn rule). Pattern zeros in the output indicate **deck-composition limits**, not AI limits — e.g. Generation Ship's 2-ideology deck rules out trips/quads/full-house entirely; straight-flush and royal-flush require card distributions the starting decks rarely provide.
 - Simulates a single Epoch from a fresh deck: no Legacy cards, no cross-Epoch effects.
 
 ## Common Mistakes
 
 - Comparing runs that used different `runs` or `seedOffset` values.
+- "Validating" with a small seedOffset — offset 7 with 500 runs shares 493 seeds with the default set, so agreement proves nothing.
 - Tuning from a 50-run sample — differences under ~5 points of win rate are noise at that size.
 - Reading the heuristic win rate as the expected human win rate.

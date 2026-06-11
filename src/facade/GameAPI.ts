@@ -16,6 +16,7 @@ import {
   discardLand as discardLandCore,
   placeCard as placeCardCore,
   recallInfluence as recallInfluenceCore,
+  storeCard as storeCardCore,
 } from "../core/engine/commands.ts";
 import { endTurn as endTurnCore, resolveCrisis as resolveCrisisCore } from "../core/engine/turn.ts";
 import { createRng, type RNG } from "../core/engine/rng.ts";
@@ -44,7 +45,6 @@ import { demonym, demonymName } from "../core/engine/ideology.ts";
 import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../core/engine/column.ts";
 import { evaluateColumn } from "../core/engine/columnPatterns.ts";
 import { countDissentInDeck } from "../core/engine/effects.ts";
-import { unlockedIdeologyBreakdown } from "../core/data/projects.ts";
 
 export interface Snapshot {
   campaign: Campaign;
@@ -53,7 +53,6 @@ export interface Snapshot {
   vector: IdeologyVector;
   demonymLabel: string;
   deckCounts: { hand: number; draw: number; discard: number; dissent: number };
-  ideologyBreakdown: Record<"solidarity" | "sovereignty" | "transformation" | "heritage", number>;
   columnBuildable: boolean[]; // parallel to epoch.columns
 }
 
@@ -90,7 +89,7 @@ export class GameAPI {
   /** Serialize current state for persistence. */
   exportState(): SavedState {
     return {
-      version: 4,
+      version: 5,
       campaign: this.campaign,
       settingId: this.setting.id,
       epoch: this.epoch,
@@ -179,6 +178,7 @@ export class GameAPI {
       lands: { cards: [...c.lands.cards] },
       influence: { cards: c.influence.cards.map((card) => ({ ...card })) },
       charter: { card: c.charter.card },
+      storage: [...c.storage],
     }));
     const columnBuildable = columnsView.map(
       (c) => evaluateColumn(c, this.setting.projects) !== null,
@@ -214,7 +214,6 @@ export class GameAPI {
         discard: this.epoch.discard.length,
         dissent,
       },
-      ideologyBreakdown: unlockedIdeologyBreakdown(this.epoch.unlockedProjects),
       columnBuildable,
     };
   }
@@ -264,12 +263,30 @@ export class GameAPI {
       : r;
   }
 
+  storeCard(cardId: string, columnIndex: number, replaceId?: string): CommandResult<Card> {
+    return storeCardCore(this.epoch, this.setting, cardId, columnIndex, replaceId);
+  }
+
+  placeFromStorage(cardId: string, columnIndex: number): CommandResult<Card> {
+    const r = placeCardCore(
+      this.epoch,
+      this.campaign,
+      this.setting,
+      cardId,
+      columnIndex,
+      this.rng,
+      "storage",
+    );
+    return r.ok ? { ok: true, value: r.card } : r;
+  }
+
   commitHand(
     columnIndex: number,
     row: "land" | "influence",
     cardIds: string[],
+    fromStorageIds: string[] = [],
   ): CommandResult<Card[]> {
-    const result = commitHandCore(this.epoch, columnIndex, row, cardIds, this.rng);
+    const result = commitHandCore(this.epoch, columnIndex, row, cardIds, this.rng, fromStorageIds);
     if (result.ok) this.persist();
     return result;
   }

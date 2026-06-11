@@ -84,6 +84,7 @@
 
     /* Layout */
     --rail-width: 44px;
+    --tree-width: 200px;
   }
 
   /* Light theme — follows OS when user hasn't chosen. */
@@ -281,7 +282,13 @@
 
   .app-main {
     display: grid;
-    grid-template-columns: var(--rail-width) minmax(0, 1fr) var(--rail-width);
+    grid-template-columns: var(--rail-width) var(--tree-width) minmax(0, 1fr) var(--rail-width);
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .project-tree {
+    border-right: 1px solid var(--rule-strong);
     overflow: hidden;
     min-height: 0;
   }
@@ -673,6 +680,13 @@
     min-width: 112px;
     width: 112px;
     margin-inline: auto;
+    /* Cell roots are pure layout since drop zones moved onto stacks and
+       placeholders — let pointer events fall through so a neighbor column's
+       storage peek (which overflows into this cell's box) stays hoverable. */
+    pointer-events: none;
+  }
+  .cell > * {
+    pointer-events: auto;
   }
   .cell.land-cell,
   .cell.influence-cell,
@@ -742,11 +756,14 @@
   }
 
   /* Drop targets: solid accent-tinted fill, 2px accent rule on the bottom
-     edge. No dashed outlines anywhere. */
+     edge. No dashed outlines anywhere. Matches stacks/placeholders inside
+     cells (directive-driven) as well as the legacy cell-root form. */
+  .cell .drop-target,
   .cell.drop-target {
     background: color-mix(in srgb, var(--accent) 10%, transparent);
     border-bottom: 2px solid var(--accent);
   }
+  .cell .drag-over,
   .cell.drag-over {
     background: color-mix(in srgb, var(--accent) 22%, transparent);
     border-bottom: 2px solid var(--accent);

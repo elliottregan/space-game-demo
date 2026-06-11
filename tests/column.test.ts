@@ -105,6 +105,15 @@ describe("column placement", () => {
   });
 });
 
+test("clearColumn wipes rows but leaves storage untouched", () => {
+  const col = createEmptyColumn();
+  placeLand(col, land(7, "solidarity"));
+  col.storage.push(land(8, "heritage"));
+  clearColumn(col);
+  expect(col.lands.cards.length).toBe(0);
+  expect(col.storage.length).toBe(1);
+});
+
 describe("single-card placement routing through validateRowHand", () => {
   test("first role on empty influence row is valid (high-card)", () => {
     const col = createEmptyColumn();
