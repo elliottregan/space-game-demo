@@ -71,7 +71,7 @@ Organized into three buckets. Each type lives next to the concept it describes; 
 - `components/` — SFCs, three buckets mirroring `core/`:
   - **`core/`** — pure visual primitives with no game-state knowledge. `Card`, `AxisBar`.
   - **`shell/`** — chrome and framing around the play area: header (`TurnBar`, `SaveSlotMenu`, `ThemeToggle`), modals (`CampaignEnd`, `CardListModal`), rails (`Rail`, `RailFlyout` + `sidebar/` sections).
-  - **`game/`** — gameplay-bound UI: tableau (`TableauPanel`, `TableauColumn`, `LandCell`, `InfluenceCell`, `CharterCell`, `ColumnFooter`), hand (`HandPanel`), piles (`DeckDiscardPanel`), info panels (`IdeologyDisplay`, `UnlockedProjectsPanel`), Crisis flow (`CrisisScreen`, `LegacyChoiceRow`).
+  - **`game/`** — gameplay-bound UI: tableau (`TableauPanel`, `TableauColumn`, `LandCell`, `InfluenceCell`, `CharterCell`, `ColumnFooter`), hand (`HandPanel`), piles (`DeckDiscardPanel`), info panels (`IdeologyDisplay`, `ProjectTreePanel`), Crisis flow (`CrisisScreen`, `LegacyChoiceRow`).
 
 ### Scripts
 
