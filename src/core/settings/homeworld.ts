@@ -99,6 +99,7 @@ export const HOMEWORLD: Setting = {
     columnCount: 7,
     influenceBaseline: 8,
     maxTurns: 12,
+    storageCapacity: 1,
   },
   startingDeck: ALL_CARD_IDS,
   startingColumns: STARTING_COLUMNS,

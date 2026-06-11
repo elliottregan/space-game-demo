@@ -1,12 +1,17 @@
 <template>
-  <div class="card-stack" :style="containerStyle">
+  <div v-drop-zone="dropZone ?? null" class="card-stack" :style="containerStyle">
     <div
       v-for="(c, i) in cards"
       :key="c.id"
       class="card-stack-slot"
       :style="{ '--stack-index': i, '--stack-z': i + 1 }"
     >
-      <Card :card="c" :selectable="false" />
+      <Card
+        :card="c"
+        :selectable="selectable"
+        :selected="selectedIds.includes(c.id)"
+        @select="$emit('select', c.id)"
+      />
     </div>
     <slot />
   </div>
@@ -16,6 +21,7 @@
 import { computed } from "vue";
 import type { Card as CardT } from "../../../core/types.ts";
 import Card from "./Card.vue";
+import { vDropZone, type DropZoneOptions } from "../../util/dropZone.ts";
 
 type StackDirection = "vertical" | "horizontal";
 
@@ -23,9 +29,19 @@ const props = withDefaults(
   defineProps<{
     cards: CardT[];
     direction?: StackDirection;
+    dropZone?: DropZoneOptions | null;
+    selectable?: boolean;
+    selectedIds?: string[];
   }>(),
-  { direction: "vertical" },
+  {
+    direction: "vertical",
+    dropZone: null,
+    selectable: false,
+    selectedIds: () => [],
+  },
 );
+
+defineEmits<{ select: [cardId: string] }>();
 
 const CARD_WIDTH = 112;
 const CARD_HEIGHT = 150;

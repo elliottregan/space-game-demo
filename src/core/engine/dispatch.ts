@@ -57,6 +57,11 @@ export function dispatch(epoch: Epoch, ev: GameEvent): void {
       epoch.draw.unshift(makeDissent());
       break;
     }
+    case "card-stored": {
+      const col = epoch.columns[ev.columnIndex];
+      if (col) col.storage.push(ev.card);
+      break;
+    }
     case "turn-ended":
     case "crisis-resolved":
       break;

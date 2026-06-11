@@ -16,6 +16,8 @@ export interface SettingRules {
   influenceBaseline: number;
   /** Turn budget. Crisis fires once `epoch.turn` exceeds this. */
   maxTurns: number;
+  /** Per-column storage slots (inert staging area). */
+  storageCapacity: number;
 }
 
 export interface Setting {

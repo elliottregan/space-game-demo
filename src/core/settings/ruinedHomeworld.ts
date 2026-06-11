@@ -96,6 +96,7 @@ export const RUINED_HOMEWORLD: Setting = {
     columnCount: 5,
     influenceBaseline: 8,
     maxTurns: 16,
+    storageCapacity: 1,
   },
   startingDeck: ALL_CARD_IDS,
   startingColumns: [],
