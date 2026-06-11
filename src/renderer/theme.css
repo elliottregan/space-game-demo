@@ -783,12 +783,22 @@
   }
   /* FLIP move transition for cards reflowing around a draw/discard. The
      flight itself is driven by the Web Animations API — tune it in
-     src/renderer/animation/cardFlight.ts (duration, easing, stagger, arc). */
+     src/renderer/animation/cardFlight.ts (duration, easing, stagger, arc).
+     The card variant must out-rank .card[draggable="true"] (0,2,0), whose
+     background/box-shadow transition would otherwise drop the transform
+     transition entirely and make reflowing cards snap instead of slide. */
   .hand-move {
     transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   }
+  .hand-cards .card.hand-move {
+    transition:
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      background 0.08s,
+      box-shadow 0.1s;
+  }
   @media (prefers-reduced-motion: reduce) {
-    .hand-move {
+    .hand-move,
+    .hand-cards .card.hand-move {
       transition: none;
     }
   }

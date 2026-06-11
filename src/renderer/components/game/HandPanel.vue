@@ -1,6 +1,7 @@
 <template>
   <Panel class="hand-panel" :title="`Hand (${hand.length})`">
     <TransitionGroup
+      ref="handList"
       tag="div"
       class="hand-cards"
       :css="false"
@@ -80,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onBeforeUpdate, ref } from "vue";
 import type { Card as CardT, Column } from "../../../core/types.ts";
 import Card from "../core/Card.vue";
 import Panel from "../core/Panel.vue";
@@ -241,6 +242,24 @@ function onCardDragEnd(): void {
   endDrag();
 }
 
+const handList = ref<{ $el?: HTMLElement } | null>(null);
+
+/** Card rects captured just before each patch (Vue's own FLIP trick). Leave
+ * hooks pin departing cards at these positions: by the time a given leave
+ * fires, earlier leavers from the same update are already out of flow and
+ * the centered row has reflowed, so a live rect would start the flight from
+ * a shifted, gap-collapsed spot. */
+const preUpdateRects = new Map<string, DOMRect>();
+onBeforeUpdate(() => {
+  preUpdateRects.clear();
+  const root = handList.value?.$el;
+  if (!root) return;
+  for (const el of root.querySelectorAll<HTMLElement>("[data-card-id]")) {
+    const id = el.dataset.cardId;
+    if (id && el.style.position !== "fixed") preUpdateRects.set(id, el.getBoundingClientRect());
+  }
+});
+
 function onCardEnter(el: Element, done: () => void): void {
   if (!(el instanceof HTMLElement) || !el.dataset.cardId) return done();
   animateDraw(el, done);
@@ -248,7 +267,8 @@ function onCardEnter(el: Element, done: () => void): void {
 
 function onCardLeave(el: Element, done: () => void): void {
   if (!(el instanceof HTMLElement) || !el.dataset.cardId) return done();
-  if (props.discardIds.includes(el.dataset.cardId)) animateDiscard(el, done);
-  else animatePlaced(el, done);
+  const from = preUpdateRects.get(el.dataset.cardId);
+  if (props.discardIds.includes(el.dataset.cardId)) animateDiscard(el, done, from);
+  else animatePlaced(el, done, from);
 }
 </script>

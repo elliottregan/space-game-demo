@@ -158,14 +158,19 @@ export function animateDraw(el: HTMLElement, done: () => void): void {
 }
 
 /**
- * Take the leaving card out of flow (pinned at its current spot, so siblings
- * reflow and the move transition kicks in immediately), then fly it onto the
+ * Take the leaving card out of flow (pinned at its spot, so siblings reflow
+ * and the move transition kicks in immediately), then fly it onto the
  * discard pile along the reverse of the draw path.
+ *
+ * `from` is the card's rect captured before the patch began. When several
+ * cards leave in one update, each leave hook fires after the previous card
+ * was already pinned out of flow — a live rect would measure the re-centered
+ * row and start the flight from a shifted, gap-collapsed position.
  */
-export function animateDiscard(el: HTMLElement, done: () => void): void {
+export function animateDiscard(el: HTMLElement, done: () => void, from?: DOMRect): void {
   const to = pileRect("discard");
   if (!to || prefersReducedMotion()) return done();
-  const rect = el.getBoundingClientRect();
+  const rect = from ?? el.getBoundingClientRect();
   pin(el, rect);
   const { dx, dy } = centerDelta(to, rect);
   const anim = el.animate(flightFrames(dx, dy, pileScale(to, rect)).reverse(), {
@@ -177,10 +182,11 @@ export function animateDiscard(el: HTMLElement, done: () => void): void {
   finish(anim, done);
 }
 
-/** Card left the hand but not for the discard (placed on the tableau): quick fade in place. */
-export function animatePlaced(el: HTMLElement, done: () => void): void {
+/** Card left the hand but not for the discard (placed on the tableau): quick
+ * fade in place. `from` as in animateDiscard. */
+export function animatePlaced(el: HTMLElement, done: () => void, from?: DOMRect): void {
   if (prefersReducedMotion()) return done();
-  pin(el, el.getBoundingClientRect());
+  pin(el, from ?? el.getBoundingClientRect());
   const anim = el.animate(
     [
       { opacity: 1, transform: "scale(1)" },
