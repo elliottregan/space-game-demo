@@ -92,6 +92,7 @@ import Card from "../core/Card.vue";
 import Panel from "../core/Panel.vue";
 import { beginDrag, endDrag, dragging } from "../../util/dragState.ts";
 import { identifyRowHand, canCommitHand } from "../../../core/engine/rowHands.ts";
+import { canPlaceLand, canPlaceInfluence, canPlaceCharter } from "../../../core/engine/column.ts";
 import { animateDiscard, animateDraw, animatePlaced } from "../../animation/cardFlight.ts";
 
 const props = defineProps<{
@@ -128,10 +129,9 @@ const combinedSelection = computed(() => [
   ...(props.storageSelection?.cards.filter((c) => !isDissent(c)) ?? []),
 ]);
 
-/** Columns where EVERY playable selected card can be placed in order
- * (Land row stacks lands of matching rank; Influence holds one Role;
- * Charter holds one Charter). Simulating sequential placement avoids
- * promising slots where only the first selected card actually fits. */
+/** Columns where EVERY playable selected card can be placed in order,
+ * as determined by the core placement rules. Simulating sequential placement
+ * avoids promising slots where only the first selected card actually fits. */
 const validSharedSlots = computed(() => {
   const cards = playableSelection.value;
   if (cards.length === 0) return [];
@@ -194,28 +194,25 @@ function formatHand(hand: string): string {
     .join(" ");
 }
 
+/**
+ * Returns true if every card in `cards` can be placed onto `col` one after
+ * another. Delegates to the real core helpers (`canPlaceLand`,
+ * `canPlaceInfluence`, `canPlaceCharter`) on a shallow column copy so this
+ * function can never drift from the authoritative placement rules.
+ */
 function canPlaceAllSequentially(cards: CardT[], col: Column): boolean {
-  let landCount = col.lands.cards.length;
-  let landRank: number | null = col.lands.cards[0]?.rank ?? null;
-  let influenceFilled = col.influence.cards.length > 0;
-  let charterFilled = col.charter.card !== null;
+  // Simulate sequential single-card placement with the real core rules.
+  const sim: Column = {
+    lands: { cards: [...col.lands.cards] },
+    influence: { cards: [...col.influence.cards] },
+    charter: { card: col.charter.card },
+    storage: [...col.storage],
+  };
   for (const c of cards) {
-    if (c.kind === "land") {
-      if (landCount >= 4) return false;
-      if (landRank !== null && landRank !== c.rank) return false;
-      landCount++;
-      landRank = c.rank;
-    } else if (c.kind === "role") {
-      if (influenceFilled) return false;
-      if (landCount < 1) return false;
-      influenceFilled = true;
-    } else if (c.kind === "charter") {
-      if (charterFilled) return false;
-      if (!influenceFilled) return false;
-      charterFilled = true;
-    } else {
-      return false;
-    }
+    if (c.kind === "land" && canPlaceLand(sim, c)) sim.lands.cards.push(c);
+    else if (c.kind === "role" && canPlaceInfluence(sim, c)) sim.influence.cards.push(c);
+    else if (c.kind === "charter" && canPlaceCharter(sim, c)) sim.charter.card = c;
+    else return false;
   }
   return true;
 }
