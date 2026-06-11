@@ -46,24 +46,28 @@
         />
 
         <div class="hand-row">
+          <DiscardPilePanel
+            :discard-count="epoch.discard.length"
+            @view="onViewPile('discard')"
+            @drop-card="onDiscardFromHand"
+          />
           <HandPanel
             :hand="epoch.hand"
             :selected-ids="selectedIds"
             :influence="epoch.influence"
             :columns="epoch.columns"
             :valid-columns-for="validColumnsFor"
+            :discard-ids="discardIds"
             @toggle-select="onToggleSelect"
             @clear-selection="onClearSelection"
             @place-cards="onPlaceCards"
             @commit-to-row="onCommitToRow"
           />
-          <DeckDiscardPanel
+          <DeckPilePanel
             :draw-count="epoch.draw.length"
-            :discard-count="epoch.discard.length"
             :ended="epoch.status.kind !== 'in-progress'"
-            @view="onViewPile"
+            @view="onViewPile('deck')"
             @end-turn="onEndTurn"
-            @drop-card="onDiscardFromHand"
           />
         </div>
 
@@ -186,7 +190,8 @@ import UnlockedProjectsPanel from "./components/game/UnlockedProjectsPanel.vue";
 import IdeologyDisplay from "./components/game/IdeologyDisplay.vue";
 import CrisisScreen from "./components/game/CrisisScreen.vue";
 import CampaignEnd from "./components/shell/CampaignEnd.vue";
-import DeckDiscardPanel from "./components/game/DeckDiscardPanel.vue";
+import DeckPilePanel from "./components/game/DeckPilePanel.vue";
+import DiscardPilePanel from "./components/game/DiscardPilePanel.vue";
 import CardListModal from "./components/shell/CardListModal.vue";
 import SaveSlotMenu from "./components/shell/SaveSlotMenu.vue";
 import ThemeToggle from "./components/shell/ThemeToggle.vue";
@@ -250,6 +255,8 @@ const nextSettingName = computed(() => {
   if (id === "campaign-end") return "End";
   return SETTING_BY_ID[id]?.name ?? id;
 });
+
+const discardIds = computed(() => epoch.value.discard.map((c) => c.id));
 
 const buildableLabels = computed(() => {
   return epoch.value.columns.map((col) => {

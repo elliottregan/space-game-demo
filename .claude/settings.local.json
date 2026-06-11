@@ -62,7 +62,12 @@
       "Bash(git cherry-pick:*)",
       "Bash(git stash:*)",
       "WebFetch(domain:claude.ai)",
-      "Skill(update-config)"
+      "Skill(update-config)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "mcp__plugin_playwright_playwright__browser_resize",
+      "mcp__plugin_playwright_playwright__browser_run_code_unsafe",
+      "mcp__plugin_playwright_playwright__browser_close"
     ]
   }
 }

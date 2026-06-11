@@ -309,11 +309,17 @@
   .hand-panel {
     --panel-bg: transparent;
   }
+  /* Discard pile · hand · deck pile. The hand stretches and centers its
+     cards so draws fly in from the deck on the right and discards land on
+     the pile to the left. */
   .hand-row {
     display: flex;
     gap: var(--space-3);
     align-items: stretch;
     min-width: 0;
+  }
+  .hand-row .pile-panel {
+    flex: 0 0 140px;
   }
 
   .error-bar {
@@ -328,21 +334,77 @@
 @layer components {
   /* -------------------- Card -------------------- */
   /* A card is paper on the table: square, flat face, suit bar on top.
-     Shadow only when it can be picked up (selectable/draggable). */
+     Shadow only when it can be picked up (selectable/draggable).
+     Front and back live on a 3D plane (preserve-3d + hidden backfaces) so
+     draw/discard flights can flip the card over mid-flight. */
   .card {
     --suit: var(--ink-subtle);
     position: relative;
     width: 112px;
     height: 150px;
+    font-size: 11px;
+    flex-shrink: 0;
+    user-select: none;
+    transform-style: preserve-3d;
+  }
+  .card-face {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    backface-visibility: hidden;
+  }
+  .card-front {
     background: var(--paper);
     border-top: 5px solid var(--suit);
     display: flex;
     flex-direction: column;
     padding: 6px;
-    font-size: 11px;
-    flex-shrink: 0;
+    transition: background 0.08s;
+  }
+  .card-back-face {
+    transform: rotateY(180deg);
+  }
+
+  /* Card back: a small Bauhaus poster — frame, circle, bar, triangle in
+     theme colors. Geometry is percentage-based so the same design scales
+     from full cards down to the pile stacks. Parent provides position+size. */
+  .card-back {
+    background: var(--paper);
     overflow: hidden;
-    user-select: none;
+  }
+  .cbk-frame,
+  .cbk-circle,
+  .cbk-bar,
+  .cbk-triangle {
+    position: absolute;
+  }
+  .cbk-frame {
+    inset: 5%;
+    border: 2px solid var(--rule-strong);
+  }
+  .cbk-circle {
+    left: 13%;
+    top: 11%;
+    width: 46%;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .cbk-bar {
+    left: 9%;
+    right: 9%;
+    top: 46%;
+    height: 6%;
+    background: var(--suit-solidarity);
+    rotate: -14deg;
+  }
+  .cbk-triangle {
+    right: 9%;
+    bottom: 8%;
+    width: 50%;
+    height: 36%;
+    background: var(--suit-sovereignty);
+    clip-path: polygon(0 100%, 100% 100%, 100% 0);
   }
   .card.suit-solidarity {
     --suit: var(--suit-solidarity);
@@ -361,6 +423,8 @@
   }
   .card.kind-dissent {
     --suit: var(--suit-dissent);
+  }
+  .card.kind-dissent .card-front {
     background: var(--paper-dissent);
   }
 
@@ -438,8 +502,10 @@
     cursor: pointer;
   }
   .card.selectable:hover {
-    background: var(--paper-hover);
     box-shadow: var(--shadow-lifted);
+  }
+  .card.selectable:hover .card-front {
+    background: var(--paper-hover);
   }
   .card.selected {
     outline: 2px solid var(--ink);
@@ -707,6 +773,34 @@
     overflow-x: auto;
     padding: var(--space-1);
     scrollbar-width: thin;
+    /* Center the hand between the piles; `safe` keeps the left edge
+       reachable when the hand overflows. */
+    justify-content: safe center;
+  }
+  .hand-empty {
+    color: var(--ink-subtle);
+    padding: 40px;
+  }
+  /* FLIP move transition for cards reflowing around a draw/discard. The
+     flight itself is driven by the Web Animations API — tune it in
+     src/renderer/animation/cardFlight.ts (duration, easing, stagger, arc).
+     The card variant must out-rank .card[draggable="true"] (0,2,0), whose
+     background/box-shadow transition would otherwise drop the transform
+     transition entirely and make reflowing cards snap instead of slide. */
+  .hand-move {
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .hand-cards .card.hand-move {
+    transition:
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      background 0.08s,
+      box-shadow 0.1s;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hand-move,
+    .hand-cards .card.hand-move {
+      transition: none;
+    }
   }
   .hand-actions {
     display: flex;
@@ -743,84 +837,93 @@
   }
 
   /* -------------------- Deck / Discard piles -------------------- */
-  /* A pile is a small stack of paper: the button is the top sheet, one
-     offset pseudo-element suggests the sheets beneath. */
-  .deck-discard-panel {
-    --panel-bg: var(--mat-strong);
+  /* A pile is a physical stack of cards on the table: the top sheet shows
+     the Bauhaus card back, sheet edges peek out beneath it (more edges for
+     bigger piles), and an empty pile leaves only a card-shaped shadow. */
+  .pile-panel {
+    --panel-bg: transparent;
   }
-  .pile-row {
-    display: flex;
-    gap: 8px;
-  }
-  .pile-stack {
-    position: relative;
-    /* Keep the ::after stack edge inside this element's own stacking
-       context so z-index: -1 can't drop it behind ancestors. */
-    isolation: isolate;
-    flex: 1 1 0;
-    height: 106px;
+  .pile-zone {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    cursor: pointer;
+    gap: var(--space-1);
+  }
+  .pile-stack {
+    position: relative;
+    /* Card-back area (96×129, card aspect) + 8px right/bottom for the
+       under-layer offsets. */
+    width: 104px;
+    height: 137px;
+    flex: 0 0 auto;
     padding: 0;
-    font-family: inherit;
+    border: none;
+    background: none;
+    cursor: pointer;
     color: var(--ink);
+    font-family: inherit;
+    transition: translate 0.1s;
+  }
+  .pile-layer,
+  .pile-top-card,
+  .pile-silhouette,
+  .pile-card-area {
+    position: absolute;
+    inset: 0 8px 8px 0;
+  }
+  .pile-card-area {
+    pointer-events: none;
+  }
+  .pile-layer {
     background: var(--paper);
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35);
+  }
+  .pile-top-card {
     box-shadow: var(--shadow-interactive);
-    transition:
-      translate 0.1s,
-      box-shadow 0.1s;
+  }
+  .pile-discard .pile-top-card {
+    rotate: 1.5deg;
+  }
+  /* Empty pile: the shadow a card would cast — a faint ink-tinted
+     silhouette with the suit-bar echo along the top. */
+  .pile-silhouette {
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+    border-top: 5px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  }
+  .pile-count-badge {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    z-index: 1;
+    padding: 1px 7px;
+    background: var(--ink);
+    color: var(--ground);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
   }
   .pile-stack:hover:not(:disabled) {
     translate: 0 -2px;
+  }
+  .pile-stack:hover:not(:disabled) .pile-top-card {
     box-shadow: var(--shadow-lifted);
   }
   .pile-stack:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-    box-shadow: none;
-  }
-  .pile-stack::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    translate: 4px 4px;
-    /* Ground, not mat-strong: the edge must contrast with the pile zone's
-       mat-strong panel or the stack depth disappears. */
-    background: var(--ground);
-    z-index: -1;
-  }
-  .pile-deck {
-    background: repeating-linear-gradient(135deg, var(--paper) 0 6px, var(--mat-strong) 6px 12px);
-  }
-  .pile-discard {
-    background: var(--paper);
-  }
-  .pile-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--ink-muted);
-  }
-  .pile-count {
-    font-size: 26px;
-    font-weight: 700;
-    color: var(--ink);
-    line-height: 1;
-    margin: 4px 0;
+    cursor: default;
   }
   .pile-hint {
     font-size: 9px;
     color: var(--ink-subtle);
   }
-  .pile-stack.drop-target {
-    background: color-mix(in srgb, var(--accent) 10%, var(--paper));
-    border-bottom: 2px solid var(--accent);
+  .pile-stack.drop-target .pile-top-card,
+  .pile-stack.drop-target .pile-silhouette {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
-  .pile-stack.drag-over {
-    background: color-mix(in srgb, var(--accent) 22%, var(--paper));
-    border-bottom: 2px solid var(--accent);
+  .pile-stack.drag-over .pile-top-card,
+  .pile-stack.drag-over .pile-silhouette {
+    outline-width: 3px;
+    background: color-mix(in srgb, var(--accent) 14%, var(--paper));
   }
   .market-button {
     margin-top: 8px;
