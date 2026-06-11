@@ -19,6 +19,13 @@ export interface CardFlightConfig {
    * Positive bows the path upward, negative downward, 0 is a straight line.
    */
   arcHeight: number;
+  /**
+   * 3D flip across the flight: the card sits at this rotateY on the pile
+   * (180 = back showing, flips to the face mid-flight; 0 disables the flip).
+   */
+  flipDegrees: number;
+  /** Perspective distance (px) for the flip — smaller = more dramatic 3D. */
+  perspectivePx: number;
   /** Fade/shrink time for cards leaving the hand to somewhere other than the discard (e.g. placed on the tableau), ms. */
   placedFadeMs: number;
 }
@@ -28,6 +35,8 @@ export const CARD_FLIGHT: CardFlightConfig = {
   easing: "cubic-bezier(0.22, 1, 0.36, 1)",
   staggerMs: 55,
   arcHeight: 48,
+  flipDegrees: 180,
+  perspectivePx: 900,
   placedFadeMs: 160,
 };
 
@@ -73,18 +82,29 @@ function pileScale(pile: DOMRect, card: DOMRect): number {
   return Math.min(pile.width / card.width, pile.height / card.height);
 }
 
+/** Center-to-center offset — flights translate and flip around the card's center. */
+function centerDelta(from: DOMRect, to: DOMRect): { dx: number; dy: number } {
+  return {
+    dx: from.left + from.width / 2 - (to.left + to.width / 2),
+    dy: from.top + from.height / 2 - (to.top + to.height / 2),
+  };
+}
+
 /**
- * Keyframes from the pile (offset 0) to the card's natural spot (offset 1),
- * bowed by arcHeight at the midpoint. Reverse for outbound flights.
+ * Keyframes from the pile (offset 0, back showing) to the card's natural
+ * spot (offset 1, face showing), bowed by arcHeight and flipping through
+ * flipDegrees at the midpoint. Reverse for outbound flights.
  */
 function flightFrames(dx: number, dy: number, scale: number): Keyframe[] {
   const mid = (1 + scale) / 2;
+  const p = `perspective(${CARD_FLIGHT.perspectivePx}px)`;
+  const flip = CARD_FLIGHT.flipDegrees;
   return [
-    { transform: `translate(${dx}px, ${dy}px) scale(${scale})` },
+    { transform: `${p} translate(${dx}px, ${dy}px) scale(${scale}) rotateY(${flip}deg)` },
     {
-      transform: `translate(${dx / 2}px, ${dy / 2 - CARD_FLIGHT.arcHeight}px) scale(${mid})`,
+      transform: `${p} translate(${dx / 2}px, ${dy / 2 - CARD_FLIGHT.arcHeight}px) scale(${mid}) rotateY(${flip / 2}deg)`,
     },
-    { transform: "translate(0, 0) scale(1)" },
+    { transform: `${p} translate(0, 0) scale(1) rotateY(0deg)` },
   ];
 }
 
@@ -97,16 +117,13 @@ export function animateDraw(el: HTMLElement, done: () => void): void {
   const from = pileRect("deck");
   if (!from || prefersReducedMotion()) return done();
   const rect = el.getBoundingClientRect();
-  el.style.transformOrigin = "top left";
-  const anim = el.animate(
-    flightFrames(from.left - rect.left, from.top - rect.top, pileScale(from, rect)),
-    {
-      duration: CARD_FLIGHT.durationMs,
-      easing: CARD_FLIGHT.easing,
-      delay: nextDrawIndex() * CARD_FLIGHT.staggerMs,
-      fill: "backwards",
-    },
-  );
+  const { dx, dy } = centerDelta(from, rect);
+  const anim = el.animate(flightFrames(dx, dy, pileScale(from, rect)), {
+    duration: CARD_FLIGHT.durationMs,
+    easing: CARD_FLIGHT.easing,
+    delay: nextDrawIndex() * CARD_FLIGHT.staggerMs,
+    fill: "backwards",
+  });
   finish(anim, done);
 }
 
@@ -120,15 +137,13 @@ export function animateDiscard(el: HTMLElement, done: () => void): void {
   if (!to || prefersReducedMotion()) return done();
   const rect = el.getBoundingClientRect();
   pin(el, rect);
-  const anim = el.animate(
-    flightFrames(to.left - rect.left, to.top - rect.top, pileScale(to, rect)).reverse(),
-    {
-      duration: CARD_FLIGHT.durationMs,
-      easing: CARD_FLIGHT.easing,
-      delay: nextDiscardIndex() * CARD_FLIGHT.staggerMs,
-      fill: "both",
-    },
-  );
+  const { dx, dy } = centerDelta(to, rect);
+  const anim = el.animate(flightFrames(dx, dy, pileScale(to, rect)).reverse(), {
+    duration: CARD_FLIGHT.durationMs,
+    easing: CARD_FLIGHT.easing,
+    delay: nextDiscardIndex() * CARD_FLIGHT.staggerMs,
+    fill: "both",
+  });
   finish(anim, done);
 }
 
@@ -156,6 +171,9 @@ function pin(el: HTMLElement, rect: DOMRect): void {
     margin: "0",
     zIndex: "40",
     pointerEvents: "none",
-    transformOrigin: "top left",
+    /* A card discarded by drag still carries .dragging (opacity 0.35) on its
+       leaving vnode; partial opacity also flattens the 3D context and breaks
+       the backface flip, so force it fully opaque for the flight. */
+    opacity: "1",
   });
 }
