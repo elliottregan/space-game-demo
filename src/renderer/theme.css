@@ -614,6 +614,13 @@
     min-width: 112px;
     width: 112px;
     margin-inline: auto;
+    /* Cell roots are pure layout since drop zones moved onto stacks and
+       placeholders — let pointer events fall through so a neighbor column's
+       storage peek (which overflows into this cell's box) stays hoverable. */
+    pointer-events: none;
+  }
+  .cell > * {
+    pointer-events: auto;
   }
   .cell.land-cell,
   .cell.influence-cell,

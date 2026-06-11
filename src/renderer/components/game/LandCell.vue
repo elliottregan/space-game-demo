@@ -1,38 +1,42 @@
 <template>
   <div class="cell land-cell" :class="{ occupied: cards.length > 0 }">
-    <!-- Storage: rotated stack behind the active stack, peeking right. -->
-    <div class="storage-layer" :class="{ empty: storage.length === 0 }" v-drop-zone="storageZone">
-      <span v-if="storage.length === 0" class="storage-tab-label">Storage</span>
+    <!-- fit-content wrapper: storage anchors to the actual stack/placeholder
+         edge, not the (column-wide) cell, so the peek survives wide stacks. -->
+    <div class="land-content">
+      <!-- Storage: rotated stack behind the active stack, peeking right. -->
+      <div class="storage-layer" :class="{ empty: storage.length === 0 }" v-drop-zone="storageZone">
+        <span v-if="storage.length === 0" class="storage-tab-label">Storage</span>
+        <CardStack
+          v-else
+          :cards="storage"
+          direction="horizontal"
+          :selectable="true"
+          :selected-ids="selectedStorageIds"
+          @select="(id) => $emit('toggleStorageSelect', id)"
+        >
+          <button
+            v-if="storage.length === 1 && canPlaceStored(storage[0])"
+            class="cell-action"
+            @click.stop="$emit('playFromStorage', storage[0].id)"
+          >
+            Play
+          </button>
+        </CardStack>
+      </div>
+
+      <div v-if="cards.length === 0" class="cell-empty land-placeholder" v-drop-zone="landZone">
+        <span class="cell-empty-label">Land</span>
+      </div>
       <CardStack
         v-else
-        :cards="storage"
+        :cards="cards"
         direction="horizontal"
-        :selectable="true"
-        :selected-ids="selectedStorageIds"
-        @select="(id) => $emit('toggleStorageSelect', id)"
+        class="land-stack"
+        :drop-zone="landZone"
       >
-        <button
-          v-if="storage.length === 1 && canPlaceStored(storage[0])"
-          class="cell-action"
-          @click.stop="$emit('playFromStorage', storage[0].id)"
-        >
-          Play
-        </button>
+        <button class="cell-action" @click.stop="$emit('discard')">Discard</button>
       </CardStack>
     </div>
-
-    <div v-if="cards.length === 0" class="cell-empty land-placeholder" v-drop-zone="landZone">
-      <span class="cell-empty-label">Land</span>
-    </div>
-    <CardStack
-      v-else
-      :cards="cards"
-      direction="horizontal"
-      class="land-stack"
-      :drop-zone="landZone"
-    >
-      <button class="cell-action" @click.stop="$emit('discard')">Discard</button>
-    </CardStack>
   </div>
 </template>
 
@@ -72,6 +76,11 @@ const storageZone = computed<DropZoneOptions>(() => ({
 .land-cell {
   position: relative;
 }
+.land-content {
+  position: relative;
+  width: fit-content;
+  margin: auto;
+}
 .land-stack {
   position: relative;
   z-index: 1;
@@ -80,15 +89,23 @@ const storageZone = computed<DropZoneOptions>(() => ({
   position: relative;
   z-index: 1;
 }
+/* A stored card lurking behind a (translucent) empty placeholder would ghost
+   through it — solidify the placeholder when storage is occupied. */
+.storage-layer:not(.empty) + .land-placeholder {
+  background: var(--mat-strong);
+}
 .storage-layer {
   position: absolute;
   top: 50%;
-  right: -34px;
+  /* Original (unrotated) box sits 16px past the wrapper's right edge; after
+     the 90° spin about its center the visual box peeks ~35px out, showing
+     the cards' header strip (rank + suit) along the right side. */
+  right: -16px;
   transform: translateY(-50%) rotate(90deg);
+  transform-origin: center center;
   z-index: 0;
   opacity: 0.55;
   transition: opacity 120ms ease;
-  transform-origin: center center;
 }
 .storage-layer:hover,
 .storage-layer:focus-within {
@@ -98,6 +115,9 @@ const storageZone = computed<DropZoneOptions>(() => ({
 .storage-layer.empty {
   width: 112px;
   height: 28px;
+  /* Tab needs a bigger throw: its rotated box is only 28px wide, so push it
+     fully clear of the wrapper edge to stay visible and hittable. */
+  right: -72px;
   display: flex;
   align-items: center;
   justify-content: center;
