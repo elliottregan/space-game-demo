@@ -51,7 +51,7 @@ describe("buildProjectTree", () => {
     const nodes = buildProjectTree(PROJECTS, []);
     const straight = nodes.find((n) => n.pattern === "straight");
     expect(straight?.name).toBe("Project straight");
-    expect(straight?.value).toBe(PROJECTS.find((p) => p.pattern === "straight")!.value);
+    expect(straight?.value).toBe(5);
     expect(straight?.requirement).toBe("Straight");
   });
 

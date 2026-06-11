@@ -2,7 +2,7 @@
 // Derives ladder nodes from a Setting's projects + the Epoch's unlocks.
 
 import type { KeystoneProject, PatternKind, ProjectUnlock } from "../../core/types.ts";
-import { PATTERNS_IN_ORDER } from "../../core/data/projects.ts";
+import { PATTERNS_IN_ORDER, getProjectForPattern } from "../../core/data/projects.ts";
 import { patternLabel } from "./labels.ts";
 
 export interface ProjectTreeNode {
@@ -22,7 +22,7 @@ export function buildProjectTree(
 ): ProjectTreeNode[] {
   const nodes: ProjectTreeNode[] = [];
   for (const pattern of PATTERNS_IN_ORDER) {
-    const project = projects.find((p) => p.pattern === pattern);
+    const project = getProjectForPattern(projects, pattern);
     if (!project) continue;
     const builds = unlocks.filter((u) => u.pattern === pattern);
     nodes.push({
