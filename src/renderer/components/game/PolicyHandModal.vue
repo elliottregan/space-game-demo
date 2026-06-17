@@ -23,7 +23,7 @@
         </span>
       </header>
 
-      <div class="pm-cards">
+      <div class="pm-cards" ref="cardsEl">
         <div
           v-for="(card, index) in candidates"
           :key="`${card.id}-${index}`"
@@ -57,9 +57,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import type { PolicyCard as PolicyCardT, PolicySlot, Ideology } from "../../../core/types.ts";
 import { cssColorFor, IDEOLOGIES, IDEOLOGY_DISPLAY } from "../../../core/data/ideologies.ts";
+import { animateDraw, policyDeckPile } from "../../animation/cardFlight.ts";
 import PolicyCard from "./PolicyCard.vue";
 
 const MAX_SLOTS = 5;
@@ -75,6 +76,23 @@ const props = defineProps<{
 const emit = defineEmits<{
   enact: [keepIds: string[]];
 }>();
+
+const cardsEl = ref<HTMLElement | null>(null);
+
+// On open, deal each drawn candidate in from its ideology's policy-deck tile
+// with the same flip + scale flight as the building-hand draw. The deck tiles
+// (PolicyPiles, in the persistent zone) register as `policy-deck:<ideology>`
+// piles and are already mounted when this gate opens. Reduced-motion / a
+// missing pile both no-op inside animateDraw (the card just appears).
+onMounted(() => {
+  const slots = cardsEl.value?.querySelectorAll<HTMLElement>(".pm-card-slot");
+  if (!slots) return;
+  for (const slot of slots) {
+    const ideology = slot.dataset.candidateIdeology as Ideology | undefined;
+    const cardEl = slot.querySelector<HTMLElement>(".policy-card");
+    if (ideology && cardEl) animateDraw(cardEl, () => {}, policyDeckPile(ideology));
+  }
+});
 
 /** Ids the player has chosen to keep this turn (select-then-enact). */
 const keep = ref<Set<string>>(new Set());
