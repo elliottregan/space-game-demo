@@ -89,9 +89,8 @@
           <PolicyPiles :decks="snapshot.policy.decks" :discards="snapshot.policy.discards" />
         </div>
 
-        <PolicyDraw
+        <PolicyHandModal
           v-if="policyPhase"
-          class="policy-draw-prompt"
           :candidates="snapshot.policy.candidates"
           :tableau="snapshot.policy.tableau"
           :influence="snapshot.influence"
@@ -210,8 +209,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, nextTick, ref } from "vue";
 import { getGameService } from "./GameService.ts";
+import {
+  CARD_FLIGHT,
+  captureCard,
+  flyCapturedClone,
+  getPileRect,
+  policyDiscardPile,
+  type CapturedCard,
+} from "./animation/cardFlight.ts";
 import ConfirmDialog from "./components/core/ConfirmDialog.vue";
 import TurnBar from "./components/shell/TurnBar.vue";
 import HandPanel from "./components/game/HandPanel.vue";
@@ -226,7 +233,7 @@ import CardListModal from "./components/shell/CardListModal.vue";
 import SaveSlotMenu from "./components/shell/SaveSlotMenu.vue";
 import ThemeToggle from "./components/shell/ThemeToggle.vue";
 import CrisisCounterPanel from "./components/game/CrisisCounterPanel.vue";
-import PolicyDraw from "./components/game/PolicyDraw.vue";
+import PolicyHandModal from "./components/game/PolicyHandModal.vue";
 import PolicyTableau from "./components/game/PolicyTableau.vue";
 import PolicyPiles from "./components/game/PolicyPiles.vue";
 import Rail, { type RailItem } from "./components/shell/Rail.vue";
@@ -235,7 +242,7 @@ import MonumentsSection from "./components/shell/sidebar/MonumentsSection.vue";
 import LegacyCardsSection from "./components/shell/sidebar/LegacyCardsSection.vue";
 import DeckCountsSection from "./components/shell/sidebar/DeckCountsSection.vue";
 import EventLogSection from "./components/shell/sidebar/EventLogSection.vue";
-import type { Card, LegacyUpgrade } from "../core/types.ts";
+import type { Card, Ideology, LegacyUpgrade } from "../core/types.ts";
 import { SETTING_BY_ID } from "../core/settings/index.ts";
 import { MAX_SLOTS } from "../facade/persistence.ts";
 import { evaluateColumn } from "../core/engine/columnPatterns.ts";
@@ -463,8 +470,54 @@ function onDiscardFromHand(idOrIds: string | string[]): void {
 function onResolveCrisis(): void {
   game.resolveCrisis();
 }
+/**
+ * Enact choreography. The policy modal unmounts the instant `enactPolicies`
+ * flips the phase to "play", so we snapshot each drawn card (clone + rect) from
+ * the modal DOM *before* the state change, then — once the new tableau row and
+ * discard tiles have rendered — fly the kept clones into their tableau slots and
+ * the unkept clones onto their ideology discard tiles.
+ */
 function onEnactPolicies(keepIds: string[]): void {
+  const kept = new Set(keepIds);
+  const captures: { id: string; ideology: Ideology; keep: boolean; card: CapturedCard }[] = [];
+
+  const scrim = document.querySelector(".policy-modal-scrim");
+  if (scrim) {
+    for (const slot of scrim.querySelectorAll<HTMLElement>("[data-candidate-index]")) {
+      const id = slot.dataset.candidateId;
+      const ideology = slot.dataset.candidateIdeology as Ideology | undefined;
+      const cardEl = slot.querySelector<HTMLElement>(".policy-card");
+      if (!id || !ideology || !cardEl) continue;
+      captures.push({ id, ideology, keep: kept.has(id), card: captureCard(cardEl) });
+    }
+  }
+
+  // Advance state (clears candidates, updates tableau/discards, unmounts modal).
   game.enactPolicies(keepIds);
+
+  if (captures.length === 0) return;
+
+  // Destinations only exist after the snapshot re-renders.
+  void nextTick(() => {
+    // Stagger kept and unkept independently so each wave reads as a group.
+    let keptN = 0;
+    let discardN = 0;
+    for (const c of captures) {
+      if (c.keep) {
+        const target = document.querySelector<HTMLElement>(
+          `[data-policy-id="${CSS.escape(c.id)}"]`,
+        );
+        flyCapturedClone(c.card, target?.getBoundingClientRect() ?? null, () => {}, {
+          delay: keptN++ * CARD_FLIGHT.staggerMs,
+        });
+      } else {
+        flyCapturedClone(c.card, getPileRect(policyDiscardPile(c.ideology)), () => {}, {
+          flip: true,
+          delay: discardN++ * CARD_FLIGHT.staggerMs,
+        });
+      }
+    }
+  });
 }
 function onRemovePolicy(slotIndex: number): void {
   if (policyPhase.value) return;

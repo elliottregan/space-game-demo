@@ -3,6 +3,7 @@
     <template v-for="(slot, i) in slots" :key="i">
       <PolicyCard
         v-if="slot"
+        :data-policy-id="slot.card.id"
         :card="slot.card"
         :stacks="slot.stacks"
         removable

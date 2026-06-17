@@ -29,6 +29,9 @@
           :key="`${card.id}-${index}`"
           class="pm-card-slot"
           :class="{ locked: !isKept(card.id) && !canKeep(card.id) }"
+          :data-candidate-index="index"
+          :data-candidate-id="card.id"
+          :data-candidate-ideology="card.ideology"
         >
           <PolicyCard
             :card="card"

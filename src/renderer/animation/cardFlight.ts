@@ -84,6 +84,12 @@ function pileRect(kind: PileKind): DOMRect | null {
   return piles.get(kind)?.getBoundingClientRect() ?? null;
 }
 
+/** Live bounding rect of a registered pile, or null if not mounted. Exposed so
+ *  callers driving their own clone flights (policy enact) can target a tile. */
+export function getPileRect(kind: PileKind): DOMRect | null {
+  return pileRect(kind);
+}
+
 function prefersReducedMotion(): boolean {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
@@ -246,6 +252,68 @@ export function animatePlaced(el: HTMLElement, done: () => void, from?: DOMRect)
     { duration: CARD_FLIGHT.placedFadeMs, easing: "ease-out", fill: "both" },
   );
   finish(anim, done);
+}
+
+/**
+ * Snapshot a card element into a detached, absolutely-pinned clone that can fly
+ * later. Captured *before* a state change unmounts the source (the policy modal
+ * tears down the instant `enactPolicies` runs); `flyCapturedClone` then plays
+ * the flight against destinations that only exist post-enact.
+ */
+export interface CapturedCard {
+  clone: HTMLElement;
+  fromRect: DOMRect;
+}
+
+export function captureCard(sourceEl: HTMLElement): CapturedCard {
+  const fromRect = sourceEl.getBoundingClientRect();
+  const clone = sourceEl.cloneNode(true) as HTMLElement;
+  pin(clone, fromRect);
+  clone.style.transformStyle = "preserve-3d";
+  return { clone, fromRect };
+}
+
+/**
+ * Fly a previously-captured clone from its origin to `toRect`, scaling to fit
+ * the destination footprint. `flip` plays the same mid-flight backface roll the
+ * pile flights use (true for cards landing on a discard tile, false for cards
+ * settling into a tableau slot). No-ops (and resolves, discarding the clone)
+ * under prefers-reduced-motion or when `toRect` is missing.
+ */
+export function flyCapturedClone(
+  captured: CapturedCard,
+  toRect: DOMRect | null,
+  done: () => void,
+  opts: { flip?: boolean; delay?: number } = {},
+): void {
+  const { clone, fromRect } = captured;
+  if (!toRect || prefersReducedMotion()) return done();
+  document.body.appendChild(clone);
+  const { dx, dy } = centerDelta(toRect, fromRect);
+  const scale = Math.min(toRect.width / fromRect.width, toRect.height / fromRect.height);
+  const flip = opts.flip ? CARD_FLIGHT.flipDegrees : 0;
+  const p = `perspective(${CARD_FLIGHT.perspectivePx}px)`;
+  const mid = (1 + scale) / 2;
+  const frames: Keyframe[] = [
+    { transform: `${p} translate(0, 0) scale(1) rotateY(0deg)`, opacity: 1 },
+    {
+      transform: `${p} translate(${dx / 2}px, ${dy / 2 - CARD_FLIGHT.arcHeight}px) scale(${mid}) rotateY(${flip / 2}deg)`,
+    },
+    {
+      transform: `${p} translate(${dx}px, ${dy}px) scale(${scale}) rotateY(${flip}deg)`,
+      opacity: opts.flip ? 0.85 : 1,
+    },
+  ];
+  const anim = clone.animate(frames, {
+    duration: CARD_FLIGHT.durationMs,
+    easing: CARD_FLIGHT.easing,
+    delay: opts.delay ?? 0,
+    fill: "both",
+  });
+  finish(anim, () => {
+    clone.remove();
+    done();
+  });
 }
 
 function pin(el: HTMLElement, rect: DOMRect): void {
