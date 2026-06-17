@@ -70,8 +70,6 @@ const props = defineProps<{
   candidates: PolicyCardT[];
   /** Current tableau — used to compute whether a candidate can still be slotted. */
   tableau: PolicySlot[];
-  /** Per-ideology majority-counter tally = this turn's per-deck draw counts. */
-  influence: Record<Ideology, number>;
 }>();
 
 const emit = defineEmits<{
@@ -158,14 +156,20 @@ function emitEnact(): void {
   );
 }
 
-/** Ideology-colored draw counts, only for ideologies that drew this turn. */
-const drawCounts = computed(() =>
-  IDEOLOGIES.filter((ideology) => props.influence[ideology] > 0).map((ideology) => ({
+/**
+ * Ideology-colored draw counts, tallied from the ACTUAL candidates drawn this
+ * turn (not the cumulative majority counter, which overstates when a deck drew
+ * fewer than its majority). Only ideologies that actually drew appear.
+ */
+const drawCounts = computed(() => {
+  const tally = {} as Record<Ideology, number>;
+  for (const card of props.candidates) tally[card.ideology] = (tally[card.ideology] ?? 0) + 1;
+  return IDEOLOGIES.filter((ideology) => (tally[ideology] ?? 0) > 0).map((ideology) => ({
     ideology,
-    count: props.influence[ideology],
+    count: tally[ideology],
     label: IDEOLOGY_DISPLAY[ideology].name,
-  })),
-);
+  }));
+});
 </script>
 
 <style scoped>

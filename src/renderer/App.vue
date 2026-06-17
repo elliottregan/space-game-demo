@@ -93,7 +93,6 @@
           v-if="policyPhase"
           :candidates="snapshot.policy.candidates"
           :tableau="snapshot.policy.tableau"
-          :influence="snapshot.influence"
           @enact="onEnactPolicies"
         />
 

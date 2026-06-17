@@ -100,25 +100,39 @@ function prefersReducedMotion(): boolean {
  * both (end turn: hand cycles out, new hand cycles in), the draw animations
  * are pushed back so they start only after the discard wave has landed.
  *
+ * Flights are partitioned by namespace so independent waves never interfere:
+ * the building hand ("building") and the policy modal ("policy") each get their
+ * own batch. On a turn that both cycles the building hand AND opens the policy
+ * modal, the policy candidate draws stagger among themselves and are NOT pushed
+ * back behind the building-hand discard wave.
+ *
  * The hook call order within a flush is not guaranteed (enters can fire
  * before leaves), so draws are scheduled optimistically and their delays
  * are bumped when the batch closes at the next animation frame — before
  * the first frame paints.
  */
+type BatchKey = "building" | "policy";
+
 interface FlightBatch {
   draws: number;
   discards: number;
   drawAnims: Animation[];
 }
 
-let batch: FlightBatch | null = null;
+const batches = new Map<BatchKey, FlightBatch>();
 
-function currentBatch(): FlightBatch {
-  if (batch) return batch;
+/** Which batch a pile belongs to — policy tiles isolate from the building hand. */
+function batchKeyFor(kind: PileKind): BatchKey {
+  return kind === "deck" || kind === "discard" ? "building" : "policy";
+}
+
+function currentBatch(key: BatchKey): FlightBatch {
+  const existing = batches.get(key);
+  if (existing) return existing;
   const b: FlightBatch = { draws: 0, discards: 0, drawAnims: [] };
-  batch = b;
+  batches.set(key, b);
   requestAnimationFrame(() => {
-    batch = null;
+    batches.delete(key);
     if (b.discards === 0 || b.drawAnims.length === 0) return;
     const wave = Math.max(
       0,
@@ -191,7 +205,7 @@ export function animateDraw(el: HTMLElement, done: () => void, fromKind: PileKin
   el.style.visibility = "hidden";
   document.body.appendChild(clone);
   const { dx, dy } = centerDelta(from, rect);
-  const b = currentBatch();
+  const b = currentBatch(batchKeyFor(fromKind));
   const anim = clone.animate(flightFrames(dx, dy, pileScale(from, rect)), {
     duration: CARD_FLIGHT.durationMs,
     easing: CARD_FLIGHT.easing,
@@ -233,7 +247,7 @@ export function animateDiscard(
   const anim = el.animate(flightFrames(dx, dy, pileScale(to, rect)).reverse(), {
     duration: CARD_FLIGHT.durationMs,
     easing: CARD_FLIGHT.easing,
-    delay: currentBatch().discards++ * CARD_FLIGHT.staggerMs,
+    delay: currentBatch(batchKeyFor(toKind)).discards++ * CARD_FLIGHT.staggerMs,
     fill: "both",
   });
   finish(anim, done);
