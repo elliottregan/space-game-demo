@@ -8,6 +8,8 @@ import {
   projectLevels,
   projectContribution,
   marginalContribution,
+  projectMajority,
+  ideologyInfluence,
 } from "../src/core/data/projects.ts";
 import type { KeystoneProject, ProjectUnlock } from "../src/core/types.ts";
 import { getCard, landId, roleId } from "../src/core/data/cards.ts";
@@ -179,5 +181,46 @@ describe("project leveling", () => {
     expect(marginalContribution(p, 0)).toBe(2);
     expect(marginalContribution(p, 1)).toBe(1);
     expect(marginalContribution(p, 9)).toBe(1);
+  });
+});
+
+const L = (rank: number, ideo: "solidarity" | "sovereignty" | "transformation" | "heritage") =>
+  getCard(landId(rank, ideo));
+
+describe("project majority", () => {
+  test("plurality of non-wild card ideologies", () => {
+    expect(projectMajority([L(2, "solidarity"), L(2, "solidarity"), L(3, "heritage")])).toBe(
+      "solidarity",
+    );
+  });
+  test("wild cards are excluded", () => {
+    expect(projectMajority([L(2, "heritage"), getCard("keystone-pioneer")])).toBe("heritage");
+  });
+  test("a tie returns null", () => {
+    expect(projectMajority([L(2, "solidarity"), L(3, "heritage")])).toBeNull();
+  });
+  test("all-wild returns null", () => {
+    expect(projectMajority([getCard("keystone-pioneer")])).toBeNull();
+  });
+});
+
+describe("ideologyInfluence", () => {
+  test("counts unlocks per majority ideology, skipping ties", () => {
+    const u = (cards: ReturnType<typeof getCard>[]) => ({
+      projectId: "p",
+      pattern: "pair" as const,
+      turn: 1,
+      cards,
+    });
+    const inf = ideologyInfluence([
+      u([L(2, "solidarity"), L(2, "solidarity")]),
+      u([L(3, "solidarity"), L(3, "solidarity")]),
+      u([L(4, "heritage"), L(4, "heritage")]),
+      u([L(5, "solidarity"), L(6, "heritage")]),
+    ]);
+    expect(inf.solidarity).toBe(2);
+    expect(inf.heritage).toBe(1);
+    expect(inf.sovereignty).toBe(0);
+    expect(inf.transformation).toBe(0);
   });
 });

@@ -158,3 +158,29 @@ export function unlockedIdeologyBreakdown(unlocks: ProjectUnlock[]): Record<Ideo
   }
   return out;
 }
+
+/** Strict plurality of non-wild card ideologies in a set of cards.
+ *  Returns null on a tie or if all cards are wild. */
+export function projectMajority(cards: Card[]): Ideology | null {
+  const tally = zeroIdeologyBreakdown();
+  for (const c of cards) {
+    if (c.ideology === "wild") continue;
+    tally[c.ideology] += 1;
+  }
+  const ranked = (Object.entries(tally) as [Ideology, number][])
+    .filter(([, n]) => n > 0)
+    .sort((a, b) => b[1] - a[1]);
+  if (ranked.length === 0) return null;
+  if (ranked.length > 1 && ranked[0][1] === ranked[1][1]) return null;
+  return ranked[0][0];
+}
+
+/** Count of unlocks whose projectMajority equals each ideology; ties skipped. */
+export function ideologyInfluence(unlocks: ProjectUnlock[]): Record<Ideology, number> {
+  const out = zeroIdeologyBreakdown();
+  for (const u of unlocks) {
+    const m = projectMajority(u.cards);
+    if (m) out[m] += 1;
+  }
+  return out;
+}
