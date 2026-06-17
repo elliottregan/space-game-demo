@@ -17,9 +17,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { PolicySlot } from "../../../core/types.ts";
+import { POLICY_SLOT_CAP } from "../../../core/data/policies.ts";
 import PolicyCard from "./PolicyCard.vue";
-
-const SLOT_COUNT = 5;
 
 const props = defineProps<{
   tableau: PolicySlot[];
@@ -29,9 +28,9 @@ defineEmits<{
   remove: [slotIndex: number];
 }>();
 
-/** Always render SLOT_COUNT cells; trailing nulls are empty placeholders. */
+/** Always render POLICY_SLOT_CAP cells; trailing nulls are empty placeholders. */
 const slots = computed<(PolicySlot | null)[]>(() =>
-  Array.from({ length: SLOT_COUNT }, (_, i) => props.tableau[i] ?? null),
+  Array.from({ length: POLICY_SLOT_CAP }, (_, i) => props.tableau[i] ?? null),
 );
 </script>
 
