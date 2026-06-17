@@ -88,6 +88,9 @@ export class GameAPI {
       this.campaign = saved.campaign;
       this.setting = getSetting(saved.settingId);
       this.epoch = saved.epoch;
+      // Defensive: a v6 save predating `turnPhase` would otherwise load
+      // `undefined` and lock the board (every verb gated off the play phase).
+      if (this.epoch.turnPhase === undefined) this.epoch.turnPhase = "play";
       this.endOfEpoch = saved.endOfEpoch;
       this.rng = createRng(saved.seed);
     } else {
