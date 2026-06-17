@@ -272,37 +272,42 @@ function runEpoch(api: GameAPI): RunResult {
     let acted = false;
 
     // -----------------------------------------------------------------------
-    // Step 0: Slot beneficial policy candidates drawn this turn. Slot when a
-    // free slot exists or the card stacks one already in the tableau; prefer
+    // Step 0: Resolve the policy phase. A turn that drew candidates opens in
+    // `turnPhase === "policy"` (see turn.ts); board verbs and `endTurn` are
+    // gated until we leave it. Slot beneficial candidates — when a free slot
+    // exists or the card stacks one already in the tableau; prefer
     // draw/influence/storage cards for scarce slots. Never spend a fresh slot
     // on Conscription (its +1 Dissent is a cost) — only stack it onto a match.
-    // Unslotted candidates auto-discard at end of turn.
+    // Then `finishPolicyPhase()` returns to the play phase; any unslotted
+    // candidates auto-discard on the next end-of-turn flush.
+    //
+    // NOTE: this uses the per-card `slotPolicy` bridge + `finishPolicyPhase`
+    // until `enactPolicies` lands (plan task 0.3) and the sim is rewritten to
+    // batch-enact (task 0.4).
     // -----------------------------------------------------------------------
-    {
+    if (snap.epoch.turnPhase === "policy") {
       const cands = snap.epoch.policy.candidates;
-      if (cands.length > 0) {
-        const PRIORITY: Record<string, number> = {
-          mobilize: 5,
-          mandate: 5,
-          stockpile: 5,
-          "solidarity-forever": 5,
-          "deep-reserves": 5,
-          continuity: 3,
-          archive: 2,
-          conscription: 0,
-        };
-        const ordered = [...cands].sort((a, b) => (PRIORITY[b.id] ?? 0) - (PRIORITY[a.id] ?? 0));
-        for (const c of ordered) {
-          const tableau = api.snapshot().epoch.policy.tableau;
-          const stacks = tableau.some((t) => t.card.id === c.id);
-          const freeSlot = tableau.length < 5;
-          if (!stacks && c.id === "conscription") continue; // don't pay a slot for a downside
-          if ((stacks || freeSlot) && api.slotPolicy(c.id).ok) acted = true;
-        }
+      const PRIORITY: Record<string, number> = {
+        mobilize: 5,
+        mandate: 5,
+        stockpile: 5,
+        "solidarity-forever": 5,
+        "deep-reserves": 5,
+        continuity: 3,
+        archive: 2,
+        conscription: 0,
+      };
+      const ordered = [...cands].sort((a, b) => (PRIORITY[b.id] ?? 0) - (PRIORITY[a.id] ?? 0));
+      for (const c of ordered) {
+        const tableau = api.snapshot().epoch.policy.tableau;
+        const stacks = tableau.some((t) => t.card.id === c.id);
+        const freeSlot = tableau.length < 5;
+        if (!stacks && c.id === "conscription") continue; // don't pay a slot for a downside
+        if (stacks || freeSlot) api.slotPolicy(c.id);
       }
+      api.finishPolicyPhase(); // leave the policy phase so board verbs / endTurn unlock
+      continue;
     }
-
-    if (acted) continue;
 
     // -----------------------------------------------------------------------
     // Step 1: Build any buildable column (prefer highest marginal leveled value).

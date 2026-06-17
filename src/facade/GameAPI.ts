@@ -340,6 +340,21 @@ export class GameAPI {
     return result;
   }
 
+  /**
+   * Bridge for the Crisis simulator until `enactPolicies` lands in task 0.3 and
+   * the sim is rewritten in task 0.4. The sim resolves policy candidates with the
+   * per-card `slotPolicy`/`discardPolicyCandidate` commands, neither of which
+   * leaves the policy phase. Without this, the first turn that draws a candidate
+   * would pin `turnPhase` at "policy" and make every subsequent `endTurn` a
+   * silent no-op (spinning to MAX_STEPS). Returns the turn to the play phase once
+   * candidates have been resolved. Remove when `enactPolicies` replaces this.
+   */
+  finishPolicyPhase(): CommandResult {
+    this.epoch.turnPhase = "play";
+    this.persist();
+    return { ok: true, value: undefined };
+  }
+
   /** Remove a slotted policy from the tableau, cycling it to its discard. */
   removePolicy(slotIndex: number): CommandResult {
     const result = removePolicyCore(this.epoch, slotIndex);

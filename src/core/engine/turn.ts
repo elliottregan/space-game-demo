@@ -13,6 +13,7 @@ import { IDEOLOGIES } from "../data/ideologies.ts";
 import { addDissent, drawToHandSize, purgeDissent, resolveEndOfTurn } from "./effects.ts";
 import { dispatch } from "./dispatch.ts";
 import { effectiveRules } from "./effectiveRules.ts";
+import { openingTurnPhase } from "./turnPhase.ts";
 import type { RNG } from "./rng.ts";
 
 /**
@@ -46,6 +47,9 @@ export function drawPolicies(epoch: Epoch, rng: RNG): void {
 export function endTurn(epoch: Epoch, _campaign: Campaign, setting: Setting, rng: RNG): void {
   if (epoch.status.kind !== "in-progress") return;
   if (epoch.phase !== "play") return;
+  // A turn can only be ended from the play phase; pending policy must resolve
+  // first. turnPhase is orthogonal to the lifecycle `phase` above.
+  if (epoch.turnPhase !== "play") return;
 
   const er = effectiveRules(epoch, setting);
 
@@ -86,6 +90,11 @@ export function endTurn(epoch: Epoch, _campaign: Campaign, setting: Setting, rng
 
   // Policy draw: reveal this turn's candidates, scaled by majority influence.
   drawPolicies(epoch, rng);
+
+  // Open the new turn in the policy phase iff there are candidates to resolve;
+  // otherwise straight into play. (The crisis early-return above never reaches
+  // here, so a crisis turn leaves turnPhase untouched.)
+  epoch.turnPhase = openingTurnPhase(epoch.policy.candidates.length > 0);
 }
 
 export function resolveCrisis(epoch: Epoch, setting: Setting): CrisisOutcome {
