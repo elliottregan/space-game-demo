@@ -326,3 +326,57 @@ export function commitHand(
 
   return { ok: true, value: all };
 }
+
+// -------------------------------------------------------------------------
+// Policy tableau commands (M4)
+// -------------------------------------------------------------------------
+
+const POLICY_SLOT_CAP = 5;
+
+/**
+ * Move a drawn candidate into the policy tableau. If a slot already holds the
+ * same card id, the candidate stacks onto it (stacks++) and consumes no new
+ * slot. Otherwise it takes a free slot, rejecting when all 5 slots are full and
+ * no id matches. The candidate is consumed only on success.
+ */
+export function slotPolicy(epoch: Epoch, cardId: string): CmdResult<void> {
+  const candIdx = epoch.policy.candidates.findIndex((c) => c.id === cardId);
+  if (candIdx === -1) return { ok: false, error: "Policy not among this turn's candidates." };
+
+  const existing = epoch.policy.tableau.find((s) => s.card.id === cardId);
+  if (existing) {
+    existing.stacks += 1;
+  } else {
+    if (epoch.policy.tableau.length >= POLICY_SLOT_CAP) {
+      return { ok: false, error: "Policy tableau is full (5 slots)." };
+    }
+    epoch.policy.tableau.push({ card: epoch.policy.candidates[candIdx], stacks: 1 });
+  }
+  epoch.policy.candidates.splice(candIdx, 1);
+  return { ok: true, value: undefined };
+}
+
+/** Discard a drawn candidate to its ideology's discard pile (it will cycle). */
+export function discardPolicyCandidate(epoch: Epoch, cardId: string): CmdResult<void> {
+  const candIdx = epoch.policy.candidates.findIndex((c) => c.id === cardId);
+  if (candIdx === -1) return { ok: false, error: "Policy not among this turn's candidates." };
+  const [card] = epoch.policy.candidates.splice(candIdx, 1);
+  epoch.policy.discards[card.ideology].push(card);
+  return { ok: true, value: undefined };
+}
+
+/**
+ * Remove a slotted policy from the tableau, returning one copy per stack to
+ * that card's ideology discard pile so it cycles back into the deck later.
+ */
+export function removePolicy(epoch: Epoch, slotIndex: number): CmdResult<void> {
+  if (slotIndex < 0 || slotIndex >= epoch.policy.tableau.length) {
+    return { ok: false, error: "Invalid policy slot." };
+  }
+  const [removed] = epoch.policy.tableau.splice(slotIndex, 1);
+  const discard = epoch.policy.discards[removed.card.ideology];
+  for (let i = 0; i < removed.stacks; i++) {
+    discard.push(removed.card);
+  }
+  return { ok: true, value: undefined };
+}

@@ -8,17 +8,53 @@ import type {
   ProjectUnlock,
   Setting,
 } from "../types.ts";
-import { projectLevels, reversePatternOrder } from "../data/projects.ts";
+import { ideologyInfluence, projectLevels, reversePatternOrder } from "../data/projects.ts";
+import { IDEOLOGIES } from "../data/ideologies.ts";
 import { addDissent, drawToHandSize, purgeDissent, resolveEndOfTurn } from "./effects.ts";
 import { dispatch } from "./dispatch.ts";
 import { effectiveRules } from "./effectiveRules.ts";
 import type { RNG } from "./rng.ts";
+
+/**
+ * Start-of-turn policy draw. For each ideology, draw `ideologyInfluence[I]`
+ * cards from `decks[I]` into `policy.candidates`. When a deck empties mid-draw,
+ * its discard reshuffles back in (rng.shuffle) and the draw continues; if both
+ * are empty we simply draw fewer. Turn 1 has no unlocks → all influence is 0 →
+ * nothing is drawn (the intended cold open). Exported for the turn-flow tail and
+ * for tests.
+ */
+export function drawPolicies(epoch: Epoch, rng: RNG): void {
+  const influence = ideologyInfluence(epoch.unlockedProjects);
+  for (const ideology of IDEOLOGIES) {
+    let need = influence[ideology];
+    while (need > 0) {
+      const deck = epoch.policy.decks[ideology];
+      if (deck.length === 0) {
+        const discard = epoch.policy.discards[ideology];
+        if (discard.length === 0) break; // deck + discard both dry → draw fewer
+        epoch.policy.decks[ideology] = rng.shuffle(discard);
+        epoch.policy.discards[ideology] = [];
+        continue;
+      }
+      const card = epoch.policy.decks[ideology].shift();
+      if (card) epoch.policy.candidates.push(card);
+      need -= 1;
+    }
+  }
+}
 
 export function endTurn(epoch: Epoch, _campaign: Campaign, setting: Setting, rng: RNG): void {
   if (epoch.status.kind !== "in-progress") return;
   if (epoch.phase !== "play") return;
 
   const er = effectiveRules(epoch, setting);
+
+  // Flush any policy candidates the player did not slot back into their
+  // ideology's discard pile so they cycle, then clear the candidate area.
+  for (const card of epoch.policy.candidates) {
+    epoch.policy.discards[card.ideology].push(card);
+  }
+  epoch.policy.candidates = [];
 
   // Resolve queued end-of-turn effects (addDissent etc.).
   resolveEndOfTurn({ epoch, rng });
@@ -47,6 +83,9 @@ export function endTurn(epoch: Epoch, _campaign: Campaign, setting: Setting, rng
   purgeDissent(epoch, er.dissentPurge);
   epoch.influence = er.influenceBaseline;
   drawToHandSize(epoch, er.handSize, rng);
+
+  // Policy draw: reveal this turn's candidates, scaled by majority influence.
+  drawPolicies(epoch, rng);
 }
 
 export function resolveCrisis(epoch: Epoch, setting: Setting): CrisisOutcome {
