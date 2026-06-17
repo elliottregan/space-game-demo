@@ -507,9 +507,22 @@ function onEnactPolicies(keepIds: string[]): void {
         const target = document.querySelector<HTMLElement>(
           `[data-policy-id="${CSS.escape(c.id)}"]`,
         );
-        flyCapturedClone(c.card, target?.getBoundingClientRect() ?? null, () => {}, {
-          delay: keptN++ * CARD_FLIGHT.staggerMs,
-        });
+        const toRect = target?.getBoundingClientRect() ?? null;
+        // `target` IS the `.policy-card` element: PolicyTableau binds
+        // `data-policy-id` directly on <PolicyCard>, whose single root carries
+        // `class="policy-card …"` and (no inheritAttrs:false) absorbs the attr.
+        // `querySelector(".policy-card")` would search descendants only and
+        // always return null, so hide the destination card itself.
+        const hideEl = target;
+        if (hideEl && toRect) hideEl.style.visibility = "hidden";
+        flyCapturedClone(
+          c.card,
+          toRect,
+          () => {
+            if (hideEl) hideEl.style.visibility = "";
+          },
+          { delay: keptN++ * CARD_FLIGHT.staggerMs },
+        );
       } else {
         flyCapturedClone(c.card, getPileRect(policyDiscardPile(c.ideology)), () => {}, {
           flip: true,
