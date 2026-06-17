@@ -353,6 +353,9 @@ export class GameAPI {
   }
 
   endTurn(): CommandResult {
+    if (this.epoch.turnPhase !== "play") {
+      return { ok: false, error: "Resolve drawn policies first." };
+    }
     endTurnCore(this.epoch, this.campaign, this.setting, this.rng);
     this.maybeEnterCrisis();
     return { ok: true, value: undefined };
