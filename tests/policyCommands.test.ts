@@ -16,7 +16,12 @@ import {
   removePolicy,
 } from "../src/core/engine/commands.ts";
 import { drawPolicies, endTurn } from "../src/core/engine/turn.ts";
-import { getPolicy } from "../src/core/data/policies.ts";
+import {
+  getPolicy,
+  POLICY_SLOT_CAP,
+  projectedNewSlots,
+  wouldFitInTableau,
+} from "../src/core/data/policies.ts";
 import { getCard, landId } from "../src/core/data/cards.ts";
 import { getSetting } from "../src/core/settings/index.ts";
 import { createCampaign } from "../src/core/engine/campaign.ts";
@@ -341,5 +346,26 @@ describe("endTurn flushes leftover candidates", () => {
     expect(ep.policy.candidates).toHaveLength(0);
     expect(ep.policy.discards.sovereignty).toHaveLength(2);
     expect(ep.policy.discards.solidarity).toHaveLength(1);
+  });
+});
+
+describe("shared slot projection (single source for cap math)", () => {
+  test("projectedNewSlots: distinct new ids vs stacking onto existing slots", () => {
+    const tableau = [slot("mandate"), slot("stockpile")];
+    // mandate stacks (no new slot); mobilize + continuity are two new distinct.
+    expect(projectedNewSlots(tableau, ["mandate", "mobilize", "continuity"])).toBe(2);
+    // duplicate keep-ids collapse to one new slot.
+    expect(projectedNewSlots(tableau, ["mobilize", "mobilize"])).toBe(1);
+    // all keeps already slotted → zero new slots.
+    expect(projectedNewSlots(tableau, ["mandate", "stockpile"])).toBe(0);
+  });
+
+  test("wouldFitInTableau agrees with enactPolicies cap at the boundary", () => {
+    const tableau = [slot("mandate"), slot("stockpile"), slot("continuity"), slot("archive")];
+    // 4 slots + 1 new distinct = 5 = cap → fits.
+    expect(wouldFitInTableau(tableau, ["mobilize"])).toBe(true);
+    // 4 slots + 2 new distinct = 6 > cap → rejects (matches the enact test above).
+    expect(wouldFitInTableau(tableau, ["mobilize", "deep-reserves"])).toBe(false);
+    expect(POLICY_SLOT_CAP).toBe(5);
   });
 });

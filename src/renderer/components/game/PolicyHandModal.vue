@@ -60,10 +60,11 @@
 import { computed, onMounted, ref, watch } from "vue";
 import type { PolicyCard as PolicyCardT, PolicySlot, Ideology } from "../../../core/types.ts";
 import { cssColorFor, IDEOLOGIES, IDEOLOGY_DISPLAY } from "../../../core/data/ideologies.ts";
+import { POLICY_SLOT_CAP, projectedNewSlots } from "../../../core/data/policies.ts";
 import { animateDraw, policyDeckPile } from "../../animation/cardFlight.ts";
 import PolicyCard from "./PolicyCard.vue";
 
-const MAX_SLOTS = 5;
+const MAX_SLOTS = POLICY_SLOT_CAP;
 
 const props = defineProps<{
   candidates: PolicyCardT[];
@@ -111,19 +112,17 @@ function isKept(cardId: string): boolean {
 /** Ids already occupying a tableau slot (stacking onto these costs no new slot). */
 const slottedIds = computed(() => new Set(props.tableau.map((s) => s.card.id)));
 
-/** Distinct kept ids that would need a brand-new tableau slot. */
-const projectedNewSlots = computed(
-  () => [...keep.value].filter((id) => !slottedIds.value.has(id)).length,
-);
+/** Distinct kept ids that would need a brand-new tableau slot (shared core helper). */
+const newSlots = computed(() => projectedNewSlots(props.tableau, keep.value));
 
 /**
- * A candidate can be newly kept when keeping it would not exceed the 5-slot cap.
+ * A candidate can be newly kept when keeping it would not exceed the slot cap.
  * Keeping an id that already stacks (slotted, or already kept) is always allowed.
  */
 function canKeep(cardId: string): boolean {
   if (keep.value.has(cardId)) return true;
   if (slottedIds.value.has(cardId)) return true; // stacks onto an existing slot
-  return props.tableau.length + projectedNewSlots.value < MAX_SLOTS;
+  return props.tableau.length + newSlots.value < MAX_SLOTS;
 }
 
 function toggleKeep(cardId: string): void {

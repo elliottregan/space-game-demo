@@ -11,6 +11,7 @@ import type {
   ProjectUnlock,
   Setting,
 } from "../types.ts";
+import { POLICY_SLOT_CAP, wouldFitInTableau } from "../data/policies.ts";
 import { canPlaceCharter, canPlaceInfluence, canPlaceLand, columnCards } from "./column.ts";
 import { evaluateColumn } from "./columnPatterns.ts";
 import { dispatch } from "./dispatch.ts";
@@ -363,8 +364,6 @@ export function commitHand(
 // Policy tableau commands (M4)
 // -------------------------------------------------------------------------
 
-const POLICY_SLOT_CAP = 5;
-
 /**
  * Slot a single policy card into the tableau. If a slot already holds the same
  * card id, the card stacks onto it (stacks++) and consumes no new slot.
@@ -412,11 +411,13 @@ export function enactPolicies(epoch: Epoch, keepIds: string[]): CmdResult<void> 
   }
 
   const keepSet = new Set(keepIds);
-  const slottedIds = new Set(epoch.policy.tableau.map((s) => s.card.id));
-  // Distinct kept ids that are NOT already a tableau slot → each needs a new slot.
-  const distinctNew = new Set([...keepSet].filter((id) => !slottedIds.has(id))).size;
-  if (epoch.policy.tableau.length + distinctNew > POLICY_SLOT_CAP) {
-    return { ok: false, error: "Too many policies for the tableau (5 slots)." };
+  // Cap counts DISTINCT kept ids not already slotted (each needs a fresh slot);
+  // ids that already stack pay no slot. See wouldFitInTableau in data/policies.
+  if (!wouldFitInTableau(epoch.policy.tableau, keepSet)) {
+    return {
+      ok: false,
+      error: `Too many policies for the tableau (${POLICY_SLOT_CAP} slots).`,
+    };
   }
 
   for (const card of candidates) {

@@ -169,3 +169,37 @@ export function getPolicy(id: string): PolicyCard {
 export const POLICY_BY_ID: Record<string, PolicyCard> = Object.fromEntries(
   ALL_POLICIES.map((c) => [c.id, c]),
 );
+
+// -------------------------------------------------------------------------
+// Slot cap + stacking-aware projection (single source of truth)
+// -------------------------------------------------------------------------
+
+/** Maximum number of distinct policy slots the tableau can hold. */
+export const POLICY_SLOT_CAP = 5;
+
+/** Minimal structural view of a tableau slot — `PolicySlot` (engine/epoch.ts)
+ *  is assignable to this. Kept here so data/policies.ts has no engine deps. */
+interface SlotLike {
+  card: { id: string };
+}
+
+/**
+ * How many brand-new tableau slots a set of keep-ids would consume.
+ *
+ * Stacking-aware: a keep-id already present in the tableau stacks onto its
+ * existing slot for free, and duplicate keep-ids collapse to one. The result
+ * is the count of DISTINCT keep-ids not already slotted.
+ */
+export function projectedNewSlots(tableau: SlotLike[], keepIds: Iterable<string>): number {
+  const slottedIds = new Set(tableau.map((s) => s.card.id));
+  const distinctNew = new Set<string>();
+  for (const id of keepIds) {
+    if (!slottedIds.has(id)) distinctNew.add(id);
+  }
+  return distinctNew.size;
+}
+
+/** Whether keeping `keepIds` would leave the tableau within the slot cap. */
+export function wouldFitInTableau(tableau: SlotLike[], keepIds: Iterable<string>): boolean {
+  return tableau.length + projectedNewSlots(tableau, keepIds) <= POLICY_SLOT_CAP;
+}

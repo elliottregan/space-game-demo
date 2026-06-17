@@ -11,6 +11,7 @@
 // slot is still free; never spend a fresh slot on Conscription's +1 Dissent
 // cost (only stack it).
 
+import { POLICY_SLOT_CAP } from "../src/core/data/policies.ts";
 import type { PolicyCard, PolicySlot } from "../src/core/types.ts";
 
 const PRIORITY: Record<string, number> = {
@@ -34,7 +35,7 @@ export function pickPolicyKeepIds(candidates: PolicyCard[], tableau: PolicySlot[
   for (const c of ordered) {
     const stacks = slottedIds.has(c.id) || keptNewDistinct.has(c.id);
     if (!stacks && c.id === "conscription") continue; // don't pay a slot for a downside
-    const freeSlot = usedSlots + keptNewDistinct.size < 5;
+    const freeSlot = usedSlots + keptNewDistinct.size < POLICY_SLOT_CAP;
     if (stacks || freeSlot) {
       keepIds.push(c.id);
       if (!slottedIds.has(c.id)) keptNewDistinct.add(c.id);
