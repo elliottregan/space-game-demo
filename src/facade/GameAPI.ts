@@ -330,9 +330,7 @@ export class GameAPI {
     cardIds: string[],
     fromStorageIds: string[] = [],
   ): CommandResult<Card[]> {
-    const result = commitHandCore(this.epoch, columnIndex, row, cardIds, this.rng, fromStorageIds);
-    if (result.ok) this.persist();
-    return result;
+    return commitHandCore(this.epoch, columnIndex, row, cardIds, this.rng, fromStorageIds);
   }
 
   /**
@@ -343,16 +341,12 @@ export class GameAPI {
    * distinct new slots would exceed the 5-slot cap.
    */
   enactPolicies(keepIds: string[]): CommandResult {
-    const result = enactPoliciesCore(this.epoch, keepIds);
-    if (result.ok) this.persist();
-    return result;
+    return enactPoliciesCore(this.epoch, keepIds);
   }
 
   /** Remove a slotted policy from the tableau, cycling it to its discard. */
   removePolicy(slotIndex: number): CommandResult {
-    const result = removePolicyCore(this.epoch, slotIndex);
-    if (result.ok) this.persist();
-    return result;
+    return removePolicyCore(this.epoch, slotIndex);
   }
 
   endTurn(): CommandResult {

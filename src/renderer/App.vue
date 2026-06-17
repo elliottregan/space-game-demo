@@ -351,7 +351,6 @@ function onToggleStorageSelect(columnIndex: number, cardId: string): void {
 }
 
 function onStoreCard(cardId: string, columnIndex: number): void {
-  if (policyPhase.value) return;
   // Storage capacity is policy-dependent; read the effective value, not the
   // Setting base. Only a full column forces the destructive-replace path —
   // with a policy-granted free slot the store is immediate.
@@ -387,7 +386,6 @@ function onStoreCard(cardId: string, columnIndex: number): void {
 }
 
 function onPlaceFromStorage(cardId: string, columnIndex: number): void {
-  if (policyPhase.value) return;
   game.placeFromStorage(cardId, columnIndex);
   selectedStorage.value = null;
 }
@@ -419,18 +417,15 @@ function canPlaceStored(col: number, card: Card): boolean {
 }
 
 function onPlaceCard(cardId: string, i: number): void {
-  if (policyPhase.value) return;
   game.placeCard(cardId, i);
 }
 function onPlaceCards(ids: string[], i: number): void {
-  if (policyPhase.value) return;
   for (const id of ids) {
     if (game.validColumns(id).includes(i)) game.placeCard(id, i);
   }
   selectedIds.value = [];
 }
 function onCommitToRow(columnIndex: number, row: "land" | "influence"): void {
-  if (policyPhase.value) return;
   // Sync the service's commitBuffer with the current selection, then commit.
   game.commitBuffer.value = [...selectedIds.value];
   const sel = storageSelection.value;
@@ -443,27 +438,21 @@ function onCommitToRow(columnIndex: number, row: "land" | "influence"): void {
   }
 }
 function onDiscardLand(i: number): void {
-  if (policyPhase.value) return;
   game.discardLand(i);
 }
 function onDiscardCharter(i: number): void {
-  if (policyPhase.value) return;
   game.discardCharter(i);
 }
 function onRecallInfluence(i: number): void {
-  if (policyPhase.value) return;
   game.recallInfluence(i);
 }
 function onDiscardColumn(i: number): void {
-  if (policyPhase.value) return;
   game.discardColumn(i);
 }
 function onBuild(i: number): void {
-  if (policyPhase.value) return;
   game.buildColumn(i);
 }
 function onDiscardFromHand(idOrIds: string | string[]): void {
-  if (policyPhase.value) return;
   const ids = typeof idOrIds === "string" ? [idOrIds] : idOrIds;
   for (const id of ids) game.discardFromHand(id);
   selectedIds.value = [];
@@ -514,7 +503,10 @@ function onEnactPolicies(keepIds: string[]): void {
   }
 
   // Advance state (clears candidates, updates tableau/discards, unmounts modal).
-  game.enactPolicies(keepIds);
+  // If core rejects the enact (surfaced via lastError through GameService.run),
+  // the modal stays mounted and nothing moved — skip the flight choreography.
+  const enacted = game.enactPolicies(keepIds);
+  if (!enacted.ok) return;
 
   if (captures.length === 0) return;
 
@@ -570,11 +562,9 @@ function onEnactPolicies(keepIds: string[]): void {
   });
 }
 function onRemovePolicy(slotIndex: number): void {
-  if (policyPhase.value) return;
   game.removePolicy(slotIndex);
 }
 function onEndTurn(): void {
-  if (policyPhase.value) return;
   game.endTurn();
   selectedIds.value = [];
   selectedStorage.value = null;
