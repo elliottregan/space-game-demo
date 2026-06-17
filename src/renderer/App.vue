@@ -353,7 +353,9 @@ function onToggleStorageSelect(columnIndex: number, cardId: string): void {
 
 function onStoreCard(cardId: string, columnIndex: number): void {
   if (policyPhase.value) return;
-  // Capacity 1: replace the current occupant when full.
+  // Storage capacity is policy-dependent; read the effective value, not the
+  // Setting base. Only a full column forces the destructive-replace path —
+  // with a policy-granted free slot the store is immediate.
   const capacity = snapshot.value.effective.storageCapacity;
   const full = (epoch.value.columns[columnIndex]?.storage.length ?? 0) >= capacity;
   const occupant = epoch.value.columns[columnIndex]?.storage[0];
