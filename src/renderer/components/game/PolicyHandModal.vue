@@ -28,7 +28,7 @@
           v-for="(card, index) in candidates"
           :key="`${card.id}-${index}`"
           class="pm-card-slot"
-          :class="{ locked: !isKept(card.id) && !canKeep(card.id) }"
+          :class="{ locked: !isKept(index) && !canKeep(index) }"
           :data-candidate-index="index"
           :data-candidate-id="card.id"
           :data-candidate-ideology="card.ideology"
@@ -36,11 +36,11 @@
           <PolicyCard
             :card="card"
             selectable
-            :selected="isKept(card.id)"
-            @select="toggleKeep(card.id)"
+            :selected="isKept(index)"
+            @select="toggleKeep(index)"
           />
           <span
-            v-if="!isKept(card.id) && !canKeep(card.id)"
+            v-if="!isKept(index) && !canKeep(index)"
             class="pm-lock-reason"
             :title="`Tableau full (${MAX_SLOTS} slots)`"
             >Tableau full ({{ MAX_SLOTS }} slots)</span
@@ -95,8 +95,11 @@ onMounted(() => {
   }
 });
 
-/** Ids the player has chosen to keep this turn (select-then-enact). */
-const keep = ref<Set<string>>(new Set());
+// Selection is PER-COPY: we track kept candidate INDICES (keyed by the v-for
+// index), not ids. Two drawn copies of one policy are independent — you can keep
+// one and discard the other. Cap math still collapses by DISTINCT id (two kept
+// copies of one id = a single new tableau slot).
+const keep = ref<Set<number>>(new Set());
 // Reset the selection whenever a new batch of candidates is drawn.
 watch(
   () => props.candidates,
@@ -105,35 +108,54 @@ watch(
   },
 );
 
-function isKept(cardId: string): boolean {
-  return keep.value.has(cardId);
+function isKept(index: number): boolean {
+  return keep.value.has(index);
 }
+
+/** Distinct ids among the currently-kept indices. */
+const keptDistinctIds = computed(
+  () =>
+    new Set([...keep.value].map((i) => props.candidates[i]?.id).filter((id): id is string => !!id)),
+);
+
+/** Distinct kept ids that would need a brand-new tableau slot (shared core helper). */
+const newSlots = computed(() => projectedNewSlots(props.tableau, keptDistinctIds.value));
 
 /** Ids already occupying a tableau slot (stacking onto these costs no new slot). */
 const slottedIds = computed(() => new Set(props.tableau.map((s) => s.card.id)));
 
-/** Distinct kept ids that would need a brand-new tableau slot (shared core helper). */
-const newSlots = computed(() => projectedNewSlots(props.tableau, keep.value));
-
 /**
- * A candidate can be newly kept when keeping it would not exceed the slot cap.
- * Keeping an id that already stacks (slotted, or already kept) is always allowed.
+ * A candidate copy can be newly kept when keeping it would not exceed the slot
+ * cap. Keeping a copy whose id already consumes a slot — already slotted in the
+ * tableau, or another kept copy of the same id — is always allowed (it stacks).
  */
-function canKeep(cardId: string): boolean {
-  if (keep.value.has(cardId)) return true;
-  if (slottedIds.value.has(cardId)) return true; // stacks onto an existing slot
+function canKeep(index: number): boolean {
+  if (keep.value.has(index)) return true;
+  const id = props.candidates[index]?.id;
+  if (!id) return false;
+  if (slottedIds.value.has(id)) return true; // stacks onto an existing slot
+  if (keptDistinctIds.value.has(id)) return true; // stacks onto another kept copy
   return props.tableau.length + newSlots.value < MAX_SLOTS;
 }
 
-function toggleKeep(cardId: string): void {
+function toggleKeep(index: number): void {
   const next = new Set(keep.value);
-  if (next.has(cardId)) next.delete(cardId);
-  else if (canKeep(cardId)) next.add(cardId);
+  if (next.has(index)) next.delete(index);
+  else if (canKeep(index)) next.add(index);
   keep.value = next;
 }
 
+/**
+ * Emit keepIds as a MULTISET — one id per kept copy, so two kept copies of one
+ * id appear twice. Core enactPolicies consumes it as a multiset. Sorted by index
+ * so the order matches the candidate order the choreography captures.
+ */
 function emitEnact(): void {
-  emit("enact", [...keep.value]);
+  const keptIndices = [...keep.value].sort((a, b) => a - b);
+  emit(
+    "enact",
+    keptIndices.map((i) => props.candidates[i].id),
+  );
 }
 
 /** Ideology-colored draw counts, only for ideologies that drew this turn. */

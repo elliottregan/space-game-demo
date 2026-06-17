@@ -224,18 +224,51 @@ describe("enactPolicies", () => {
     expect(ep.turnPhase).toBe("play");
   });
 
-  test("two kept copies of one id consume a single slot and stack", () => {
+  test("per-copy keep: one of two drawn copies is kept, the other discarded", () => {
     const ep = makeEpoch({
       candidates: [getPolicy("mobilize"), getPolicy("mobilize")],
       turnPhase: "policy",
     });
+    // keepIds names mobilize ONCE → keep one copy (stacks 1), discard the other.
     const r = enactPolicies(ep, ["mobilize"]);
     expect(r.ok).toBe(true);
     expect(ep.policy.tableau).toHaveLength(1);
     expect(ep.policy.tableau[0].card.id).toBe("mobilize");
-    expect(ep.policy.tableau[0].stacks).toBe(2);
+    expect(ep.policy.tableau[0].stacks).toBe(1);
+    // The other drawn copy went to solidarity's discard.
+    expect(ep.policy.discards.solidarity.map((c) => c.id)).toEqual(["mobilize"]);
     expect(ep.policy.candidates).toHaveLength(0);
     expect(ep.turnPhase).toBe("play");
+  });
+
+  test("per-copy keep: naming an id twice keeps both drawn copies as a x2 stack", () => {
+    const ep = makeEpoch({
+      candidates: [getPolicy("mobilize"), getPolicy("mobilize")],
+      turnPhase: "policy",
+    });
+    const r = enactPolicies(ep, ["mobilize", "mobilize"]);
+    expect(r.ok).toBe(true);
+    expect(ep.policy.tableau).toHaveLength(1);
+    expect(ep.policy.tableau[0].card.id).toBe("mobilize");
+    expect(ep.policy.tableau[0].stacks).toBe(2);
+    expect(ep.policy.discards.solidarity).toHaveLength(0);
+    expect(ep.policy.candidates).toHaveLength(0);
+    expect(ep.turnPhase).toBe("play");
+  });
+
+  test("over-keep: naming more copies than were drawn is rejected (no mutation)", () => {
+    const ep = makeEpoch({
+      // Only 2 Mobilize drawn; keepIds names 3.
+      candidates: [getPolicy("mobilize"), getPolicy("mobilize")],
+      turnPhase: "policy",
+    });
+    const r = enactPolicies(ep, ["mobilize", "mobilize", "mobilize"]);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toBe("Policy not among this turn's candidates.");
+    expect(ep.policy.tableau).toHaveLength(0);
+    expect(ep.policy.discards.solidarity).toHaveLength(0);
+    expect(ep.policy.candidates).toHaveLength(2);
+    expect(ep.turnPhase).toBe("policy");
   });
 
   test("rejects when a kept id is not among candidates (phase unchanged)", () => {

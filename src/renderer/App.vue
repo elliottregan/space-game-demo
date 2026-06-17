@@ -480,8 +480,18 @@ function onResolveCrisis(): void {
  * the unkept clones onto their ideology discard tiles.
  */
 function onEnactPolicies(keepIds: string[]): void {
-  const kept = new Set(keepIds);
-  const captures: { id: string; ideology: Ideology; keep: boolean; card: CapturedCard }[] = [];
+  // keepIds is a MULTISET (per-copy keep): two kept copies of one id appear
+  // twice. Consume it in candidate-index order so the right COPY is flagged kept
+  // when only some of an id's drawn copies are kept.
+  const keepCounts = new Map<string, number>();
+  for (const id of keepIds) keepCounts.set(id, (keepCounts.get(id) ?? 0) + 1);
+  const captures: {
+    index: number;
+    id: string;
+    ideology: Ideology;
+    keep: boolean;
+    card: CapturedCard;
+  }[] = [];
 
   const scrim = document.querySelector(".policy-modal-scrim");
   if (scrim) {
@@ -489,8 +499,18 @@ function onEnactPolicies(keepIds: string[]): void {
       const id = slot.dataset.candidateId;
       const ideology = slot.dataset.candidateIdeology as Ideology | undefined;
       const cardEl = slot.querySelector<HTMLElement>(".policy-card");
-      if (!id || !ideology || !cardEl) continue;
-      captures.push({ id, ideology, keep: kept.has(id), card: captureCard(cardEl) });
+      const index = Number(slot.dataset.candidateIndex);
+      if (!id || !ideology || !cardEl || Number.isNaN(index)) continue;
+      captures.push({ index, id, ideology, keep: false, card: captureCard(cardEl) });
+    }
+  }
+  // Walk in candidate-index order, consuming the keep multiset per id.
+  captures.sort((a, b) => a.index - b.index);
+  for (const c of captures) {
+    const left = keepCounts.get(c.id) ?? 0;
+    if (left > 0) {
+      c.keep = true;
+      keepCounts.set(c.id, left - 1);
     }
   }
 

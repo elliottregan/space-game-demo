@@ -385,43 +385,63 @@ function discardPolicyCard(epoch: Epoch, card: PolicyCard): void {
 }
 
 /**
- * Resolve the drawn-policy phase in one batch. `keepIds` names the candidates to
- * slot (stacking onto matching slots, taking free slots otherwise); every other
- * candidate is discarded to its ideology pile. Then candidates clear and the
- * turn advances to the play phase.
+ * Resolve the drawn-policy phase in one batch. `keepIds` is a MULTISET of
+ * candidate ids to slot (stacking onto matching slots, taking free slots
+ * otherwise); every candidate not consumed by a keep-id is discarded to its
+ * ideology pile. Then candidates clear and the turn advances to the play phase.
+ *
+ * Per-copy semantics: two drawn copies of one id are kept independently. The
+ * id's keep count in `keepIds` is how many of its drawn copies to slot, in
+ * order; the rest are discarded. So `["mobilize"]` against two drawn Mobilize
+ * keeps ONE and discards the other; `["mobilize","mobilize"]` keeps both (x2
+ * stack).
  *
  * Validation (all-or-nothing — no mutation on reject):
  *  - must be in the policy phase;
- *  - every id in `keepIds` must be a current candidate id;
+ *  - `keepIds` must be a sub-multiset of the candidate ids (you cannot keep more
+ *    copies of an id than were drawn, nor an id that was not drawn);
  *  - the cap counts DISTINCT kept ids not already slotted: reject when
- *    `tableau.length + distinctNew > 5`. A `keepId` may name an id with two
- *    drawn copies — keeping both fills a single slot (one distinct), the extra
- *    copy stacks.
+ *    `tableau.length + distinctNew > 5`. Two kept copies of one id fill a single
+ *    slot (one distinct), the extra copy stacks.
  */
 export function enactPolicies(epoch: Epoch, keepIds: string[]): CmdResult<void> {
   const blocked = requirePolicyResolution(epoch);
   if (blocked) return blocked;
 
   const candidates = [...epoch.policy.candidates];
-  const candidateIds = new Set(candidates.map((c) => c.id));
+
+  // Validate keepIds is a sub-multiset of candidate ids: tally drawn copies per
+  // id, then ensure each requested keep has a remaining copy to consume.
+  const drawnCounts = new Map<string, number>();
+  for (const c of candidates) {
+    drawnCounts.set(c.id, (drawnCounts.get(c.id) ?? 0) + 1);
+  }
+  const keepCounts = new Map<string, number>();
   for (const id of keepIds) {
-    if (!candidateIds.has(id)) {
+    keepCounts.set(id, (keepCounts.get(id) ?? 0) + 1);
+  }
+  for (const [id, want] of keepCounts) {
+    if (want > (drawnCounts.get(id) ?? 0)) {
       return { ok: false, error: "Policy not among this turn's candidates." };
     }
   }
 
-  const keepSet = new Set(keepIds);
   // Cap counts DISTINCT kept ids not already slotted (each needs a fresh slot);
-  // ids that already stack pay no slot. See wouldFitInTableau in data/policies.
-  if (!wouldFitInTableau(epoch.policy.tableau, keepSet)) {
+  // ids that already stack pay no slot. Two kept copies of one id = one distinct.
+  if (!wouldFitInTableau(epoch.policy.tableau, keepCounts.keys())) {
     return {
       ok: false,
       error: `Too many policies for the tableau (${POLICY_SLOT_CAP} slots).`,
     };
   }
 
+  // Consume keepIds as a multiset: iterate candidates in order — if the id has a
+  // remaining keep count, slot it and decrement; otherwise discard it.
+  const remaining = new Map(keepCounts);
   for (const card of candidates) {
-    if (keepSet.has(card.id)) {
+    const left = remaining.get(card.id) ?? 0;
+    if (left > 0) {
+      remaining.set(card.id, left - 1);
       slotPolicyCard(epoch, card);
     } else {
       discardPolicyCard(epoch, card);
