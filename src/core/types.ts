@@ -45,3 +45,5 @@ export type {
 } from "./engine/campaign.ts";
 
 export type { Setting, SettingRules } from "./settings/index.ts";
+
+export type { PolicyCard, PolicyModifier } from "./data/policies.ts";
