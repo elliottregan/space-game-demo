@@ -286,29 +286,29 @@ export class GameAPI {
   }
 
   discardLand(columnIndex: number): CommandResult<Card> {
-    return discardLandCore(this.epoch, columnIndex);
+    return discardLandCore(this.epoch, columnIndex, this.rng);
   }
   discardCharter(columnIndex: number): CommandResult<Card> {
-    return discardCharterCore(this.epoch, columnIndex);
+    return discardCharterCore(this.epoch, columnIndex, this.rng);
   }
   recallInfluence(columnIndex: number): CommandResult<Card[]> {
-    return recallInfluenceCore(this.epoch, columnIndex);
+    return recallInfluenceCore(this.epoch, columnIndex, this.rng);
   }
   discardColumn(columnIndex: number): CommandResult<void> {
-    return discardColumnCore(this.epoch, columnIndex);
+    return discardColumnCore(this.epoch, columnIndex, this.rng);
   }
   discardFromHand(cardId: string): CommandResult<Card> {
-    return discardFromHandCore(this.epoch, cardId);
+    return discardFromHandCore(this.epoch, cardId, this.rng);
   }
   buildColumn(columnIndex: number): CommandResult<{ projectId: string; pattern: string }> {
-    const r = buildColumnCore(this.epoch, this.setting, columnIndex);
+    const r = buildColumnCore(this.epoch, this.setting, columnIndex, this.rng);
     return r.ok
       ? { ok: true, value: { projectId: r.value.projectId, pattern: r.value.pattern } }
       : r;
   }
 
   storeCard(cardId: string, columnIndex: number, replaceId?: string): CommandResult<Card> {
-    return storeCardCore(this.epoch, this.setting, cardId, columnIndex, replaceId);
+    return storeCardCore(this.epoch, this.setting, cardId, columnIndex, this.rng, replaceId);
   }
 
   placeFromStorage(cardId: string, columnIndex: number): CommandResult<Card> {

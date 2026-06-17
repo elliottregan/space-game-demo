@@ -140,18 +140,18 @@ function playToTopRow(
   return { ok: true, card };
 }
 
-export function discardLand(epoch: Epoch, columnIndex: number): CmdResult<Card> {
+export function discardLand(epoch: Epoch, columnIndex: number, rng: RNG): CmdResult<Card> {
   const blocked = requirePlayable(epoch);
   if (blocked) return blocked;
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
   const card = col.lands.cards.pop();
   if (!card) return { ok: false, error: "No Land to discard." };
-  dispatch(epoch, { type: "card-discarded", card, source: "tableau-land" });
+  dispatch(epoch, { type: "card-discarded", card, source: "tableau-land" }, rng);
   return { ok: true, value: card };
 }
 
-export function discardCharter(epoch: Epoch, columnIndex: number): CmdResult<Card> {
+export function discardCharter(epoch: Epoch, columnIndex: number, rng: RNG): CmdResult<Card> {
   const blocked = requirePlayable(epoch);
   if (blocked) return blocked;
   const col = epoch.columns[columnIndex];
@@ -159,11 +159,11 @@ export function discardCharter(epoch: Epoch, columnIndex: number): CmdResult<Car
   const card = col.charter.card;
   if (!card) return { ok: false, error: "No Charter to discard." };
   col.charter.card = null;
-  dispatch(epoch, { type: "card-discarded", card, source: "tableau-charter" });
+  dispatch(epoch, { type: "card-discarded", card, source: "tableau-charter" }, rng);
   return { ok: true, value: card };
 }
 
-export function recallInfluence(epoch: Epoch, columnIndex: number): CmdResult<Card[]> {
+export function recallInfluence(epoch: Epoch, columnIndex: number, rng: RNG): CmdResult<Card[]> {
   const blocked = requirePlayable(epoch);
   if (blocked) return blocked;
   const col = epoch.columns[columnIndex];
@@ -176,13 +176,13 @@ export function recallInfluence(epoch: Epoch, columnIndex: number): CmdResult<Ca
   // Emit a discard event per recalled card so Dissent + discard piles get the
   // same treatment as today's single-recall.
   for (const card of recalled) {
-    dispatch(epoch, { type: "card-discarded", card, source: "influence-recall" });
+    dispatch(epoch, { type: "card-discarded", card, source: "influence-recall" }, rng);
   }
   col.influence.cards.length = 0;
   return { ok: true, value: recalled };
 }
 
-export function discardColumn(epoch: Epoch, columnIndex: number): CmdResult<void> {
+export function discardColumn(epoch: Epoch, columnIndex: number, rng: RNG): CmdResult<void> {
   const blocked = requirePlayable(epoch);
   if (blocked) return blocked;
   const col = epoch.columns[columnIndex];
@@ -194,19 +194,19 @@ export function discardColumn(epoch: Epoch, columnIndex: number): CmdResult<void
   col.influence.cards.length = 0;
   col.charter.card = null;
   for (const c of cards) {
-    dispatch(epoch, { type: "card-discarded", card: c, source: "column" });
+    dispatch(epoch, { type: "card-discarded", card: c, source: "column" }, rng);
   }
   return { ok: true, value: undefined };
 }
 
-export function discardFromHand(epoch: Epoch, cardId: string): CmdResult<Card> {
+export function discardFromHand(epoch: Epoch, cardId: string, rng: RNG): CmdResult<Card> {
   const blocked = requirePlayable(epoch);
   if (blocked) return blocked;
   const idx = epoch.hand.findIndex((c) => c.id === cardId);
   if (idx === -1) return { ok: false, error: "Card not in hand." };
   const card = epoch.hand[idx];
   epoch.hand.splice(idx, 1);
-  dispatch(epoch, { type: "card-discarded", card, source: "hand" });
+  dispatch(epoch, { type: "card-discarded", card, source: "hand" }, rng);
   return { ok: true, value: card };
 }
 
@@ -214,6 +214,7 @@ export function buildColumn(
   epoch: Epoch,
   setting: Setting,
   columnIndex: number,
+  rng: RNG,
 ): CmdResult<ProjectUnlock> {
   const blocked = requirePlayable(epoch);
   if (blocked) return blocked;
@@ -229,7 +230,7 @@ export function buildColumn(
     turn: epoch.turn,
     cards: [...match.cards],
   };
-  dispatch(epoch, { type: "column-built", columnIndex, unlock });
+  dispatch(epoch, { type: "column-built", columnIndex, unlock }, rng);
   return { ok: true, value: unlock };
 }
 
@@ -253,6 +254,7 @@ export function storeCard(
   setting: Setting,
   cardId: string,
   columnIndex: number,
+  rng: RNG,
   replaceId?: string,
 ): CmdResult<Card> {
   const blocked = requirePlayable(epoch);
@@ -273,7 +275,7 @@ export function storeCard(
       return { ok: false, error: "Card to replace not found in storage." };
     }
     const [replaced] = col.storage.splice(replaceIdx, 1);
-    dispatch(epoch, { type: "card-discarded", card: replaced, source: "storage" });
+    dispatch(epoch, { type: "card-discarded", card: replaced, source: "storage" }, rng);
   } else {
     const capacity = effectiveRules(epoch, setting).storageCapacity;
     if (col.storage.length >= capacity) {

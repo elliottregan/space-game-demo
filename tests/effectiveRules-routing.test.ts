@@ -53,9 +53,9 @@ describe("effectiveRules routing — storage capacity", () => {
     const a = land(2, "heritage");
     const b = land(3, "sovereignty");
     ep.hand = [a, b];
-    expect(storeCard(ep, SETTING, a.id, 0).ok).toBe(true);
+    expect(storeCard(ep, SETTING, a.id, 0, rng).ok).toBe(true);
     // Without Stockpile this would be "Storage is full." With cap 2 it succeeds.
-    const r = storeCard(ep, SETTING, b.id, 0);
+    const r = storeCard(ep, SETTING, b.id, 0, rng);
     expect(r.ok).toBe(true);
     expect(col.storage.length).toBe(2);
   });
@@ -67,8 +67,8 @@ describe("effectiveRules routing — storage capacity", () => {
     const a = land(2, "heritage");
     const b = land(3, "sovereignty");
     ep.hand = [a, b];
-    expect(storeCard(ep, SETTING, a.id, 0).ok).toBe(true);
-    const r = storeCard(ep, SETTING, b.id, 0);
+    expect(storeCard(ep, SETTING, a.id, 0, rng).ok).toBe(true);
+    const r = storeCard(ep, SETTING, b.id, 0, rng);
     expect(r.ok).toBe(false);
     expect(col.storage.length).toBe(1);
   });
@@ -105,6 +105,24 @@ describe("effectiveRules routing — endTurn", () => {
     // The first endTurnKeep (=1) card is retained; the rest is cycled to discard.
     expect(ep.hand).toContain(keeper);
     expect(ep.discard).toContain(dropped);
+  });
+
+  test("Archive keeps the first NON-Dissent card when Dissent sits at the front", () => {
+    // endTurnKeep keeps the first N cards by position, but an inert Dissent must
+    // never burn a keep slot. With a Dissent at hand[0] and Archive (keep 1), the
+    // kept card is the non-Dissent keeper; the Dissent cycles to discard.
+    const ep = epochWith([slot("archive")]);
+    const dissent = makeDissent();
+    const keeper = land(2, "solidarity");
+    ep.hand = [dissent, keeper];
+    ep.draw = filler();
+    endTurn(ep, campaign, SETTING, createRng(13));
+    // The keeper survived the cycle into the new hand…
+    expect(ep.hand).toContain(keeper);
+    // …the Dissent was cycled out (to discard) rather than carried…
+    expect(ep.discard).toContain(dissent);
+    // …and no Dissent ended up in the new hand.
+    expect(ep.hand.some((c) => c.tags.includes("dissent"))).toBe(false);
   });
 
   test("no Archive cycles the whole hand (endTurnKeep 0)", () => {
@@ -144,6 +162,28 @@ describe("effectiveRules routing — endTurn", () => {
     endTurn(ep, campaign, SETTING, rng);
     const added = [...ep.draw, ...ep.hand, ...ep.discard].filter((c) => c.tags.includes("dissent"));
     expect(added.length).toBe(1);
+  });
+
+  test("Conscription's added Dissent shuffles into the draw pile, not the opening hand", () => {
+    // Conscription adds +1 Dissent at start of turn. The fix shuffles it into a
+    // RANDOM position in the draw pile (seedable rng) instead of unshifting it to
+    // draw[0], where drawToHandSize would deal it straight into the new hand.
+    // Seed 1 deterministically places it past the hand-draw cutoff.
+    const ep = epochWith([slot("conscription")]);
+    ep.hand = [];
+    ep.draw = Array.from({ length: 12 }, (_, i) => land((i % 8) + 2, "transformation"));
+    endTurn(ep, campaign, SETTING, createRng(1));
+
+    // The opening hand contains no Dissent — it was not dealt off the front.
+    expect(ep.hand.some((c) => c.tags.includes("dissent"))).toBe(false);
+    // Exactly one Dissent exists, and it sits in the draw pile at a non-front
+    // index (shuffled in, not stacked on top).
+    const dissentInDraw = ep.draw
+      .map((c, i) => ({ c, i }))
+      .filter(({ c }) => c.tags.includes("dissent"));
+    expect(dissentInDraw.length).toBe(1);
+    expect(dissentInDraw[0].i).toBeGreaterThan(0);
+    expect(ep.draw[0].tags.includes("dissent")).toBe(false);
   });
 
   test("Conscription + Continuity together: add 1 then purge 1 → net 0 Dissent", () => {

@@ -159,7 +159,7 @@ describe("board verbs are gated to the play phase", () => {
       candidates: [getPolicy("mobilize")],
       turnPhase: "policy",
     });
-    const r = buildColumn(ep, SETTING, 0);
+    const r = buildColumn(ep, SETTING, 0, createRng(1));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toBe("Resolve drawn policies first.");
   });

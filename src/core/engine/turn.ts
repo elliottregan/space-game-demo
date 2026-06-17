@@ -63,15 +63,22 @@ export function endTurn(epoch: Epoch, _campaign: Campaign, setting: Setting, rng
   // Resolve queued end-of-turn effects (addDissent etc.).
   resolveEndOfTurn({ epoch, rng });
 
-  // End-of-turn hand cycle: keep the first er.endTurnKeep cards; the rest drop
-  // to discard without triggering Dissent. The per-discard Dissent rule applies
-  // to deliberate releases, not the natural turn cycle. (endTurnKeep is 0 by
-  // default, so this cycles the whole hand as before.)
-  if (epoch.hand.length > er.endTurnKeep) {
-    const cycled = epoch.hand.slice(er.endTurnKeep);
-    epoch.hand = epoch.hand.slice(0, er.endTurnKeep);
-    epoch.discard.push(...cycled);
+  // End-of-turn hand cycle: keep the first er.endTurnKeep NON-DISSENT cards;
+  // cycle everything else (including any inert Dissent) to discard without
+  // triggering the per-discard Dissent rule. Carrying a Dissent across the turn
+  // would waste an Archive keep slot on an unplayable card, so it is skipped.
+  // (endTurnKeep is 0 by default, so this cycles the whole hand as before.)
+  const kept: typeof epoch.hand = [];
+  const cycled: typeof epoch.hand = [];
+  for (const card of epoch.hand) {
+    if (kept.length < er.endTurnKeep && !card.tags.includes("dissent")) {
+      kept.push(card);
+    } else {
+      cycled.push(card);
+    }
   }
+  epoch.hand = kept;
+  epoch.discard.push(...cycled);
 
   dispatch(epoch, { type: "turn-ended", turn: epoch.turn });
   epoch.turn += 1;
@@ -83,7 +90,7 @@ export function endTurn(epoch: Epoch, _campaign: Campaign, setting: Setting, rng
 
   // Start of turn. Dissent add (a cost) then purge, then influence reset and
   // draw — all sized by the policy tableau via effectiveRules.
-  addDissent(epoch, er.dissentAdd);
+  addDissent(epoch, er.dissentAdd, rng);
   purgeDissent(epoch, er.dissentPurge);
   epoch.influence = er.influenceBaseline;
   drawToHandSize(epoch, er.handSize, rng);
