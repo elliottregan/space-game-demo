@@ -23,6 +23,7 @@ import { evaluateColumn } from "../src/core/engine/columnPatterns.ts";
 import { canCommitHand } from "../src/core/engine/rowHands.ts";
 import { PATTERNS_IN_ORDER, unlockedIdeologyBreakdown } from "../src/core/data/projects.ts";
 import type { Card, Column, PatternKind } from "../src/core/types.ts";
+import { pickPolicyKeepIds } from "./policyKeep.ts";
 
 const RUNS = Number(process.argv[2] ?? 200);
 const SETTING_ARG = String(process.argv[3] ?? "all");
@@ -425,6 +426,12 @@ function runEpoch(api: GameAPI, tactics: Tactic[]): RunStat {
 
   while (api.snapshot().epoch.phase === "play" && steps < 2000) {
     steps++;
+    // Resolve the policy phase before acting; board verbs are core-gated until then.
+    if (api.snapshot().epoch.turnPhase === "policy") {
+      const ps = api.snapshot().epoch.policy;
+      api.enactPolicies(pickPolicyKeepIds(ps.candidates, ps.tableau));
+      continue;
+    }
     // Detect a build by watching the unlock count, then credit its value.
     const before = api.snapshot().epoch.unlockedProjects.length;
     let acted = false;

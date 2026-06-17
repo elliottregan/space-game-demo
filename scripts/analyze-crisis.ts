@@ -11,6 +11,7 @@ import { canCommitHand } from "../src/core/engine/rowHands.ts";
 import { PATTERNS_IN_ORDER, marginalContribution } from "../src/core/data/projects.ts";
 import type { PatternKind } from "../src/core/types.ts";
 import type { Card, Column } from "../src/core/types.ts";
+import { pickPolicyKeepIds } from "./policyKeep.ts";
 
 const runs = Number(process.argv[2] ?? 50);
 const settingId = String(process.argv[3] ?? "homeworld");
@@ -285,37 +286,7 @@ function runEpoch(api: GameAPI): RunResult {
     // for a fresh slot (its +1 Dissent is a cost) — only if it stacks.
     // -----------------------------------------------------------------------
     if (snap.epoch.turnPhase === "policy") {
-      const cands = snap.epoch.policy.candidates;
-      const PRIORITY: Record<string, number> = {
-        mobilize: 5,
-        mandate: 5,
-        stockpile: 5,
-        "solidarity-forever": 5,
-        "deep-reserves": 5,
-        continuity: 3,
-        archive: 2,
-        conscription: 0,
-      };
-      const ordered = [...cands].sort((a, b) => (PRIORITY[b.id] ?? 0) - (PRIORITY[a.id] ?? 0));
-
-      const slottedIds = new Set(snap.epoch.policy.tableau.map((t) => t.card.id));
-      const keepIds: string[] = [];
-      const keptNewDistinct = new Set<string>(); // distinct kept ids needing a fresh slot
-      const usedSlots = snap.epoch.policy.tableau.length;
-
-      for (const c of ordered) {
-        const stacks = slottedIds.has(c.id) || keptNewDistinct.has(c.id);
-        if (!stacks && c.id === "conscription") continue; // don't pay a slot for a downside
-        // A fresh slot is available when current slots + already-projected new
-        // distinct keeps is still under the 5-slot cap.
-        const freeSlot = usedSlots + keptNewDistinct.size < 5;
-        if (stacks || freeSlot) {
-          keepIds.push(c.id);
-          if (!slottedIds.has(c.id)) keptNewDistinct.add(c.id);
-        }
-      }
-
-      api.enactPolicies(keepIds);
+      api.enactPolicies(pickPolicyKeepIds(snap.epoch.policy.candidates, snap.epoch.policy.tableau));
       continue;
     }
 
