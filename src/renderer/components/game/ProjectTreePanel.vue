@@ -10,7 +10,12 @@
         <span class="node-mark" :class="{ filled: node.built }"></span>
         <div class="node-body">
           <span class="node-name">{{ node.name }}</span>
-          <span class="node-req">{{ node.requirement }} · +{{ node.value }}</span>
+          <span class="node-req">
+            <template v-if="node.built"
+              >{{ node.requirement }} · +{{ node.contributedValue }}</template
+            >
+            <template v-else>{{ node.requirement }} · +{{ node.value }}</template>
+          </span>
         </div>
         <span v-if="node.buildCount > 1" class="node-count">×{{ node.buildCount }}</span>
       </div>

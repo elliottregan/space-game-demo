@@ -2,7 +2,11 @@
 // Derives ladder nodes from a Setting's projects + the Epoch's unlocks.
 
 import type { KeystoneProject, PatternKind, ProjectUnlock } from "../../core/types.ts";
-import { PATTERNS_IN_ORDER, getProjectForPattern } from "../../core/data/projects.ts";
+import {
+  PATTERNS_IN_ORDER,
+  getProjectForPattern,
+  projectContribution,
+} from "../../core/data/projects.ts";
 import { patternLabel } from "./labels.ts";
 
 export interface ProjectTreeNode {
@@ -14,6 +18,8 @@ export interface ProjectTreeNode {
   built: boolean;
   buildCount: number;
   firstBuiltTurn: number | null;
+  /** Total leveled Crisis contribution from all builds of this project (0 when unbuilt). */
+  contributedValue: number;
 }
 
 export function buildProjectTree(
@@ -33,6 +39,7 @@ export function buildProjectTree(
       built: builds.length > 0,
       buildCount: builds.length,
       firstBuiltTurn: builds.length > 0 ? Math.min(...builds.map((u) => u.turn)) : null,
+      contributedValue: builds.length > 0 ? projectContribution(project, builds.length) : 0,
     });
   }
   return nodes;
