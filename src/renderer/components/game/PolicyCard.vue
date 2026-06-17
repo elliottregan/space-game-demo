@@ -10,8 +10,10 @@
     ]"
     :style="{ '--card-accent': cssColorFor(card.ideology) }"
     :role="selectable ? 'button' : undefined"
+    :tabindex="selectable ? 0 : undefined"
     :aria-pressed="selectable ? selected : undefined"
     @click="selectable ? $emit('select') : undefined"
+    @keydown="onKeydown"
   >
     <div class="policy-card-face policy-card-front">
       <div class="pc-accent" aria-hidden="true"></div>
@@ -67,10 +69,18 @@ const props = withDefaults(
   },
 );
 
-defineEmits<{
+const emit = defineEmits<{
   select: [];
   remove: [];
 }>();
+
+function onKeydown(event: KeyboardEvent) {
+  if (!props.selectable) return;
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    emit("select");
+  }
+}
 
 const effectText = computed(() => describePolicy(props.card));
 const ideologyLabel = computed(() => IDEOLOGY_DISPLAY[props.card.ideology].name);
@@ -101,6 +111,7 @@ const ideologyLabel = computed(() => IDEOLOGY_DISPLAY[props.card.ideology].name)
   align-items: stretch;
   background: var(--paper);
   box-shadow: var(--shadow-interactive);
+  transition: background 0.08s;
 }
 
 .policy-card-back-face {
@@ -198,6 +209,7 @@ const ideologyLabel = computed(() => IDEOLOGY_DISPLAY[props.card.ideology].name)
 
 .policy-card.selectable {
   cursor: pointer;
+  transition: box-shadow 0.1s;
 }
 
 .policy-card.selectable:hover .policy-card-front {
@@ -206,6 +218,11 @@ const ideologyLabel = computed(() => IDEOLOGY_DISPLAY[props.card.ideology].name)
 
 .policy-card.selectable:hover {
   box-shadow: var(--shadow-lifted);
+}
+
+.policy-card.selectable:focus-visible {
+  box-shadow: var(--shadow-lifted);
+  outline: none;
 }
 
 .policy-card.selected .policy-card-front {
