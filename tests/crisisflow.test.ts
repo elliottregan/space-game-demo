@@ -47,6 +47,7 @@ function epochWithUnlocks(unlocks: ProjectUnlock[]): Epoch {
     settingId: "homeworld",
     turn: 13,
     phase: "crisis",
+    turnPhase: "play",
     hand: [],
     draw: [],
     discard: [],

@@ -28,6 +28,7 @@ function makeEpoch(tableau: PolicySlot[], unlocks: ProjectUnlock[] = []): Epoch 
     settingId: setting.id,
     turn: 1,
     phase: "play",
+    turnPhase: "play",
     hand: [],
     draw: [],
     discard: [],

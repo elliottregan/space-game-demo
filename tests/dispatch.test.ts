@@ -19,6 +19,7 @@ function freshEpoch(columns: Column[] = []): Epoch {
     settingId: "test",
     turn: 1,
     phase: "play",
+    turnPhase: "play",
     hand: [],
     draw: [],
     discard: [],

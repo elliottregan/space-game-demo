@@ -30,6 +30,7 @@ function epochWith(tableau: PolicySlot[], columns: Column[] = [createEmptyColumn
     settingId: SETTING.id,
     turn: 1,
     phase: "play",
+    turnPhase: "play",
     hand: [],
     draw: [],
     discard: [],

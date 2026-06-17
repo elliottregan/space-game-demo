@@ -51,6 +51,7 @@ function makeEpoch(
     settingId: SETTING.id,
     turn: 1,
     phase: "play",
+    turnPhase: "play",
     hand: [],
     draw: [],
     discard: [],

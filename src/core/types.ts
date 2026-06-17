@@ -35,6 +35,8 @@ export type { DiscardSource, GameEvent } from "./engine/events.ts";
 
 export type { Epoch, EpochPhase, EpochStatus, PolicySlot, PolicyState } from "./engine/epoch.ts";
 
+export type { TurnPhase } from "./engine/turnPhase.ts";
+
 export type { EffectiveRules } from "./engine/effectiveRules.ts";
 
 export type {

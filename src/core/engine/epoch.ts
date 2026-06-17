@@ -14,6 +14,7 @@ import type { RNG } from "./rng.ts";
 import type { Ideology } from "../data/ideologies.ts";
 import { IDEOLOGIES } from "../data/ideologies.ts";
 import { POLICY_DECKS, type PolicyCard } from "../data/policies.ts";
+import type { TurnPhase } from "./turnPhase.ts";
 
 // -------------------------------------------------------------------------
 // Epoch runtime state
@@ -23,7 +24,11 @@ export interface Epoch {
   epochNumber: number;
   settingId: string;
   turn: number;
+  /** Epoch lifecycle phase. */
   phase: EpochPhase;
+  /** Sub-phase within a turn. Orthogonal to `phase`: only meaningful while
+   *  `phase === "play"`. See engine/turnPhase.ts. */
+  turnPhase: TurnPhase;
   hand: Card[];
   draw: Card[];
   discard: Card[];
@@ -106,6 +111,7 @@ export function createEpoch(
     settingId: setting.id,
     turn: 1,
     phase: "play",
+    turnPhase: "play",
     hand: [],
     draw: deck,
     discard: [],
