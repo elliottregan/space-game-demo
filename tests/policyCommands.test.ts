@@ -309,6 +309,27 @@ describe("removePolicy (play phase)", () => {
     expect(removePolicy(ep, -1).ok).toBe(false);
     expect(ep.policy.tableau).toHaveLength(1);
   });
+
+  test("rejects when the Epoch has ended (gained the status guard)", () => {
+    const ep = makeEpoch({ tableau: [slot("mandate")] });
+    ep.status = {
+      kind: "lost",
+      outcome: { totalValue: 0, cleared: false, contributingUnlocks: [], contributions: [] },
+    };
+    const r = removePolicy(ep, 0);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toBe("Epoch ended.");
+    expect(ep.policy.tableau).toHaveLength(1); // untouched
+  });
+
+  test("rejects when in the crisis lifecycle phase (gained the phase guard)", () => {
+    const ep = makeEpoch({ tableau: [slot("mandate")] });
+    ep.phase = "crisis";
+    const r = removePolicy(ep, 0);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toBe("Not in play phase.");
+    expect(ep.policy.tableau).toHaveLength(1); // untouched
+  });
 });
 
 describe("endTurn flushes leftover candidates", () => {

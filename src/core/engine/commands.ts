@@ -24,11 +24,27 @@ export type PlaceResult = { ok: true; card: Card } | { ok: false; error: string 
 
 export type CmdResult<T = void> = { ok: true; value: T } | { ok: false; error: string };
 
-/** Board verbs are only legal in the play phase. While `turnPhase === "policy"`
- *  the player must resolve drawn policies first. Returns the rejection error
- *  string when out of phase, or null when the verb may proceed. */
-function playPhaseGate(epoch: Epoch): string | null {
-  return isPlayPhase(epoch) ? null : "Resolve drawn policies first.";
+/** A bare rejection. Assignable to any `CmdResult<T>` / `PlaceResult` because
+ *  the error arm is independent of `T`, so `return blocked;` typechecks. */
+type Rejection = { ok: false; error: string };
+
+/** Gate for board/tableau verbs: the Epoch must be live, in the play lifecycle
+ *  phase, and past the policy sub-phase. Returns the rejection, or null to
+ *  proceed. */
+function requirePlayable(epoch: Epoch): Rejection | null {
+  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
+  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  if (!isPlayPhase(epoch)) return { ok: false, error: "Resolve drawn policies first." };
+  return null;
+}
+
+/** Gate for the policy-resolution verb: live, in the play lifecycle phase, and
+ *  still in the policy sub-phase. Returns the rejection, or null to proceed. */
+function requirePolicyResolution(epoch: Epoch): Rejection | null {
+  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
+  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  if (!isPolicyPhase(epoch)) return { ok: false, error: "Not in the policy phase." };
+  return null;
 }
 
 export function placeCard(
@@ -40,10 +56,8 @@ export function placeCard(
   rng: RNG,
   source: "hand" | "storage" = "hand",
 ): PlaceResult {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
-  const gate = playPhaseGate(epoch);
-  if (gate) return { ok: false, error: gate };
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
 
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
@@ -126,10 +140,8 @@ function playToTopRow(
 }
 
 export function discardLand(epoch: Epoch, columnIndex: number): CmdResult<Card> {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
-  const gate = playPhaseGate(epoch);
-  if (gate) return { ok: false, error: gate };
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
   const card = col.lands.cards.pop();
@@ -139,10 +151,8 @@ export function discardLand(epoch: Epoch, columnIndex: number): CmdResult<Card> 
 }
 
 export function discardCharter(epoch: Epoch, columnIndex: number): CmdResult<Card> {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
-  const gate = playPhaseGate(epoch);
-  if (gate) return { ok: false, error: gate };
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
   const card = col.charter.card;
@@ -153,10 +163,8 @@ export function discardCharter(epoch: Epoch, columnIndex: number): CmdResult<Car
 }
 
 export function recallInfluence(epoch: Epoch, columnIndex: number): CmdResult<Card[]> {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
-  const gate = playPhaseGate(epoch);
-  if (gate) return { ok: false, error: gate };
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
   if (col.influence.cards.length === 0) return { ok: false, error: "No Influence to recall." };
@@ -174,10 +182,8 @@ export function recallInfluence(epoch: Epoch, columnIndex: number): CmdResult<Ca
 }
 
 export function discardColumn(epoch: Epoch, columnIndex: number): CmdResult<void> {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
-  const gate = playPhaseGate(epoch);
-  if (gate) return { ok: false, error: gate };
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
   const cards = columnCards(col);
@@ -193,10 +199,8 @@ export function discardColumn(epoch: Epoch, columnIndex: number): CmdResult<void
 }
 
 export function discardFromHand(epoch: Epoch, cardId: string): CmdResult<Card> {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
-  const gate = playPhaseGate(epoch);
-  if (gate) return { ok: false, error: gate };
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
   const idx = epoch.hand.findIndex((c) => c.id === cardId);
   if (idx === -1) return { ok: false, error: "Card not in hand." };
   const card = epoch.hand[idx];
@@ -210,10 +214,8 @@ export function buildColumn(
   setting: Setting,
   columnIndex: number,
 ): CmdResult<ProjectUnlock> {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
-  const gate = playPhaseGate(epoch);
-  if (gate) return { ok: false, error: gate };
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
 
@@ -252,10 +254,8 @@ export function storeCard(
   columnIndex: number,
   replaceId?: string,
 ): CmdResult<Card> {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
-  const gate = playPhaseGate(epoch);
-  if (gate) return { ok: false, error: gate };
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
   const handIdx = epoch.hand.findIndex((c) => c.id === cardId);
@@ -294,10 +294,8 @@ export function commitHand(
   rng: RNG,
   fromStorageIds: string[] = [],
 ): CmdResult<Card[]> {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
-  const gate = playPhaseGate(epoch);
-  if (gate) return { ok: false, error: gate };
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
   if (cardIds.length + fromStorageIds.length === 0)
     return { ok: false, error: "No cards to commit." };
 
@@ -402,7 +400,8 @@ function discardPolicyCard(epoch: Epoch, card: PolicyCard): void {
  *    copy stacks.
  */
 export function enactPolicies(epoch: Epoch, keepIds: string[]): CmdResult<void> {
-  if (!isPolicyPhase(epoch)) return { ok: false, error: "Not in the policy phase." };
+  const blocked = requirePolicyResolution(epoch);
+  if (blocked) return blocked;
 
   const candidates = [...epoch.policy.candidates];
   const candidateIds = new Set(candidates.map((c) => c.id));
@@ -437,8 +436,8 @@ export function enactPolicies(epoch: Epoch, keepIds: string[]): CmdResult<void> 
  * that card's ideology discard pile so it cycles back into the deck later.
  */
 export function removePolicy(epoch: Epoch, slotIndex: number): CmdResult<void> {
-  const gate = playPhaseGate(epoch);
-  if (gate) return { ok: false, error: gate };
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
   if (slotIndex < 0 || slotIndex >= epoch.policy.tableau.length) {
     return { ok: false, error: "Invalid policy slot." };
   }
