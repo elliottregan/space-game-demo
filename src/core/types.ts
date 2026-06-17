@@ -22,6 +22,7 @@ export type {
   CrisisOutcome,
   KeystoneProject,
   PatternKind,
+  ProjectLevel,
   ProjectUnlock,
 } from "./data/projects.ts";
 

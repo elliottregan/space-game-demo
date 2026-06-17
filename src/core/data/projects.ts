@@ -22,6 +22,13 @@ export type PatternKind =
   | "straight-flush"
   | "royal-flush";
 
+export interface ProjectLevel {
+  /** Crisis-value increment gained on reaching this level (level 1 = base). */
+  value: number;
+  /** Reserved for future upgrade effects; unused in the value-only launch. */
+  effect?: EffectSpec;
+}
+
 export interface KeystoneProject {
   id: string;
   pattern: PatternKind;
@@ -29,6 +36,8 @@ export interface KeystoneProject {
   flavor: string;
   /** Contribution to the Crisis score when this project's pattern is built. */
   value: number;
+  /** Optional authored diminishing curve; defaults derived from value. */
+  levels?: ProjectLevel[];
   /** Optional one-shot or passive effect on unlock; semantics deferred. */
   unlockEffect?: EffectSpec;
 }
@@ -94,6 +103,36 @@ export function getProjectForPattern(
   pattern: PatternKind,
 ): KeystoneProject | null {
   return projects.find((p) => p.pattern === pattern) ?? null;
+}
+
+/** The diminishing level curve for a project: authored if present, else a
+ *  default of [base, ⌈base/2⌉, ⌈base/4⌉] floored at 1. */
+export function projectLevels(project: KeystoneProject): ProjectLevel[] {
+  if (project.levels && project.levels.length > 0) return project.levels;
+  const base = project.value;
+  return [
+    { value: base },
+    { value: Math.max(1, Math.round(base / 2)) },
+    { value: Math.max(1, Math.round(base / 4)) },
+  ];
+}
+
+/** Total Crisis contribution for building this project `count` times. Level
+ *  increments past the authored curve repeat its last entry — the
+ *  never-worthless flat tail. */
+export function projectContribution(project: KeystoneProject, count: number): number {
+  if (count <= 0) return 0;
+  const levels = projectLevels(project);
+  let total = 0;
+  for (let i = 0; i < count; i++) total += levels[Math.min(i, levels.length - 1)].value;
+  return total;
+}
+
+/** Marginal value of the next build (count → count + 1). For the build AI. */
+export function marginalContribution(project: KeystoneProject, currentCount: number): number {
+  return (
+    projectContribution(project, currentCount + 1) - projectContribution(project, currentCount)
+  );
 }
 
 export function unlockedIdeologyBreakdown(unlocks: ProjectUnlock[]): Record<Ideology, number> {
