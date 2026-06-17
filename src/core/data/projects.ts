@@ -106,7 +106,7 @@ export function getProjectForPattern(
 }
 
 /** The diminishing level curve for a project: authored if present, else a
- *  default of [base, ⌈base/2⌉, ⌈base/4⌉] floored at 1. */
+ *  default of [base, round(base/2), round(base/4)] floored at 1. */
 export function projectLevels(project: KeystoneProject): ProjectLevel[] {
   if (project.levels && project.levels.length > 0) return project.levels;
   const base = project.value;
