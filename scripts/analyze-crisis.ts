@@ -8,7 +8,7 @@
 import { GameAPI } from "../src/facade/GameAPI.ts";
 import { evaluateColumn } from "../src/core/engine/columnPatterns.ts";
 import { canCommitHand } from "../src/core/engine/rowHands.ts";
-import { PATTERNS_IN_ORDER } from "../src/core/data/projects.ts";
+import { PATTERNS_IN_ORDER, marginalContribution } from "../src/core/data/projects.ts";
 import type { PatternKind } from "../src/core/types.ts";
 import type { Card, Column } from "../src/core/types.ts";
 
@@ -272,7 +272,7 @@ function runEpoch(api: GameAPI): RunResult {
     let acted = false;
 
     // -----------------------------------------------------------------------
-    // Step 1: Build any buildable column (prefer highest-value match).
+    // Step 1: Build any buildable column (prefer highest marginal leveled value).
     // -----------------------------------------------------------------------
     {
       let bestValue = -Infinity;
@@ -281,8 +281,12 @@ function runEpoch(api: GameAPI): RunResult {
       for (let i = 0; i < snap.epoch.columns.length; i++) {
         const m = evaluateColumn(snap.epoch.columns[i], snap.setting.projects);
         if (!m) continue;
-        const proj = snap.setting.projects.find((p) => p.id === m.projectId);
-        const val = proj?.value ?? 0;
+        const project = snap.setting.projects.find((p) => p.id === m.projectId);
+        if (!project) continue;
+        const currentCount = snap.epoch.unlockedProjects.filter(
+          (u) => u.projectId === m.projectId,
+        ).length;
+        const val = marginalContribution(project, currentCount);
         if (val > bestValue) {
           bestValue = val;
           bestCol = i;
