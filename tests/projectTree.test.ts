@@ -61,4 +61,12 @@ describe("buildProjectTree", () => {
     expect(nodes.find((n) => n.pattern === "royal-flush")).toBeUndefined();
     expect(nodes.length).toBe(PATTERNS_IN_ORDER.length - 1);
   });
+
+  test("built nodes carry leveled contributed value", () => {
+    // pair is index 1 → base value 2 → levels [2,1,1]
+    const nodes = buildProjectTree(PROJECTS, [unlock("pair", 1), unlock("pair", 2)]);
+    const pair = nodes.find((n) => n.pattern === "pair");
+    expect(pair?.buildCount).toBe(2);
+    expect(pair?.contributedValue).toBe(3); // 2 + 1
+  });
 });

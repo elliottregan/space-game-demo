@@ -106,7 +106,7 @@ export function prepareEndOfEpoch(
       candidates: [],
       nextSettingId: "campaign-end",
       outcome: "loss",
-      crisis: { totalValue: 0, cleared: false, contributingUnlocks: [] },
+      crisis: { totalValue: 0, cleared: false, contributingUnlocks: [], contributions: [] },
       ideologyBreakdown: zeroIdeologyBreakdown(),
     };
   }

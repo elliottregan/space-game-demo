@@ -55,7 +55,7 @@ For a **tuning loop**:
 
 ## Limitations
 
-- The AI uses a multi-step greedy policy each turn: (1) build best column, (2) multi-card commit (straight, full-house, four-of-a-kind, three-of-a-kind, two-pair, pair — lands first, then roles), (3) single-card placement, (4) store one land toward a straight, (5) end turn. It never replaces stored cards (no-churn rule). Pattern zeros in the output indicate **deck-composition limits**, not AI limits — e.g. Generation Ship's 2-ideology deck rules out trips/quads/full-house entirely; straight-flush and royal-flush require card distributions the starting decks rarely provide.
+- The AI uses a multi-step greedy policy each turn: (1) builds the column with the highest **marginal (leveled)** value, (2) multi-card commit (straight, full-house, four-of-a-kind, three-of-a-kind, two-pair, pair — lands first, then roles), (3) single-card placement, (4) store one land toward a straight, (5) end turn. It never replaces stored cards (no-churn rule). Pattern zeros in the output indicate **deck-composition limits**, not AI limits — e.g. Generation Ship's 2-ideology deck rules out trips/quads/full-house entirely; straight-flush and royal-flush require card distributions the starting decks rarely provide.
 - Simulates a single Epoch from a fresh deck: no Legacy cards, no cross-Epoch effects.
 
 ## Common Mistakes

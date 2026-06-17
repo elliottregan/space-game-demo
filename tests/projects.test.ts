@@ -5,6 +5,9 @@ import {
   getProjectForPattern,
   reversePatternOrder,
   unlockedIdeologyBreakdown,
+  projectLevels,
+  projectContribution,
+  marginalContribution,
 } from "../src/core/data/projects.ts";
 import type { KeystoneProject, ProjectUnlock } from "../src/core/types.ts";
 import { getCard, landId, roleId } from "../src/core/data/cards.ts";
@@ -138,5 +141,43 @@ describe("projects helpers", () => {
     expect(b.heritage).toBe(1);
     expect(b.sovereignty).toBe(2); // land3 + role
     expect(b.transformation).toBe(0);
+  });
+});
+
+const proj = (value: number, levels?: { value: number }[]): KeystoneProject => ({
+  id: "t",
+  pattern: "pair",
+  name: "T",
+  flavor: "",
+  value,
+  ...(levels ? { levels } : {}),
+});
+
+describe("project leveling", () => {
+  test("default curve: L1 = base, then halving with a floor of 1", () => {
+    expect(projectLevels(proj(2)).map((l) => l.value)).toEqual([2, 1, 1]);
+    expect(projectLevels(proj(6)).map((l) => l.value)).toEqual([6, 3, 2]);
+  });
+
+  test("authored levels override the default", () => {
+    expect(projectLevels(proj(5, [{ value: 5 }, { value: 4 }])).map((l) => l.value)).toEqual([
+      5, 4,
+    ]);
+  });
+
+  test("contribution sums increments; tail repeats the last level", () => {
+    const p = proj(2); // [2,1,1]
+    expect(projectContribution(p, 0)).toBe(0);
+    expect(projectContribution(p, 1)).toBe(2);
+    expect(projectContribution(p, 2)).toBe(3);
+    expect(projectContribution(p, 3)).toBe(4);
+    expect(projectContribution(p, 5)).toBe(6); // 2+1+1+1+1
+  });
+
+  test("marginal value is the next build's increment", () => {
+    const p = proj(2);
+    expect(marginalContribution(p, 0)).toBe(2);
+    expect(marginalContribution(p, 1)).toBe(1);
+    expect(marginalContribution(p, 9)).toBe(1);
   });
 });

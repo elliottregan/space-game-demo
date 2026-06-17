@@ -99,6 +99,8 @@ This keeps pair-spam *playable* (the floor) while bending it toward diminishing 
 
 > Note for `resolveCrisis`: contribution becomes "sum of authored level values reached" rather than "value × unlock count." `ProjectUnlock` records stay per-build for the log/history.
 
+**Resolved (M3, 2026-06-16):** Diminishing curve is `[base, round(base/2), round(base/4)]` floored at 1; builds past the authored curve repeat the last level (never-worthless flat tail). Value-only launch — `ProjectLevel` carries an unused `effect?` placeholder for future upgrade effects. Base storage capacity kept flat at 1 everywhere (no per-Setting variation). Crisis difficulties retuned after re-baseline: homeworld 14 / generation-ship 12 / ruined-homeworld 20.
+
 ---
 
 ## Mechanic 3: The soft-gated tech tree
@@ -160,14 +162,14 @@ This lands once and pays off for every subsequent feature (#140's laws and #141'
 | M0 | Tech tree v0 visualization (renderer-only) | yes — replaces DEV-EVAL-138's strip |
 | M1 | Column storage (core + facade + UI) | yes |
 | M2 | Simulator: commitHand + storage heuristic, re-baseline | yes — blocks *tuning* of M1/M3/M4, not their code |
-| M3 | Project upgrades (levels) + Crisis contribution change | yes |
+| M3 | Project upgrades (levels) + Crisis contribution change | yes — ✅ done (2026-06-16) |
 | M4 | Soft gates (tiers) on the tree view | yes |
 | M5 | Endings integration | separate spec (#141) |
 
 ## Open questions
 
 1. **Dissent in storage:** allow (quarantine as a capacity trade-off) or exclude (`storeCard` rejects `dissent` tags)? Leaning allow — it's an emergent decision with a real cost — but it needs simulator eyes on the dissent-ratio math.
-2. **Base capacity:** 1 vs 2 per column, and is it per-Setting? (Generation Ship may want 2 to compensate for 4 columns.)
+2. ~~**Base capacity:** 1 vs 2 per column, and is it per-Setting? (Generation Ship may want 2 to compensate for 4 columns.)~~ **Resolved (M3):** kept flat at 1 per column across all Settings.
 3. **Cross-column feeding:** strictly local storage is the current rule; is a tech-tree reward that allows pulling from an adjacent column's storage worth the rules complexity?
-4. **Upgrade effects vocabulary:** keep to a closed set (storage capacity, keep-a-card, Influence trickle) expressible without new engine hooks — the cleanup PR's lesson. Which two or three make the launch set?
+4. ~~**Upgrade effects vocabulary:** keep to a closed set (storage capacity, keep-a-card, Influence trickle) expressible without new engine hooks — the cleanup PR's lesson. Which two or three make the launch set?~~ **Resolved (M3):** value-only for the M3 launch; effects deferred (placeholder `effect?` field exists on `ProjectLevel` for future wiring).
 5. **Does a stored charter telegraph too much?** A charter in storage announces "this column will be built" — fine, or should charters be the one un-storable kind?

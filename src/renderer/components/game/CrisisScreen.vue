@@ -8,10 +8,15 @@
       </p>
 
       <ol class="unlock-walk">
-        <li v-for="(u, i) in walk" :key="u.projectId + '@' + u.turn">
-          <span class="step-pattern">{{ patternLabel(u.pattern) }}</span>
-          <span class="step-name">{{ projectName(u.projectId) }}</span>
-          <span class="step-value">+{{ projectValue(u.projectId) }}</span>
+        <li v-for="(c, i) in walk" :key="c.projectId + '@' + c.turn">
+          <span class="step-pattern">{{ patternLabel(c.pattern) }}</span>
+          <span class="step-name"
+            >{{ c.name
+            }}<template v-if="c.level > 1">
+              <span class="step-level">L{{ c.level }}</span></template
+            ></span
+          >
+          <span class="step-value">+{{ c.value }}</span>
           <span class="step-running">= {{ runningTotals[i] }}</span>
         </li>
       </ol>
@@ -49,7 +54,6 @@ import type {
   Crisis,
   CrisisOutcome,
   Ideology,
-  KeystoneProject,
   LegacyCandidate,
   LegacyUpgrade,
 } from "../../../core/types.ts";
@@ -60,7 +64,6 @@ import LegacyChoiceRow from "./LegacyChoiceRow.vue";
 const props = defineProps<{
   crisis: Crisis;
   outcome: CrisisOutcome;
-  projects: KeystoneProject[];
   candidates: LegacyCandidate[];
   breakdown: Record<Ideology, number>;
   nextSettingName: string;
@@ -69,12 +72,12 @@ defineEmits<{ advance: [choices: Record<string, LegacyUpgrade>] }>();
 
 const choices = ref<Record<string, LegacyUpgrade>>({});
 
-const walk = computed(() => props.outcome.contributingUnlocks);
+const walk = computed(() => props.outcome.contributions);
 const runningTotals = computed(() => {
   const out: number[] = [];
   let acc = 0;
-  for (const u of walk.value) {
-    acc += projectValue(u.projectId);
+  for (const c of walk.value) {
+    acc += c.value;
     out.push(acc);
   }
   return out;
@@ -83,12 +86,6 @@ const nextLabel = computed(() =>
   props.outcome.cleared ? `Continue to ${props.nextSettingName}` : "Continue",
 );
 
-function projectName(id: string): string {
-  return props.projects.find((p) => p.id === id)?.name ?? id;
-}
-function projectValue(id: string): number {
-  return props.projects.find((p) => p.id === id)?.value ?? 0;
-}
 function onChoose(id: string, u: LegacyUpgrade): void {
   choices.value = { ...choices.value, [id]: u };
 }
@@ -158,6 +155,10 @@ function onChoose(id: string, u: LegacyUpgrade): void {
 }
 .step-running {
   color: var(--ink-subtle);
+}
+.step-level {
+  color: var(--ink-subtle);
+  font-size: 10px;
 }
 .modal.crisis-screen .primary {
   align-self: flex-end;
