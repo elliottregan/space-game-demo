@@ -1,7 +1,6 @@
 import { describe, test, expect } from "bun:test";
 
 import { ALL_POLICIES, POLICY_DECKS, POLICY_BY_ID } from "../src/core/data/policies.ts";
-import type { PolicyCard } from "../src/core/data/policies.ts";
 
 describe("ALL_POLICIES", () => {
   test("has exactly 8 distinct cards", () => {
@@ -46,10 +45,11 @@ describe("POLICY_BY_ID", () => {
   test("solidarity-forever has base.handSize === 1 and scale with per=4 and solidarity", () => {
     const card = POLICY_BY_ID["solidarity-forever"];
     expect(card.base.handSize).toBe(1);
-    expect(card.scale).toBeDefined();
-    expect(card.scale!.ideology).toBe("solidarity");
-    expect(card.scale!.per).toBe(4);
-    expect(card.scale!.mod.handSize).toBe(1);
+    const { scale } = card;
+    expect(scale).toBeDefined();
+    expect(scale?.ideology).toBe("solidarity");
+    expect(scale?.per).toBe(4);
+    expect(scale?.mod.handSize).toBe(1);
   });
 
   test("mandate has base.influence === 1 and no scale", () => {
@@ -72,10 +72,11 @@ describe("POLICY_BY_ID", () => {
   test("deep-reserves has base.storage === 1 and scale with per=2 and transformation", () => {
     const card = POLICY_BY_ID["deep-reserves"];
     expect(card.base.storage).toBe(1);
-    expect(card.scale).toBeDefined();
-    expect(card.scale!.ideology).toBe("transformation");
-    expect(card.scale!.per).toBe(2);
-    expect(card.scale!.mod.storage).toBe(1);
+    const { scale } = card;
+    expect(scale).toBeDefined();
+    expect(scale?.ideology).toBe("transformation");
+    expect(scale?.per).toBe(2);
+    expect(scale?.mod.storage).toBe(1);
   });
 
   test("continuity has base.dissentPurge === 1 and no scale", () => {

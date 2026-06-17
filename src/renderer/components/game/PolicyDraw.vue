@@ -18,8 +18,8 @@
 
     <ul class="draw-list">
       <li
-        v-for="card in candidates"
-        :key="card.id"
+        v-for="(card, index) in candidates"
+        :key="`${card.id}-${index}`"
         class="draw-card"
         :style="{ '--card-accent': cssColorFor(card.ideology) }"
       >
