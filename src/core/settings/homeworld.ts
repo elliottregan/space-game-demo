@@ -83,7 +83,7 @@ const CRISIS: Crisis = {
   id: "homeworld-arrival-storm",
   name: "Arrival Storm",
   flavor: "The first generation faces a dust-storm that will not pass.",
-  difficulty: 14,
+  difficulty: 16,
 };
 
 const STARTING_COLUMNS: ColumnConfig[] = [];
