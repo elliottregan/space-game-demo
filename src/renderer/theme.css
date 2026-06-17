@@ -336,6 +336,14 @@
     border-top: 2px solid var(--status-negative);
     font-size: 12px;
   }
+
+  /* Policy candidate prompt: an inline mat band drawing attention to the
+     this-turn policy draws. Surfaces below the hand row when candidates exist. */
+  .policy-draw-prompt {
+    background: var(--mat);
+    border-top: 2px solid var(--accent);
+    padding: var(--space-3);
+  }
 }
 
 @layer components {

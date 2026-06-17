@@ -24,6 +24,10 @@
         :influence="epoch.influence"
         :dissent-count="snapshot.deckCounts.dissent"
         :ended="epoch.status.kind !== 'in-progress'"
+        :effective="snapshot.effective"
+        :base-hand-size="setting.rules.handSize"
+        :base-influence-baseline="setting.rules.influenceBaseline"
+        :base-storage-capacity="setting.rules.storageCapacity"
         @end-turn="onEndTurn"
       />
     </div>
@@ -79,6 +83,16 @@
           />
         </div>
 
+        <PolicyDraw
+          v-if="snapshot.policy.candidates.length > 0"
+          class="policy-draw-prompt"
+          :candidates="snapshot.policy.candidates"
+          :tableau="snapshot.policy.tableau"
+          :influence="snapshot.influence"
+          @slot="onSlotPolicy"
+          @discard="onDiscardCandidate"
+        />
+
         <button
           v-if="!eoe && epoch.phase === 'crisis'"
           class="primary resolve-crisis"
@@ -113,7 +127,15 @@
         </RailFlyout>
 
         <RailFlyout
-          v-if="rightRailActive === 'monuments'"
+          v-if="rightRailActive === 'policies'"
+          side="right"
+          title="Policy tableau"
+          @close="rightRailActive = null"
+        >
+          <PolicyTableau :tableau="snapshot.policy.tableau" @remove="onRemovePolicy" />
+        </RailFlyout>
+        <RailFlyout
+          v-else-if="rightRailActive === 'monuments'"
           side="right"
           title="Monuments"
           @close="rightRailActive = null"
@@ -207,6 +229,8 @@ import CardListModal from "./components/shell/CardListModal.vue";
 import SaveSlotMenu from "./components/shell/SaveSlotMenu.vue";
 import ThemeToggle from "./components/shell/ThemeToggle.vue";
 import CrisisCounterPanel from "./components/game/CrisisCounterPanel.vue";
+import PolicyDraw from "./components/game/PolicyDraw.vue";
+import PolicyTableau from "./components/game/PolicyTableau.vue";
 import Rail, { type RailItem } from "./components/shell/Rail.vue";
 import RailFlyout from "./components/shell/RailFlyout.vue";
 import MonumentsSection from "./components/shell/sidebar/MonumentsSection.vue";
@@ -246,6 +270,7 @@ const leftRailItems: RailItem[] = [
 ];
 
 const rightRailItems: RailItem[] = [
+  { key: "policies", label: "Policy tableau", icon: "policies" },
   { key: "monuments", label: "Monuments", icon: "monuments" },
   { key: "legacy", label: "Legacy cards", icon: "legacy" },
   { key: "counts", label: "Deck counts", icon: "counts" },
@@ -425,6 +450,15 @@ function onDiscardFromHand(idOrIds: string | string[]): void {
 }
 function onResolveCrisis(): void {
   game.resolveCrisis();
+}
+function onSlotPolicy(cardId: string): void {
+  game.slotPolicy(cardId);
+}
+function onDiscardCandidate(cardId: string): void {
+  game.discardPolicyCandidate(cardId);
+}
+function onRemovePolicy(slotIndex: number): void {
+  game.removePolicy(slotIndex);
 }
 function onEndTurn(): void {
   game.endTurn();

@@ -166,6 +166,26 @@ class GameService {
     if (r.ok) this.clearBuffer();
     this.refresh();
   }
+
+  // -----------------------------------------------------------------------
+  // Policy tableau — candidate draw + slotting
+  // -----------------------------------------------------------------------
+
+  slotPolicy(cardId: string): void {
+    const r = this.api.slotPolicy(cardId);
+    this.report(r as any);
+    this.refresh();
+  }
+  discardPolicyCandidate(cardId: string): void {
+    const r = this.api.discardPolicyCandidate(cardId);
+    this.report(r as any);
+    this.refresh();
+  }
+  removePolicy(slotIndex: number): void {
+    const r = this.api.removePolicy(slotIndex);
+    this.report(r as any);
+    this.refresh();
+  }
 }
 
 let instance: GameService | null = null;
