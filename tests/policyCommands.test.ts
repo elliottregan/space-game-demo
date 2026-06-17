@@ -1,13 +1,21 @@
-// B5: policy draw (start-of-turn) + slot / stack / discard / remove commands.
-// Draw count scales with each ideology's majority-counter influence; slotting a
-// matching id stacks (no new slot); a 6th distinct card with the tableau full
-// rejects; removePolicy returns stacked copies to that deck's discard; leftover
-// candidates are flushed to discards on endTurn.
+// B5 + Task 0.3: policy draw (start-of-turn) + phase-gated board verbs +
+// enactPolicies (batch slot/discard that leaves the policy phase).
+//
+// Draw count scales with each ideology's majority-counter influence (drawPolicies).
+// Board verbs reject while turnPhase === "policy". enactPolicies keeps the chosen
+// candidate ids (stacking onto matching slots, taking free slots otherwise),
+// discards the rest to their ideology piles, clears candidates, and advances to
+// the play phase. The 5-slot cap counts DISTINCT new ids. removePolicy returns
+// stacked copies to that deck's discard; leftover candidates are flushed on endTurn.
 
 import { describe, test, expect } from "bun:test";
-import { slotPolicy, discardPolicyCandidate, removePolicy } from "../src/core/engine/commands.ts";
+import {
+  buildColumn,
+  enactPolicies,
+  placeCard,
+  removePolicy,
+} from "../src/core/engine/commands.ts";
 import { drawPolicies, endTurn } from "../src/core/engine/turn.ts";
-import { effectiveRules } from "../src/core/engine/effectiveRules.ts";
 import { getPolicy } from "../src/core/data/policies.ts";
 import { getCard, landId } from "../src/core/data/cards.ts";
 import { getSetting } from "../src/core/settings/index.ts";
@@ -41,6 +49,7 @@ function makeEpoch(
     unlocks?: ProjectUnlock[];
     decks?: Partial<Record<Ideology, PolicyCard[]>>;
     discards?: Partial<Record<Ideology, PolicyCard[]>>;
+    turnPhase?: "policy" | "play";
   } = {},
 ): Epoch {
   const base = emptyPolicyState();
@@ -51,7 +60,7 @@ function makeEpoch(
     settingId: SETTING.id,
     turn: 1,
     phase: "play",
-    turnPhase: "play",
+    turnPhase: opts.turnPhase ?? "play",
     hand: [],
     draw: [],
     discard: [],
@@ -129,57 +138,130 @@ describe("drawPolicies — draw scales with influence", () => {
   });
 });
 
-describe("slotPolicy", () => {
-  test("slots a candidate into a free tableau slot", () => {
-    const ep = makeEpoch({ candidates: [getPolicy("mandate")] });
-    const r = slotPolicy(ep, "mandate");
+describe("board verbs are gated to the play phase", () => {
+  test("placeCard rejects while turnPhase === 'policy'", () => {
+    const ep = makeEpoch({
+      candidates: [getPolicy("mobilize")],
+      turnPhase: "policy",
+    });
+    const r = placeCard(ep, campaign, SETTING, "anything", 0, createRng(1));
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toBe("Resolve drawn policies first.");
+  });
+
+  test("buildColumn rejects while turnPhase === 'policy'", () => {
+    const ep = makeEpoch({
+      candidates: [getPolicy("mobilize")],
+      turnPhase: "policy",
+    });
+    const r = buildColumn(ep, SETTING, 0);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toBe("Resolve drawn policies first.");
+  });
+
+  test("removePolicy rejects while turnPhase === 'policy'", () => {
+    const ep = makeEpoch({
+      tableau: [slot("mandate")],
+      candidates: [getPolicy("mobilize")],
+      turnPhase: "policy",
+    });
+    const r = removePolicy(ep, 0);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toBe("Resolve drawn policies first.");
+    expect(ep.policy.tableau).toHaveLength(1); // untouched
+  });
+});
+
+describe("enactPolicies", () => {
+  test("keeps the chosen id, discards the rest, advances to play", () => {
+    const ep = makeEpoch({
+      candidates: [getPolicy("mobilize"), getPolicy("mandate"), getPolicy("archive")],
+      turnPhase: "policy",
+    });
+    const r = enactPolicies(ep, ["mobilize"]);
+    expect(r.ok).toBe(true);
+    // mobilize slotted.
+    expect(ep.policy.tableau).toHaveLength(1);
+    expect(ep.policy.tableau[0].card.id).toBe("mobilize");
+    expect(ep.policy.tableau[0].stacks).toBe(1);
+    // mandate + archive discarded to their ideologies.
+    expect(ep.policy.discards.sovereignty.map((c) => c.id)).toEqual(["mandate"]);
+    expect(ep.policy.discards.heritage.map((c) => c.id)).toEqual(["archive"]);
+    // candidates cleared, phase advanced.
+    expect(ep.policy.candidates).toHaveLength(0);
+    expect(ep.turnPhase).toBe("play");
+  });
+
+  test("enactPolicies([]) discards everything and advances", () => {
+    const ep = makeEpoch({
+      candidates: [getPolicy("mobilize"), getPolicy("mandate")],
+      turnPhase: "policy",
+    });
+    const r = enactPolicies(ep, []);
+    expect(r.ok).toBe(true);
+    expect(ep.policy.tableau).toHaveLength(0);
+    expect(ep.policy.discards.solidarity.map((c) => c.id)).toEqual(["mobilize"]);
+    expect(ep.policy.discards.sovereignty.map((c) => c.id)).toEqual(["mandate"]);
+    expect(ep.policy.candidates).toHaveLength(0);
+    expect(ep.turnPhase).toBe("play");
+  });
+
+  test("stacks onto a matching tableau slot (no new slot)", () => {
+    const ep = makeEpoch({
+      tableau: [slot("mobilize", 1)],
+      candidates: [getPolicy("mobilize")],
+      turnPhase: "policy",
+    });
+    const r = enactPolicies(ep, ["mobilize"]);
     expect(r.ok).toBe(true);
     expect(ep.policy.tableau).toHaveLength(1);
-    expect(ep.policy.tableau[0].card.id).toBe("mandate");
-    expect(ep.policy.tableau[0].stacks).toBe(1);
-    expect(ep.policy.candidates).toHaveLength(0);
+    expect(ep.policy.tableau[0].stacks).toBe(2);
+    expect(ep.turnPhase).toBe("play");
   });
 
-  test("slotting onto a matching id stacks (no new slot)", () => {
+  test("two kept copies of one id consume a single slot and stack", () => {
     const ep = makeEpoch({
-      tableau: [slot("mandate", 1)],
-      candidates: [getPolicy("mandate")],
+      candidates: [getPolicy("mobilize"), getPolicy("mobilize")],
+      turnPhase: "policy",
     });
-    const r = slotPolicy(ep, "mandate");
+    const r = enactPolicies(ep, ["mobilize"]);
     expect(r.ok).toBe(true);
-    expect(ep.policy.tableau).toHaveLength(1); // unchanged length
-    expect(ep.policy.tableau[0].stacks).toBe(2); // incremented
+    expect(ep.policy.tableau).toHaveLength(1);
+    expect(ep.policy.tableau[0].card.id).toBe("mobilize");
+    expect(ep.policy.tableau[0].stacks).toBe(2);
     expect(ep.policy.candidates).toHaveLength(0);
+    expect(ep.turnPhase).toBe("play");
   });
 
-  test("after stacking, effectiveRules reflects the stack", () => {
+  test("rejects when a kept id is not among candidates (phase unchanged)", () => {
     const ep = makeEpoch({
-      tableau: [slot("mandate", 1)],
-      candidates: [getPolicy("mandate")],
+      candidates: [getPolicy("mobilize")],
+      turnPhase: "policy",
     });
-    slotPolicy(ep, "mandate");
-    const r = effectiveRules(ep, SETTING);
-    expect(r.influenceBaseline).toBe(SETTING.rules.influenceBaseline + 2);
-  });
-
-  test("rejects a 6th distinct card when 5 slots are full and no id matches", () => {
-    const ep = makeEpoch({
-      tableau: [
-        slot("mandate"),
-        slot("mobilize"),
-        slot("stockpile"),
-        slot("continuity"),
-        slot("archive"),
-      ],
-      candidates: [getPolicy("conscription")],
-    });
-    const r = slotPolicy(ep, "conscription");
+    const r = enactPolicies(ep, ["mandate"]);
     expect(r.ok).toBe(false);
-    expect(ep.policy.tableau).toHaveLength(5);
-    expect(ep.policy.candidates).toHaveLength(1); // candidate untouched on reject
+    expect(ep.policy.tableau).toHaveLength(0);
+    expect(ep.policy.candidates).toHaveLength(1);
+    expect(ep.turnPhase).toBe("policy");
   });
 
-  test("stacks onto a match even when 5 slots are full", () => {
+  test("rejects over-cap keepIds counting DISTINCT new slots (phase unchanged)", () => {
+    // Tableau already has 4 distinct slots; keeping 2 new distinct ids would be 6.
+    const ep = makeEpoch({
+      tableau: [slot("mandate"), slot("stockpile"), slot("continuity"), slot("archive")],
+      candidates: [getPolicy("mobilize"), getPolicy("deep-reserves")],
+      turnPhase: "policy",
+    });
+    const r = enactPolicies(ep, ["mobilize", "deep-reserves"]);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toBe("Too many policies for the tableau (5 slots).");
+    expect(ep.policy.tableau).toHaveLength(4); // untouched
+    expect(ep.policy.candidates).toHaveLength(2);
+    expect(ep.turnPhase).toBe("policy");
+  });
+
+  test("a kept id already in the tableau is not counted as a new slot for the cap", () => {
+    // 5 slots full; keep mandate (already slotted → stacks, no new slot).
     const ep = makeEpoch({
       tableau: [
         slot("mandate"),
@@ -189,39 +271,27 @@ describe("slotPolicy", () => {
         slot("archive"),
       ],
       candidates: [getPolicy("mandate")],
+      turnPhase: "policy",
     });
-    const r = slotPolicy(ep, "mandate");
+    const r = enactPolicies(ep, ["mandate"]);
     expect(r.ok).toBe(true);
     expect(ep.policy.tableau).toHaveLength(5);
     expect(ep.policy.tableau[0].stacks).toBe(2);
+    expect(ep.turnPhase).toBe("play");
   });
 
-  test("rejects when the card is not among candidates", () => {
-    const ep = makeEpoch({ candidates: [getPolicy("mandate")] });
-    const r = slotPolicy(ep, "mobilize");
+  test("rejects when not in the policy phase", () => {
+    const ep = makeEpoch({
+      candidates: [getPolicy("mobilize")],
+      turnPhase: "play",
+    });
+    const r = enactPolicies(ep, ["mobilize"]);
     expect(r.ok).toBe(false);
-    expect(ep.policy.tableau).toHaveLength(0);
+    if (!r.ok) expect(r.error).toBe("Not in the policy phase.");
   });
 });
 
-describe("discardPolicyCandidate", () => {
-  test("removes the candidate and pushes it to its ideology's discard", () => {
-    const ep = makeEpoch({ candidates: [getPolicy("mandate")] });
-    const r = discardPolicyCandidate(ep, "mandate");
-    expect(r.ok).toBe(true);
-    expect(ep.policy.candidates).toHaveLength(0);
-    expect(ep.policy.discards.sovereignty).toHaveLength(1);
-    expect(ep.policy.discards.sovereignty[0].id).toBe("mandate");
-  });
-
-  test("rejects when the card is not a candidate", () => {
-    const ep = makeEpoch({ candidates: [] });
-    const r = discardPolicyCandidate(ep, "mandate");
-    expect(r.ok).toBe(false);
-  });
-});
-
-describe("removePolicy", () => {
+describe("removePolicy (play phase)", () => {
   test("frees the slot and returns one copy per stack to the deck's discard", () => {
     const ep = makeEpoch({ tableau: [slot("mandate", 3), slot("mobilize", 1)] });
     const r = removePolicy(ep, 0);

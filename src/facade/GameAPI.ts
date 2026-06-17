@@ -14,11 +14,10 @@ import {
   discardColumn as discardColumnCore,
   discardFromHand as discardFromHandCore,
   discardLand as discardLandCore,
-  discardPolicyCandidate as discardPolicyCandidateCore,
+  enactPolicies as enactPoliciesCore,
   placeCard as placeCardCore,
   recallInfluence as recallInfluenceCore,
   removePolicy as removePolicyCore,
-  slotPolicy as slotPolicyCore,
   storeCard as storeCardCore,
 } from "../core/engine/commands.ts";
 import { endTurn as endTurnCore, resolveCrisis as resolveCrisisCore } from "../core/engine/turn.ts";
@@ -325,31 +324,75 @@ export class GameAPI {
     return result;
   }
 
-  /** Slot a drawn policy candidate into the tableau (stacks onto a match, or
-   *  takes a free slot; rejects if full and no match). */
-  slotPolicy(cardId: string): CommandResult {
-    const result = slotPolicyCore(this.epoch, cardId);
-    if (result.ok) this.persist();
-    return result;
-  }
-
-  /** Discard a drawn policy candidate to its ideology's discard pile. */
-  discardPolicyCandidate(cardId: string): CommandResult {
-    const result = discardPolicyCandidateCore(this.epoch, cardId);
+  /**
+   * Resolve the drawn-policy phase in one batch: keep the named candidate ids
+   * (stacking onto matching slots, taking free slots otherwise), discard the
+   * rest to their ideology piles, then advance to the play phase. Rejects when
+   * not in the policy phase, when a kept id is not a candidate, or when the
+   * distinct new slots would exceed the 5-slot cap.
+   */
+  enactPolicies(keepIds: string[]): CommandResult {
+    const result = enactPoliciesCore(this.epoch, keepIds);
     if (result.ok) this.persist();
     return result;
   }
 
   /**
-   * Bridge for the Crisis simulator until `enactPolicies` lands in task 0.3 and
-   * the sim is rewritten in task 0.4. The sim resolves policy candidates with the
-   * per-card `slotPolicy`/`discardPolicyCandidate` commands, neither of which
-   * leaves the policy phase. Without this, the first turn that draws a candidate
-   * would pin `turnPhase` at "policy" and make every subsequent `endTurn` a
-   * silent no-op (spinning to MAX_STEPS). Returns the turn to the play phase once
-   * candidates have been resolved. Remove when `enactPolicies` replaces this.
+   * Legacy per-card slotting bridge for the PR #146 policy-draw UI (the
+   * `PolicyDraw.vue` slot/discard flow). It slots a single candidate in place
+   * without leaving the policy phase, so the player can resolve the remaining
+   * candidates one at a time; the batch `enactPolicies` is the real command and
+   * this whole pair is removed when the modal flow lands in Phase 3.
+   */
+  slotPolicy(cardId: string): CommandResult {
+    const policy = this.epoch.policy;
+    const candIdx = policy.candidates.findIndex((c) => c.id === cardId);
+    if (candIdx === -1) {
+      return { ok: false, error: "Policy not among this turn's candidates." };
+    }
+    const existing = policy.tableau.find((s) => s.card.id === cardId);
+    if (existing) {
+      existing.stacks += 1;
+    } else {
+      if (policy.tableau.length >= 5) {
+        return { ok: false, error: "Policy tableau is full (5 slots)." };
+      }
+      policy.tableau.push({ card: policy.candidates[candIdx], stacks: 1 });
+    }
+    policy.candidates.splice(candIdx, 1);
+    this.persist();
+    return { ok: true, value: undefined };
+  }
+
+  /** Legacy per-card discard bridge (PR #146 UI): push one candidate to its
+   *  ideology's discard without leaving the policy phase. Removed in Phase 3. */
+  discardPolicyCandidate(cardId: string): CommandResult {
+    const policy = this.epoch.policy;
+    const candIdx = policy.candidates.findIndex((c) => c.id === cardId);
+    if (candIdx === -1) {
+      return { ok: false, error: "Policy not among this turn's candidates." };
+    }
+    const [card] = policy.candidates.splice(candIdx, 1);
+    policy.discards[card.ideology].push(card);
+    this.persist();
+    return { ok: true, value: undefined };
+  }
+
+  /**
+   * Bridge for the Crisis simulator until task 0.4 rewrites Step 0 to call
+   * `enactPolicies` directly. The legacy sim resolves candidates with the
+   * per-card `slotPolicy`/`discardPolicyCandidate` bridges above, neither of
+   * which leaves the policy phase — without this, the first turn that draws a
+   * candidate would pin `turnPhase` at "policy" and make every subsequent
+   * `endTurn` a silent no-op. Returns the turn to the play phase, flushing any
+   * still-unresolved candidates to their discards. Removed in task 0.4.
    */
   finishPolicyPhase(): CommandResult {
+    const policy = this.epoch.policy;
+    for (const card of policy.candidates) {
+      policy.discards[card.ideology].push(card);
+    }
+    policy.candidates = [];
     this.epoch.turnPhase = "play";
     this.persist();
     return { ok: true, value: undefined };
