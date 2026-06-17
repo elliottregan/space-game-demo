@@ -171,13 +171,10 @@ class GameService {
   // Policy tableau — candidate draw + slotting
   // -----------------------------------------------------------------------
 
-  slotPolicy(cardId: string): void {
-    const r = this.api.slotPolicy(cardId);
-    this.report(r as any);
-    this.refresh();
-  }
-  discardPolicyCandidate(cardId: string): void {
-    const r = this.api.discardPolicyCandidate(cardId);
+  /** Resolve the drawn-policy phase in one batch: keep the named candidate ids
+   *  (stacking onto matching slots), discard the rest, advance to play. */
+  enactPolicies(keepIds: string[]): void {
+    const r = this.api.enactPolicies(keepIds);
     this.report(r as any);
     this.refresh();
   }

@@ -272,18 +272,17 @@ function runEpoch(api: GameAPI): RunResult {
     let acted = false;
 
     // -----------------------------------------------------------------------
-    // Step 0: Resolve the policy phase. A turn that drew candidates opens in
-    // `turnPhase === "policy"` (see turn.ts); board verbs and `endTurn` are
-    // gated until we leave it. Slot beneficial candidates — when a free slot
-    // exists or the card stacks one already in the tableau; prefer
-    // draw/influence/storage cards for scarce slots. Never spend a fresh slot
-    // on Conscription (its +1 Dissent is a cost) — only stack it onto a match.
-    // Then `finishPolicyPhase()` returns to the play phase; any unslotted
-    // candidates auto-discard on the next end-of-turn flush.
+    // Step 0: Resolve the policy phase in one batch. A turn that drew candidates
+    // opens in `turnPhase === "policy"` (see turn.ts); board verbs and `endTurn`
+    // are core-gated until we leave it. We compute a `keepIds` set from the
+    // candidates and call `api.enactPolicies(keepIds)` — keeping advances the
+    // turn to "play" (unkept candidates discard to their ideology piles).
     //
-    // NOTE: this uses the per-card `slotPolicy` bridge + `finishPolicyPhase`
-    // until `enactPolicies` lands (plan task 0.3) and the sim is rewritten to
-    // batch-enact (task 0.4).
+    // Heuristic (unchanged intent from the per-card bridge): prefer
+    // draw/influence/storage policies for scarce slots; keep a candidate when it
+    // stacks an already-kept/slotted id OR a projected distinct slot is still
+    // free (tableau.length + distinctKeptNewIds < 5); never keep Conscription
+    // for a fresh slot (its +1 Dissent is a cost) — only if it stacks.
     // -----------------------------------------------------------------------
     if (snap.epoch.turnPhase === "policy") {
       const cands = snap.epoch.policy.candidates;
@@ -298,14 +297,25 @@ function runEpoch(api: GameAPI): RunResult {
         conscription: 0,
       };
       const ordered = [...cands].sort((a, b) => (PRIORITY[b.id] ?? 0) - (PRIORITY[a.id] ?? 0));
+
+      const slottedIds = new Set(snap.epoch.policy.tableau.map((t) => t.card.id));
+      const keepIds: string[] = [];
+      const keptNewDistinct = new Set<string>(); // distinct kept ids needing a fresh slot
+      const usedSlots = snap.epoch.policy.tableau.length;
+
       for (const c of ordered) {
-        const tableau = api.snapshot().epoch.policy.tableau;
-        const stacks = tableau.some((t) => t.card.id === c.id);
-        const freeSlot = tableau.length < 5;
+        const stacks = slottedIds.has(c.id) || keptNewDistinct.has(c.id);
         if (!stacks && c.id === "conscription") continue; // don't pay a slot for a downside
-        if (stacks || freeSlot) api.slotPolicy(c.id);
+        // A fresh slot is available when current slots + already-projected new
+        // distinct keeps is still under the 5-slot cap.
+        const freeSlot = usedSlots + keptNewDistinct.size < 5;
+        if (stacks || freeSlot) {
+          keepIds.push(c.id);
+          if (!slottedIds.has(c.id)) keptNewDistinct.add(c.id);
+        }
       }
-      api.finishPolicyPhase(); // leave the policy phase so board verbs / endTurn unlock
+
+      api.enactPolicies(keepIds);
       continue;
     }
 

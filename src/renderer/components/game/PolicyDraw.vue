@@ -21,6 +21,7 @@
         v-for="(card, index) in candidates"
         :key="`${card.id}-${index}`"
         class="draw-card"
+        :class="{ kept: isKept(card.id) }"
         :style="{ '--card-accent': cssColorFor(card.ideology) }"
       >
         <div class="card-accent" aria-hidden="true"></div>
@@ -33,30 +34,25 @@
           <button
             type="button"
             class="primary"
-            :disabled="!canSlot(card.id)"
-            :title="canSlot(card.id) ? `Slot ${card.name}` : 'Tableau full'"
-            @click="$emit('slot', card.id)"
+            :disabled="!isKept(card.id) && !canKeep(card.id)"
+            :title="keepTitle(card)"
+            @click="toggleKeep(card.id)"
           >
-            Slot
-          </button>
-          <button
-            type="button"
-            class="linklike"
-            :title="`Discard ${card.name}`"
-            @click="$emit('discard', card.id)"
-          >
-            Discard
+            {{ isKept(card.id) ? "Keep ✓" : "Keep" }}
           </button>
         </div>
       </li>
     </ul>
 
-    <p class="draw-caption">Unslotted candidates auto-discard at end of turn.</p>
+    <div class="draw-foot">
+      <button type="button" class="primary enact" @click="emitEnact">Enact policies</button>
+      <p class="draw-caption">Unkept candidates discard to their ideology pile.</p>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import type { PolicyCard, PolicySlot, Ideology } from "../../../core/types.ts";
 import { cssColorFor, IDEOLOGIES, IDEOLOGY_DISPLAY } from "../../../core/data/ideologies.ts";
 import { describePolicy } from "../../util/policies.ts";
@@ -71,18 +67,57 @@ const props = defineProps<{
   influence: Record<Ideology, number>;
 }>();
 
-defineEmits<{
-  slot: [cardId: string];
-  discard: [cardId: string];
+const emit = defineEmits<{
+  enact: [keepIds: string[]];
 }>();
 
+/** Ids the player has chosen to keep this turn (select-then-enact). */
+const keep = ref<Set<string>>(new Set());
+// Reset the selection whenever a new batch of candidates is drawn.
+watch(
+  () => props.candidates,
+  () => {
+    keep.value = new Set();
+  },
+);
+
+function isKept(cardId: string): boolean {
+  return keep.value.has(cardId);
+}
+
+/** Ids already occupying a tableau slot (stacking onto these costs no new slot). */
+const slottedIds = computed(() => new Set(props.tableau.map((s) => s.card.id)));
+
+/** Distinct kept ids that would need a brand-new tableau slot. */
+const projectedNewSlots = computed(
+  () => [...keep.value].filter((id) => !slottedIds.value.has(id)).length,
+);
+
 /**
- * A candidate can be slotted when the tableau has a free slot, OR when its id
- * already occupies a slot (in which case it stacks and consumes no new slot).
+ * A candidate can be newly kept when keeping it would not exceed the 5-slot cap.
+ * Keeping an id that already stacks (slotted, or already kept) is always allowed.
  */
-function canSlot(cardId: string): boolean {
-  if (props.tableau.length < MAX_SLOTS) return true;
-  return props.tableau.some((slot) => slot.card.id === cardId);
+function canKeep(cardId: string): boolean {
+  if (keep.value.has(cardId)) return true;
+  if (slottedIds.value.has(cardId)) return true; // stacks onto an existing slot
+  return props.tableau.length + projectedNewSlots.value < MAX_SLOTS;
+}
+
+function keepTitle(card: PolicyCard): string {
+  if (isKept(card.id)) return `Drop ${card.name} from keepers`;
+  if (canKeep(card.id)) return `Keep ${card.name}`;
+  return "Tableau full (5 slots)";
+}
+
+function toggleKeep(cardId: string): void {
+  const next = new Set(keep.value);
+  if (next.has(cardId)) next.delete(cardId);
+  else if (canKeep(cardId)) next.add(cardId);
+  keep.value = next;
+}
+
+function emitEnact(): void {
+  emit("enact", [...keep.value]);
 }
 
 /** Ideology-colored draw counts, only for ideologies that drew this turn. */
@@ -189,6 +224,21 @@ const drawCounts = computed(() =>
 }
 .card-actions button {
   white-space: nowrap;
+}
+
+.draw-card.kept {
+  box-shadow:
+    var(--shadow-interactive),
+    inset 0 0 0 2px var(--card-accent, var(--ink));
+}
+
+.draw-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.enact {
+  align-self: flex-start;
 }
 
 .draw-caption {

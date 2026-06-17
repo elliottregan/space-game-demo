@@ -45,6 +45,7 @@ import type {
   LegacyUpgrade,
   PolicyState,
   Setting,
+  TurnPhase,
 } from "../core/types.ts";
 import { demonym, demonymName } from "../core/engine/ideology.ts";
 import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../core/engine/column.ts";
@@ -57,6 +58,9 @@ export interface Snapshot {
   campaign: Campaign;
   setting: Setting;
   epoch: Epoch;
+  /** Sub-phase of the current turn (mirrors `epoch.turnPhase`). Only meaningful
+   *  while `epoch.phase === "play"`; the renderer reads it to gate board UI. */
+  turnPhase: TurnPhase;
   vector: IdeologyVector;
   demonymLabel: string;
   deckCounts: { hand: number; draw: number; discard: number; dissent: number };
@@ -175,6 +179,9 @@ export class GameAPI {
     this.campaign = state.campaign;
     this.setting = getSetting(state.settingId);
     this.epoch = state.epoch;
+    // Defensive: v6 is unmerged, so an older dev save may predate `turnPhase`.
+    // Default it to "play" so a loaded epoch is immediately interactive.
+    if (this.epoch.turnPhase === undefined) this.epoch.turnPhase = "play";
     this.endOfEpoch = state.endOfEpoch;
     this.rng = createRng(state.seed);
   }
@@ -218,6 +225,7 @@ export class GameAPI {
       },
       setting: this.setting,
       epoch: epochView,
+      turnPhase: this.epoch.turnPhase,
       vector,
       demonymLabel: demonymName(demonym(vector)),
       deckCounts: {
@@ -335,67 +343,6 @@ export class GameAPI {
     const result = enactPoliciesCore(this.epoch, keepIds);
     if (result.ok) this.persist();
     return result;
-  }
-
-  /**
-   * Legacy per-card slotting bridge for the PR #146 policy-draw UI (the
-   * `PolicyDraw.vue` slot/discard flow). It slots a single candidate in place
-   * without leaving the policy phase, so the player can resolve the remaining
-   * candidates one at a time; the batch `enactPolicies` is the real command and
-   * this whole pair is removed when the modal flow lands in Phase 3.
-   */
-  slotPolicy(cardId: string): CommandResult {
-    const policy = this.epoch.policy;
-    const candIdx = policy.candidates.findIndex((c) => c.id === cardId);
-    if (candIdx === -1) {
-      return { ok: false, error: "Policy not among this turn's candidates." };
-    }
-    const existing = policy.tableau.find((s) => s.card.id === cardId);
-    if (existing) {
-      existing.stacks += 1;
-    } else {
-      if (policy.tableau.length >= 5) {
-        return { ok: false, error: "Policy tableau is full (5 slots)." };
-      }
-      policy.tableau.push({ card: policy.candidates[candIdx], stacks: 1 });
-    }
-    policy.candidates.splice(candIdx, 1);
-    this.persist();
-    return { ok: true, value: undefined };
-  }
-
-  /** Legacy per-card discard bridge (PR #146 UI): push one candidate to its
-   *  ideology's discard without leaving the policy phase. Removed in Phase 3. */
-  discardPolicyCandidate(cardId: string): CommandResult {
-    const policy = this.epoch.policy;
-    const candIdx = policy.candidates.findIndex((c) => c.id === cardId);
-    if (candIdx === -1) {
-      return { ok: false, error: "Policy not among this turn's candidates." };
-    }
-    const [card] = policy.candidates.splice(candIdx, 1);
-    policy.discards[card.ideology].push(card);
-    this.persist();
-    return { ok: true, value: undefined };
-  }
-
-  /**
-   * Bridge for the Crisis simulator until task 0.4 rewrites Step 0 to call
-   * `enactPolicies` directly. The legacy sim resolves candidates with the
-   * per-card `slotPolicy`/`discardPolicyCandidate` bridges above, neither of
-   * which leaves the policy phase — without this, the first turn that draws a
-   * candidate would pin `turnPhase` at "policy" and make every subsequent
-   * `endTurn` a silent no-op. Returns the turn to the play phase, flushing any
-   * still-unresolved candidates to their discards. Removed in task 0.4.
-   */
-  finishPolicyPhase(): CommandResult {
-    const policy = this.epoch.policy;
-    for (const card of policy.candidates) {
-      policy.discards[card.ideology].push(card);
-    }
-    policy.candidates = [];
-    this.epoch.turnPhase = "play";
-    this.persist();
-    return { ok: true, value: undefined };
   }
 
   /** Remove a slotted policy from the tableau, cycling it to its discard. */

@@ -84,13 +84,12 @@
         </div>
 
         <PolicyDraw
-          v-if="snapshot.policy.candidates.length > 0"
+          v-if="snapshot.turnPhase === 'policy'"
           class="policy-draw-prompt"
           :candidates="snapshot.policy.candidates"
           :tableau="snapshot.policy.tableau"
           :influence="snapshot.influence"
-          @slot="onSlotPolicy"
-          @discard="onDiscardCandidate"
+          @enact="onEnactPolicies"
         />
 
         <button
@@ -451,11 +450,8 @@ function onDiscardFromHand(idOrIds: string | string[]): void {
 function onResolveCrisis(): void {
   game.resolveCrisis();
 }
-function onSlotPolicy(cardId: string): void {
-  game.slotPolicy(cardId);
-}
-function onDiscardCandidate(cardId: string): void {
-  game.discardPolicyCandidate(cardId);
+function onEnactPolicies(keepIds: string[]): void {
+  game.enactPolicies(keepIds);
 }
 function onRemovePolicy(slotIndex: number): void {
   game.removePolicy(slotIndex);
