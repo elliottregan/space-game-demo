@@ -39,6 +39,7 @@
 
       <div class="play-area">
         <TableauPanel
+          :class="{ 'phase-locked': policyPhase }"
           :columns="epoch.columns"
           :column-buildable="snapshot.columnBuildable"
           :buildable-labels="buildableLabels"
@@ -56,7 +57,7 @@
           @build="onBuild"
         />
 
-        <div class="hand-row">
+        <div class="hand-row" :class="{ 'phase-locked': policyPhase }">
           <DiscardPilePanel
             :discard-count="epoch.discard.length"
             @view="onViewPile('discard')"
@@ -77,14 +78,19 @@
           />
           <DeckPilePanel
             :draw-count="epoch.draw.length"
-            :ended="epoch.status.kind !== 'in-progress'"
+            :ended="epoch.status.kind !== 'in-progress' || policyPhase"
             @view="onViewPile('deck')"
             @end-turn="onEndTurn"
           />
         </div>
 
+        <div class="policy-zone">
+          <PolicyTableau :tableau="snapshot.policy.tableau" @remove="onRemovePolicy" />
+          <PolicyPiles :decks="snapshot.policy.decks" :discards="snapshot.policy.discards" />
+        </div>
+
         <PolicyDraw
-          v-if="snapshot.turnPhase === 'policy'"
+          v-if="policyPhase"
           class="policy-draw-prompt"
           :candidates="snapshot.policy.candidates"
           :tableau="snapshot.policy.tableau"
@@ -126,15 +132,7 @@
         </RailFlyout>
 
         <RailFlyout
-          v-if="rightRailActive === 'policies'"
-          side="right"
-          title="Policy tableau"
-          @close="rightRailActive = null"
-        >
-          <PolicyTableau :tableau="snapshot.policy.tableau" @remove="onRemovePolicy" />
-        </RailFlyout>
-        <RailFlyout
-          v-else-if="rightRailActive === 'monuments'"
+          v-if="rightRailActive === 'monuments'"
           side="right"
           title="Monuments"
           @close="rightRailActive = null"
@@ -230,6 +228,7 @@ import ThemeToggle from "./components/shell/ThemeToggle.vue";
 import CrisisCounterPanel from "./components/game/CrisisCounterPanel.vue";
 import PolicyDraw from "./components/game/PolicyDraw.vue";
 import PolicyTableau from "./components/game/PolicyTableau.vue";
+import PolicyPiles from "./components/game/PolicyPiles.vue";
 import Rail, { type RailItem } from "./components/shell/Rail.vue";
 import RailFlyout from "./components/shell/RailFlyout.vue";
 import MonumentsSection from "./components/shell/sidebar/MonumentsSection.vue";
@@ -269,7 +268,6 @@ const leftRailItems: RailItem[] = [
 ];
 
 const rightRailItems: RailItem[] = [
-  { key: "policies", label: "Policy tableau", icon: "policies" },
   { key: "monuments", label: "Monuments", icon: "monuments" },
   { key: "legacy", label: "Legacy cards", icon: "legacy" },
   { key: "counts", label: "Deck counts", icon: "counts" },
@@ -286,6 +284,10 @@ function toggleRight(key: string): void {
 const snapshot = computed(() => game.snapshot.value);
 const setting = computed(() => snapshot.value.setting);
 const epoch = computed(() => snapshot.value.epoch);
+// During the policy phase the core rejects all board verbs; the UI reflects
+// that by locking the building hand/tableau and suppressing End Turn until the
+// drawn policies are enacted.
+const policyPhase = computed(() => snapshot.value.turnPhase === "policy");
 const eoe = computed(() => game.endOfEpoch.value);
 const lastError = computed(() => game.lastError.value);
 const demonymLabel = computed(() => snapshot.value.demonymLabel);
@@ -343,6 +345,7 @@ function onToggleStorageSelect(columnIndex: number, cardId: string): void {
 }
 
 function onStoreCard(cardId: string, columnIndex: number): void {
+  if (policyPhase.value) return;
   // Capacity 1: replace the current occupant when full.
   const capacity = setting.value.rules.storageCapacity;
   const full = (epoch.value.columns[columnIndex]?.storage.length ?? 0) >= capacity;
@@ -376,6 +379,7 @@ function onStoreCard(cardId: string, columnIndex: number): void {
 }
 
 function onPlaceFromStorage(cardId: string, columnIndex: number): void {
+  if (policyPhase.value) return;
   game.placeFromStorage(cardId, columnIndex);
   selectedStorage.value = null;
 }
@@ -407,15 +411,18 @@ function canPlaceStored(col: number, card: Card): boolean {
 }
 
 function onPlaceCard(cardId: string, i: number): void {
+  if (policyPhase.value) return;
   game.placeCard(cardId, i);
 }
 function onPlaceCards(ids: string[], i: number): void {
+  if (policyPhase.value) return;
   for (const id of ids) {
     if (game.validColumns(id).includes(i)) game.placeCard(id, i);
   }
   selectedIds.value = [];
 }
 function onCommitToRow(columnIndex: number, row: "land" | "influence"): void {
+  if (policyPhase.value) return;
   // Sync the service's commitBuffer with the current selection, then commit.
   game.commitBuffer.value = [...selectedIds.value];
   const sel = storageSelection.value;
@@ -428,21 +435,27 @@ function onCommitToRow(columnIndex: number, row: "land" | "influence"): void {
   }
 }
 function onDiscardLand(i: number): void {
+  if (policyPhase.value) return;
   game.discardLand(i);
 }
 function onDiscardCharter(i: number): void {
+  if (policyPhase.value) return;
   game.discardCharter(i);
 }
 function onRecallInfluence(i: number): void {
+  if (policyPhase.value) return;
   game.recallInfluence(i);
 }
 function onDiscardColumn(i: number): void {
+  if (policyPhase.value) return;
   game.discardColumn(i);
 }
 function onBuild(i: number): void {
+  if (policyPhase.value) return;
   game.buildColumn(i);
 }
 function onDiscardFromHand(idOrIds: string | string[]): void {
+  if (policyPhase.value) return;
   const ids = typeof idOrIds === "string" ? [idOrIds] : idOrIds;
   for (const id of ids) game.discardFromHand(id);
   selectedIds.value = [];
@@ -454,9 +467,11 @@ function onEnactPolicies(keepIds: string[]): void {
   game.enactPolicies(keepIds);
 }
 function onRemovePolicy(slotIndex: number): void {
+  if (policyPhase.value) return;
   game.removePolicy(slotIndex);
 }
 function onEndTurn(): void {
+  if (policyPhase.value) return;
   game.endTurn();
   selectedIds.value = [];
   selectedStorage.value = null;
