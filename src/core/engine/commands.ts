@@ -7,6 +7,7 @@ import { canPlaceCharter, canPlaceInfluence, canPlaceLand, columnCards } from ".
 import { evaluateColumn } from "./columnPatterns.ts";
 import { dispatch } from "./dispatch.ts";
 import { applyEffect } from "./effects.ts";
+import { effectiveRules } from "./effectiveRules.ts";
 import { canCommitHand } from "./rowHands.ts";
 import type { RNG } from "./rng.ts";
 
@@ -241,7 +242,7 @@ export function storeCard(
     const [replaced] = col.storage.splice(replaceIdx, 1);
     dispatch(epoch, { type: "card-discarded", card: replaced, source: "storage" });
   } else {
-    const capacity = setting.rules.storageCapacity;
+    const capacity = effectiveRules(epoch, setting).storageCapacity;
     if (col.storage.length >= capacity) {
       return { ok: false, error: "Storage is full." };
     }

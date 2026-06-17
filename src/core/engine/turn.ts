@@ -9,23 +9,28 @@ import type {
   Setting,
 } from "../types.ts";
 import { projectLevels, reversePatternOrder } from "../data/projects.ts";
-import { drawToHandSize, resolveEndOfTurn } from "./effects.ts";
+import { addDissent, drawToHandSize, purgeDissent, resolveEndOfTurn } from "./effects.ts";
 import { dispatch } from "./dispatch.ts";
+import { effectiveRules } from "./effectiveRules.ts";
 import type { RNG } from "./rng.ts";
 
 export function endTurn(epoch: Epoch, _campaign: Campaign, setting: Setting, rng: RNG): void {
   if (epoch.status.kind !== "in-progress") return;
   if (epoch.phase !== "play") return;
 
+  const er = effectiveRules(epoch, setting);
+
   // Resolve queued end-of-turn effects (addDissent etc.).
   resolveEndOfTurn({ epoch, rng });
 
-  // End-of-turn hand cycle: cards still in hand drop to discard without
-  // triggering Dissent. The per-discard Dissent rule applies to deliberate
-  // releases, not the natural turn cycle.
-  if (epoch.hand.length > 0) {
-    epoch.discard.push(...epoch.hand);
-    epoch.hand = [];
+  // End-of-turn hand cycle: keep the first er.endTurnKeep cards; the rest drop
+  // to discard without triggering Dissent. The per-discard Dissent rule applies
+  // to deliberate releases, not the natural turn cycle. (endTurnKeep is 0 by
+  // default, so this cycles the whole hand as before.)
+  if (epoch.hand.length > er.endTurnKeep) {
+    const cycled = epoch.hand.slice(er.endTurnKeep);
+    epoch.hand = epoch.hand.slice(0, er.endTurnKeep);
+    epoch.discard.push(...cycled);
   }
 
   dispatch(epoch, { type: "turn-ended", turn: epoch.turn });
@@ -36,8 +41,12 @@ export function endTurn(epoch: Epoch, _campaign: Campaign, setting: Setting, rng
     return;
   }
 
-  drawToHandSize(epoch, setting.rules.handSize, rng);
-  epoch.influence = setting.rules.influenceBaseline;
+  // Start of turn. Dissent add (a cost) then purge, then influence reset and
+  // draw — all sized by the policy tableau via effectiveRules.
+  addDissent(epoch, er.dissentAdd);
+  purgeDissent(epoch, er.dissentPurge);
+  epoch.influence = er.influenceBaseline;
+  drawToHandSize(epoch, er.handSize, rng);
 }
 
 export function resolveCrisis(epoch: Epoch, setting: Setting): CrisisOutcome {

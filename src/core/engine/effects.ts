@@ -73,6 +73,15 @@ export function drawToHandSize(epoch: Epoch, handSize: number, rng: RNG): Card[]
   return drawCards(epoch, deficit, rng);
 }
 
+/** Shuffle `count` fresh Dissent cards into the draw pile (start-of-turn cost).
+ *  Routed through the `dissent-added` dispatch — this is NOT a discard, so it
+ *  does not trigger the per-discard Dissent rule. */
+export function addDissent(epoch: Epoch, count: number): void {
+  for (let i = 0; i < count; i++) {
+    dispatch(epoch, { type: "dissent-added" });
+  }
+}
+
 export function purgeDissent(epoch: Epoch, count: number): number {
   let purged = 0;
   const pools: Card[][] = [epoch.discard, epoch.hand, epoch.draw];
