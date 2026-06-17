@@ -33,7 +33,7 @@ export type { CharterRow, Column, ColumnConfig, InfluenceRow, LandRow } from "./
 
 export type { DiscardSource, GameEvent } from "./engine/events.ts";
 
-export type { Epoch, EpochPhase, EpochStatus } from "./engine/epoch.ts";
+export type { Epoch, EpochPhase, EpochStatus, PolicySlot, PolicyState } from "./engine/epoch.ts";
 
 export type {
   Campaign,
