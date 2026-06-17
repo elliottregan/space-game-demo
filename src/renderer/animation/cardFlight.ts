@@ -7,6 +7,8 @@
  * the renderer stays declarative and all motion tuning lives in CARD_FLIGHT.
  */
 
+import type { Ideology } from "../../core/types.ts";
+
 export interface CardFlightConfig {
   /** Flight time per card, ms. */
   durationMs: number;
@@ -47,7 +49,28 @@ export const CARD_FLIGHT: CardFlightConfig = {
   placedFadeMs: 160,
 };
 
-export type PileKind = "deck" | "discard";
+/**
+ * Pile registry keys. The building hand uses the two singleton piles
+ * (`"deck"` / `"discard"`); policy cards fly from/to per-ideology tiles keyed
+ * by the template-literal convention `policy-deck:<ideology>` /
+ * `policy-discard:<ideology>`. Build those keys with `policyDeckPile` /
+ * `policyDiscardPile` to avoid string typos at call sites.
+ */
+export type PileKind =
+  | "deck"
+  | "discard"
+  | `policy-deck:${Ideology}`
+  | `policy-discard:${Ideology}`;
+
+/** Key for an ideology's policy draw tile (e.g. `"policy-deck:solidarity"`). */
+export function policyDeckPile(ideology: Ideology): PileKind {
+  return `policy-deck:${ideology}`;
+}
+
+/** Key for an ideology's policy discard tile (e.g. `"policy-discard:heritage"`). */
+export function policyDiscardPile(ideology: Ideology): PileKind {
+  return `policy-discard:${ideology}`;
+}
 
 const piles = new Map<PileKind, HTMLElement>();
 
@@ -141,7 +164,7 @@ function finish(anim: Animation, done: () => void): void {
 }
 
 /**
- * Fly a freshly drawn card from the deck pile to its slot in the hand.
+ * Fly a freshly drawn card from a draw pile to its slot in the hand.
  *
  * The flight is performed by a body-level clone: the hand list is a scroll
  * container (overflow-x: auto), so the real in-flow card transformed out to
@@ -149,9 +172,12 @@ function finish(anim: Animation, done: () => void): void {
  * instead of rising off the stack. The real element keeps its slot in the
  * layout (hidden) while the clone flies, so siblings never reflow mid-wave;
  * while the flight waits its turn, the clone sits on the deck back-side up.
+ *
+ * `fromKind` selects the source pile (default `"deck"` — the building hand);
+ * policy cards pass an ideology-specific `policy-deck:<ideology>` key.
  */
-export function animateDraw(el: HTMLElement, done: () => void): void {
-  const from = pileRect("deck");
+export function animateDraw(el: HTMLElement, done: () => void, fromKind: PileKind = "deck"): void {
+  const from = pileRect(fromKind);
   if (!from || prefersReducedMotion()) return done();
   const rect = el.getBoundingClientRect();
   const clone = el.cloneNode(true) as HTMLElement;
@@ -183,9 +209,17 @@ export function animateDraw(el: HTMLElement, done: () => void): void {
  * cards leave in one update, each leave hook fires after the previous card
  * was already pinned out of flow — a live rect would measure the re-centered
  * row and start the flight from a shifted, gap-collapsed position.
+ *
+ * `toKind` selects the target pile (default `"discard"` — the building hand);
+ * policy cards pass an ideology-specific `policy-discard:<ideology>` key.
  */
-export function animateDiscard(el: HTMLElement, done: () => void, from?: DOMRect): void {
-  const to = pileRect("discard");
+export function animateDiscard(
+  el: HTMLElement,
+  done: () => void,
+  from?: DOMRect,
+  toKind: PileKind = "discard",
+): void {
+  const to = pileRect(toKind);
   if (!to || prefersReducedMotion()) return done();
   const rect = from ?? el.getBoundingClientRect();
   pin(el, rect);
