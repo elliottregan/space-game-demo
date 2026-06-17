@@ -19,6 +19,7 @@ export { IDEOLOGIES, IDEOLOGY_DISPLAY, zeroIdeologyBreakdown } from "./data/ideo
 
 export type {
   Crisis,
+  CrisisContribution,
   CrisisOutcome,
   KeystoneProject,
   PatternKind,

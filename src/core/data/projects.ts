@@ -57,11 +57,24 @@ export interface Crisis {
   difficulty: number;
 }
 
+export interface CrisisContribution {
+  projectId: string;
+  pattern: PatternKind;
+  name: string;
+  turn: number;
+  /** 1-based level this build represents. */
+  level: number;
+  /** Marginal leveled value this build added. */
+  value: number;
+}
+
 export interface CrisisOutcome {
   totalValue: number;
   cleared: boolean;
   /** Ordered highest pattern first (reverse of PATTERNS_IN_ORDER), then by turn. */
   contributingUnlocks: ProjectUnlock[];
+  /** Per-build leveled detail, same order as contributingUnlocks. */
+  contributions: CrisisContribution[];
 }
 
 // -------------------------------------------------------------------------

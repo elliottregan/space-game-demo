@@ -268,7 +268,10 @@ describe("commitHand command", () => {
     const card0 = getCard(landId(7, "solidarity"));
     const card1 = getCard(landId(7, "heritage"));
     const ep = epochWithHand([card0, card1]);
-    ep.status = { kind: "won", outcome: { totalValue: 0, cleared: true, contributingUnlocks: [] } };
+    ep.status = {
+      kind: "won",
+      outcome: { totalValue: 0, cleared: true, contributingUnlocks: [], contributions: [] },
+    };
     const result = commitHand(ep, 0, "land", [card0.id, card1.id], rng);
     expect(result.ok).toBe(false);
   });

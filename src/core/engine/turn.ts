@@ -1,7 +1,14 @@
 // End-of-turn and Crisis-resolution flow.
 
-import type { Campaign, CrisisOutcome, Epoch, ProjectUnlock, Setting } from "../types.ts";
-import { reversePatternOrder } from "../data/projects.ts";
+import type {
+  Campaign,
+  CrisisContribution,
+  CrisisOutcome,
+  Epoch,
+  ProjectUnlock,
+  Setting,
+} from "../types.ts";
+import { projectLevels, reversePatternOrder } from "../data/projects.ts";
 import { drawToHandSize, resolveEndOfTurn } from "./effects.ts";
 import { dispatch } from "./dispatch.ts";
 import type { RNG } from "./rng.ts";
@@ -44,22 +51,37 @@ export function resolveCrisis(epoch: Epoch, setting: Setting): CrisisOutcome {
     arr.push(u);
     byPattern.set(u.pattern, arr);
   }
-  const contributing: ProjectUnlock[] = [];
+  const contributingUnlocks: ProjectUnlock[] = [];
+  const contributions: CrisisContribution[] = [];
   let total = 0;
   for (const pattern of order) {
     const unlocks = (byPattern.get(pattern) ?? []).slice().sort((a, b) => a.turn - b.turn);
+    const countByProject = new Map<string, number>();
     for (const u of unlocks) {
       const project = setting.projects.find((p) => p.id === u.projectId);
       if (!project) continue;
-      total += project.value;
-      contributing.push(u);
+      const idx = countByProject.get(u.projectId) ?? 0;
+      const levels = projectLevels(project);
+      const value = levels[Math.min(idx, levels.length - 1)].value;
+      countByProject.set(u.projectId, idx + 1);
+      total += value;
+      contributingUnlocks.push(u);
+      contributions.push({
+        projectId: u.projectId,
+        pattern,
+        name: project.name,
+        turn: u.turn,
+        level: idx + 1,
+        value,
+      });
     }
   }
   const cleared = total >= setting.crisis.difficulty;
   const outcome: CrisisOutcome = {
     totalValue: total,
     cleared,
-    contributingUnlocks: contributing,
+    contributingUnlocks,
+    contributions,
   };
   epoch.crisis = { status: "resolved", outcome };
   epoch.status = cleared ? { kind: "won", outcome } : { kind: "lost", outcome };
