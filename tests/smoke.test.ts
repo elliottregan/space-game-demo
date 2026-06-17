@@ -8,7 +8,7 @@ describe("GameAPI smoke", () => {
     const s = api.snapshot();
     expect(s.setting.id).toBe("homeworld");
     expect(s.epoch.epochNumber).toBe(1);
-    expect(s.epoch.hand.length).toBe(s.setting.rules.handSize);
+    expect(s.epoch.hand.length).toBe(s.effective.handSize);
     expect(s.epoch.columns.length).toBe(s.setting.rules.columnCount);
     expect(
       s.epoch.columns.every(
@@ -30,9 +30,9 @@ describe("GameAPI smoke", () => {
     expect(s.policy.decks.solidarity.length).toBeGreaterThan(0);
     expect(s.policy).not.toBe(api.snapshot().policy);
     // Effective rules default to the Setting's base rules with no policies slotted.
-    expect(s.effective.handSize).toBe(s.setting.rules.handSize);
-    expect(s.effective.influenceBaseline).toBe(s.setting.rules.influenceBaseline);
-    expect(s.effective.storageCapacity).toBe(s.setting.rules.storageCapacity);
+    expect(s.effective.handSize).toBe(s.setting.rules.baseHandSize);
+    expect(s.effective.influenceBaseline).toBe(s.setting.rules.baseInfluenceBaseline);
+    expect(s.effective.storageCapacity).toBe(s.setting.rules.baseStorageCapacity);
     expect(s.effective.endTurnKeep).toBe(0);
     // Influence tally is zero before any build.
     expect(s.influence.solidarity).toBe(0);

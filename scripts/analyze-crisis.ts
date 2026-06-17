@@ -399,7 +399,7 @@ function runEpoch(api: GameAPI): RunResult {
       const handLands = snap4.epoch.hand.filter(
         (c) => c.kind === "land" && !c.tags.includes("dissent"),
       );
-      const storageCapacity = snap4.setting.rules.storageCapacity;
+      const storageCapacity = snap4.effective.storageCapacity;
 
       outer: for (const card of handLands) {
         // Only store if this card can't be placed anywhere useful

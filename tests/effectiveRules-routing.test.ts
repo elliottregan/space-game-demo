@@ -37,7 +37,7 @@ function epochWith(tableau: PolicySlot[], columns: Column[] = [createEmptyColumn
     columns,
     unlockedProjects: [],
     eventLog: [],
-    influence: SETTING.rules.influenceBaseline,
+    influence: SETTING.rules.baseInfluenceBaseline,
     endOfTurnQueue: [],
     status: { kind: "in-progress" },
     crisis: { status: "pending" },
@@ -78,20 +78,22 @@ describe("effectiveRules routing — endTurn", () => {
   test("a slotted Mandate raises next turn's influence by 1", () => {
     const ep = epochWith([slot("mandate")]);
     endTurn(ep, campaign, SETTING, rng);
-    expect(ep.influence).toBe(SETTING.rules.influenceBaseline + 1);
+    expect(ep.influence).toBe(SETTING.rules.baseInfluenceBaseline + 1);
   });
 
   test("baseline path (no policies) resets influence to setting baseline", () => {
     const ep = epochWith([]);
     ep.influence = 0;
     endTurn(ep, campaign, SETTING, rng);
-    expect(ep.influence).toBe(SETTING.rules.influenceBaseline);
+    expect(ep.influence).toBe(SETTING.rules.baseInfluenceBaseline);
   });
 
   // Seed a full draw pile so drawToHandSize is satisfied without reshuffling
   // the discard back into hand — keeps cycle assertions deterministic.
   const filler = () =>
-    Array.from({ length: SETTING.rules.handSize }, (_, i) => land((i % 8) + 2, "transformation"));
+    Array.from({ length: SETTING.rules.baseHandSize }, (_, i) =>
+      land((i % 8) + 2, "transformation"),
+    );
 
   test("a slotted Archive keeps 1 card in hand across endTurn", () => {
     const ep = epochWith([slot("archive")]);

@@ -67,7 +67,7 @@ function makeEpoch(
     columns: [],
     unlockedProjects: opts.unlocks ?? [],
     eventLog: [],
-    influence: SETTING.rules.influenceBaseline,
+    influence: SETTING.rules.baseInfluenceBaseline,
     endOfTurnQueue: [],
     status: { kind: "in-progress" },
     crisis: { status: "pending" },

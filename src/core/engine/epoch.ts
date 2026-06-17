@@ -8,6 +8,7 @@ import type { GameEvent } from "./events.ts";
 import { type Column, columnFromConfig, createEmptyColumn } from "./column.ts";
 import { CARD_BY_ID } from "../data/cards.ts";
 import { drawToHandSize, purgeDissent } from "./effects.ts";
+import { effectiveRules } from "./effectiveRules.ts";
 import { deriveVector, type IdeologyVector } from "./ideology.ts";
 import type { Setting } from "../settings/index.ts";
 import type { RNG } from "./rng.ts";
@@ -118,14 +119,18 @@ export function createEpoch(
     columns,
     unlockedProjects: [],
     eventLog: [],
-    influence: setting.rules.influenceBaseline,
+    influence: 0,
     endOfTurnQueue: [],
     status: { kind: "in-progress" },
     crisis: { status: "pending" },
     policy: createPolicyState(rng),
   };
 
-  drawToHandSize(epoch, setting.rules.handSize, rng);
+  // Initial influence + hand are operative values: route through effectiveRules
+  // (the policy tableau is empty at creation, so these equal the base rules).
+  const er = effectiveRules(epoch, setting);
+  epoch.influence = er.influenceBaseline;
+  drawToHandSize(epoch, er.handSize, rng);
   return epoch;
 }
 

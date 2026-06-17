@@ -12,7 +12,7 @@
 //   settingId (default "all") — homeworld | generation-ship | ruined-homeworld | all
 //   policy    (default "all") — rush | tall | flush | monoculture | straight | all
 //
-// Env: STORAGE_CAP=N overrides every Setting's storageCapacity for the run
+// Env: STORAGE_CAP=N overrides every Setting's baseStorageCapacity for the run
 //   (capacity sweep). e.g. STORAGE_CAP=3 bun run scripts/explore-strategies.ts 300 all straight
 // Env: VALUES=pattern:n,pattern:n overrides per-pattern project values for the
 //   run (value sweep). e.g. VALUES=straight:9,straight-flush:14,royal-flush:18
@@ -323,7 +323,7 @@ function placeMonoculture(api: GameAPI): boolean {
 /** Store a hand land that keeps a column's land+storage ranks inside one 5-window. */
 function storeTowardStraight(api: GameAPI): boolean {
   const snap = api.snapshot();
-  const cap = snap.setting.rules.storageCapacity;
+  const cap = snap.effective.storageCapacity;
   const handLands = snap.epoch.hand.filter((c) => c.kind === "land" && !isDissent(c));
   for (let i = 0; i < snap.epoch.columns.length; i++) {
     const col = snap.epoch.columns[i];
@@ -491,8 +491,9 @@ const r1 = (n: number | null) => (n === null ? null : Math.round(n * 10) / 10);
 
 function report(settingId: string, policy: string) {
   // getSetting returns the shared registry object, so this override is picked
-  // up by the store command (which reads setting.rules.storageCapacity live).
-  if (STORAGE_CAP !== null) getSetting(settingId).rules.storageCapacity = STORAGE_CAP;
+  // up by the store command (which reads effectiveRules().storageCapacity live,
+  // seeded from this base).
+  if (STORAGE_CAP !== null) getSetting(settingId).rules.baseStorageCapacity = STORAGE_CAP;
   for (const [pat, v] of Object.entries(VALUE_OVERRIDES)) {
     const proj = getSetting(settingId).projects.find((p) => p.pattern === pat);
     if (proj) proj.value = v;

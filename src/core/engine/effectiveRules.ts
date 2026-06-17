@@ -32,9 +32,9 @@ function applyModifier(acc: EffectiveRules, mod: PolicyModifier, times: number):
 /** Resolve the Setting's base rules through the epoch's policy tableau. */
 export function effectiveRules(epoch: Epoch, setting: Setting): EffectiveRules {
   const acc: EffectiveRules = {
-    handSize: setting.rules.handSize,
-    influenceBaseline: setting.rules.influenceBaseline,
-    storageCapacity: setting.rules.storageCapacity,
+    handSize: setting.rules.baseHandSize,
+    influenceBaseline: setting.rules.baseInfluenceBaseline,
+    storageCapacity: setting.rules.baseStorageCapacity,
     endTurnKeep: 0,
     dissentPurge: 0,
     dissentAdd: 0,

@@ -25,9 +25,9 @@
         :dissent-count="snapshot.deckCounts.dissent"
         :ended="epoch.status.kind !== 'in-progress'"
         :effective="snapshot.effective"
-        :base-hand-size="setting.rules.handSize"
-        :base-influence-baseline="setting.rules.influenceBaseline"
-        :base-storage-capacity="setting.rules.storageCapacity"
+        :base-hand-size="setting.rules.baseHandSize"
+        :base-influence-baseline="setting.rules.baseInfluenceBaseline"
+        :base-storage-capacity="setting.rules.baseStorageCapacity"
         @end-turn="onEndTurn"
       />
     </div>
@@ -354,7 +354,7 @@ function onToggleStorageSelect(columnIndex: number, cardId: string): void {
 function onStoreCard(cardId: string, columnIndex: number): void {
   if (policyPhase.value) return;
   // Capacity 1: replace the current occupant when full.
-  const capacity = setting.value.rules.storageCapacity;
+  const capacity = snapshot.value.effective.storageCapacity;
   const full = (epoch.value.columns[columnIndex]?.storage.length ?? 0) >= capacity;
   const occupant = epoch.value.columns[columnIndex]?.storage[0];
 

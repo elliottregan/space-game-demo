@@ -49,9 +49,9 @@ describe("effectiveRules", () => {
   test("empty tableau equals setting.rules with zeroed extras", () => {
     const r = effectiveRules(makeEpoch([]), setting);
     expect(r).toEqual({
-      handSize: setting.rules.handSize,
-      influenceBaseline: setting.rules.influenceBaseline,
-      storageCapacity: setting.rules.storageCapacity,
+      handSize: setting.rules.baseHandSize,
+      influenceBaseline: setting.rules.baseInfluenceBaseline,
+      storageCapacity: setting.rules.baseStorageCapacity,
       endTurnKeep: 0,
       dissentPurge: 0,
       dissentAdd: 0,
@@ -60,17 +60,17 @@ describe("effectiveRules", () => {
 
   test("one Mandate raises influenceBaseline by 1", () => {
     const r = effectiveRules(makeEpoch([slot("mandate")]), setting);
-    expect(r.influenceBaseline).toBe(setting.rules.influenceBaseline + 1);
+    expect(r.influenceBaseline).toBe(setting.rules.baseInfluenceBaseline + 1);
   });
 
   test("Mandate x3 stacks raises influenceBaseline by 3", () => {
     const r = effectiveRules(makeEpoch([slot("mandate", 3)]), setting);
-    expect(r.influenceBaseline).toBe(setting.rules.influenceBaseline + 3);
+    expect(r.influenceBaseline).toBe(setting.rules.baseInfluenceBaseline + 3);
   });
 
   test("Stockpile raises storageCapacity by 1", () => {
     const r = effectiveRules(makeEpoch([slot("stockpile")]), setting);
-    expect(r.storageCapacity).toBe(setting.rules.storageCapacity + 1);
+    expect(r.storageCapacity).toBe(setting.rules.baseStorageCapacity + 1);
   });
 
   test("Deep Reserves with 4 transformation influence: +1 base +2 scaled = +3 storage", () => {
@@ -81,42 +81,42 @@ describe("effectiveRules", () => {
       influenceUnlock("transformation", 5),
     ];
     const r = effectiveRules(makeEpoch([slot("deep-reserves")], unlocks), setting);
-    expect(r.storageCapacity).toBe(setting.rules.storageCapacity + 3);
+    expect(r.storageCapacity).toBe(setting.rules.baseStorageCapacity + 3);
   });
 
   test("Conscription adds influence +2 and dissentAdd 1", () => {
     const r = effectiveRules(makeEpoch([slot("conscription")]), setting);
-    expect(r.influenceBaseline).toBe(setting.rules.influenceBaseline + 2);
+    expect(r.influenceBaseline).toBe(setting.rules.baseInfluenceBaseline + 2);
     expect(r.dissentAdd).toBe(1);
   });
 
   test("Solidarity Forever with 8 solidarity influence: handSize +1 base +2 scaled", () => {
     const unlocks = Array.from({ length: 8 }, (_, i) => influenceUnlock("solidarity", i + 2));
     const r = effectiveRules(makeEpoch([slot("solidarity-forever")], unlocks), setting);
-    expect(r.handSize).toBe(setting.rules.handSize + 3);
+    expect(r.handSize).toBe(setting.rules.baseHandSize + 3);
   });
 
   test("Deep Reserves with influence below per: floor(1/2)=0, base only (+1 storage)", () => {
     const unlocks = [influenceUnlock("transformation", 2)];
     const r = effectiveRules(makeEpoch([slot("deep-reserves")], unlocks), setting);
-    expect(r.storageCapacity).toBe(setting.rules.storageCapacity + 1);
+    expect(r.storageCapacity).toBe(setting.rules.baseStorageCapacity + 1);
   });
 
   test("Solidarity Forever with influence below per: floor(3/4)=0, base only (+1 handSize)", () => {
     const unlocks = Array.from({ length: 3 }, (_, i) => influenceUnlock("solidarity", i + 2));
     const r = effectiveRules(makeEpoch([slot("solidarity-forever")], unlocks), setting);
-    expect(r.handSize).toBe(setting.rules.handSize + 1);
+    expect(r.handSize).toBe(setting.rules.baseHandSize + 1);
   });
 
   test("Deep Reserves x2 at 4 influence: (+1 base +2 scaled) x2 stacks = +6 storage", () => {
     const unlocks = Array.from({ length: 4 }, (_, i) => influenceUnlock("transformation", i + 2));
     const r = effectiveRules(makeEpoch([slot("deep-reserves", 2)], unlocks), setting);
-    expect(r.storageCapacity).toBe(setting.rules.storageCapacity + 6);
+    expect(r.storageCapacity).toBe(setting.rules.baseStorageCapacity + 6);
   });
 
   test("Mandate + Conscription accumulate across slots: influenceBaseline +3", () => {
     const r = effectiveRules(makeEpoch([slot("mandate"), slot("conscription")]), setting);
-    expect(r.influenceBaseline).toBe(setting.rules.influenceBaseline + 3);
+    expect(r.influenceBaseline).toBe(setting.rules.baseInfluenceBaseline + 3);
     expect(r.dissentAdd).toBe(1);
   });
 
