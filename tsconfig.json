@@ -19,11 +19,10 @@
     "skipLibCheck": true,
     "noEmit": true,
     "types": ["bun", "vite/client"],
-    "baseUrl": ".",
     "paths": {
-      "@core/*": ["src/core/*"],
-      "@ui/*": ["src/renderer/*"],
-      "@facade/*": ["src/facade/*"]
+      "@core/*": ["./src/core/*"],
+      "@ui/*": ["./src/renderer/*"],
+      "@facade/*": ["./src/facade/*"]
     }
   },
   "include": ["src/**/*", "tests/**/*"]
