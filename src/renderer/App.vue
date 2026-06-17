@@ -158,7 +158,6 @@
       v-if="eoe"
       :crisis="setting.crisis"
       :outcome="eoe.crisis"
-      :projects="setting.projects"
       :candidates="eoe.candidates"
       :breakdown="eoe.ideologyBreakdown"
       :next-setting-name="nextSettingName"

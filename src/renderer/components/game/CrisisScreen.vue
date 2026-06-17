@@ -54,7 +54,6 @@ import type {
   Crisis,
   CrisisOutcome,
   Ideology,
-  KeystoneProject,
   LegacyCandidate,
   LegacyUpgrade,
 } from "../../../core/types.ts";
@@ -65,7 +64,6 @@ import LegacyChoiceRow from "./LegacyChoiceRow.vue";
 const props = defineProps<{
   crisis: Crisis;
   outcome: CrisisOutcome;
-  projects: KeystoneProject[];
   candidates: LegacyCandidate[];
   breakdown: Record<Ideology, number>;
   nextSettingName: string;
