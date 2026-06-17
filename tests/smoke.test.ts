@@ -20,6 +20,27 @@ describe("GameAPI smoke", () => {
     ).toBe(true);
   });
 
+  test("snapshot carries policy engine, effective rules, and influence", () => {
+    const api = new GameAPI(42, { skipLoad: true });
+    const s = api.snapshot();
+    // Policy engine state is present and cloned (fresh refs for shallowRef).
+    expect(s.policy).toBeDefined();
+    expect(s.policy.tableau).toEqual([]);
+    expect(s.policy.candidates).toEqual([]);
+    expect(s.policy.decks.solidarity.length).toBeGreaterThan(0);
+    expect(s.policy).not.toBe(api.snapshot().policy);
+    // Effective rules default to the Setting's base rules with no policies slotted.
+    expect(s.effective.handSize).toBe(s.setting.rules.handSize);
+    expect(s.effective.influenceBaseline).toBe(s.setting.rules.influenceBaseline);
+    expect(s.effective.storageCapacity).toBe(s.setting.rules.storageCapacity);
+    expect(s.effective.endTurnKeep).toBe(0);
+    // Influence tally is zero before any build.
+    expect(s.influence.solidarity).toBe(0);
+    expect(s.influence.sovereignty).toBe(0);
+    expect(s.influence.transformation).toBe(0);
+    expect(s.influence.heritage).toBe(0);
+  });
+
   test("end turn increments the turn counter while in play phase", () => {
     const api = new GameAPI(42, { skipLoad: true });
     const t0 = api.snapshot().epoch.turn;

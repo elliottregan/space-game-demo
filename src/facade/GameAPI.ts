@@ -14,8 +14,11 @@ import {
   discardColumn as discardColumnCore,
   discardFromHand as discardFromHandCore,
   discardLand as discardLandCore,
+  discardPolicyCandidate as discardPolicyCandidateCore,
   placeCard as placeCardCore,
   recallInfluence as recallInfluenceCore,
+  removePolicy as removePolicyCore,
+  slotPolicy as slotPolicyCore,
   storeCard as storeCardCore,
 } from "../core/engine/commands.ts";
 import { endTurn as endTurnCore, resolveCrisis as resolveCrisisCore } from "../core/engine/turn.ts";
@@ -36,15 +39,20 @@ import type {
   Campaign,
   Card,
   Column,
+  EffectiveRules,
   Epoch,
+  Ideology,
   IdeologyVector,
   LegacyUpgrade,
+  PolicyState,
   Setting,
 } from "../core/types.ts";
 import { demonym, demonymName } from "../core/engine/ideology.ts";
 import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../core/engine/column.ts";
 import { evaluateColumn } from "../core/engine/columnPatterns.ts";
 import { countDissentInDeck } from "../core/engine/effects.ts";
+import { effectiveRules } from "../core/engine/effectiveRules.ts";
+import { ideologyInfluence } from "../core/data/projects.ts";
 
 export interface Snapshot {
   campaign: Campaign;
@@ -54,6 +62,9 @@ export interface Snapshot {
   demonymLabel: string;
   deckCounts: { hand: number; draw: number; discard: number; dissent: number };
   columnBuildable: boolean[]; // parallel to epoch.columns
+  policy: PolicyState; // deep-cloned policy engine state
+  effective: EffectiveRules; // setting rules folded through the policy tableau
+  influence: Record<Ideology, number>; // majority-counter tally per ideology
 }
 
 export type CommandResult<T = void> = { ok: true; value: T } | { ok: false; error: string };
@@ -89,7 +100,7 @@ export class GameAPI {
   /** Serialize current state for persistence. */
   exportState(): SavedState {
     return {
-      version: 5,
+      version: 6,
       campaign: this.campaign,
       settingId: this.setting.id,
       epoch: this.epoch,
@@ -183,6 +194,7 @@ export class GameAPI {
     const columnBuildable = columnsView.map(
       (c) => evaluateColumn(c, this.setting.projects) !== null,
     );
+    const policyView = this.clonePolicy();
     const epochView: Epoch = {
       ...this.epoch,
       hand: [...this.epoch.hand],
@@ -196,6 +208,7 @@ export class GameAPI {
         status: this.epoch.crisis.status,
         outcome: this.epoch.crisis.outcome,
       },
+      policy: policyView,
     };
     return {
       campaign: {
@@ -215,6 +228,27 @@ export class GameAPI {
         dissent,
       },
       columnBuildable,
+      policy: policyView,
+      effective: effectiveRules(this.epoch, this.setting),
+      influence: ideologyInfluence(this.epoch.unlockedProjects),
+    };
+  }
+
+  /** Deep-clone the policy engine state so shallowRef sees fresh references
+   *  after every mutation (same discipline as the rest of snapshot). */
+  private clonePolicy(): PolicyState {
+    const p = this.epoch.policy;
+    const cloneDeckMap = (m: PolicyState["decks"]): PolicyState["decks"] => ({
+      solidarity: [...m.solidarity],
+      sovereignty: [...m.sovereignty],
+      transformation: [...m.transformation],
+      heritage: [...m.heritage],
+    });
+    return {
+      decks: cloneDeckMap(p.decks),
+      discards: cloneDeckMap(p.discards),
+      tableau: p.tableau.map((s) => ({ card: s.card, stacks: s.stacks })),
+      candidates: [...p.candidates],
     };
   }
 
@@ -287,6 +321,28 @@ export class GameAPI {
     fromStorageIds: string[] = [],
   ): CommandResult<Card[]> {
     const result = commitHandCore(this.epoch, columnIndex, row, cardIds, this.rng, fromStorageIds);
+    if (result.ok) this.persist();
+    return result;
+  }
+
+  /** Slot a drawn policy candidate into the tableau (stacks onto a match, or
+   *  takes a free slot; rejects if full and no match). */
+  slotPolicy(cardId: string): CommandResult {
+    const result = slotPolicyCore(this.epoch, cardId);
+    if (result.ok) this.persist();
+    return result;
+  }
+
+  /** Discard a drawn policy candidate to its ideology's discard pile. */
+  discardPolicyCandidate(cardId: string): CommandResult {
+    const result = discardPolicyCandidateCore(this.epoch, cardId);
+    if (result.ok) this.persist();
+    return result;
+  }
+
+  /** Remove a slotted policy from the tableau, cycling it to its discard. */
+  removePolicy(slotIndex: number): CommandResult {
+    const result = removePolicyCore(this.epoch, slotIndex);
     if (result.ok) this.persist();
     return result;
   }
