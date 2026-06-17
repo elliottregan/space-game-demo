@@ -502,33 +502,49 @@ function onEnactPolicies(keepIds: string[]): void {
     // Stagger kept and unkept independently so each wave reads as a group.
     let keptN = 0;
     let discardN = 0;
-    for (const c of captures) {
-      if (c.keep) {
+
+    // Hide each kept destination card while its clone flies in (so it doesn't
+    // pop in first). Two kept copies of one policy id merge into the SAME
+    // tableau slot, so ref-count and reveal only when the LAST flight targeting
+    // an element lands — otherwise the first-finishing flight pops the slot back
+    // into view while a later clone is still mid-air. `target` IS the
+    // `.policy-card` element (PolicyTableau binds `data-policy-id` on
+    // <PolicyCard>, whose single root absorbs the attr).
+    const revealCounts = new Map<HTMLElement, number>();
+    const keptFlights = captures
+      .filter((c) => c.keep)
+      .map((c) => {
         const target = document.querySelector<HTMLElement>(
           `[data-policy-id="${CSS.escape(c.id)}"]`,
         );
         const toRect = target?.getBoundingClientRect() ?? null;
-        // `target` IS the `.policy-card` element: PolicyTableau binds
-        // `data-policy-id` directly on <PolicyCard>, whose single root carries
-        // `class="policy-card …"` and (no inheritAttrs:false) absorbs the attr.
-        // `querySelector(".policy-card")` would search descendants only and
-        // always return null, so hide the destination card itself.
-        const hideEl = target;
-        if (hideEl && toRect) hideEl.style.visibility = "hidden";
-        flyCapturedClone(
-          c.card,
-          toRect,
-          () => {
-            if (hideEl) hideEl.style.visibility = "";
-          },
-          { delay: keptN++ * CARD_FLIGHT.staggerMs },
-        );
-      } else {
-        flyCapturedClone(c.card, getPileRect(policyDiscardPile(c.ideology)), () => {}, {
-          flip: true,
-          delay: discardN++ * CARD_FLIGHT.staggerMs,
-        });
-      }
+        if (target && toRect) {
+          if (!revealCounts.has(target)) target.style.visibility = "hidden";
+          revealCounts.set(target, (revealCounts.get(target) ?? 0) + 1);
+        }
+        return { card: c.card, toRect, hideEl: toRect ? target : null };
+      });
+
+    for (const f of keptFlights) {
+      flyCapturedClone(
+        f.card,
+        f.toRect,
+        () => {
+          if (!f.hideEl) return;
+          const remaining = (revealCounts.get(f.hideEl) ?? 1) - 1;
+          revealCounts.set(f.hideEl, remaining);
+          if (remaining <= 0) f.hideEl.style.visibility = "";
+        },
+        { delay: keptN++ * CARD_FLIGHT.staggerMs },
+      );
+    }
+
+    for (const c of captures) {
+      if (c.keep) continue;
+      flyCapturedClone(c.card, getPileRect(policyDiscardPile(c.ideology)), () => {}, {
+        flip: true,
+        delay: discardN++ * CARD_FLIGHT.staggerMs,
+      });
     }
   });
 }
