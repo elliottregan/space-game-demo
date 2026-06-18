@@ -160,6 +160,13 @@
       @cancel="pendingConfirm = null"
       >{{ pendingConfirm?.body }}</ConfirmDialog
     >
+
+    <PromotionPicker
+      v-if="pendingPromotion"
+      :ideologies="pendingPromotion.ideologies"
+      @promote="onPromote"
+      @cancel="pendingPromotion = null"
+    />
   </div>
 </template>
 
@@ -193,6 +200,7 @@ import ScoreMeter from "./components/game/ScoreMeter.vue";
 import PolicyHandModal from "./components/game/PolicyHandModal.vue";
 import PolicyTableau from "./components/game/PolicyTableau.vue";
 import PolicyPiles from "./components/game/PolicyPiles.vue";
+import PromotionPicker from "./components/game/PromotionPicker.vue";
 import type { Card, Ideology, LegacyUpgrade } from "../core/types.ts";
 import { SETTING_BY_ID } from "../core/settings/index.ts";
 import { MAX_SLOTS } from "../facade/persistence.ts";
@@ -216,6 +224,10 @@ const pendingConfirm = ref<{
   confirmLabel: string;
   action: () => void;
 } | null>(null);
+
+// When a Build needs a player promotion choice (≥2 present ideologies), hold the
+// target column here to open the PromotionPicker; mirrors pendingConfirm.
+const pendingPromotion = ref<{ columnIndex: number; ideologies: Ideology[] } | null>(null);
 
 const statsOpen = ref(false);
 
@@ -376,7 +388,21 @@ function onDiscardColumn(i: number): void {
   game.discardColumn(i);
 }
 function onBuild(i: number): void {
-  game.buildColumn(i);
+  const options = game.promotableIdeologies(i);
+  if (options.length === 0) {
+    game.buildColumn(i); // all-wild ⇒ no promotion (core coerces to null)
+  } else if (options.length === 1) {
+    game.buildColumn(i, options[0]); // unambiguous ⇒ auto-promote
+  } else {
+    pendingPromotion.value = { columnIndex: i, ideologies: options };
+  }
+}
+
+function onPromote(ideology: Ideology): void {
+  const pending = pendingPromotion.value;
+  if (!pending) return;
+  game.buildColumn(pending.columnIndex, ideology);
+  pendingPromotion.value = null;
 }
 function onDiscardFromHand(idOrIds: string | string[]): void {
   const ids = typeof idOrIds === "string" ? [idOrIds] : idOrIds;
