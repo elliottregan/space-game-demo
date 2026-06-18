@@ -293,13 +293,6 @@
     gap: 8px;
   }
 
-  /* Slim full-width band under the TurnBar: the always-visible Crisis clock. */
-  .crisis-bar-region {
-    padding: 6px 16px;
-    border-bottom: 1px solid var(--rule-strong);
-    background: var(--ground);
-  }
-
   .app-main {
     display: grid;
     grid-template-columns: var(--tree-width) minmax(0, 1fr);

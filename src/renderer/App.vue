@@ -33,16 +33,16 @@
       />
     </div>
 
-    <div class="crisis-bar-region">
-      <CrisisBar :crisis="setting.crisis" :turn="epoch.turn" :max-turns="setting.rules.maxTurns" />
-    </div>
-
     <div class="app-main">
       <aside class="info-column">
-        <ScoreMeter
-          :crisis="setting.crisis"
-          :unlocks="epoch.unlockedProjects"
-          :projects="setting.projects"
+        <CrisisObjectivesPanel
+          :state="epoch.crisisTree"
+          :available-nodes="snapshot.availableNodes"
+          :tree="setting.crisisTree"
+          :crisis-name="setting.crisis.name"
+          :turn="epoch.turn"
+          :max-turns="setting.rules.maxTurns"
+          @set-active="onSetActiveObjective"
         />
         <IdeologyDisplay :vector="snapshot.vector" />
         <ProjectTreePanel :projects="setting.projects" :unlocks="epoch.unlockedProjects" />
@@ -195,8 +195,7 @@ import CardListModal from "./components/shell/CardListModal.vue";
 import StatsModal from "./components/shell/StatsModal.vue";
 import SaveSlotMenu from "./components/shell/SaveSlotMenu.vue";
 import ThemeToggle from "./components/shell/ThemeToggle.vue";
-import CrisisBar from "./components/game/CrisisBar.vue";
-import ScoreMeter from "./components/game/ScoreMeter.vue";
+import CrisisObjectivesPanel from "./components/game/CrisisObjectivesPanel.vue";
 import PolicyHandModal from "./components/game/PolicyHandModal.vue";
 import PolicyTableau from "./components/game/PolicyTableau.vue";
 import PolicyPiles from "./components/game/PolicyPiles.vue";
@@ -396,6 +395,10 @@ function onBuild(i: number): void {
   } else {
     pendingPromotion.value = { columnIndex: i, ideologies: options };
   }
+}
+
+function onSetActiveObjective(payload: { nodeId: string; ideology?: Ideology }): void {
+  game.setActiveObjective(payload.nodeId, payload.ideology);
 }
 
 function onPromote(ideology: Ideology): void {

@@ -3,9 +3,6 @@
     <div class="modal crisis-screen">
       <h1>{{ crisis.name }}</h1>
       <p class="flavor">{{ crisis.flavor }}</p>
-      <p class="difficulty">
-        Difficulty: <b>{{ crisis.difficulty }}</b>
-      </p>
 
       <ol class="unlock-walk">
         <li v-for="(c, i) in walk" :key="c.projectId + '@' + c.turn">
@@ -22,8 +19,8 @@
       </ol>
 
       <p class="verdict">
-        Total {{ outcome.totalValue }} / {{ crisis.difficulty }} —
-        <b>{{ outcome.cleared ? "Cleared" : "Failed" }}</b>
+        <b>{{ outcome.cleared ? "Crisis averted" : "Crisis overwhelmed you" }}</b>
+        <template v-if="clearedPath">— {{ clearedPath }}</template>
       </p>
 
       <p class="ideology">
@@ -86,6 +83,11 @@ const nextLabel = computed(() =>
   props.outcome.cleared ? `Continue to ${props.nextSettingName}` : "Continue",
 );
 
+// The cleared node ids carried by the outcome, joined into a readable path.
+// Node names aren't on the outcome (it carries ids), so show the ids — the
+// detailed tree-view (with names) is the deferred §9 UI pass.
+const clearedPath = computed(() => props.outcome.clearedNodeIds.join(" → "));
+
 function onChoose(id: string, u: LegacyUpgrade): void {
   choices.value = { ...choices.value, [id]: u };
 }
@@ -123,7 +125,6 @@ function onChoose(id: string, u: LegacyUpgrade): void {
   color: var(--ink-muted);
   font-style: italic;
 }
-.modal.crisis-screen .difficulty,
 .modal.crisis-screen .verdict,
 .modal.crisis-screen .ideology {
   margin: 0;
