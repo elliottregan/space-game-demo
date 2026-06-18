@@ -337,3 +337,41 @@ describe("GameAPI defensive promotedIdeology backfill", () => {
     expect(u.promotedIdeology).toBe(null);
   });
 });
+
+describe("GameAPI defensive crisisTree backfill", () => {
+  test("a loaded epoch missing crisisTree is seeded from the Setting's tree", () => {
+    // Start from a real, fully-formed epoch so snapshot() has a complete
+    // deck/policy state to read, then delete crisisTree and round-trip through a
+    // v8 store. The constructor's defensive block must seed it (active = root)
+    // so snapshot() (which deep-clones crisisTree) does not crash.
+    const seed = new GameAPI(3, { skipLoad: true });
+    const state = JSON.parse(JSON.stringify(seed.exportState())) as Record<string, unknown>;
+    const epoch = state.epoch as Record<string, unknown>;
+    delete epoch.crisisTree; // pretend a pre-P3 / hand-edited save
+
+    const v8 = {
+      version: 8,
+      activeSlotId: "slot-x",
+      slots: [
+        {
+          id: "slot-x",
+          label: "E1 · Homeworld · T1",
+          createdAt: 1,
+          lastPlayedAt: 1,
+          state,
+        },
+      ],
+    };
+    store.set(V8_KEY, JSON.stringify(v8));
+
+    const api = new GameAPI(1);
+    const snap = api.snapshot();
+    const ct = (snap.epoch as unknown as { crisisTree: { activeNodeId: string } }).crisisTree;
+    expect(ct.activeNodeId).toBe(getSetting("homeworld").crisisTree.rootId);
+  });
+
+  test("a brand-new GameAPI persists at version 8", () => {
+    const api = new GameAPI(99, { skipLoad: true });
+    expect(api.exportState().version).toBe(8);
+  });
+});
