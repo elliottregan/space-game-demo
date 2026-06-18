@@ -12,7 +12,7 @@
 //   settingId (default "all") — homeworld | generation-ship | ruined-homeworld | all
 //   policy    (default "all") — rush | tall | flush | monoculture | straight | all
 //
-// Env: STORAGE_CAP=N overrides every Setting's storageCapacity for the run
+// Env: STORAGE_CAP=N overrides every Setting's baseStorageCapacity for the run
 //   (capacity sweep). e.g. STORAGE_CAP=3 bun run scripts/explore-strategies.ts 300 all straight
 // Env: VALUES=pattern:n,pattern:n overrides per-pattern project values for the
 //   run (value sweep). e.g. VALUES=straight:9,straight-flush:14,royal-flush:18
@@ -23,6 +23,7 @@ import { evaluateColumn } from "../src/core/engine/columnPatterns.ts";
 import { canCommitHand } from "../src/core/engine/rowHands.ts";
 import { PATTERNS_IN_ORDER, unlockedIdeologyBreakdown } from "../src/core/data/projects.ts";
 import type { Card, Column, PatternKind } from "../src/core/types.ts";
+import { pickPolicyKeepIds } from "./policyKeep.ts";
 
 const RUNS = Number(process.argv[2] ?? 200);
 const SETTING_ARG = String(process.argv[3] ?? "all");
@@ -322,7 +323,7 @@ function placeMonoculture(api: GameAPI): boolean {
 /** Store a hand land that keeps a column's land+storage ranks inside one 5-window. */
 function storeTowardStraight(api: GameAPI): boolean {
   const snap = api.snapshot();
-  const cap = snap.setting.rules.storageCapacity;
+  const cap = snap.effective.storageCapacity;
   const handLands = snap.epoch.hand.filter((c) => c.kind === "land" && !isDissent(c));
   for (let i = 0; i < snap.epoch.columns.length; i++) {
     const col = snap.epoch.columns[i];
@@ -425,6 +426,12 @@ function runEpoch(api: GameAPI, tactics: Tactic[]): RunStat {
 
   while (api.snapshot().epoch.phase === "play" && steps < 2000) {
     steps++;
+    // Resolve the policy phase before acting; board verbs are core-gated until then.
+    if (api.snapshot().epoch.turnPhase === "policy") {
+      const ps = api.snapshot().epoch.policy;
+      api.enactPolicies(pickPolicyKeepIds(ps.candidates, ps.tableau));
+      continue;
+    }
     // Detect a build by watching the unlock count, then credit its value.
     const before = api.snapshot().epoch.unlockedProjects.length;
     let acted = false;
@@ -484,8 +491,9 @@ const r1 = (n: number | null) => (n === null ? null : Math.round(n * 10) / 10);
 
 function report(settingId: string, policy: string) {
   // getSetting returns the shared registry object, so this override is picked
-  // up by the store command (which reads setting.rules.storageCapacity live).
-  if (STORAGE_CAP !== null) getSetting(settingId).rules.storageCapacity = STORAGE_CAP;
+  // up by the store command (which reads effectiveRules().storageCapacity live,
+  // seeded from this base).
+  if (STORAGE_CAP !== null) getSetting(settingId).rules.baseStorageCapacity = STORAGE_CAP;
   for (const [pat, v] of Object.entries(VALUE_OVERRIDES)) {
     const proj = getSetting(settingId).projects.find((p) => p.pattern === pat);
     if (proj) proj.value = v;

@@ -44,7 +44,7 @@ export function resolveEndOfTurn(ctx: EffectContext): void {
   for (const effect of queue) {
     if (effect.kind === "addDissent") {
       for (let i = 0; i < effect.amount; i++) {
-        dispatch(ctx.epoch, { type: "dissent-added" });
+        dispatch(ctx.epoch, { type: "dissent-added" }, ctx.rng);
       }
     }
   }
@@ -71,6 +71,17 @@ export function drawToHandSize(epoch: Epoch, handSize: number, rng: RNG): Card[]
   const deficit = Math.max(0, handSize - epoch.hand.length);
   if (deficit === 0) return [];
   return drawCards(epoch, deficit, rng);
+}
+
+/** Shuffle `count` fresh Dissent cards into the draw pile (start-of-turn cost).
+ *  Each card is inserted at a RANDOM position in `epoch.draw` via the seedable
+ *  rng, so it is not dealt straight into the next opening hand. Routed through
+ *  the `dissent-added` dispatch — this is NOT a discard, so it does not trigger
+ *  the per-discard Dissent rule. */
+export function addDissent(epoch: Epoch, count: number, rng: RNG): void {
+  for (let i = 0; i < count; i++) {
+    dispatch(epoch, { type: "dissent-added" }, rng);
+  }
 }
 
 export function purgeDissent(epoch: Epoch, count: number): number {

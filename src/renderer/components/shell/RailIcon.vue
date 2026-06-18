@@ -54,6 +54,12 @@
       <rect x="4" y="7" width="10" height="13" rx="1.5" />
       <rect x="10" y="4" width="10" height="13" rx="1.5" />
     </template>
+    <!-- Policy tableau: a row of slot cards -->
+    <template v-else-if="name === 'policies'">
+      <rect x="3" y="6" width="5" height="12" />
+      <rect x="9.5" y="6" width="5" height="12" />
+      <rect x="16" y="6" width="5" height="12" />
+    </template>
   </svg>
 </template>
 
@@ -65,7 +71,8 @@ export type RailIconName =
   | "legacy"
   | "counts"
   | "log"
-  | "piles";
+  | "piles"
+  | "policies";
 
 defineProps<{ name: RailIconName }>();
 </script>

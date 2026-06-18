@@ -13,6 +13,7 @@ import { getSetting } from "../src/core/settings/index.ts";
 import { createCampaign } from "../src/core/engine/campaign.ts";
 import { createRng } from "../src/core/engine/rng.ts";
 import type { Column, Epoch } from "../src/core/types.ts";
+import { emptyPolicyState } from "./fixtures.ts";
 
 export function freshEpoch(columns: Column[] = [createEmptyColumn()]): Epoch {
   return {
@@ -20,6 +21,7 @@ export function freshEpoch(columns: Column[] = [createEmptyColumn()]): Epoch {
     settingId: "test",
     turn: 1,
     phase: "play",
+    turnPhase: "play",
     hand: [],
     draw: [],
     discard: [],
@@ -30,6 +32,7 @@ export function freshEpoch(columns: Column[] = [createEmptyColumn()]): Epoch {
     endOfTurnQueue: [],
     status: { kind: "in-progress" },
     crisis: { status: "pending" },
+    policy: emptyPolicyState(),
   };
 }
 
@@ -68,6 +71,7 @@ describe("storage model", () => {
 });
 
 const SETTING = getSetting("homeworld"); // storageCapacity: 1
+const rng = createRng(7);
 
 /** Storage is unlocked by play: seed a Land so the column accepts stores. */
 function seedLand(ep: Epoch, col = 0): void {
@@ -81,7 +85,7 @@ describe("storeCard command", () => {
     const card = land(6, "sovereignty");
     ep.hand = [card];
     const before = ep.influence;
-    const r = storeCard(ep, SETTING, card.id, 0);
+    const r = storeCard(ep, SETTING, card.id, 0, rng);
     expect(r.ok).toBe(true);
     expect(ep.hand.length).toBe(0);
     expect(ep.columns[0].storage).toEqual([card]);
@@ -93,7 +97,7 @@ describe("storeCard command", () => {
     const ep = freshEpoch();
     const card = land(6, "sovereignty");
     ep.hand = [card];
-    const r = storeCard(ep, SETTING, card.id, 0);
+    const r = storeCard(ep, SETTING, card.id, 0, rng);
     expect(r.ok).toBe(false);
     expect(ep.hand).toContain(card);
     expect(ep.columns[0].storage.length).toBe(0);
@@ -108,9 +112,9 @@ describe("storeCard command", () => {
     const charter = getCard("keystone-pioneer");
     const dissent = makeDissent();
     ep.hand = [role, charter, dissent];
-    expect(storeCard(ep, SETTING, role.id, 0).ok).toBe(true);
-    expect(storeCard(ep, SETTING, charter.id, 1).ok).toBe(true);
-    expect(storeCard(ep, SETTING, dissent.id, 2).ok).toBe(true);
+    expect(storeCard(ep, SETTING, role.id, 0, rng).ok).toBe(true);
+    expect(storeCard(ep, SETTING, charter.id, 1, rng).ok).toBe(true);
+    expect(storeCard(ep, SETTING, dissent.id, 2, rng).ok).toBe(true);
   });
 
   test("at capacity without replaceId → error, nothing changes", () => {
@@ -120,7 +124,7 @@ describe("storeCard command", () => {
     ep.columns[0].storage = [stored];
     const incoming = land(9, "solidarity");
     ep.hand = [incoming];
-    const r = storeCard(ep, SETTING, incoming.id, 0);
+    const r = storeCard(ep, SETTING, incoming.id, 0, rng);
     expect(r.ok).toBe(false);
     expect(ep.columns[0].storage).toEqual([stored]);
     expect(ep.hand).toContain(incoming);
@@ -133,7 +137,7 @@ describe("storeCard command", () => {
     ep.columns[0].storage = [stored];
     const incoming = land(9, "solidarity");
     ep.hand = [incoming];
-    const r = storeCard(ep, SETTING, incoming.id, 0, stored.id);
+    const r = storeCard(ep, SETTING, incoming.id, 0, rng, stored.id);
     expect(r.ok).toBe(true);
     expect(ep.columns[0].storage).toEqual([incoming]);
     expect(ep.discard).toContain(stored);
@@ -148,7 +152,7 @@ describe("storeCard command", () => {
     // Pretend capacity were larger: replaceId is honored regardless of fullness.
     const incoming = land(9, "solidarity");
     ep.hand = [incoming];
-    const r = storeCard(ep, SETTING, incoming.id, 0, stored.id);
+    const r = storeCard(ep, SETTING, incoming.id, 0, rng, stored.id);
     expect(r.ok).toBe(true);
     expect(ep.columns[0].storage).toEqual([incoming]);
     expect(ep.discard).toContain(stored);
@@ -159,7 +163,7 @@ describe("storeCard command", () => {
     seedLand(ep);
     const incoming = land(9, "solidarity");
     ep.hand = [incoming];
-    const r = storeCard(ep, SETTING, incoming.id, 0, "ghost");
+    const r = storeCard(ep, SETTING, incoming.id, 0, rng, "ghost");
     expect(r.ok).toBe(false);
     expect(ep.hand).toContain(incoming);
     expect(ep.columns[0].storage.length).toBe(0);
@@ -171,14 +175,12 @@ describe("storeCard command", () => {
     seedLand(ep);
     const card = land(6, "sovereignty");
     ep.hand = [card];
-    expect(storeCard(ep, SETTING, "nope", 0).ok).toBe(false);
-    expect(storeCard(ep, SETTING, card.id, 99).ok).toBe(false);
+    expect(storeCard(ep, SETTING, "nope", 0, rng).ok).toBe(false);
+    expect(storeCard(ep, SETTING, card.id, 99, rng).ok).toBe(false);
     ep.phase = "crisis";
-    expect(storeCard(ep, SETTING, card.id, 0).ok).toBe(false);
+    expect(storeCard(ep, SETTING, card.id, 0, rng).ok).toBe(false);
   });
 });
-
-const rng = createRng(7);
 
 describe("pulling from storage", () => {
   test("commitHand combines hand + this column's storage into a straight", () => {
@@ -276,7 +278,7 @@ describe("pulling from storage", () => {
     placeCharter(col, getCard("keystone-founding-charter"));
     const kept = land(2, "solidarity");
     col.storage = [kept];
-    const r = buildColumn(ep, getSetting("homeworld"), 0);
+    const r = buildColumn(ep, getSetting("homeworld"), 0, rng);
     expect(r.ok).toBe(true);
     expect(col.lands.cards.length).toBe(0);
     expect(col.storage).toEqual([kept]);

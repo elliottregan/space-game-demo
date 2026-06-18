@@ -7,6 +7,8 @@
  * the renderer stays declarative and all motion tuning lives in CARD_FLIGHT.
  */
 
+import type { Ideology } from "../../core/types.ts";
+
 export interface CardFlightConfig {
   /** Flight time per card, ms. */
   durationMs: number;
@@ -47,7 +49,28 @@ export const CARD_FLIGHT: CardFlightConfig = {
   placedFadeMs: 160,
 };
 
-export type PileKind = "deck" | "discard";
+/**
+ * Pile registry keys. The building hand uses the two singleton piles
+ * (`"deck"` / `"discard"`); policy cards fly from/to per-ideology tiles keyed
+ * by the template-literal convention `policy-deck:<ideology>` /
+ * `policy-discard:<ideology>`. Build those keys with `policyDeckPile` /
+ * `policyDiscardPile` to avoid string typos at call sites.
+ */
+export type PileKind =
+  | "deck"
+  | "discard"
+  | `policy-deck:${Ideology}`
+  | `policy-discard:${Ideology}`;
+
+/** Key for an ideology's policy draw tile (e.g. `"policy-deck:solidarity"`). */
+export function policyDeckPile(ideology: Ideology): PileKind {
+  return `policy-deck:${ideology}`;
+}
+
+/** Key for an ideology's policy discard tile (e.g. `"policy-discard:heritage"`). */
+export function policyDiscardPile(ideology: Ideology): PileKind {
+  return `policy-discard:${ideology}`;
+}
 
 const piles = new Map<PileKind, HTMLElement>();
 
@@ -61,6 +84,12 @@ function pileRect(kind: PileKind): DOMRect | null {
   return piles.get(kind)?.getBoundingClientRect() ?? null;
 }
 
+/** Live bounding rect of a registered pile, or null if not mounted. Exposed so
+ *  callers driving their own clone flights (policy enact) can target a tile. */
+export function getPileRect(kind: PileKind): DOMRect | null {
+  return pileRect(kind);
+}
+
 function prefersReducedMotion(): boolean {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
@@ -71,25 +100,39 @@ function prefersReducedMotion(): boolean {
  * both (end turn: hand cycles out, new hand cycles in), the draw animations
  * are pushed back so they start only after the discard wave has landed.
  *
+ * Flights are partitioned by namespace so independent waves never interfere:
+ * the building hand ("building") and the policy modal ("policy") each get their
+ * own batch. On a turn that both cycles the building hand AND opens the policy
+ * modal, the policy candidate draws stagger among themselves and are NOT pushed
+ * back behind the building-hand discard wave.
+ *
  * The hook call order within a flush is not guaranteed (enters can fire
  * before leaves), so draws are scheduled optimistically and their delays
  * are bumped when the batch closes at the next animation frame — before
  * the first frame paints.
  */
+type BatchKey = "building" | "policy";
+
 interface FlightBatch {
   draws: number;
   discards: number;
   drawAnims: Animation[];
 }
 
-let batch: FlightBatch | null = null;
+const batches = new Map<BatchKey, FlightBatch>();
 
-function currentBatch(): FlightBatch {
-  if (batch) return batch;
+/** Which batch a pile belongs to — policy tiles isolate from the building hand. */
+function batchKeyFor(kind: PileKind): BatchKey {
+  return kind === "deck" || kind === "discard" ? "building" : "policy";
+}
+
+function currentBatch(key: BatchKey): FlightBatch {
+  const existing = batches.get(key);
+  if (existing) return existing;
   const b: FlightBatch = { draws: 0, discards: 0, drawAnims: [] };
-  batch = b;
+  batches.set(key, b);
   requestAnimationFrame(() => {
-    batch = null;
+    batches.delete(key);
     if (b.discards === 0 || b.drawAnims.length === 0) return;
     const wave = Math.max(
       0,
@@ -141,7 +184,7 @@ function finish(anim: Animation, done: () => void): void {
 }
 
 /**
- * Fly a freshly drawn card from the deck pile to its slot in the hand.
+ * Fly a freshly drawn card from a draw pile to its slot in the hand.
  *
  * The flight is performed by a body-level clone: the hand list is a scroll
  * container (overflow-x: auto), so the real in-flow card transformed out to
@@ -149,9 +192,12 @@ function finish(anim: Animation, done: () => void): void {
  * instead of rising off the stack. The real element keeps its slot in the
  * layout (hidden) while the clone flies, so siblings never reflow mid-wave;
  * while the flight waits its turn, the clone sits on the deck back-side up.
+ *
+ * `fromKind` selects the source pile (default `"deck"` — the building hand);
+ * policy cards pass an ideology-specific `policy-deck:<ideology>` key.
  */
-export function animateDraw(el: HTMLElement, done: () => void): void {
-  const from = pileRect("deck");
+export function animateDraw(el: HTMLElement, done: () => void, fromKind: PileKind = "deck"): void {
+  const from = pileRect(fromKind);
   if (!from || prefersReducedMotion()) return done();
   const rect = el.getBoundingClientRect();
   const clone = el.cloneNode(true) as HTMLElement;
@@ -159,7 +205,7 @@ export function animateDraw(el: HTMLElement, done: () => void): void {
   el.style.visibility = "hidden";
   document.body.appendChild(clone);
   const { dx, dy } = centerDelta(from, rect);
-  const b = currentBatch();
+  const b = currentBatch(batchKeyFor(fromKind));
   const anim = clone.animate(flightFrames(dx, dy, pileScale(from, rect)), {
     duration: CARD_FLIGHT.durationMs,
     easing: CARD_FLIGHT.easing,
@@ -183,9 +229,17 @@ export function animateDraw(el: HTMLElement, done: () => void): void {
  * cards leave in one update, each leave hook fires after the previous card
  * was already pinned out of flow — a live rect would measure the re-centered
  * row and start the flight from a shifted, gap-collapsed position.
+ *
+ * `toKind` selects the target pile (default `"discard"` — the building hand);
+ * policy cards pass an ideology-specific `policy-discard:<ideology>` key.
  */
-export function animateDiscard(el: HTMLElement, done: () => void, from?: DOMRect): void {
-  const to = pileRect("discard");
+export function animateDiscard(
+  el: HTMLElement,
+  done: () => void,
+  from?: DOMRect,
+  toKind: PileKind = "discard",
+): void {
+  const to = pileRect(toKind);
   if (!to || prefersReducedMotion()) return done();
   const rect = from ?? el.getBoundingClientRect();
   pin(el, rect);
@@ -193,7 +247,7 @@ export function animateDiscard(el: HTMLElement, done: () => void, from?: DOMRect
   const anim = el.animate(flightFrames(dx, dy, pileScale(to, rect)).reverse(), {
     duration: CARD_FLIGHT.durationMs,
     easing: CARD_FLIGHT.easing,
-    delay: currentBatch().discards++ * CARD_FLIGHT.staggerMs,
+    delay: currentBatch(batchKeyFor(toKind)).discards++ * CARD_FLIGHT.staggerMs,
     fill: "both",
   });
   finish(anim, done);
@@ -212,6 +266,68 @@ export function animatePlaced(el: HTMLElement, done: () => void, from?: DOMRect)
     { duration: CARD_FLIGHT.placedFadeMs, easing: "ease-out", fill: "both" },
   );
   finish(anim, done);
+}
+
+/**
+ * Snapshot a card element into a detached, absolutely-pinned clone that can fly
+ * later. Captured *before* a state change unmounts the source (the policy modal
+ * tears down the instant `enactPolicies` runs); `flyCapturedClone` then plays
+ * the flight against destinations that only exist post-enact.
+ */
+export interface CapturedCard {
+  clone: HTMLElement;
+  fromRect: DOMRect;
+}
+
+export function captureCard(sourceEl: HTMLElement): CapturedCard {
+  const fromRect = sourceEl.getBoundingClientRect();
+  const clone = sourceEl.cloneNode(true) as HTMLElement;
+  pin(clone, fromRect);
+  clone.style.transformStyle = "preserve-3d";
+  return { clone, fromRect };
+}
+
+/**
+ * Fly a previously-captured clone from its origin to `toRect`, scaling to fit
+ * the destination footprint. `flip` plays the same mid-flight backface roll the
+ * pile flights use (true for cards landing on a discard tile, false for cards
+ * settling into a tableau slot). No-ops (and resolves, discarding the clone)
+ * under prefers-reduced-motion or when `toRect` is missing.
+ */
+export function flyCapturedClone(
+  captured: CapturedCard,
+  toRect: DOMRect | null,
+  done: () => void,
+  opts: { flip?: boolean; delay?: number } = {},
+): void {
+  const { clone, fromRect } = captured;
+  if (!toRect || prefersReducedMotion()) return done();
+  document.body.appendChild(clone);
+  const { dx, dy } = centerDelta(toRect, fromRect);
+  const scale = Math.min(toRect.width / fromRect.width, toRect.height / fromRect.height);
+  const flip = opts.flip ? CARD_FLIGHT.flipDegrees : 0;
+  const p = `perspective(${CARD_FLIGHT.perspectivePx}px)`;
+  const mid = (1 + scale) / 2;
+  const frames: Keyframe[] = [
+    { transform: `${p} translate(0, 0) scale(1) rotateY(0deg)`, opacity: 1 },
+    {
+      transform: `${p} translate(${dx / 2}px, ${dy / 2 - CARD_FLIGHT.arcHeight}px) scale(${mid}) rotateY(${flip / 2}deg)`,
+    },
+    {
+      transform: `${p} translate(${dx}px, ${dy}px) scale(${scale}) rotateY(${flip}deg)`,
+      opacity: opts.flip ? 0.85 : 1,
+    },
+  ];
+  const anim = clone.animate(frames, {
+    duration: CARD_FLIGHT.durationMs,
+    easing: CARD_FLIGHT.easing,
+    delay: opts.delay ?? 0,
+    fill: "both",
+  });
+  finish(anim, () => {
+    clone.remove();
+    done();
+  });
 }
 
 function pin(el: HTMLElement, rect: DOMRect): void {

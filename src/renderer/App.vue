@@ -24,6 +24,10 @@
         :influence="epoch.influence"
         :dissent-count="snapshot.deckCounts.dissent"
         :ended="epoch.status.kind !== 'in-progress'"
+        :effective="snapshot.effective"
+        :base-hand-size="setting.rules.baseHandSize"
+        :base-influence-baseline="setting.rules.baseInfluenceBaseline"
+        :base-storage-capacity="setting.rules.baseStorageCapacity"
         @end-turn="onEndTurn"
       />
     </div>
@@ -35,6 +39,7 @@
 
       <div class="play-area">
         <TableauPanel
+          :class="{ 'phase-locked': policyPhase }"
           :columns="epoch.columns"
           :column-buildable="snapshot.columnBuildable"
           :buildable-labels="buildableLabels"
@@ -52,7 +57,7 @@
           @build="onBuild"
         />
 
-        <div class="hand-row">
+        <div class="hand-row" :class="{ 'phase-locked': policyPhase }">
           <DiscardPilePanel
             :discard-count="epoch.discard.length"
             @view="onViewPile('discard')"
@@ -73,11 +78,23 @@
           />
           <DeckPilePanel
             :draw-count="epoch.draw.length"
-            :ended="epoch.status.kind !== 'in-progress'"
+            :ended="epoch.status.kind !== 'in-progress' || policyPhase"
             @view="onViewPile('deck')"
             @end-turn="onEndTurn"
           />
         </div>
+
+        <div class="policy-zone">
+          <PolicyTableau :tableau="snapshot.policy.tableau" @remove="onRemovePolicy" />
+          <PolicyPiles :decks="snapshot.policy.decks" :discards="snapshot.policy.discards" />
+        </div>
+
+        <PolicyHandModal
+          v-if="policyPhase"
+          :candidates="snapshot.policy.candidates"
+          :tableau="snapshot.policy.tableau"
+          @enact="onEnactPolicies"
+        />
 
         <button
           v-if="!eoe && epoch.phase === 'crisis'"
@@ -191,8 +208,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, nextTick, ref } from "vue";
 import { getGameService } from "./GameService.ts";
+import {
+  CARD_FLIGHT,
+  captureCard,
+  flyCapturedClone,
+  getPileRect,
+  policyDiscardPile,
+  type CapturedCard,
+} from "./animation/cardFlight.ts";
 import ConfirmDialog from "./components/core/ConfirmDialog.vue";
 import TurnBar from "./components/shell/TurnBar.vue";
 import HandPanel from "./components/game/HandPanel.vue";
@@ -207,13 +232,16 @@ import CardListModal from "./components/shell/CardListModal.vue";
 import SaveSlotMenu from "./components/shell/SaveSlotMenu.vue";
 import ThemeToggle from "./components/shell/ThemeToggle.vue";
 import CrisisCounterPanel from "./components/game/CrisisCounterPanel.vue";
+import PolicyHandModal from "./components/game/PolicyHandModal.vue";
+import PolicyTableau from "./components/game/PolicyTableau.vue";
+import PolicyPiles from "./components/game/PolicyPiles.vue";
 import Rail, { type RailItem } from "./components/shell/Rail.vue";
 import RailFlyout from "./components/shell/RailFlyout.vue";
 import MonumentsSection from "./components/shell/sidebar/MonumentsSection.vue";
 import LegacyCardsSection from "./components/shell/sidebar/LegacyCardsSection.vue";
 import DeckCountsSection from "./components/shell/sidebar/DeckCountsSection.vue";
 import EventLogSection from "./components/shell/sidebar/EventLogSection.vue";
-import type { Card, LegacyUpgrade } from "../core/types.ts";
+import type { Card, Ideology, LegacyUpgrade } from "../core/types.ts";
 import { SETTING_BY_ID } from "../core/settings/index.ts";
 import { MAX_SLOTS } from "../facade/persistence.ts";
 import { evaluateColumn } from "../core/engine/columnPatterns.ts";
@@ -262,6 +290,10 @@ function toggleRight(key: string): void {
 const snapshot = computed(() => game.snapshot.value);
 const setting = computed(() => snapshot.value.setting);
 const epoch = computed(() => snapshot.value.epoch);
+// During the policy phase the core rejects all board verbs; the UI reflects
+// that by locking the building hand/tableau and suppressing End Turn until the
+// drawn policies are enacted.
+const policyPhase = computed(() => snapshot.value.turnPhase === "policy");
 const eoe = computed(() => game.endOfEpoch.value);
 const lastError = computed(() => game.lastError.value);
 const demonymLabel = computed(() => snapshot.value.demonymLabel);
@@ -319,8 +351,10 @@ function onToggleStorageSelect(columnIndex: number, cardId: string): void {
 }
 
 function onStoreCard(cardId: string, columnIndex: number): void {
-  // Capacity 1: replace the current occupant when full.
-  const capacity = setting.value.rules.storageCapacity;
+  // Storage capacity is policy-dependent; read the effective value, not the
+  // Setting base. Only a full column forces the destructive-replace path —
+  // with a policy-granted free slot the store is immediate.
+  const capacity = snapshot.value.effective.storageCapacity;
   const full = (epoch.value.columns[columnIndex]?.storage.length ?? 0) >= capacity;
   const occupant = epoch.value.columns[columnIndex]?.storage[0];
 
@@ -425,6 +459,110 @@ function onDiscardFromHand(idOrIds: string | string[]): void {
 }
 function onResolveCrisis(): void {
   game.resolveCrisis();
+}
+/**
+ * Enact choreography. The policy modal unmounts the instant `enactPolicies`
+ * flips the phase to "play", so we snapshot each drawn card (clone + rect) from
+ * the modal DOM *before* the state change, then — once the new tableau row and
+ * discard tiles have rendered — fly the kept clones into their tableau slots and
+ * the unkept clones onto their ideology discard tiles.
+ */
+function onEnactPolicies(keepIds: string[]): void {
+  // keepIds is a MULTISET (per-copy keep): two kept copies of one id appear
+  // twice. Consume it in candidate-index order so the right COPY is flagged kept
+  // when only some of an id's drawn copies are kept.
+  const keepCounts = new Map<string, number>();
+  for (const id of keepIds) keepCounts.set(id, (keepCounts.get(id) ?? 0) + 1);
+  const captures: {
+    index: number;
+    id: string;
+    ideology: Ideology;
+    keep: boolean;
+    card: CapturedCard;
+  }[] = [];
+
+  const scrim = document.querySelector(".policy-modal-scrim");
+  if (scrim) {
+    for (const slot of scrim.querySelectorAll<HTMLElement>("[data-candidate-index]")) {
+      const id = slot.dataset.candidateId;
+      const ideology = slot.dataset.candidateIdeology as Ideology | undefined;
+      const cardEl = slot.querySelector<HTMLElement>(".policy-card");
+      const index = Number(slot.dataset.candidateIndex);
+      if (!id || !ideology || !cardEl || Number.isNaN(index)) continue;
+      captures.push({ index, id, ideology, keep: false, card: captureCard(cardEl) });
+    }
+  }
+  // Walk in candidate-index order, consuming the keep multiset per id.
+  captures.sort((a, b) => a.index - b.index);
+  for (const c of captures) {
+    const left = keepCounts.get(c.id) ?? 0;
+    if (left > 0) {
+      c.keep = true;
+      keepCounts.set(c.id, left - 1);
+    }
+  }
+
+  // Advance state (clears candidates, updates tableau/discards, unmounts modal).
+  // If core rejects the enact (surfaced via lastError through GameService.run),
+  // the modal stays mounted and nothing moved — skip the flight choreography.
+  const enacted = game.enactPolicies(keepIds);
+  if (!enacted.ok) return;
+
+  if (captures.length === 0) return;
+
+  // Destinations only exist after the snapshot re-renders.
+  void nextTick(() => {
+    // Stagger kept and unkept independently so each wave reads as a group.
+    let keptN = 0;
+    let discardN = 0;
+
+    // Hide each kept destination card while its clone flies in (so it doesn't
+    // pop in first). Two kept copies of one policy id merge into the SAME
+    // tableau slot, so ref-count and reveal only when the LAST flight targeting
+    // an element lands — otherwise the first-finishing flight pops the slot back
+    // into view while a later clone is still mid-air. `target` IS the
+    // `.policy-card` element (PolicyTableau binds `data-policy-id` on
+    // <PolicyCard>, whose single root absorbs the attr).
+    const revealCounts = new Map<HTMLElement, number>();
+    const keptFlights = captures
+      .filter((c) => c.keep)
+      .map((c) => {
+        const target = document.querySelector<HTMLElement>(
+          `[data-policy-id="${CSS.escape(c.id)}"]`,
+        );
+        const toRect = target?.getBoundingClientRect() ?? null;
+        if (target && toRect) {
+          if (!revealCounts.has(target)) target.style.visibility = "hidden";
+          revealCounts.set(target, (revealCounts.get(target) ?? 0) + 1);
+        }
+        return { card: c.card, toRect, hideEl: toRect ? target : null };
+      });
+
+    for (const f of keptFlights) {
+      flyCapturedClone(
+        f.card,
+        f.toRect,
+        () => {
+          if (!f.hideEl) return;
+          const remaining = (revealCounts.get(f.hideEl) ?? 1) - 1;
+          revealCounts.set(f.hideEl, remaining);
+          if (remaining <= 0) f.hideEl.style.visibility = "";
+        },
+        { delay: keptN++ * CARD_FLIGHT.staggerMs },
+      );
+    }
+
+    for (const c of captures) {
+      if (c.keep) continue;
+      flyCapturedClone(c.card, getPileRect(policyDiscardPile(c.ideology)), () => {}, {
+        flip: true,
+        delay: discardN++ * CARD_FLIGHT.staggerMs,
+      });
+    }
+  });
+}
+function onRemovePolicy(slotIndex: number): void {
+  game.removePolicy(slotIndex);
 }
 function onEndTurn(): void {
   game.endTurn();

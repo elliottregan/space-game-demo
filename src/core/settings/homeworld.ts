@@ -83,7 +83,7 @@ const CRISIS: Crisis = {
   id: "homeworld-arrival-storm",
   name: "Arrival Storm",
   flavor: "The first generation faces a dust-storm that will not pass.",
-  difficulty: 14,
+  difficulty: 16,
 };
 
 const STARTING_COLUMNS: ColumnConfig[] = [];
@@ -95,11 +95,11 @@ export const HOMEWORLD: Setting = {
   flavorText:
     "Mars under a dome. The first generation debates what comes next: to dig in, to lift off, or to build something neither.",
   rules: {
-    handSize: 7,
+    baseHandSize: 7,
     columnCount: 7,
-    influenceBaseline: 8,
+    baseInfluenceBaseline: 8,
     maxTurns: 12,
-    storageCapacity: 1,
+    baseStorageCapacity: 1,
   },
   startingDeck: ALL_CARD_IDS,
   startingColumns: STARTING_COLUMNS,

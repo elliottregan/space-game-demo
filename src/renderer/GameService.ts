@@ -1,7 +1,7 @@
 // Reactive bridge between the pure GameAPI and Vue components.
 
 import { shallowRef, ref, type Ref, type ShallowRef } from "vue";
-import { GameAPI, type Snapshot } from "../facade/GameAPI.ts";
+import { GameAPI, type CommandResult, type Snapshot } from "../facade/GameAPI.ts";
 import type { SaveSlot } from "../facade/persistence.ts";
 import type { LegacyUpgrade } from "../core/types.ts";
 
@@ -30,6 +30,22 @@ class GameService {
     this.reloadSlotList();
   }
 
+  /**
+   * Single command-dispatch chokepoint. Runs `fn`, surfaces any failure on
+   * `lastError` (and clears it on success), then refreshes the snapshot ref and
+   * persists exactly once. Every mutating command flows through here, so the
+   * "mutate → reflect in Vue → save" sequence lives in one place.
+   */
+  private run<T>(fn: () => CommandResult<T>): CommandResult<T> {
+    const r = fn();
+    // An error persists until the next command (success clears it, another
+    // failure replaces it) — no time-based auto-dismiss.
+    this.lastError.value = r.ok ? null : r.error;
+    this.refresh();
+    return r;
+  }
+
+  /** Snapshot the API, persist once, and re-read the slot list into refs. */
   private refresh(): void {
     this.snapshot.value = this.api.snapshot();
     this.endOfEpoch.value = this.api.endOfEpochState();
@@ -42,17 +58,6 @@ class GameService {
     this.activeSlotId.value = this.api.activeSlotId();
   }
 
-  private report(r: { ok: boolean; error?: string }): void {
-    if (!r.ok && r.error) {
-      this.lastError.value = r.error;
-      setTimeout(() => {
-        if (this.lastError.value === r.error) this.lastError.value = null;
-      }, 2500);
-    } else {
-      this.lastError.value = null;
-    }
-  }
-
   // Queries
   validColumns(cardId: string): number[] {
     return this.api.validColumns(cardId);
@@ -60,66 +65,42 @@ class GameService {
 
   // Commands
   placeCard(cardId: string, columnIndex: number): void {
-    const r = this.api.placeCard(cardId, columnIndex);
-    this.report(r as any);
-    this.refresh();
+    this.run(() => this.api.placeCard(cardId, columnIndex));
   }
   discardLand(columnIndex: number): void {
-    const r = this.api.discardLand(columnIndex);
-    this.report(r as any);
-    this.refresh();
+    this.run(() => this.api.discardLand(columnIndex));
   }
   discardCharter(columnIndex: number): void {
-    const r = this.api.discardCharter(columnIndex);
-    this.report(r as any);
-    this.refresh();
+    this.run(() => this.api.discardCharter(columnIndex));
   }
   recallInfluence(columnIndex: number): void {
-    const r = this.api.recallInfluence(columnIndex);
-    this.report(r as any);
-    this.refresh();
+    this.run(() => this.api.recallInfluence(columnIndex));
   }
   discardColumn(columnIndex: number): void {
-    const r = this.api.discardColumn(columnIndex);
-    this.report(r as any);
-    this.refresh();
+    this.run(() => this.api.discardColumn(columnIndex));
   }
   discardFromHand(cardId: string): void {
-    const r = this.api.discardFromHand(cardId);
-    this.report(r as any);
-    this.refresh();
+    this.run(() => this.api.discardFromHand(cardId));
   }
   buildColumn(columnIndex: number): void {
-    const r = this.api.buildColumn(columnIndex);
-    this.report(r as any);
-    this.refresh();
+    this.run(() => this.api.buildColumn(columnIndex));
   }
   storeCard(cardId: string, columnIndex: number, replaceId?: string): void {
-    const r = this.api.storeCard(cardId, columnIndex, replaceId);
-    this.report(r as any);
-    this.refresh();
+    this.run(() => this.api.storeCard(cardId, columnIndex, replaceId));
   }
   placeFromStorage(cardId: string, columnIndex: number): void {
-    const r = this.api.placeFromStorage(cardId, columnIndex);
-    this.report(r as any);
-    this.refresh();
+    this.run(() => this.api.placeFromStorage(cardId, columnIndex));
   }
   resolveCrisis(): void {
-    const r = this.api.resolveCrisis();
-    this.report(r as any);
-    this.refresh();
+    this.run(() => this.api.resolveCrisis());
   }
 
   endTurn(): void {
-    const r = this.api.endTurn();
-    this.report(r as any);
-    this.refresh();
+    this.run(() => this.api.endTurn());
   }
 
   advanceEpoch(choices: Record<string, LegacyUpgrade>): void {
-    const r = this.api.advanceEpoch(choices);
-    this.report(r as any);
-    this.refresh();
+    this.run(() => this.api.advanceEpoch(choices));
   }
 
   restart(seed?: number): void {
@@ -161,10 +142,23 @@ class GameService {
   }
 
   commitToRow(columnIndex: number, row: "land" | "influence", fromStorageIds: string[] = []): void {
-    const r = this.api.commitHand(columnIndex, row, [...this.commitBuffer.value], fromStorageIds);
-    this.report(r as any);
+    const r = this.run(() =>
+      this.api.commitHand(columnIndex, row, [...this.commitBuffer.value], fromStorageIds),
+    );
     if (r.ok) this.clearBuffer();
-    this.refresh();
+  }
+
+  // -----------------------------------------------------------------------
+  // Policy tableau — candidate draw + slotting
+  // -----------------------------------------------------------------------
+
+  /** Resolve the drawn-policy phase in one batch: keep the named candidate ids
+   *  (stacking onto matching slots), discard the rest, advance to play. */
+  enactPolicies(keepIds: string[]): CommandResult {
+    return this.run(() => this.api.enactPolicies(keepIds));
+  }
+  removePolicy(slotIndex: number): void {
+    this.run(() => this.api.removePolicy(slotIndex));
   }
 }
 

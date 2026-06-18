@@ -336,6 +336,34 @@
     border-top: 2px solid var(--status-negative);
     font-size: 12px;
   }
+
+  /* Persistent policy zone under the building hand row: the tableau row of
+     slotted policies stretches on the left/center, the deck/discard 2x2 grids
+     sit pinned to the right. */
+  .policy-zone {
+    display: flex;
+    gap: var(--space-4);
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: var(--space-3);
+    background: var(--mat);
+    border-top: 1px solid var(--rule-strong);
+    min-width: 0;
+  }
+  .policy-zone .policy-tableau {
+    flex: 1 1 auto;
+  }
+  .policy-zone .policy-piles {
+    flex: 0 0 auto;
+  }
+
+  /* Phase lock: during the policy phase the building hand/tableau are visible
+     but non-interactive until the player enacts the drawn policies. */
+  .phase-locked {
+    pointer-events: none;
+    opacity: 0.55;
+    filter: saturate(0.6);
+  }
 }
 
 @layer components {

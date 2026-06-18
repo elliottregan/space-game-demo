@@ -83,7 +83,7 @@ const CRISIS: Crisis = {
   id: "ruin-collapse",
   name: "The Long Collapse",
   flavor: "What was once a city must be coaxed back into shape.",
-  difficulty: 20,
+  difficulty: 23,
 };
 
 export const RUINED_HOMEWORLD: Setting = {
@@ -92,11 +92,11 @@ export const RUINED_HOMEWORLD: Setting = {
   description: "Return to a scarred world. Salvage and re-found.",
   flavorText: "The dome cracked. The fields turned. Begin again.",
   rules: {
-    handSize: 7,
+    baseHandSize: 7,
     columnCount: 5,
-    influenceBaseline: 8,
+    baseInfluenceBaseline: 8,
     maxTurns: 16,
-    storageCapacity: 1,
+    baseStorageCapacity: 1,
   },
   startingDeck: ALL_CARD_IDS,
   startingColumns: [],

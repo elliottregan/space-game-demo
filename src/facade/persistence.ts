@@ -4,14 +4,14 @@
 import type { Campaign, Epoch } from "../core/types.ts";
 import type { EndOfEpochState } from "../core/engine/campaign.ts";
 
-const STORE_KEY = "deck-demo-saves-v5";
-const PREV_KEY = "deck-demo-saves-v4";
-const ARCHIVE_KEY = "deck-demo-saves-v4-archive";
+const STORE_KEY = "deck-demo-saves-v6";
+const PREV_KEY = "deck-demo-saves-v5";
+const ARCHIVE_KEY = "deck-demo-saves-v5-archive";
 
 export const MAX_SLOTS = 10;
 
 export interface SavedState {
-  version: 5;
+  version: 6;
   campaign: Campaign;
   settingId: string;
   epoch: Epoch;
@@ -28,13 +28,13 @@ export interface SaveSlot {
 }
 
 export interface SaveStore {
-  version: 5;
+  version: 6;
   activeSlotId: string | null;
   slots: SaveSlot[];
 }
 
 function emptyStore(): SaveStore {
-  return { version: 5, activeSlotId: null, slots: [] };
+  return { version: 6, activeSlotId: null, slots: [] };
 }
 
 export function loadStore(): SaveStore {
@@ -43,9 +43,9 @@ export function loadStore(): SaveStore {
     const raw = localStorage.getItem(STORE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as SaveStore;
-      if (parsed.version === 5 && Array.isArray(parsed.slots)) return parsed;
+      if (parsed.version === 6 && Array.isArray(parsed.slots)) return parsed;
     }
-    // One-time v4 archival.
+    // One-time v5 archival (no migration).
     const prev = localStorage.getItem(PREV_KEY);
     if (prev && !localStorage.getItem(ARCHIVE_KEY)) {
       localStorage.setItem(ARCHIVE_KEY, prev);

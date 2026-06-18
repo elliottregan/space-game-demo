@@ -7,6 +7,7 @@
 import { GameAPI } from "../src/facade/GameAPI.ts";
 import { evaluateColumn } from "../src/core/engine/columnPatterns.ts";
 import { getSetting } from "../src/core/settings/index.ts";
+import { pickPolicyKeepIds } from "./policyKeep.ts";
 
 const runs = Number(process.argv[2] ?? 200);
 const settingArg = String(process.argv[3] ?? "all");
@@ -25,6 +26,12 @@ function runEpoch(api: GameAPI): { won: boolean; margin: number } {
   const MAX_STEPS = 1000;
   while (api.snapshot().epoch.phase === "play" && steps < MAX_STEPS) {
     steps++;
+    // Resolve the policy phase before acting; board verbs are core-gated until then.
+    if (api.snapshot().epoch.turnPhase === "policy") {
+      const ps = api.snapshot().epoch.policy;
+      api.enactPolicies(pickPolicyKeepIds(ps.candidates, ps.tableau));
+      continue;
+    }
     const snap = api.snapshot();
     let acted = false;
     for (const card of snap.epoch.hand) {
@@ -58,8 +65,8 @@ function runEpoch(api: GameAPI): { won: boolean; margin: number } {
 
 function simulate(settingId: string, influenceOverride: number | null, n: number) {
   const setting = getSetting(settingId);
-  const original = setting.rules.influenceBaseline;
-  if (influenceOverride !== null) setting.rules.influenceBaseline = influenceOverride;
+  const original = setting.rules.baseInfluenceBaseline;
+  if (influenceOverride !== null) setting.rules.baseInfluenceBaseline = influenceOverride;
 
   const results: { won: boolean; margin: number }[] = [];
   for (let i = 0; i < n; i++) {
@@ -67,7 +74,7 @@ function simulate(settingId: string, influenceOverride: number | null, n: number
     results.push(runEpoch(api));
   }
 
-  setting.rules.influenceBaseline = original; // restore
+  setting.rules.baseInfluenceBaseline = original; // restore
 
   const wins = results.filter((r) => r.won).length;
   const margins = results.map((r) => r.margin);
@@ -87,7 +94,7 @@ console.log(`\nInfluence baseline comparison — ${runs} runs per variant\n`);
 
 for (const settingId of SETTINGS_TO_TEST) {
   const setting = getSetting(settingId);
-  const defaultBaseline = setting.rules.influenceBaseline;
+  const defaultBaseline = setting.rules.baseInfluenceBaseline;
   console.log(`=== ${setting.name} (default baseline: ${defaultBaseline}) ===`);
   console.log(
     "Variant".padEnd(20),

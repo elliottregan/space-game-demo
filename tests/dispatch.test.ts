@@ -11,6 +11,7 @@ import type { Column, Epoch, ProjectUnlock } from "../src/core/types.ts";
 import { countDissentInDeck } from "../src/core/engine/effects.ts";
 import { commitHand } from "../src/core/engine/commands.ts";
 import { createRng } from "../src/core/engine/rng.ts";
+import { emptyPolicyState } from "./fixtures.ts";
 
 function freshEpoch(columns: Column[] = []): Epoch {
   return {
@@ -18,6 +19,7 @@ function freshEpoch(columns: Column[] = []): Epoch {
     settingId: "test",
     turn: 1,
     phase: "play",
+    turnPhase: "play",
     hand: [],
     draw: [],
     discard: [],
@@ -28,6 +30,7 @@ function freshEpoch(columns: Column[] = []): Epoch {
     endOfTurnQueue: [],
     status: { kind: "in-progress" },
     crisis: { status: "pending" },
+    policy: emptyPolicyState(),
   };
 }
 

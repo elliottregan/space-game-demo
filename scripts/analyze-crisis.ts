@@ -11,6 +11,7 @@ import { canCommitHand } from "../src/core/engine/rowHands.ts";
 import { PATTERNS_IN_ORDER, marginalContribution } from "../src/core/data/projects.ts";
 import type { PatternKind } from "../src/core/types.ts";
 import type { Card, Column } from "../src/core/types.ts";
+import { pickPolicyKeepIds } from "./policyKeep.ts";
 
 const runs = Number(process.argv[2] ?? 50);
 const settingId = String(process.argv[3] ?? "homeworld");
@@ -272,6 +273,24 @@ function runEpoch(api: GameAPI): RunResult {
     let acted = false;
 
     // -----------------------------------------------------------------------
+    // Step 0: Resolve the policy phase in one batch. A turn that drew candidates
+    // opens in `turnPhase === "policy"` (see turn.ts); board verbs and `endTurn`
+    // are core-gated until we leave it. We compute a `keepIds` set from the
+    // candidates and call `api.enactPolicies(keepIds)` — keeping advances the
+    // turn to "play" (unkept candidates discard to their ideology piles).
+    //
+    // Heuristic (unchanged intent from the per-card bridge): prefer
+    // draw/influence/storage policies for scarce slots; keep a candidate when it
+    // stacks an already-kept/slotted id OR a projected distinct slot is still
+    // free (tableau.length + distinctKeptNewIds < 5); never keep Conscription
+    // for a fresh slot (its +1 Dissent is a cost) — only if it stacks.
+    // -----------------------------------------------------------------------
+    if (snap.epoch.turnPhase === "policy") {
+      api.enactPolicies(pickPolicyKeepIds(snap.epoch.policy.candidates, snap.epoch.policy.tableau));
+      continue;
+    }
+
+    // -----------------------------------------------------------------------
     // Step 1: Build any buildable column (prefer highest marginal leveled value).
     // -----------------------------------------------------------------------
     {
@@ -380,7 +399,7 @@ function runEpoch(api: GameAPI): RunResult {
       const handLands = snap4.epoch.hand.filter(
         (c) => c.kind === "land" && !c.tags.includes("dissent"),
       );
-      const storageCapacity = snap4.setting.rules.storageCapacity;
+      const storageCapacity = snap4.effective.storageCapacity;
 
       outer: for (const card of handLands) {
         // Only store if this card can't be placed anywhere useful

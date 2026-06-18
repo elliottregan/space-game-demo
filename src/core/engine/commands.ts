@@ -2,17 +2,51 @@
 // Each command validates the request, mutates state via dispatch, and returns
 // a tagged result so the facade can surface errors without exceptions.
 
-import type { Campaign, Card, Epoch, GameEvent, ProjectUnlock, Setting } from "../types.ts";
+import type {
+  Campaign,
+  Card,
+  Epoch,
+  GameEvent,
+  PolicyCard,
+  ProjectUnlock,
+  Setting,
+} from "../types.ts";
+import { POLICY_SLOT_CAP, wouldFitInTableau } from "../data/policies.ts";
 import { canPlaceCharter, canPlaceInfluence, canPlaceLand, columnCards } from "./column.ts";
 import { evaluateColumn } from "./columnPatterns.ts";
 import { dispatch } from "./dispatch.ts";
 import { applyEffect } from "./effects.ts";
+import { effectiveRules } from "./effectiveRules.ts";
 import { canCommitHand } from "./rowHands.ts";
+import { isPlayPhase, isPolicyPhase } from "./turnPhase.ts";
 import type { RNG } from "./rng.ts";
 
 export type PlaceResult = { ok: true; card: Card } | { ok: false; error: string };
 
 export type CmdResult<T = void> = { ok: true; value: T } | { ok: false; error: string };
+
+/** A bare rejection. Assignable to any `CmdResult<T>` / `PlaceResult` because
+ *  the error arm is independent of `T`, so `return blocked;` typechecks. */
+type Rejection = { ok: false; error: string };
+
+/** Gate for board/tableau verbs: the Epoch must be live, in the play lifecycle
+ *  phase, and past the policy sub-phase. Returns the rejection, or null to
+ *  proceed. */
+function requirePlayable(epoch: Epoch): Rejection | null {
+  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
+  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  if (!isPlayPhase(epoch)) return { ok: false, error: "Resolve drawn policies first." };
+  return null;
+}
+
+/** Gate for the policy-resolution verb: live, in the play lifecycle phase, and
+ *  still in the policy sub-phase. Returns the rejection, or null to proceed. */
+function requirePolicyResolution(epoch: Epoch): Rejection | null {
+  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
+  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  if (!isPolicyPhase(epoch)) return { ok: false, error: "Not in the policy phase." };
+  return null;
+}
 
 export function placeCard(
   epoch: Epoch,
@@ -23,8 +57,8 @@ export function placeCard(
   rng: RNG,
   source: "hand" | "storage" = "hand",
 ): PlaceResult {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
 
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
@@ -106,32 +140,32 @@ function playToTopRow(
   return { ok: true, card };
 }
 
-export function discardLand(epoch: Epoch, columnIndex: number): CmdResult<Card> {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+export function discardLand(epoch: Epoch, columnIndex: number, rng: RNG): CmdResult<Card> {
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
   const card = col.lands.cards.pop();
   if (!card) return { ok: false, error: "No Land to discard." };
-  dispatch(epoch, { type: "card-discarded", card, source: "tableau-land" });
+  dispatch(epoch, { type: "card-discarded", card, source: "tableau-land" }, rng);
   return { ok: true, value: card };
 }
 
-export function discardCharter(epoch: Epoch, columnIndex: number): CmdResult<Card> {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+export function discardCharter(epoch: Epoch, columnIndex: number, rng: RNG): CmdResult<Card> {
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
   const card = col.charter.card;
   if (!card) return { ok: false, error: "No Charter to discard." };
   col.charter.card = null;
-  dispatch(epoch, { type: "card-discarded", card, source: "tableau-charter" });
+  dispatch(epoch, { type: "card-discarded", card, source: "tableau-charter" }, rng);
   return { ok: true, value: card };
 }
 
-export function recallInfluence(epoch: Epoch, columnIndex: number): CmdResult<Card[]> {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+export function recallInfluence(epoch: Epoch, columnIndex: number, rng: RNG): CmdResult<Card[]> {
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
   if (col.influence.cards.length === 0) return { ok: false, error: "No Influence to recall." };
@@ -142,15 +176,15 @@ export function recallInfluence(epoch: Epoch, columnIndex: number): CmdResult<Ca
   // Emit a discard event per recalled card so Dissent + discard piles get the
   // same treatment as today's single-recall.
   for (const card of recalled) {
-    dispatch(epoch, { type: "card-discarded", card, source: "influence-recall" });
+    dispatch(epoch, { type: "card-discarded", card, source: "influence-recall" }, rng);
   }
   col.influence.cards.length = 0;
   return { ok: true, value: recalled };
 }
 
-export function discardColumn(epoch: Epoch, columnIndex: number): CmdResult<void> {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+export function discardColumn(epoch: Epoch, columnIndex: number, rng: RNG): CmdResult<void> {
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
   const cards = columnCards(col);
@@ -160,19 +194,19 @@ export function discardColumn(epoch: Epoch, columnIndex: number): CmdResult<void
   col.influence.cards.length = 0;
   col.charter.card = null;
   for (const c of cards) {
-    dispatch(epoch, { type: "card-discarded", card: c, source: "column" });
+    dispatch(epoch, { type: "card-discarded", card: c, source: "column" }, rng);
   }
   return { ok: true, value: undefined };
 }
 
-export function discardFromHand(epoch: Epoch, cardId: string): CmdResult<Card> {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+export function discardFromHand(epoch: Epoch, cardId: string, rng: RNG): CmdResult<Card> {
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
   const idx = epoch.hand.findIndex((c) => c.id === cardId);
   if (idx === -1) return { ok: false, error: "Card not in hand." };
   const card = epoch.hand[idx];
   epoch.hand.splice(idx, 1);
-  dispatch(epoch, { type: "card-discarded", card, source: "hand" });
+  dispatch(epoch, { type: "card-discarded", card, source: "hand" }, rng);
   return { ok: true, value: card };
 }
 
@@ -180,9 +214,10 @@ export function buildColumn(
   epoch: Epoch,
   setting: Setting,
   columnIndex: number,
+  rng: RNG,
 ): CmdResult<ProjectUnlock> {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
 
@@ -195,7 +230,7 @@ export function buildColumn(
     turn: epoch.turn,
     cards: [...match.cards],
   };
-  dispatch(epoch, { type: "column-built", columnIndex, unlock });
+  dispatch(epoch, { type: "column-built", columnIndex, unlock }, rng);
   return { ok: true, value: unlock };
 }
 
@@ -219,10 +254,11 @@ export function storeCard(
   setting: Setting,
   cardId: string,
   columnIndex: number,
+  rng: RNG,
   replaceId?: string,
 ): CmdResult<Card> {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
   const handIdx = epoch.hand.findIndex((c) => c.id === cardId);
@@ -239,9 +275,9 @@ export function storeCard(
       return { ok: false, error: "Card to replace not found in storage." };
     }
     const [replaced] = col.storage.splice(replaceIdx, 1);
-    dispatch(epoch, { type: "card-discarded", card: replaced, source: "storage" });
+    dispatch(epoch, { type: "card-discarded", card: replaced, source: "storage" }, rng);
   } else {
-    const capacity = setting.rules.storageCapacity;
+    const capacity = effectiveRules(epoch, setting).storageCapacity;
     if (col.storage.length >= capacity) {
       return { ok: false, error: "Storage is full." };
     }
@@ -261,8 +297,8 @@ export function commitHand(
   rng: RNG,
   fromStorageIds: string[] = [],
 ): CmdResult<Card[]> {
-  if (epoch.status.kind !== "in-progress") return { ok: false, error: "Epoch ended." };
-  if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
   if (cardIds.length + fromStorageIds.length === 0)
     return { ok: false, error: "No cards to commit." };
 
@@ -324,4 +360,114 @@ export function commitHand(
   }
 
   return { ok: true, value: all };
+}
+
+// -------------------------------------------------------------------------
+// Policy tableau commands (M4)
+// -------------------------------------------------------------------------
+
+/**
+ * Slot a single policy card into the tableau. If a slot already holds the same
+ * card id, the card stacks onto it (stacks++) and consumes no new slot.
+ * Otherwise it takes a free slot. Assumes the cap has already been checked by
+ * the caller (enactPolicies validates the whole batch up front).
+ */
+function slotPolicyCard(epoch: Epoch, card: PolicyCard): void {
+  const existing = epoch.policy.tableau.find((s) => s.card.id === card.id);
+  if (existing) {
+    existing.stacks += 1;
+  } else {
+    epoch.policy.tableau.push({ card, stacks: 1 });
+  }
+}
+
+/** Push a candidate to its ideology's discard pile (it will cycle back later). */
+function discardPolicyCard(epoch: Epoch, card: PolicyCard): void {
+  epoch.policy.discards[card.ideology].push(card);
+}
+
+/**
+ * Resolve the drawn-policy phase in one batch. `keepIds` is a MULTISET of
+ * candidate ids to slot (stacking onto matching slots, taking free slots
+ * otherwise); every candidate not consumed by a keep-id is discarded to its
+ * ideology pile. Then candidates clear and the turn advances to the play phase.
+ *
+ * Per-copy semantics: two drawn copies of one id are kept independently. The
+ * id's keep count in `keepIds` is how many of its drawn copies to slot, in
+ * order; the rest are discarded. So `["mobilize"]` against two drawn Mobilize
+ * keeps ONE and discards the other; `["mobilize","mobilize"]` keeps both (x2
+ * stack).
+ *
+ * Validation (all-or-nothing — no mutation on reject):
+ *  - must be in the policy phase;
+ *  - `keepIds` must be a sub-multiset of the candidate ids (you cannot keep more
+ *    copies of an id than were drawn, nor an id that was not drawn);
+ *  - the cap counts DISTINCT kept ids not already slotted: reject when
+ *    `tableau.length + distinctNew > 5`. Two kept copies of one id fill a single
+ *    slot (one distinct), the extra copy stacks.
+ */
+export function enactPolicies(epoch: Epoch, keepIds: string[]): CmdResult<void> {
+  const blocked = requirePolicyResolution(epoch);
+  if (blocked) return blocked;
+
+  const candidates = [...epoch.policy.candidates];
+
+  // Validate keepIds is a sub-multiset of candidate ids: tally drawn copies per
+  // id, then ensure each requested keep has a remaining copy to consume.
+  const drawnCounts = new Map<string, number>();
+  for (const c of candidates) {
+    drawnCounts.set(c.id, (drawnCounts.get(c.id) ?? 0) + 1);
+  }
+  const keepCounts = new Map<string, number>();
+  for (const id of keepIds) {
+    keepCounts.set(id, (keepCounts.get(id) ?? 0) + 1);
+  }
+  for (const [id, want] of keepCounts) {
+    if (want > (drawnCounts.get(id) ?? 0)) {
+      return { ok: false, error: "Policy not among this turn's candidates." };
+    }
+  }
+
+  // Cap counts DISTINCT kept ids not already slotted (each needs a fresh slot);
+  // ids that already stack pay no slot. Two kept copies of one id = one distinct.
+  if (!wouldFitInTableau(epoch.policy.tableau, keepCounts.keys())) {
+    return {
+      ok: false,
+      error: `Too many policies for the tableau (${POLICY_SLOT_CAP} slots).`,
+    };
+  }
+
+  // Consume keepIds as a multiset: iterate candidates in order — if the id has a
+  // remaining keep count, slot it and decrement; otherwise discard it.
+  const remaining = new Map(keepCounts);
+  for (const card of candidates) {
+    const left = remaining.get(card.id) ?? 0;
+    if (left > 0) {
+      remaining.set(card.id, left - 1);
+      slotPolicyCard(epoch, card);
+    } else {
+      discardPolicyCard(epoch, card);
+    }
+  }
+  epoch.policy.candidates = [];
+  epoch.turnPhase = "play";
+  return { ok: true, value: undefined };
+}
+
+/**
+ * Remove a slotted policy from the tableau, returning one copy per stack to
+ * that card's ideology discard pile so it cycles back into the deck later.
+ */
+export function removePolicy(epoch: Epoch, slotIndex: number): CmdResult<void> {
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
+  if (slotIndex < 0 || slotIndex >= epoch.policy.tableau.length) {
+    return { ok: false, error: "Invalid policy slot." };
+  }
+  const [removed] = epoch.policy.tableau.splice(slotIndex, 1);
+  const discard = epoch.policy.discards[removed.card.ideology];
+  for (let i = 0; i < removed.stacks; i++) {
+    discard.push(removed.card);
+  }
+  return { ok: true, value: undefined };
 }

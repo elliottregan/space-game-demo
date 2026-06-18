@@ -8,7 +8,7 @@ describe("GameAPI smoke", () => {
     const s = api.snapshot();
     expect(s.setting.id).toBe("homeworld");
     expect(s.epoch.epochNumber).toBe(1);
-    expect(s.epoch.hand.length).toBe(s.setting.rules.handSize);
+    expect(s.epoch.hand.length).toBe(s.effective.handSize);
     expect(s.epoch.columns.length).toBe(s.setting.rules.columnCount);
     expect(
       s.epoch.columns.every(
@@ -18,6 +18,27 @@ describe("GameAPI smoke", () => {
           col.charter.card === null,
       ),
     ).toBe(true);
+  });
+
+  test("snapshot carries policy engine, effective rules, and influence", () => {
+    const api = new GameAPI(42, { skipLoad: true });
+    const s = api.snapshot();
+    // Policy engine state is present and cloned (fresh refs for shallowRef).
+    expect(s.policy).toBeDefined();
+    expect(s.policy.tableau).toEqual([]);
+    expect(s.policy.candidates).toEqual([]);
+    expect(s.policy.decks.solidarity.length).toBeGreaterThan(0);
+    expect(s.policy).not.toBe(api.snapshot().policy);
+    // Effective rules default to the Setting's base rules with no policies slotted.
+    expect(s.effective.handSize).toBe(s.setting.rules.baseHandSize);
+    expect(s.effective.influenceBaseline).toBe(s.setting.rules.baseInfluenceBaseline);
+    expect(s.effective.storageCapacity).toBe(s.setting.rules.baseStorageCapacity);
+    expect(s.effective.endTurnKeep).toBe(0);
+    // Influence tally is zero before any build.
+    expect(s.influence.solidarity).toBe(0);
+    expect(s.influence.sovereignty).toBe(0);
+    expect(s.influence.transformation).toBe(0);
+    expect(s.influence.heritage).toBe(0);
   });
 
   test("end turn increments the turn counter while in play phase", () => {

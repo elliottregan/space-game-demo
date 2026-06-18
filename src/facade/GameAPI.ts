@@ -14,8 +14,10 @@ import {
   discardColumn as discardColumnCore,
   discardFromHand as discardFromHandCore,
   discardLand as discardLandCore,
+  enactPolicies as enactPoliciesCore,
   placeCard as placeCardCore,
   recallInfluence as recallInfluenceCore,
+  removePolicy as removePolicyCore,
   storeCard as storeCardCore,
 } from "../core/engine/commands.ts";
 import { endTurn as endTurnCore, resolveCrisis as resolveCrisisCore } from "../core/engine/turn.ts";
@@ -36,24 +38,36 @@ import type {
   Campaign,
   Card,
   Column,
+  EffectiveRules,
   Epoch,
+  Ideology,
   IdeologyVector,
   LegacyUpgrade,
+  PolicyState,
   Setting,
+  TurnPhase,
 } from "../core/types.ts";
 import { demonym, demonymName } from "../core/engine/ideology.ts";
 import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../core/engine/column.ts";
 import { evaluateColumn } from "../core/engine/columnPatterns.ts";
 import { countDissentInDeck } from "../core/engine/effects.ts";
+import { effectiveRules } from "../core/engine/effectiveRules.ts";
+import { ideologyInfluence } from "../core/data/projects.ts";
 
 export interface Snapshot {
   campaign: Campaign;
   setting: Setting;
   epoch: Epoch;
+  /** Sub-phase of the current turn (mirrors `epoch.turnPhase`). Only meaningful
+   *  while `epoch.phase === "play"`; the renderer reads it to gate board UI. */
+  turnPhase: TurnPhase;
   vector: IdeologyVector;
   demonymLabel: string;
   deckCounts: { hand: number; draw: number; discard: number; dissent: number };
   columnBuildable: boolean[]; // parallel to epoch.columns
+  policy: PolicyState; // deep-cloned policy engine state
+  effective: EffectiveRules; // setting rules folded through the policy tableau
+  influence: Record<Ideology, number>; // majority-counter tally per ideology
 }
 
 export type CommandResult<T = void> = { ok: true; value: T } | { ok: false; error: string };
@@ -74,6 +88,9 @@ export class GameAPI {
       this.campaign = saved.campaign;
       this.setting = getSetting(saved.settingId);
       this.epoch = saved.epoch;
+      // Defensive: a v6 save predating `turnPhase` would otherwise load
+      // `undefined` and lock the board (every verb gated off the play phase).
+      if (this.epoch.turnPhase === undefined) this.epoch.turnPhase = "play";
       this.endOfEpoch = saved.endOfEpoch;
       this.rng = createRng(saved.seed);
     } else {
@@ -89,7 +106,7 @@ export class GameAPI {
   /** Serialize current state for persistence. */
   exportState(): SavedState {
     return {
-      version: 5,
+      version: 6,
       campaign: this.campaign,
       settingId: this.setting.id,
       epoch: this.epoch,
@@ -165,6 +182,9 @@ export class GameAPI {
     this.campaign = state.campaign;
     this.setting = getSetting(state.settingId);
     this.epoch = state.epoch;
+    // Defensive: v6 is unmerged, so an older dev save may predate `turnPhase`.
+    // Default it to "play" so a loaded epoch is immediately interactive.
+    if (this.epoch.turnPhase === undefined) this.epoch.turnPhase = "play";
     this.endOfEpoch = state.endOfEpoch;
     this.rng = createRng(state.seed);
   }
@@ -183,6 +203,7 @@ export class GameAPI {
     const columnBuildable = columnsView.map(
       (c) => evaluateColumn(c, this.setting.projects) !== null,
     );
+    const policyView = this.clonePolicy();
     const epochView: Epoch = {
       ...this.epoch,
       hand: [...this.epoch.hand],
@@ -196,6 +217,7 @@ export class GameAPI {
         status: this.epoch.crisis.status,
         outcome: this.epoch.crisis.outcome,
       },
+      policy: policyView,
     };
     return {
       campaign: {
@@ -206,6 +228,7 @@ export class GameAPI {
       },
       setting: this.setting,
       epoch: epochView,
+      turnPhase: this.epoch.turnPhase,
       vector,
       demonymLabel: demonymName(demonym(vector)),
       deckCounts: {
@@ -215,6 +238,27 @@ export class GameAPI {
         dissent,
       },
       columnBuildable,
+      policy: policyView,
+      effective: effectiveRules(this.epoch, this.setting),
+      influence: ideologyInfluence(this.epoch.unlockedProjects),
+    };
+  }
+
+  /** Deep-clone the policy engine state so shallowRef sees fresh references
+   *  after every mutation (same discipline as the rest of snapshot). */
+  private clonePolicy(): PolicyState {
+    const p = this.epoch.policy;
+    const cloneDeckMap = (m: PolicyState["decks"]): PolicyState["decks"] => ({
+      solidarity: [...m.solidarity],
+      sovereignty: [...m.sovereignty],
+      transformation: [...m.transformation],
+      heritage: [...m.heritage],
+    });
+    return {
+      decks: cloneDeckMap(p.decks),
+      discards: cloneDeckMap(p.discards),
+      tableau: p.tableau.map((s) => ({ card: s.card, stacks: s.stacks })),
+      candidates: [...p.candidates],
     };
   }
 
@@ -242,29 +286,29 @@ export class GameAPI {
   }
 
   discardLand(columnIndex: number): CommandResult<Card> {
-    return discardLandCore(this.epoch, columnIndex);
+    return discardLandCore(this.epoch, columnIndex, this.rng);
   }
   discardCharter(columnIndex: number): CommandResult<Card> {
-    return discardCharterCore(this.epoch, columnIndex);
+    return discardCharterCore(this.epoch, columnIndex, this.rng);
   }
   recallInfluence(columnIndex: number): CommandResult<Card[]> {
-    return recallInfluenceCore(this.epoch, columnIndex);
+    return recallInfluenceCore(this.epoch, columnIndex, this.rng);
   }
   discardColumn(columnIndex: number): CommandResult<void> {
-    return discardColumnCore(this.epoch, columnIndex);
+    return discardColumnCore(this.epoch, columnIndex, this.rng);
   }
   discardFromHand(cardId: string): CommandResult<Card> {
-    return discardFromHandCore(this.epoch, cardId);
+    return discardFromHandCore(this.epoch, cardId, this.rng);
   }
   buildColumn(columnIndex: number): CommandResult<{ projectId: string; pattern: string }> {
-    const r = buildColumnCore(this.epoch, this.setting, columnIndex);
+    const r = buildColumnCore(this.epoch, this.setting, columnIndex, this.rng);
     return r.ok
       ? { ok: true, value: { projectId: r.value.projectId, pattern: r.value.pattern } }
       : r;
   }
 
   storeCard(cardId: string, columnIndex: number, replaceId?: string): CommandResult<Card> {
-    return storeCardCore(this.epoch, this.setting, cardId, columnIndex, replaceId);
+    return storeCardCore(this.epoch, this.setting, cardId, columnIndex, this.rng, replaceId);
   }
 
   placeFromStorage(cardId: string, columnIndex: number): CommandResult<Card> {
@@ -286,12 +330,29 @@ export class GameAPI {
     cardIds: string[],
     fromStorageIds: string[] = [],
   ): CommandResult<Card[]> {
-    const result = commitHandCore(this.epoch, columnIndex, row, cardIds, this.rng, fromStorageIds);
-    if (result.ok) this.persist();
-    return result;
+    return commitHandCore(this.epoch, columnIndex, row, cardIds, this.rng, fromStorageIds);
+  }
+
+  /**
+   * Resolve the drawn-policy phase in one batch: keep the named candidate ids
+   * (stacking onto matching slots, taking free slots otherwise), discard the
+   * rest to their ideology piles, then advance to the play phase. Rejects when
+   * not in the policy phase, when a kept id is not a candidate, or when the
+   * distinct new slots would exceed the 5-slot cap.
+   */
+  enactPolicies(keepIds: string[]): CommandResult {
+    return enactPoliciesCore(this.epoch, keepIds);
+  }
+
+  /** Remove a slotted policy from the tableau, cycling it to its discard. */
+  removePolicy(slotIndex: number): CommandResult {
+    return removePolicyCore(this.epoch, slotIndex);
   }
 
   endTurn(): CommandResult {
+    if (this.epoch.turnPhase !== "play") {
+      return { ok: false, error: "Resolve drawn policies first." };
+    }
     endTurnCore(this.epoch, this.campaign, this.setting, this.rng);
     this.maybeEnterCrisis();
     return { ok: true, value: undefined };

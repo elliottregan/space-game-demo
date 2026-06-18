@@ -33,7 +33,11 @@ export type { CharterRow, Column, ColumnConfig, InfluenceRow, LandRow } from "./
 
 export type { DiscardSource, GameEvent } from "./engine/events.ts";
 
-export type { Epoch, EpochPhase, EpochStatus } from "./engine/epoch.ts";
+export type { Epoch, EpochPhase, EpochStatus, PolicySlot, PolicyState } from "./engine/epoch.ts";
+
+export type { TurnPhase } from "./engine/turnPhase.ts";
+
+export type { EffectiveRules } from "./engine/effectiveRules.ts";
 
 export type {
   Campaign,
@@ -45,3 +49,5 @@ export type {
 } from "./engine/campaign.ts";
 
 export type { Setting, SettingRules } from "./settings/index.ts";
+
+export type { PolicyCard, PolicyModifier } from "./data/policies.ts";

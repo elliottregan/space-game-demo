@@ -105,6 +105,8 @@ This keeps pair-spam *playable* (the floor) while bending it toward diminishing 
 
 ## Mechanic 3: The soft-gated tech tree
 
+> **⚠️ Superseded (2026-06-17).** The soft-gated tech tree below — the **M4** milestone — was judged "ceremony": gating a sequence of builds that all just feed one number doesn't make any single build *matter*. It is **replaced by [`2026-06-17-policy-tableau-design.md`](./2026-06-17-policy-tableau-design.md)** (Policy Tableau & Majority Counters), where builds instead fuel a persistent policy engine and ideology commitment *is* the progression. M0–M3 shipped; v0 visualization (M0) lives on as the projects panel, now extended with per-project **majority counters** + a per-ideology influence readout. The v1 soft-gate section below is shelved.
+
 Phased; each phase ships alone.
 
 ### v0 — Visualization (reframed DEV-EVAL-138, renderer-only)
@@ -163,7 +165,7 @@ This lands once and pays off for every subsequent feature (#140's laws and #141'
 | M1 | Column storage (core + facade + UI) | yes |
 | M2 | Simulator: commitHand + storage heuristic, re-baseline | yes — blocks *tuning* of M1/M3/M4, not their code |
 | M3 | Project upgrades (levels) + Crisis contribution change | yes — ✅ done (2026-06-16) |
-| M4 | Soft gates (tiers) on the tree view | yes |
+| M4 | ~~Soft gates (tiers) on the tree view~~ → **superseded** by the Policy Tableau spec (2026-06-17): builds fuel a policy engine instead of gating a tree | — |
 | M5 | Endings integration | separate spec (#141) |
 
 ## Open questions

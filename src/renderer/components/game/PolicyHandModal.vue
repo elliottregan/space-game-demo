@@ -1,0 +1,281 @@
+<template>
+  <!--
+    Blocking policy-hand gate. A light scrim covers the board and intercepts
+    pointer events (board stays visible underneath, but is not interactive);
+    the centered panel floats over the hand area and is the only interactive
+    surface. No escape / scrim-click dismissal — resolving is required.
+  -->
+  <div class="policy-modal-scrim">
+    <div class="policy-modal" role="dialog" aria-modal="true" aria-label="Resolve drawn policies">
+      <header class="pm-head">
+        <span class="pm-title">Drawn policies</span>
+        <span class="pm-counts" aria-label="Policy draws by ideology this turn">
+          <span
+            v-for="entry in drawCounts"
+            :key="entry.ideology"
+            class="pm-count"
+            :style="{ '--count-accent': cssColorFor(entry.ideology) }"
+            :title="`${entry.label}: ${entry.count} ${entry.count === 1 ? 'draw' : 'draws'} this turn`"
+          >
+            <span class="count-dot" aria-hidden="true"></span>
+            <span class="count-num">{{ entry.count }}</span>
+          </span>
+        </span>
+      </header>
+
+      <div class="pm-cards" ref="cardsEl">
+        <div
+          v-for="(card, index) in candidates"
+          :key="`${card.id}-${index}`"
+          class="pm-card-slot"
+          :class="{ locked: !isKept(index) && !canKeep(index) }"
+          :data-candidate-index="index"
+          :data-candidate-id="card.id"
+          :data-candidate-ideology="card.ideology"
+        >
+          <PolicyCard
+            :card="card"
+            selectable
+            :selected="isKept(index)"
+            @select="toggleKeep(index)"
+          />
+          <span
+            v-if="!isKept(index) && !canKeep(index)"
+            class="pm-lock-reason"
+            :title="`Tableau full (${MAX_SLOTS} slots)`"
+            >Tableau full ({{ MAX_SLOTS }} slots)</span
+          >
+        </div>
+      </div>
+
+      <div class="pm-foot">
+        <button type="button" class="primary pm-enact" @click="emitEnact">Enact policies</button>
+        <p class="pm-caption">Unkept policies discard to their ideology pile.</p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from "vue";
+import type { PolicyCard as PolicyCardT, PolicySlot, Ideology } from "../../../core/types.ts";
+import { cssColorFor, IDEOLOGIES, IDEOLOGY_DISPLAY } from "../../../core/data/ideologies.ts";
+import { POLICY_SLOT_CAP, projectedNewSlots } from "../../../core/data/policies.ts";
+import { animateDraw, policyDeckPile } from "../../animation/cardFlight.ts";
+import PolicyCard from "./PolicyCard.vue";
+
+const MAX_SLOTS = POLICY_SLOT_CAP;
+
+const props = defineProps<{
+  candidates: PolicyCardT[];
+  /** Current tableau — used to compute whether a candidate can still be slotted. */
+  tableau: PolicySlot[];
+}>();
+
+const emit = defineEmits<{
+  enact: [keepIds: string[]];
+}>();
+
+const cardsEl = ref<HTMLElement | null>(null);
+
+// On open, deal each drawn candidate in from its ideology's policy-deck tile
+// with the same flip + scale flight as the building-hand draw. The deck tiles
+// (PolicyPiles, in the persistent zone) register as `policy-deck:<ideology>`
+// piles and are already mounted when this gate opens. Reduced-motion / a
+// missing pile both no-op inside animateDraw (the card just appears).
+onMounted(() => {
+  const slots = cardsEl.value?.querySelectorAll<HTMLElement>(".pm-card-slot");
+  if (!slots) return;
+  for (const slot of slots) {
+    const ideology = slot.dataset.candidateIdeology as Ideology | undefined;
+    const cardEl = slot.querySelector<HTMLElement>(".policy-card");
+    if (ideology && cardEl) animateDraw(cardEl, () => {}, policyDeckPile(ideology));
+  }
+});
+
+// Selection is PER-COPY: we track kept candidate INDICES (keyed by the v-for
+// index), not ids. Two drawn copies of one policy are independent — you can keep
+// one and discard the other. Cap math still collapses by DISTINCT id (two kept
+// copies of one id = a single new tableau slot).
+const keep = ref<Set<number>>(new Set());
+// Reset the selection whenever a new batch of candidates is drawn.
+watch(
+  () => props.candidates,
+  () => {
+    keep.value = new Set();
+  },
+);
+
+function isKept(index: number): boolean {
+  return keep.value.has(index);
+}
+
+/** Distinct ids among the currently-kept indices. */
+const keptDistinctIds = computed(
+  () =>
+    new Set([...keep.value].map((i) => props.candidates[i]?.id).filter((id): id is string => !!id)),
+);
+
+/** Distinct kept ids that would need a brand-new tableau slot (shared core helper). */
+const newSlots = computed(() => projectedNewSlots(props.tableau, keptDistinctIds.value));
+
+/** Ids already occupying a tableau slot (stacking onto these costs no new slot). */
+const slottedIds = computed(() => new Set(props.tableau.map((s) => s.card.id)));
+
+/**
+ * A candidate copy can be newly kept when keeping it would not exceed the slot
+ * cap. Keeping a copy whose id already consumes a slot — already slotted in the
+ * tableau, or another kept copy of the same id — is always allowed (it stacks).
+ */
+function canKeep(index: number): boolean {
+  if (keep.value.has(index)) return true;
+  const id = props.candidates[index]?.id;
+  if (!id) return false;
+  if (slottedIds.value.has(id)) return true; // stacks onto an existing slot
+  if (keptDistinctIds.value.has(id)) return true; // stacks onto another kept copy
+  return props.tableau.length + newSlots.value < MAX_SLOTS;
+}
+
+function toggleKeep(index: number): void {
+  const next = new Set(keep.value);
+  if (next.has(index)) next.delete(index);
+  else if (canKeep(index)) next.add(index);
+  keep.value = next;
+}
+
+/**
+ * Emit keepIds as a MULTISET — one id per kept copy, so two kept copies of one
+ * id appear twice. Core enactPolicies consumes it as a multiset. Sorted by index
+ * so the order matches the candidate order the choreography captures.
+ */
+function emitEnact(): void {
+  const keptIndices = [...keep.value].sort((a, b) => a - b);
+  emit(
+    "enact",
+    keptIndices.map((i) => props.candidates[i].id),
+  );
+}
+
+/**
+ * Ideology-colored draw counts, tallied from the ACTUAL candidates drawn this
+ * turn (not the cumulative majority counter, which overstates when a deck drew
+ * fewer than its majority). Only ideologies that actually drew appear.
+ */
+const drawCounts = computed(() => {
+  const tally = {} as Record<Ideology, number>;
+  for (const card of props.candidates) tally[card.ideology] = (tally[card.ideology] ?? 0) + 1;
+  return IDEOLOGIES.filter((ideology) => (tally[ideology] ?? 0) > 0).map((ideology) => ({
+    ideology,
+    count: tally[ideology],
+    label: IDEOLOGY_DISPLAY[ideology].name,
+  }));
+});
+</script>
+
+<style scoped>
+/* Light scrim over the board: visible-but-inert. Sits above rail flyouts (50)
+   and below the crisis screen (100); this is an in-turn gate, not a
+   campaign-level overlay. */
+.policy-modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: var(--scrim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.policy-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: min(92vw, 880px);
+  max-height: 90vh;
+  overflow: auto;
+  padding: var(--space-4);
+  background: var(--paper);
+  box-shadow: var(--shadow-lifted);
+}
+
+.pm-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.pm-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.pm-counts {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.pm-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.count-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--count-accent, var(--ink-subtle));
+}
+.count-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+
+.pm-cards {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.pm-card-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+.pm-card-slot.locked {
+  opacity: 0.5;
+}
+/* A locked candidate cannot be selected even though PolicyCard is `selectable`;
+   the toggle is gated by canKeep, so clicks are inert here. */
+.pm-card-slot.locked :deep(.policy-card) {
+  cursor: not-allowed;
+}
+
+.pm-lock-reason {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pm-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+.pm-enact {
+  align-self: center;
+}
+.pm-caption {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--ink-subtle);
+  text-align: center;
+}
+</style>

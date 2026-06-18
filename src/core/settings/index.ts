@@ -11,13 +11,15 @@ import { RUINED_HOMEWORLD } from "./ruinedHomeworld.ts";
 // -------------------------------------------------------------------------
 
 export interface SettingRules {
-  handSize: number;
+  /** Base hand size before policy deltas. Operative value: effectiveRules().handSize. */
+  baseHandSize: number;
   columnCount: number;
-  influenceBaseline: number;
+  /** Base influence baseline before policy deltas. Operative value: effectiveRules().influenceBaseline. */
+  baseInfluenceBaseline: number;
   /** Turn budget. Crisis fires once `epoch.turn` exceeds this. */
   maxTurns: number;
-  /** Per-column storage slots (inert staging area). */
-  storageCapacity: number;
+  /** Base per-column storage slots before policy deltas. Operative value: effectiveRules().storageCapacity. */
+  baseStorageCapacity: number;
 }
 
 export interface Setting {

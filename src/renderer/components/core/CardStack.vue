@@ -12,6 +12,10 @@
         :selected="selectedIds.includes(c.id)"
         @select="$emit('select', c.id)"
       />
+      <!-- Per-card affordance (e.g. a play button per stored card). Rendered
+           inside each positioned slot so it tracks its own card, not the
+           whole stack — required when more than one card is stacked. -->
+      <slot name="card-action" :card="c" :index="i" />
     </div>
     <slot />
   </div>

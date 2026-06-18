@@ -21,13 +21,17 @@
           :selected-ids="selectedStorageIds"
           @select="(id) => $emit('toggleStorageSelect', id)"
         >
-          <button
-            v-if="storage.length === 1 && canPlaceStored(storage[0])"
-            class="cell-action"
-            @click.stop="$emit('playFromStorage', storage[0].id)"
-          >
-            Play
-          </button>
+          <!-- One Play button per stored card the column can currently accept,
+               so a policy-granted 2nd stored card stays playable. -->
+          <template #card-action="{ card }">
+            <button
+              v-if="canPlaceStored(card)"
+              class="cell-action storage-play"
+              @click.stop="$emit('playFromStorage', card.id)"
+            >
+              Play
+            </button>
+          </template>
         </CardStack>
       </div>
 
