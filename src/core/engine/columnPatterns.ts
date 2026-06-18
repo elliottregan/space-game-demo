@@ -1,8 +1,10 @@
 // Pure poker-pattern evaluator over a single Column.
 
 import type { Card, Column, KeystoneProject, PatternKind } from "../types.ts";
+import type { Ideology } from "../data/cards.ts";
 import { columnCards, isBuildable } from "./column.ts";
 import { identifyRowHand, type RowHand } from "./rowHands.ts";
+import { effectiveCard } from "./countsAs.ts";
 
 export interface PatternMatch {
   kind: PatternKind;
@@ -26,6 +28,13 @@ export function evaluateColumn(col: Column, projects: KeystoneProject[]): Patter
   return { kind, projectId: project.id, cards };
 }
 
+// Independence invariant (full joker only): each wild's RANK and IDEOLOGY are
+// assigned independently — the row classifier picks the rank to maximize the
+// row-hand, sharesOneIdeology picks the color to complete a flush. Sound here
+// because rank ⊥ color for an unconstrained full joker (it can be "the 9" for a
+// straight AND "solidarity" for a flush at once), which is exactly why
+// straight-flush / royal-flush work. A FUTURE partial wild that constrains a
+// single wild on rank AND participates in a flush would need a joint solver.
 function resolveColumnPattern(
   land: RowHand | null,
   role: RowHand | null,
@@ -83,9 +92,19 @@ function containsPair(h: RowHand | null): boolean {
 }
 
 function sharesOneIdeology(cards: Card[]): boolean {
-  // "wild" cards never satisfy a flush.
-  if (cards.some((c) => c.ideology === "wild")) return false;
   if (cards.length === 0) return false;
-  const ideology = cards[0].ideology;
-  return cards.every((c) => c.ideology === ideology);
+  // A flush exists iff the intersection over every card's admissible-color set
+  // is non-empty. A full joker contributes all 4 colors (never narrows); a
+  // partial ideology wild contributes its OR-set; a colorless non-wild
+  // (bare-"wild" / Dissent) contributes the empty set, which BLOCKS. There is
+  // NO isWild escape hatch — partial ideology wilds are honored set-theoretically.
+  let inter: Set<Ideology> | null = null;
+  for (const c of cards) {
+    const colors = effectiveCard(c).ideologies;
+    if (colors.length === 0) return false; // colorless, non-completing ⇒ no flush
+    if (inter === null) inter = new Set(colors);
+    else inter = new Set([...inter].filter((i: Ideology) => colors.includes(i)));
+    if (inter.size === 0) return false;
+  }
+  return (inter?.size ?? 0) > 0;
 }
