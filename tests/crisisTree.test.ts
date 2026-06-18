@@ -515,21 +515,26 @@ describe("buildColumn advances the active node (P3)", () => {
 });
 
 describe("enactPolicies clears a Doctrine policyStrength node post-build (P3)", () => {
-  // The homeworld Capital node: requireSameIdeology, requirements [{any,5}],
-  // policyStrength 2. Drive it through core commands: bind solidarity, satisfy
-  // the 5 on-color builds (the build path passes the empty tableau, so it does
-  // NOT clear), then slot 2 solidarity policies via enactPolicies and assert the
-  // node clears with no further build.
-  test("builds alone leave it open; slotting 2 same-color policies clears it", () => {
+  // The homeworld Capital node: requireSameIdeology, with an `any` build
+  // requirement and a `policyStrength` threshold (both authored in the Setting;
+  // read live below so this stays a count-tweak-proof BEHAVIOR test). Drive it
+  // through core commands: bind solidarity, satisfy the on-color builds (the
+  // build path passes the empty tableau, so it does NOT clear), then slot enough
+  // solidarity policy stacks via enactPolicies and assert the node clears with no
+  // further build.
+  test("builds alone leave it open; slotting enough same-color policies clears it", () => {
     const setting = getSetting("homeworld");
+    const capital = setting.crisisTree.nodes.capital;
+    const buildsNeeded = capital.requirements[0].count;
+    const strengthNeeded = capital.policyStrength ?? 0;
     const ep = createEpoch(setting, createCampaign(1), createRng(7), 1);
     // Activate Capital directly (it is gated behind the root in normal play).
     ep.crisisTree.activeNodeId = "capital";
     ep.crisisTree.boundIdeology = { capital: "solidarity" };
     ep.crisisTree.cleared = [setting.crisisTree.rootId];
 
-    // Five solidarity-promoted builds (any pattern; use a same-rank pair).
-    for (let i = 0; i < 5; i++) {
+    // The node's required count of solidarity-promoted builds (any pattern).
+    for (let i = 0; i < buildsNeeded; i++) {
       const unlock = {
         projectId: `p-${i}`,
         pattern: "pair" as const,
@@ -540,16 +545,22 @@ describe("enactPolicies clears a Doctrine policyStrength node post-build (P3)", 
       ep.crisisTree = applyBuildViaCommand(ep, setting, unlock);
     }
     // Build requirement met, but the empty tableau keeps the node OPEN.
-    expect(ep.crisisTree.progress.capital).toEqual([5]);
+    expect(ep.crisisTree.progress.capital).toEqual([buildsNeeded]);
     expect(ep.crisisTree.cleared).not.toContain("capital");
 
-    // Now stage two solidarity policy candidates and enact them.
+    // Stage `strengthNeeded` solidarity policy candidates (all mobilize → they
+    // stack into one slot, so strength == stacks) and enact them.
     ep.turnPhase = "policy";
-    ep.policy.candidates = [getPolicy("mobilize"), getPolicy("mobilize")];
-    const r = enactPolicies(ep, setting, ["mobilize", "mobilize"]);
+    const keep = Array.from({ length: strengthNeeded }, () => getPolicy("mobilize"));
+    ep.policy.candidates = keep;
+    const r = enactPolicies(
+      ep,
+      setting,
+      keep.map((c) => c.id),
+    );
     expect(r.ok).toBe(true);
-    // Two slotted solidarity stacks → strength 2 == threshold → node clears.
-    expect(policyStrengthFor(ep.policy, "solidarity")).toBe(2);
+    // Slotted solidarity stacks reach the threshold → node clears.
+    expect(policyStrengthFor(ep.policy, "solidarity")).toBe(strengthNeeded);
     expect(ep.crisisTree.cleared).toContain("capital");
     expect(isWon(setting.crisisTree, ep.crisisTree)).toBe(true);
   });

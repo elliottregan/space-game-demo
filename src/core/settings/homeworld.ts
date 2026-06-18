@@ -106,7 +106,7 @@ const CRISIS_TREE: CrisisTree = {
       id: "industry",
       name: "Industry",
       branch: "expansion",
-      requirements: [{ pattern: "any", count: 8 }],
+      requirements: [{ pattern: "any", count: 12 }],
       unlocks: [],
       terminal: true,
     },
@@ -115,10 +115,9 @@ const CRISIS_TREE: CrisisTree = {
       name: "Capital",
       branch: "doctrine",
       requireSameIdeology: true,
-      // Doctrine teeth: 5 same-color builds AND 2 slotted policies of that color.
-      // Strawman; balance pending.
-      requirements: [{ pattern: "any", count: 5 }],
-      policyStrength: 2,
+      // Doctrine teeth: same-color builds AND slotted policies of that color.
+      requirements: [{ pattern: "any", count: 7 }],
+      policyStrength: 3,
       unlocks: [],
       terminal: true,
     },
@@ -126,10 +125,13 @@ const CRISIS_TREE: CrisisTree = {
       id: "monument",
       name: "Monument",
       branch: "wonder",
+      // The rare-shape branch: a straight, two-pairs, and an upgraded flush.
+      // Heavier than the strawman so it is a flush/straight SPECIALTY, not the
+      // universal cheapest terminal.
       requirements: [
         { pattern: "straight", count: 1 },
-        { pattern: "two-pair", count: 1 },
-        { pattern: "flush", count: 1, upgrade: true },
+        { pattern: "two-pair", count: 2 },
+        { pattern: "flush", count: 2, upgrade: true },
       ],
       unlocks: [],
       terminal: true,

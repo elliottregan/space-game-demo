@@ -97,9 +97,9 @@ const CRISIS_TREE: CrisisTree = {
       name: "Re-founding",
       branch: "establish",
       requirements: [
-        { pattern: "two-pair", count: 4 },
-        { pattern: "pair", count: 4 },
-        { pattern: "high-card", count: 4 },
+        { pattern: "two-pair", count: 5 },
+        { pattern: "pair", count: 5 },
+        { pattern: "high-card", count: 5 },
       ],
       unlocks: ["reclamation", "creed", "spire"],
       terminal: false,
@@ -108,7 +108,7 @@ const CRISIS_TREE: CrisisTree = {
       id: "reclamation",
       name: "Reclamation",
       branch: "expansion",
-      requirements: [{ pattern: "any", count: 10 }],
+      requirements: [{ pattern: "any", count: 18 }],
       unlocks: [],
       terminal: true,
     },
@@ -117,10 +117,9 @@ const CRISIS_TREE: CrisisTree = {
       name: "Creed",
       branch: "doctrine",
       requireSameIdeology: true,
-      // Doctrine teeth: 6 same-color builds AND 3 slotted policies of that color.
-      // Strawman; balance pending.
-      requirements: [{ pattern: "any", count: 6 }],
-      policyStrength: 3,
+      // Doctrine teeth: same-color builds AND slotted policies of that color.
+      requirements: [{ pattern: "any", count: 11 }],
+      policyStrength: 4,
       unlocks: [],
       terminal: true,
     },
@@ -128,10 +127,13 @@ const CRISIS_TREE: CrisisTree = {
       id: "spire",
       name: "Spire",
       branch: "wonder",
+      // The rare-shape branch on the long full-deck clock: straights, two-pairs,
+      // and two upgraded flushes. Heavier so it stays a flush/straight specialty
+      // rather than the universal cheapest terminal.
       requirements: [
-        { pattern: "straight", count: 1 },
-        { pattern: "two-pair", count: 2 },
-        { pattern: "flush", count: 1, upgrade: true },
+        { pattern: "straight", count: 2 },
+        { pattern: "two-pair", count: 3 },
+        { pattern: "flush", count: 2, upgrade: true },
       ],
       unlocks: [],
       terminal: true,
