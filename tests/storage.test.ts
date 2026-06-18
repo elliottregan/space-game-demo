@@ -12,7 +12,7 @@ import { getSetting } from "../src/core/settings/index.ts";
 import { createCampaign } from "../src/core/engine/campaign.ts";
 import { createRng } from "../src/core/engine/rng.ts";
 import type { Column, Epoch } from "../src/core/types.ts";
-import { emptyPolicyState, fullJoker } from "./fixtures.ts";
+import { emptyPolicyState, emptyCrisisTreeState, fullJoker } from "./fixtures.ts";
 
 export function freshEpoch(columns: Column[] = [createEmptyColumn()]): Epoch {
   return {
@@ -32,6 +32,7 @@ export function freshEpoch(columns: Column[] = [createEmptyColumn()]): Epoch {
     status: { kind: "in-progress" },
     crisis: { status: "pending" },
     policy: emptyPolicyState(),
+    crisisTree: emptyCrisisTreeState(),
   };
 }
 

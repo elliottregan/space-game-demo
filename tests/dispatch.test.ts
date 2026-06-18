@@ -6,7 +6,7 @@ import type { Column, Epoch, ProjectUnlock } from "../src/core/types.ts";
 import { countDissentInDeck } from "../src/core/engine/effects.ts";
 import { commitHand } from "../src/core/engine/commands.ts";
 import { createRng } from "../src/core/engine/rng.ts";
-import { emptyPolicyState } from "./fixtures.ts";
+import { emptyPolicyState, emptyCrisisTreeState } from "./fixtures.ts";
 
 function freshEpoch(columns: Column[] = []): Epoch {
   return {
@@ -26,6 +26,7 @@ function freshEpoch(columns: Column[] = []): Epoch {
     status: { kind: "in-progress" },
     crisis: { status: "pending" },
     policy: emptyPolicyState(),
+    crisisTree: emptyCrisisTreeState(),
   };
 }
 

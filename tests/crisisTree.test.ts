@@ -289,3 +289,94 @@ describe("authored Setting crisisTrees", () => {
     });
   }
 });
+
+// -------------------------------------------------------------------------
+// P3 integration: Epoch seeding, setActiveObjective, buildColumn hook
+// -------------------------------------------------------------------------
+
+import { GameAPI } from "../src/facade/GameAPI.ts";
+import { createEpoch } from "../src/core/engine/epoch.ts";
+import { setActiveObjective, buildColumn } from "../src/core/engine/commands.ts";
+import { createCampaign } from "../src/core/engine/campaign.ts";
+import { createRng } from "../src/core/engine/rng.ts";
+import { getSetting } from "../src/core/settings/index.ts";
+import { getCard, landId } from "../src/core/data/cards.ts";
+
+describe("crisisTree — Epoch seeding (P3)", () => {
+  test("createEpoch seeds activeNodeId=rootId, empty cleared, zeroed progress per req", () => {
+    const setting = getSetting("homeworld");
+    const ep = createEpoch(setting, createCampaign(1), createRng(1), 1);
+    const tree = setting.crisisTree;
+    expect(ep.crisisTree.activeNodeId).toBe(tree.rootId);
+    expect(ep.crisisTree.cleared).toEqual([]);
+    expect(ep.crisisTree.boundIdeology).toEqual({});
+    // progress has one zero-filled array per node, sized to its requirements.
+    for (const [id, node] of Object.entries(tree.nodes)) {
+      expect(ep.crisisTree.progress[id]).toEqual(node.requirements.map(() => 0));
+    }
+  });
+});
+
+describe("setActiveObjective (P3)", () => {
+  test("rejects a node that is not currently available", () => {
+    const setting = getSetting("homeworld");
+    const ep = createEpoch(setting, createCampaign(1), createRng(1), 1);
+    const tree = setting.crisisTree;
+    // A child of the (uncleared) root is locked: not in availableNodes yet.
+    const lockedChild = tree.nodes[tree.rootId].unlocks[0];
+    const r = setActiveObjective(ep, setting, lockedChild);
+    expect(r.ok).toBe(false);
+    // The root itself is available.
+    const ok = setActiveObjective(ep, setting, tree.rootId);
+    expect(ok.ok).toBe(true);
+    expect(ep.crisisTree.activeNodeId).toBe(tree.rootId);
+  });
+
+  test("a requireSameIdeology (Doctrine) node binds its ideology on activation", () => {
+    const setting = getSetting("homeworld");
+    const ep = createEpoch(setting, createCampaign(1), createRng(1), 1);
+    const tree = setting.crisisTree;
+    // Force the doctrine child into the available set by marking the root cleared.
+    ep.crisisTree.cleared = [tree.rootId];
+    // availableNodes returns ObjectiveNode[]; find the doctrine node by its flag.
+    const doctrine = availableNodes(tree, ep.crisisTree).find((n) => n.requireSameIdeology);
+    if (!doctrine) throw new Error("expected a requireSameIdeology node");
+    // Missing ideology is rejected; supplying one binds it.
+    const bad = setActiveObjective(ep, setting, doctrine.id);
+    expect(bad.ok).toBe(false);
+    const good = setActiveObjective(ep, setting, doctrine.id, "solidarity");
+    expect(good.ok).toBe(true);
+    expect(ep.crisisTree.activeNodeId).toBe(doctrine.id);
+    expect(ep.crisisTree.boundIdeology[doctrine.id]).toBe("solidarity");
+  });
+});
+
+describe("buildColumn advances the active node (P3)", () => {
+  // Build a two-pair (the root recipe's first requirement) directly in column 0,
+  // set the root active, build, and assert the matching requirement advanced.
+  test("a build matching the active root recipe advances its progress", () => {
+    const api = new GameAPI(99, { skipLoad: true, forceSettingId: "homeworld" });
+    // Reach into core state directly because this test targets the tree hook,
+    // not the placement UX.
+    const ep = (api as unknown as { epoch: ReturnType<typeof createEpoch> }).epoch;
+    const setting = (api as unknown as { setting: ReturnType<typeof getSetting> }).setting;
+    const rng = (api as unknown as { rng: ReturnType<typeof createRng> }).rng;
+    ep.crisisTree.activeNodeId = setting.crisisTree.rootId;
+    // A land-row pair (rank 7 solidarity) + an influence-row pair (rank 9
+    // heritage) is the canonical two-pair (pair in each row). Two distinct
+    // ideologies keep it off a flush; pass a promote arg (C2 — never argless on
+    // a >=2-ideology column).
+    const col = ep.columns[0];
+    col.lands.cards.push(getCard(landId(7, "solidarity")), getCard(landId(7, "solidarity")));
+    col.influence.cards.push(getCard(landId(9, "heritage")), getCard(landId(9, "heritage")));
+    const before = [...ep.crisisTree.progress[setting.crisisTree.rootId]];
+    const r = buildColumn(ep, setting, 0, rng, "solidarity");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.pattern).toBe("two-pair");
+    const after = ep.crisisTree.progress[setting.crisisTree.rootId];
+    // The two-pair requirement index advanced by exactly 1; total progress rose.
+    const advanced = after.reduce((s, n) => s + n, 0) - before.reduce((s, n) => s + n, 0);
+    expect(advanced).toBe(1);
+  });
+});

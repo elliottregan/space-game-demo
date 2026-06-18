@@ -5,7 +5,7 @@ import { FULL_JOKER, getCard, landId } from "../src/core/data/cards.ts";
 import type { Ideology } from "../src/core/data/ideologies.ts";
 import { IDEOLOGIES } from "../src/core/data/ideologies.ts";
 import type { PolicyCard } from "../src/core/data/policies.ts";
-import type { PolicyState } from "../src/core/types.ts";
+import type { CrisisTreeState, PolicyState } from "../src/core/types.ts";
 
 /** A fully-empty PolicyState: empty deck/discard arrays per ideology, no
  *  tableau slots, no candidates. For hand-built Epoch literals in tests. */
@@ -17,6 +17,14 @@ export function emptyPolicyState(): PolicyState {
     discards[ideology] = [];
   }
   return { decks, discards, tableau: [], candidates: [] };
+}
+
+/** A no-active-node, nothing-cleared, no-progress CrisisTreeState for hand-built
+ *  Epoch literals that don't exercise the Crisis Tree. activeNodeId === null is
+ *  the documented no-op state: applyBuild against it changes nothing. Tests that
+ *  DO drive the tree seed real state via createEpoch / seedCrisisTreeState. */
+export function emptyCrisisTreeState(): CrisisTreeState {
+  return { activeNodeId: null, cleared: [], progress: {}, boundIdeology: {} };
 }
 
 /** A full-joker card for evaluator tests: any rank, any ideology, either row.

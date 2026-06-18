@@ -4,7 +4,7 @@ import { resolveCrisis } from "../src/core/engine/turn.ts";
 import { getSetting } from "../src/core/settings/index.ts";
 import { getCard, landId } from "../src/core/data/cards.ts";
 import type { Epoch, ProjectUnlock } from "../src/core/types.ts";
-import { emptyPolicyState } from "./fixtures.ts";
+import { emptyPolicyState, emptyCrisisTreeState } from "./fixtures.ts";
 
 describe("Crisis flow", () => {
   test("Epoch reaches Crisis when turn budget is exceeded", () => {
@@ -59,6 +59,7 @@ function epochWithUnlocks(unlocks: ProjectUnlock[]): Epoch {
     status: { kind: "in-progress" },
     crisis: { status: "pending" },
     policy: emptyPolicyState(),
+    crisisTree: emptyCrisisTreeState(),
   };
 }
 

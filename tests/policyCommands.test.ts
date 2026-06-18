@@ -29,7 +29,7 @@ import { createCampaign } from "../src/core/engine/campaign.ts";
 import { createRng } from "../src/core/engine/rng.ts";
 import type { Epoch, PolicyCard, PolicySlot, ProjectUnlock } from "../src/core/types.ts";
 import type { Ideology } from "../src/core/data/ideologies.ts";
-import { emptyPolicyState } from "./fixtures.ts";
+import { emptyPolicyState, emptyCrisisTreeState } from "./fixtures.ts";
 
 const SETTING = getSetting("homeworld");
 const campaign = createCampaign(1);
@@ -84,6 +84,7 @@ function makeEpoch(
       tableau: opts.tableau ?? [],
       candidates: opts.candidates ?? [],
     },
+    crisisTree: emptyCrisisTreeState(),
   };
 }
 

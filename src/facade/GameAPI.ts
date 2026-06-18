@@ -6,7 +6,7 @@ import {
   finalizeEpoch,
   type EndOfEpochState,
 } from "../core/engine/campaign.ts";
-import { createEpoch, currentVector } from "../core/engine/epoch.ts";
+import { createEpoch, currentVector, seedCrisisTreeState } from "../core/engine/epoch.ts";
 import {
   buildColumn as buildColumnCore,
   commitHand as commitHandCore,
@@ -17,8 +17,10 @@ import {
   placeCard as placeCardCore,
   recallInfluence as recallInfluenceCore,
   removePolicy as removePolicyCore,
+  setActiveObjective as setActiveObjectiveCore,
   storeCard as storeCardCore,
 } from "../core/engine/commands.ts";
+import { availableNodes as availableNodesCore } from "../core/engine/crisisTree.ts";
 import { endTurn as endTurnCore, resolveCrisis as resolveCrisisCore } from "../core/engine/turn.ts";
 import { createRng, type RNG } from "../core/engine/rng.ts";
 import { getSetting } from "../core/settings/index.ts";
@@ -37,11 +39,13 @@ import type {
   Campaign,
   Card,
   Column,
+  CrisisTreeState,
   EffectiveRules,
   Epoch,
   Ideology,
   IdeologyVector,
   LegacyUpgrade,
+  ObjectiveNode,
   PolicyState,
   Setting,
   TurnPhase,
@@ -67,6 +71,8 @@ export interface Snapshot {
   policy: PolicyState; // deep-cloned policy engine state
   effective: EffectiveRules; // setting rules folded through the policy tableau
   influence: Record<Ideology, number>; // majority-counter tally per ideology
+  crisisTree: CrisisTreeState; // deep-cloned Crisis Tree progress
+  availableNodes: ObjectiveNode[]; // nodes the player may set active right now
 }
 
 export type CommandResult<T = void> = { ok: true; value: T } | { ok: false; error: string };
@@ -90,6 +96,11 @@ export class GameAPI {
       // Defensive: a v6 save predating `turnPhase` would otherwise load
       // `undefined` and lock the board (every verb gated off the play phase).
       if (this.epoch.turnPhase === undefined) this.epoch.turnPhase = "play";
+      // Defensive: a save predating crisisTree seeds a fresh tree state so it
+      // loads interactive (full v7→v8 migration lands in P5).
+      if (this.epoch.crisisTree === undefined) {
+        this.epoch.crisisTree = seedCrisisTreeState(this.setting.crisisTree);
+      }
       // Defensive: runs AFTER migrateV6toV7's projectMajority backfill — only
       // fills a STILL-undefined promotedIdeology (hand-edit / migrator-skipped)
       // to null, never overwriting a migrator-set real null. Keeps
@@ -191,6 +202,9 @@ export class GameAPI {
     // Defensive: an older dev save may predate `turnPhase`.
     // Default it to "play" so a loaded epoch is immediately interactive.
     if (this.epoch.turnPhase === undefined) this.epoch.turnPhase = "play";
+    if (this.epoch.crisisTree === undefined) {
+      this.epoch.crisisTree = seedCrisisTreeState(this.setting.crisisTree);
+    }
     // Defensive: runs AFTER migrateV6toV7's projectMajority backfill — only
     // fills a STILL-undefined promotedIdeology (hand-edit / migrator-skipped)
     // to null, never overwriting a migrator-set real null. Keeps
@@ -216,6 +230,7 @@ export class GameAPI {
       (c) => evaluateColumn(c, this.setting.projects) !== null,
     );
     const policyView = this.clonePolicy();
+    const crisisTreeView = this.cloneCrisisTree();
     const epochView: Epoch = {
       ...this.epoch,
       hand: [...this.epoch.hand],
@@ -230,6 +245,7 @@ export class GameAPI {
         outcome: this.epoch.crisis.outcome,
       },
       policy: policyView,
+      crisisTree: crisisTreeView,
     };
     return {
       campaign: {
@@ -253,6 +269,24 @@ export class GameAPI {
       policy: policyView,
       effective: effectiveRules(this.epoch, this.setting),
       influence: ideologyInfluence(this.epoch.unlockedProjects),
+      crisisTree: crisisTreeView,
+      availableNodes: availableNodesCore(this.setting.crisisTree, this.epoch.crisisTree).map(
+        (n) => ({ ...n }),
+      ),
+    };
+  }
+
+  /** Deep-clone the Crisis Tree progress so shallowRef sees fresh references
+   *  (same discipline as clonePolicy). */
+  private cloneCrisisTree(): CrisisTreeState {
+    const t = this.epoch.crisisTree;
+    const progress: Record<string, number[]> = {};
+    for (const [id, arr] of Object.entries(t.progress)) progress[id] = [...arr];
+    return {
+      activeNodeId: t.activeNodeId,
+      cleared: [...t.cleared],
+      progress,
+      boundIdeology: { ...t.boundIdeology },
     };
   }
 
@@ -323,6 +357,18 @@ export class GameAPI {
           },
         }
       : r;
+  }
+
+  /** Set the active Crisis-Tree objective (Doctrine nodes bind an ideology). */
+  setActiveObjective(nodeId: string, ideology?: Ideology): CommandResult {
+    return setActiveObjectiveCore(this.epoch, this.setting, nodeId, ideology);
+  }
+
+  /** Nodes the player may set active right now (unlocked + not cleared). */
+  availableNodes(): ObjectiveNode[] {
+    return availableNodesCore(this.setting.crisisTree, this.epoch.crisisTree).map((n) => ({
+      ...n,
+    }));
   }
 
   /** The promotable ideologies for a column at Build: the non-wild colors of the

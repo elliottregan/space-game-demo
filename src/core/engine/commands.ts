@@ -20,6 +20,7 @@ import { applyEffect } from "./effects.ts";
 import { effectiveRules } from "./effectiveRules.ts";
 import { canCommitHand } from "./rowHands.ts";
 import { isPlayPhase, isPolicyPhase } from "./turnPhase.ts";
+import { availableNodes, applyBuild } from "./crisisTree.ts";
 import type { RNG } from "./rng.ts";
 
 export type PlaceResult = { ok: true; card: Card } | { ok: false; error: string };
@@ -47,6 +48,36 @@ function requirePolicyResolution(epoch: Epoch): Rejection | null {
   if (epoch.phase !== "play") return { ok: false, error: "Not in play phase." };
   if (!isPolicyPhase(epoch)) return { ok: false, error: "Not in the policy phase." };
   return null;
+}
+
+/**
+ * Set the player's active Crisis-Tree objective. The node must currently be
+ * available (root, or a node all of whose parents are cleared, and not itself
+ * cleared). A `requireSameIdeology` (Doctrine) node additionally REQUIRES an
+ * `ideology` argument, which is recorded as the bound target color for that
+ * node — its requirements then only count builds promoted to that color.
+ * Switching is free and retains per-node progress + prior bindings.
+ */
+export function setActiveObjective(
+  epoch: Epoch,
+  setting: Setting,
+  nodeId: string,
+  ideology?: Ideology,
+): CmdResult<void> {
+  const blocked = requirePlayable(epoch);
+  if (blocked) return blocked;
+  const tree = setting.crisisTree;
+  // availableNodes returns ObjectiveNode[]; match on id (C1).
+  if (!availableNodes(tree, epoch.crisisTree).some((n) => n.id === nodeId)) {
+    return { ok: false, error: "Objective not available." };
+  }
+  const node = tree.nodes[nodeId];
+  if (node.requireSameIdeology) {
+    if (!ideology) return { ok: false, error: "Choose an ideology to bind." };
+    epoch.crisisTree.boundIdeology[nodeId] = ideology;
+  }
+  epoch.crisisTree.activeNodeId = nodeId;
+  return { ok: true, value: undefined };
 }
 
 export function placeCard(
@@ -226,6 +257,13 @@ export function buildColumn(
     promotedIdeology,
   };
   dispatch(epoch, { type: "column-built", columnIndex, unlock }, rng);
+  // Advance the active Crisis-Tree objective. projectBuildCount is INCLUSIVE of
+  // this build (the dispatch above already pushed `unlock` onto unlockedProjects),
+  // so the upgrade predicate (>= 2) fires on the second build of a project id.
+  const projectBuildCount = epoch.unlockedProjects.filter(
+    (u) => u.projectId === unlock.projectId,
+  ).length;
+  epoch.crisisTree = applyBuild(setting.crisisTree, epoch.crisisTree, unlock, projectBuildCount);
   return { ok: true, value: unlock };
 }
 
