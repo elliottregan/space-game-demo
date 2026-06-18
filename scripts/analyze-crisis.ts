@@ -10,7 +10,7 @@ import { evaluateColumn } from "../src/core/engine/columnPatterns.ts";
 import { canCommitHand } from "../src/core/engine/rowHands.ts";
 import { PATTERNS_IN_ORDER, marginalContribution } from "../src/core/data/projects.ts";
 import type { PatternKind } from "../src/core/types.ts";
-import type { Card, Column } from "../src/core/types.ts";
+import type { Card, Column, Ideology } from "../src/core/types.ts";
 import { pickPolicyKeepIds } from "./policyKeep.ts";
 
 const runs = Number(process.argv[2] ?? 50);
@@ -234,6 +234,31 @@ function findBestRoleCommit(
 }
 
 /**
+ * Which ideology to promote when building this column. Promotion is count-scaled
+ * over the promoted color's own NON-WILD cards (wilds are swing voters), so the
+ * greedy pick maximizes policy fuel = the present color with the most non-wild
+ * cards. Returns undefined for an all-wild column (core coerces to null). This is
+ * what unblocks multi-color builds: buildColumn rejects a >=2-color column with
+ * no promote arg ("Choose an ideology to promote").
+ */
+function bestPromote(col: Column): Ideology | undefined {
+  const tally = new Map<Ideology, number>();
+  for (const c of [...col.lands.cards, ...col.influence.cards]) {
+    if (c.countsAs !== undefined || c.ideology === "wild") continue; // wilds don't count
+    tally.set(c.ideology, (tally.get(c.ideology) ?? 0) + 1);
+  }
+  let best: Ideology | undefined;
+  let bestN = 0;
+  for (const [ideo, n] of tally) {
+    if (n > bestN) {
+      bestN = n;
+      best = ideo;
+    }
+  }
+  return best;
+}
+
+/**
  * Should we store this land card toward a straight?
  * Returns true if this card's rank, combined with at least 2 other distinct
  * ranks available (hand lands + this column's storage lands), falls within any
@@ -313,7 +338,7 @@ function runEpoch(api: GameAPI): RunResult {
         }
       }
       if (bestCol >= 0 && bestKind !== null) {
-        const r = api.buildColumn(bestCol);
+        const r = api.buildColumn(bestCol, bestPromote(snap.epoch.columns[bestCol]));
         if (r.ok) {
           unlocksByPattern[bestKind] += 1;
           if (firstByPattern[bestKind] === undefined) {
