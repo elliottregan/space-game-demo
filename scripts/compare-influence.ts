@@ -8,7 +8,7 @@ import { GameAPI } from "../src/facade/GameAPI.ts";
 import { evaluateColumn } from "../src/core/engine/columnPatterns.ts";
 import { getSetting } from "../src/core/settings/index.ts";
 import { pickPolicyKeepIds } from "./policyKeep.ts";
-import type { Ideology } from "../src/core/types.ts";
+import type { Ideology, ObjectiveNode } from "../src/core/types.ts";
 
 const runs = Number(process.argv[2] ?? 200);
 const settingArg = String(process.argv[3] ?? "all");
@@ -22,7 +22,46 @@ const INFLUENCE_VARIANTS = [
   { label: "unlimited (99)", baseline: 99 },
 ];
 
-function runEpoch(api: GameAPI): { won: boolean; margin: number } {
+/** Set the active Crisis-Tree objective toward a terminal: the root gate first,
+ *  then the branch with the fewest total remaining builds. Binds the most-present
+ *  color for requireSameIdeology (Doctrine) nodes. */
+function steerObjective(api: GameAPI): void {
+  const snap = api.snapshot();
+  const state = snap.epoch.crisisTree;
+  const avail = snap.availableNodes as ObjectiveNode[];
+  const remaining = (n: ObjectiveNode) =>
+    n.requirements.reduce(
+      (s, r, i) => s + Math.max(0, r.count - (state.progress[n.id]?.[i] ?? 0)),
+      0,
+    );
+  const ranked = [...avail].sort((a, b) => {
+    const ag = a.branch === "establish" ? 0 : 1;
+    const bg = b.branch === "establish" ? 0 : 1;
+    return ag - bg || remaining(a) - remaining(b);
+  });
+  const target = ranked[0];
+  if (!target || state.activeNodeId === target.id) return;
+  // Bind the most-present color for Doctrine nodes.
+  let ideo: Ideology | undefined;
+  if (target.requireSameIdeology) {
+    const tally = new Map<Ideology, number>();
+    for (const col of snap.epoch.columns)
+      for (const c of [...col.lands.cards, ...col.influence.cards]) {
+        if (c.countsAs !== undefined || c.ideology === "wild") continue;
+        tally.set(c.ideology, (tally.get(c.ideology) ?? 0) + 1);
+      }
+    let bestN = 0;
+    for (const [k, n] of tally) {
+      if (n > bestN) {
+        bestN = n;
+        ideo = k;
+      }
+    }
+  }
+  api.setActiveObjective(target.id, ideo);
+}
+
+function runEpoch(api: GameAPI): { won: boolean; turnsPlayed: number } {
   let steps = 0;
   const MAX_STEPS = 1000;
   while (api.snapshot().epoch.phase === "play" && steps < MAX_STEPS) {
@@ -33,6 +72,7 @@ function runEpoch(api: GameAPI): { won: boolean; margin: number } {
       api.enactPolicies(pickPolicyKeepIds(ps.candidates, ps.tableau));
       continue;
     }
+    steerObjective(api);
     const snap = api.snapshot();
     let acted = false;
     for (const card of snap.epoch.hand) {
@@ -76,7 +116,7 @@ function runEpoch(api: GameAPI): { won: boolean; margin: number } {
   const snap = api.snapshot();
   const outcome = snap.epoch.crisis.outcome;
   if (!outcome) throw new Error("Crisis did not resolve.");
-  return { won: outcome.cleared, margin: outcome.totalValue - snap.setting.crisis.difficulty };
+  return { won: outcome.cleared, turnsPlayed: snap.epoch.turn - 1 };
 }
 
 function simulate(settingId: string, influenceOverride: number | null, n: number) {
@@ -84,7 +124,7 @@ function simulate(settingId: string, influenceOverride: number | null, n: number
   const original = setting.rules.baseInfluenceBaseline;
   if (influenceOverride !== null) setting.rules.baseInfluenceBaseline = influenceOverride;
 
-  const results: { won: boolean; margin: number }[] = [];
+  const results: { won: boolean; turnsPlayed: number }[] = [];
   for (let i = 0; i < n; i++) {
     const api = new GameAPI(i + 1, { skipLoad: true, forceSettingId: settingId });
     results.push(runEpoch(api));
@@ -93,9 +133,9 @@ function simulate(settingId: string, influenceOverride: number | null, n: number
   setting.rules.baseInfluenceBaseline = original; // restore
 
   const wins = results.filter((r) => r.won).length;
-  const margins = results.map((r) => r.margin);
-  const mean = margins.reduce((a, b) => a + b, 0) / margins.length;
-  const sorted = [...margins].sort((a, b) => a - b);
+  const turns = results.map((r) => r.turnsPlayed);
+  const mean = turns.reduce((a, b) => a + b, 0) / turns.length;
+  const sorted = [...turns].sort((a, b) => a - b);
   const median = sorted[Math.floor(sorted.length / 2)];
   return {
     winRate: ((wins / n) * 100).toFixed(1) + "%",
@@ -116,8 +156,8 @@ for (const settingId of SETTINGS_TO_TEST) {
     "Variant".padEnd(20),
     "Win rate".padEnd(12),
     "Wins".padEnd(8),
-    "Margin mean".padEnd(14),
-    "Margin median",
+    "Turns mean".padEnd(14),
+    "Turns median",
   );
   console.log("-".repeat(70));
 

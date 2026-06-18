@@ -3,7 +3,7 @@ import { GameAPI } from "../src/facade/GameAPI.ts";
 import { resolveCrisis } from "../src/core/engine/turn.ts";
 import { getSetting } from "../src/core/settings/index.ts";
 import { getCard, landId } from "../src/core/data/cards.ts";
-import type { Epoch, ProjectUnlock } from "../src/core/types.ts";
+import type { Epoch, ProjectUnlock, Setting, CrisisTree } from "../src/core/types.ts";
 import { emptyPolicyState, emptyCrisisTreeState } from "./fixtures.ts";
 
 describe("Crisis flow", () => {
@@ -18,7 +18,7 @@ describe("Crisis flow", () => {
     expect(api.snapshot().epoch.phase).toBe("crisis");
   });
 
-  test("resolveCrisis records a CrisisOutcome", () => {
+  test("resolveCrisis records a CrisisOutcome with the cleared path", () => {
     const api = new GameAPI(42, { skipLoad: true });
     const limit = api.snapshot().setting.rules.maxTurns;
     for (let i = 0; i < limit + 1; i++) api.endTurn();
@@ -27,9 +27,11 @@ describe("Crisis flow", () => {
     if (!out) throw new Error("expected crisis outcome");
     expect(typeof out.totalValue).toBe("number");
     expect(typeof out.cleared).toBe("boolean");
+    expect(Array.isArray(out.clearedNodeIds)).toBe(true);
   });
 
-  test("with zero unlocks, Crisis fails", () => {
+  test("with no terminal cleared, Crisis fails", () => {
+    // A pass-only run clears no objective node → cleared===false, empty path.
     const api = new GameAPI(7, { skipLoad: true });
     const limit = api.snapshot().setting.rules.maxTurns;
     for (let i = 0; i < limit + 1; i++) api.endTurn();
@@ -37,11 +39,35 @@ describe("Crisis flow", () => {
     const out = api.snapshot().epoch.crisis.outcome;
     if (!out) throw new Error("expected crisis outcome");
     expect(out.cleared).toBe(false);
-    expect(out.totalValue).toBe(0);
+    expect(out.clearedNodeIds).toEqual([]);
+  });
+
+  test("cleared===true when a terminal node is in epoch.crisisTree.cleared", () => {
+    // Synthetic 1-node tree whose root is itself terminal: mark it cleared
+    // directly and assert resolveCrisis reads it as a win via isWon.
+    const tree: CrisisTree = {
+      rootId: "win",
+      nodes: {
+        win: {
+          id: "win",
+          name: "Instant Win",
+          branch: "establish",
+          requirements: [{ pattern: "any", count: 1 }],
+          unlocks: [],
+          terminal: true,
+        },
+      },
+    };
+    const setting: Setting = { ...getSetting("homeworld"), crisisTree: tree };
+    const ep = epochWithUnlocks([], tree);
+    ep.crisisTree.cleared = ["win"];
+    const out = resolveCrisis(ep, setting);
+    expect(out.cleared).toBe(true);
+    expect(out.clearedNodeIds).toEqual(["win"]);
   });
 });
 
-function epochWithUnlocks(unlocks: ProjectUnlock[]): Epoch {
+function epochWithUnlocks(unlocks: ProjectUnlock[], tree?: CrisisTree): Epoch {
   return {
     epochNumber: 1,
     settingId: "homeworld",
@@ -59,7 +85,7 @@ function epochWithUnlocks(unlocks: ProjectUnlock[]): Epoch {
     status: { kind: "in-progress" },
     crisis: { status: "pending" },
     policy: emptyPolicyState(),
-    crisisTree: emptyCrisisTreeState(),
+    crisisTree: emptyCrisisTreeState(tree),
   };
 }
 
@@ -71,7 +97,7 @@ const pairUnlock = (turn: number): ProjectUnlock => ({
   promotedIdeology: "solidarity",
 });
 
-describe("Crisis leveling", () => {
+describe("Crisis leveling (totalValue retained for Legacy magnitude)", () => {
   test("three pair-builds contribute 2+1+1 = 4, not 6", () => {
     const setting = getSetting("homeworld");
     const ep = epochWithUnlocks([pairUnlock(2), pairUnlock(4), pairUnlock(6)]);

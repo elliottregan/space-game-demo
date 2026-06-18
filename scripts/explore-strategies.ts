@@ -23,7 +23,7 @@ import { evaluateColumn } from "../src/core/engine/columnPatterns.ts";
 import { canCommitHand } from "../src/core/engine/rowHands.ts";
 import { isWildCard } from "../src/core/engine/countsAs.ts";
 import { PATTERNS_IN_ORDER, unlockedIdeologyBreakdown } from "../src/core/data/projects.ts";
-import type { Card, Column, Ideology, PatternKind } from "../src/core/types.ts";
+import type { Card, Column, Ideology, ObjectiveNode, PatternKind } from "../src/core/types.ts";
 import { pickPolicyKeepIds } from "./policyKeep.ts";
 
 const RUNS = Number(process.argv[2] ?? 200);
@@ -377,6 +377,33 @@ function seedStraight(api: GameAPI): boolean {
   return cols.length > 0 && api.placeCard(best.id, cols[0]).ok;
 }
 
+/** Tactic: set the active objective toward a terminal (root gate first, then the
+ *  cheapest branch). Never "acts" on the board, so it returns false (the policy
+ *  loop falls through to the real tactics). Binds an ideology for Doctrine nodes. */
+function steerObjective(api: GameAPI): boolean {
+  const snap = api.snapshot();
+  const state = snap.epoch.crisisTree;
+  const avail = snap.availableNodes as ObjectiveNode[];
+  const remaining = (n: ObjectiveNode) =>
+    n.requirements.reduce(
+      (s, r, i) => s + Math.max(0, r.count - (state.progress[n.id]?.[i] ?? 0)),
+      0,
+    );
+  const ranked = [...avail].sort((a, b) => {
+    const ag = a.branch === "establish" ? 0 : 1;
+    const bg = b.branch === "establish" ? 0 : 1;
+    return ag - bg || remaining(a) - remaining(b);
+  });
+  const target = ranked[0];
+  if (target && state.activeNodeId !== target.id) {
+    const ideo = target.requireSameIdeology
+      ? ((globalTarget(api) as Ideology | null) ?? undefined)
+      : undefined;
+    api.setActiveObjective(target.id, ideo);
+  }
+  return false; // steering never counts as a board action
+}
+
 // ---------------------------------------------------------------------------
 // Policies — ordered tactic lists. Differentiation comes from what runs FIRST.
 // ---------------------------------------------------------------------------
@@ -385,6 +412,7 @@ export type Tactic = (api: GameAPI) => boolean;
 export const POLICIES: Record<string, Tactic[]> = {
   // Build the best thing available, right now. The "pairs dominate" baseline.
   rush: [
+    steerObjective,
     buildBest(0),
     commitLand(["four-of-a-kind", "full-house", "straight", "three-of-a-kind", "two-pair", "pair"]),
     commitRolePair,
@@ -392,6 +420,7 @@ export const POLICIES: Record<string, Tactic[]> = {
   ],
   // Grow same-rank stacks before building → trips / quads / full-house.
   tall: [
+    steerObjective,
     commitLand(["four-of-a-kind", "full-house", "three-of-a-kind"]),
     growStack,
     seedStack,
@@ -402,12 +431,13 @@ export const POLICIES: Record<string, Tactic[]> = {
   ],
   // Keep every column one ideology → flush family. Recycle the hand otherwise.
   // Columns may each pick a DIFFERENT suit → a mosaic, not a monoculture.
-  flush: [buildBest(0), placeFlush, buildLate(2)],
+  flush: [steerObjective, buildBest(0), placeFlush, buildLate(2)],
   // Commit to ONE ideology for the whole society; play only that suit + wilds.
   // Tests what forcing a true monoculture costs in win rate / speed.
-  monoculture: [buildBest(0), placeMonoculture, buildLate(2)],
+  monoculture: [steerObjective, buildBest(0), placeMonoculture, buildLate(2)],
   // Reserve a column, stage sequential lands, commit a straight. Recycle otherwise.
   straight: [
+    steerObjective,
     commitLand(["straight"], 1),
     buildBest(5),
     placeKind("role"),
@@ -423,7 +453,7 @@ export const POLICIES: Record<string, Tactic[]> = {
 
 interface RunStat {
   won: boolean;
-  earliestWinTurn: number | null; // first turn cumulative value ≥ difficulty
+  turnsToWin: number | null; // first turn isWon became true (a terminal cleared)
   totalValue: number;
   unlocks: number;
   topPattern: PatternKind | null; // highest pattern built this run
@@ -437,9 +467,7 @@ function runEpoch(api: GameAPI, tactics: Tactic[]): RunStat {
     PatternKind,
     number
   >;
-  const difficulty = api.snapshot().setting.crisis.difficulty;
-  let cumValue = 0;
-  let earliestWinTurn: number | null = null;
+  let turnsToWin: number | null = null;
   let steps = 0;
 
   while (api.snapshot().epoch.phase === "play" && steps < 2000) {
@@ -450,7 +478,6 @@ function runEpoch(api: GameAPI, tactics: Tactic[]): RunStat {
       api.enactPolicies(pickPolicyKeepIds(ps.candidates, ps.tableau));
       continue;
     }
-    // Detect a build by watching the unlock count, then credit its value.
     const before = api.snapshot().epoch.unlockedProjects.length;
     let acted = false;
     for (const t of tactics) {
@@ -467,9 +494,12 @@ function runEpoch(api: GameAPI, tactics: Tactic[]): RunStat {
     if (snap.epoch.unlockedProjects.length > before) {
       const last = snap.epoch.unlockedProjects[snap.epoch.unlockedProjects.length - 1];
       byPattern[last.pattern]++;
-      const proj = snap.setting.projects.find((p) => p.id === last.projectId);
-      cumValue += proj?.value ?? 0;
-      if (earliestWinTurn === null && cumValue >= difficulty) earliestWinTurn = snap.epoch.turn;
+    }
+    // Record the first turn a terminal node is cleared (isWon became true).
+    if (turnsToWin === null) {
+      const tree = snap.setting.crisisTree;
+      const hasTerminal = snap.epoch.crisisTree.cleared.some((id) => tree.nodes[id]?.terminal);
+      if (hasTerminal) turnsToWin = snap.epoch.turn;
     }
   }
 
@@ -484,7 +514,7 @@ function runEpoch(api: GameAPI, tactics: Tactic[]): RunStat {
   const ideoTotal = ideoCounts.reduce((a, b) => a + b, 0);
   return {
     won: outcome.cleared,
-    earliestWinTurn,
+    turnsToWin,
     totalValue: outcome.totalValue,
     unlocks: Object.values(byPattern).reduce((a, b) => a + b, 0),
     topPattern,
@@ -522,7 +552,7 @@ function report(settingId: string, policy: string) {
     stats.push(runEpoch(api, POLICIES[policy]));
   }
   const wins = stats.filter((s) => s.won);
-  const winTurns = wins.map((s) => s.earliestWinTurn).filter((t): t is number => t !== null);
+  const winTurns = wins.map((s) => s.turnsToWin).filter((t): t is number => t !== null);
   const topCounts: Record<string, number> = {};
   for (const s of stats)
     if (s.topPattern) topCounts[s.topPattern] = (topCounts[s.topPattern] ?? 0) + 1;

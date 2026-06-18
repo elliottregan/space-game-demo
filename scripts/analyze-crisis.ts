@@ -10,7 +10,7 @@ import { evaluateColumn } from "../src/core/engine/columnPatterns.ts";
 import { canCommitHand } from "../src/core/engine/rowHands.ts";
 import { PATTERNS_IN_ORDER, marginalContribution } from "../src/core/data/projects.ts";
 import type { PatternKind } from "../src/core/types.ts";
-import type { Card, Column, Ideology } from "../src/core/types.ts";
+import type { Card, Column, Ideology, ObjectiveNode } from "../src/core/types.ts";
 import { pickPolicyKeepIds } from "./policyKeep.ts";
 
 const runs = Number(process.argv[2] ?? 50);
@@ -19,12 +19,11 @@ const seedOffset = Number(process.argv[4] ?? 0);
 
 interface RunResult {
   won: boolean;
-  margin: number;
-  totalValue: number;
-  difficulty: number;
+  clearedPath: string[]; // terminal node ids cleared (the win path)
+  totalValue: number; // retained for magnitude reporting only
+  turnsPlayed: number;
   unlocksByPattern: Record<PatternKind, number>;
   firstByPattern: Partial<Record<PatternKind, number>>;
-  turnsPlayed: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -280,6 +279,71 @@ function worthStoringForStraight(card: Card, handLands: Card[], colStorageLands:
 }
 
 // ---------------------------------------------------------------------------
+// Crisis-Tree objective steering
+// ---------------------------------------------------------------------------
+
+/** The present ideology with the most non-wild cards across all columns. Inlined
+ *  top-present-ideology tally (mirrors bestPromote) for Doctrine binding. */
+function topPresentIdeology(snap: ReturnType<GameAPI["snapshot"]>): Ideology | undefined {
+  const tally = new Map<Ideology, number>();
+  for (const col of snap.epoch.columns) {
+    for (const c of [...col.lands.cards, ...col.influence.cards]) {
+      if (c.countsAs !== undefined || c.ideology === "wild") continue;
+      tally.set(c.ideology, (tally.get(c.ideology) ?? 0) + 1);
+    }
+  }
+  let best: Ideology | undefined;
+  let bestN = 0;
+  for (const [ideo, n] of tally) {
+    if (n > bestN) {
+      bestN = n;
+      best = ideo;
+    }
+  }
+  return best;
+}
+
+/** Choose + set the active objective from the snapshot's availableNodes. Prefer a
+ *  non-terminal (the root gate) until it clears, then the branch with the fewest
+ *  total remaining builds. Binds the most-built present ideology for
+ *  requireSameIdeology (Doctrine) nodes. Returns the patterns the active node
+ *  still needs (to bias the build heuristic). */
+function steerObjective(api: GameAPI): { needed: Set<PatternKind>; anyNeeded: boolean } {
+  const snap = api.snapshot();
+  const tree = snap.setting.crisisTree;
+  const state = snap.epoch.crisisTree;
+  const avail = snap.availableNodes; // ObjectiveNode[] from GameAPI (P3)
+  const remaining = (n: ObjectiveNode) =>
+    n.requirements.reduce(
+      (s, r, i) => s + Math.max(0, r.count - (state.progress[n.id]?.[i] ?? 0)),
+      0,
+    );
+  // Establish/root gates first; then the cheapest branch.
+  const ranked = [...avail].sort((a, b) => {
+    const ag = a.branch === "establish" ? 0 : 1;
+    const bg = b.branch === "establish" ? 0 : 1;
+    return ag - bg || remaining(a) - remaining(b);
+  });
+  const target = ranked[0];
+  const needed = new Set<PatternKind>();
+  if (target) {
+    if (state.activeNodeId !== target.id) {
+      const ideo = target.requireSameIdeology ? topPresentIdeology(snap) : undefined;
+      api.setActiveObjective(target.id, ideo);
+    }
+    const active = api.snapshot().epoch.crisisTree.activeNodeId;
+    const node = active ? tree.nodes[active] : undefined;
+    if (node) {
+      node.requirements.forEach((r, i) => {
+        const have = api.snapshot().epoch.crisisTree.progress[node.id]?.[i] ?? 0;
+        if (have < r.count && r.pattern !== "any") needed.add(r.pattern);
+      });
+    }
+  }
+  return { needed, anyNeeded: needed.size > 0 };
+}
+
+// ---------------------------------------------------------------------------
 // Main epoch runner
 // ---------------------------------------------------------------------------
 
@@ -315,11 +379,15 @@ function runEpoch(api: GameAPI): RunResult {
       continue;
     }
 
+    // Step 0.5: steer the Crisis-Tree objective and learn which patterns it needs.
+    const { needed } = steerObjective(api);
+
     // -----------------------------------------------------------------------
-    // Step 1: Build any buildable column (prefer highest marginal leveled value).
+    // Step 1: Build any buildable column (prefer the active objective's needed
+    // patterns, then highest marginal leveled value).
     // -----------------------------------------------------------------------
     {
-      let bestValue = -Infinity;
+      let bestScore = -Infinity;
       let bestCol = -1;
       let bestKind: PatternKind | null = null;
       for (let i = 0; i < snap.epoch.columns.length; i++) {
@@ -330,9 +398,11 @@ function runEpoch(api: GameAPI): RunResult {
         const currentCount = snap.epoch.unlockedProjects.filter(
           (u) => u.projectId === m.projectId,
         ).length;
-        const val = marginalContribution(project, currentCount);
-        if (val > bestValue) {
-          bestValue = val;
+        // Objective-needed patterns get a large bonus so the AI builds the recipe.
+        const bonus = needed.has(m.kind) ? 1000 : 0;
+        const score = bonus + marginalContribution(project, currentCount);
+        if (score > bestScore) {
+          bestScore = score;
           bestCol = i;
           bestKind = m.kind;
         }
@@ -462,15 +532,13 @@ function runEpoch(api: GameAPI): RunResult {
   const snap = api.snapshot();
   const outcome = snap.epoch.crisis.outcome;
   if (!outcome) throw new Error("Crisis did not resolve after MAX_STEPS.");
-  const difficulty = snap.setting.crisis.difficulty;
   return {
     won: outcome.cleared,
-    margin: outcome.totalValue - difficulty,
+    clearedPath: outcome.clearedNodeIds,
     totalValue: outcome.totalValue,
-    difficulty,
+    turnsPlayed: snap.epoch.turn - 1, // turn is 1-based after Crisis fires
     unlocksByPattern,
     firstByPattern,
-    turnsPlayed: snap.epoch.turn - 1, // turn is 1-based after Crisis fires
   };
 }
 
@@ -486,14 +554,6 @@ function mean(arr: number[]): number | null {
   return arr.reduce((a, b) => a + b, 0) / arr.length;
 }
 
-function stdev(arr: number[]): number | null {
-  if (arr.length === 0) return null;
-  const m = mean(arr);
-  if (m === null) return null;
-  const v = arr.reduce((a, b) => a + (b - m) ** 2, 0) / arr.length;
-  return Math.sqrt(v);
-}
-
 function round(n: number | null, digits = 2): number | null {
   if (n === null) return null;
   return Math.round(n * 10 ** digits) / 10 ** digits;
@@ -506,7 +566,6 @@ function reportFor(settingId: string, runs: number): unknown {
     const api = new GameAPI(seed, { skipLoad: true, forceSettingId: settingId });
     results.push(runEpoch(api));
   }
-  const margins = results.map((r) => r.margin);
   const totals = results.map((r) => r.totalValue);
   const wins = results.filter((r) => r.won).length;
 
@@ -528,14 +587,13 @@ function reportFor(settingId: string, runs: number): unknown {
     runs,
     wins,
     winRate: round(wins / runs, 3),
-    difficulty: results[0]?.difficulty,
-    margin: {
-      mean: round(mean(margins)),
-      median: round(median(margins)),
-      stdev: round(stdev(margins)),
-      min: Math.min(...margins),
-      max: Math.max(...margins),
-    },
+    clearedPaths: results
+      .flatMap((r) => r.clearedPath)
+      .reduce<Record<string, number>>((acc, id) => {
+        acc[id] = (acc[id] ?? 0) + 1;
+        return acc;
+      }, {}),
+    avgTurnsPlayed: round(mean(results.map((r) => r.turnsPlayed))),
     totalValue: {
       mean: round(mean(totals)),
       median: round(median(totals)),

@@ -78,6 +78,10 @@ export interface CrisisContribution {
 export interface CrisisOutcome {
   totalValue: number;
   cleared: boolean;
+  /** Ids of cleared nodes whose clearing decided the outcome (the cleared path).
+   *  Empty on a loss. Source of the win verdict + the end-screen path display.
+   *  Required so every CrisisOutcome literal is surfaced at tsc time. */
+  clearedNodeIds: string[];
   /** Ordered highest pattern first (reverse of PATTERNS_IN_ORDER), then by turn. */
   contributingUnlocks: ProjectUnlock[];
   /** Per-build leveled detail, same order as contributingUnlocks. */

@@ -364,7 +364,13 @@ describe("removePolicy (play phase)", () => {
     const ep = makeEpoch({ tableau: [slot("mandate")] });
     ep.status = {
       kind: "lost",
-      outcome: { totalValue: 0, cleared: false, contributingUnlocks: [], contributions: [] },
+      outcome: {
+        totalValue: 0,
+        cleared: false,
+        clearedNodeIds: [],
+        contributingUnlocks: [],
+        contributions: [],
+      },
     };
     const r = removePolicy(ep, 0);
     expect(r.ok).toBe(false);
