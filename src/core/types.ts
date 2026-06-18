@@ -7,12 +7,14 @@ export type {
   CardIdeology,
   CardKind,
   CardTag,
+  CountsAs,
   EffectSpec,
   Rank,
   Role,
+  RowKind,
   Timing,
 } from "./data/cards.ts";
-export { ROLE_RANK } from "./data/cards.ts";
+export { FULL_JOKER, RANKS, ROLE_RANK } from "./data/cards.ts";
 
 export type { Ideology, IdeologyDisplay } from "./data/ideologies.ts";
 export { IDEOLOGIES, IDEOLOGY_DISPLAY, zeroIdeologyBreakdown } from "./data/ideologies.ts";
@@ -32,6 +34,8 @@ export type { Demonym, IdeologyVector } from "./engine/ideology.ts";
 export type { CharterRow, Column, ColumnConfig, InfluenceRow, LandRow } from "./engine/column.ts";
 
 export type { DiscardSource, GameEvent } from "./engine/events.ts";
+
+export type { EffectiveCard } from "./engine/countsAs.ts";
 
 export type { Epoch, EpochPhase, EpochStatus, PolicySlot, PolicyState } from "./engine/epoch.ts";
 
