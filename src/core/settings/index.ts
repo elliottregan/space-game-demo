@@ -2,6 +2,7 @@
 
 import type { ColumnConfig } from "../engine/column.ts";
 import type { Crisis, KeystoneProject } from "../data/projects.ts";
+import type { CrisisTree } from "../engine/crisisTree.ts";
 import { HOMEWORLD } from "./homeworld.ts";
 import { GENERATION_SHIP } from "./generationShip.ts";
 import { RUINED_HOMEWORLD } from "./ruinedHomeworld.ts";
@@ -32,7 +33,11 @@ export interface Setting {
   startingColumns: ColumnConfig[];
   /** Exactly one project per pattern (see PATTERNS_IN_ORDER in data/projects.ts). */
   projects: KeystoneProject[];
+  /** Legacy scalar Crisis (id/name/flavor/difficulty). Win condition reads
+   *  difficulty until P4; the scalar is retired in P5. */
   crisis: Crisis;
+  /** The branching win-condition DAG. Authored per Setting (§6). */
+  crisisTree: CrisisTree;
   transitions: {
     onWin: string | "campaign-end";
     onLoss: string | "campaign-end";

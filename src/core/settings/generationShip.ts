@@ -1,6 +1,6 @@
 // Generation Ship Setting — column-based redesign.
 
-import type { Setting, KeystoneProject, Crisis } from "../types.ts";
+import type { Setting, KeystoneProject, Crisis, CrisisTree } from "../types.ts";
 import { ALL_CARDS } from "../data/cards.ts";
 import { DEFAULT_PROJECT_VALUE } from "../data/projects.ts";
 
@@ -111,6 +111,57 @@ const CRISIS: Crisis = {
   difficulty: 12,
 };
 
+// Crisis Tree (Generation Ship, 14 turns / 4 columns, 2-ideology deck).
+// Trips/quads/full-house are impossible here, so recipes stay on
+// high-card/pair/two-pair/straight/flush/any. The constrained deck makes
+// monoculture the path of least resistance, so Doctrine (Mission) is the
+// cheapest terminal; the tall Expansion branch is harder with only 4 columns.
+// Counts are balance-pending strawman.
+const CRISIS_TREE: CrisisTree = {
+  rootId: "shakedown",
+  nodes: {
+    shakedown: {
+      id: "shakedown",
+      name: "Shakedown",
+      branch: "establish",
+      requirements: [
+        { pattern: "pair", count: 3 },
+        { pattern: "high-card", count: 3 },
+      ],
+      unlocks: ["fleet", "mission", "beacon"],
+      terminal: false,
+    },
+    fleet: {
+      id: "fleet",
+      name: "Fleet Standard",
+      branch: "expansion",
+      requirements: [{ pattern: "any", count: 6 }],
+      unlocks: [],
+      terminal: true,
+    },
+    mission: {
+      id: "mission",
+      name: "Mission",
+      branch: "doctrine",
+      requireSameIdeology: true,
+      requirements: [{ pattern: "any", count: 3 }],
+      unlocks: [],
+      terminal: true,
+    },
+    beacon: {
+      id: "beacon",
+      name: "Beacon",
+      branch: "wonder",
+      requirements: [
+        { pattern: "straight", count: 1 },
+        { pattern: "flush", count: 1, upgrade: true },
+      ],
+      unlocks: [],
+      terminal: true,
+    },
+  },
+};
+
 export const GENERATION_SHIP: Setting = {
   id: "generation-ship",
   name: "Generation Ship",
@@ -127,6 +178,7 @@ export const GENERATION_SHIP: Setting = {
   startingColumns: [],
   projects: PROJECTS,
   crisis: CRISIS,
+  crisisTree: CRISIS_TREE,
   transitions: {
     onWin: "campaign-end",
     onLoss: "campaign-end",

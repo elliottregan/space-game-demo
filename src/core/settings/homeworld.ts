@@ -1,6 +1,6 @@
 // Homeworld Setting — column-based redesign.
 
-import type { Setting, KeystoneProject, Crisis, ColumnConfig } from "../types.ts";
+import type { Setting, KeystoneProject, Crisis, ColumnConfig, CrisisTree } from "../types.ts";
 import { ALL_CARDS } from "../data/cards.ts";
 import { DEFAULT_PROJECT_VALUE } from "../data/projects.ts";
 
@@ -86,6 +86,55 @@ const CRISIS: Crisis = {
   difficulty: 16,
 };
 
+// Crisis Tree (§6 Homeworld strawman, 12 turns / 7 columns). The root
+// demands a spread of basic infrastructure (two-pair + high-card), then forks
+// into three terminal victory branches. Counts are balance-pending strawman.
+const CRISIS_TREE: CrisisTree = {
+  rootId: "settlement",
+  nodes: {
+    settlement: {
+      id: "settlement",
+      name: "Settlement",
+      branch: "establish",
+      requirements: [
+        { pattern: "two-pair", count: 4 },
+        { pattern: "high-card", count: 4 },
+      ],
+      unlocks: ["industry", "capital", "monument"],
+      terminal: false,
+    },
+    industry: {
+      id: "industry",
+      name: "Industry",
+      branch: "expansion",
+      requirements: [{ pattern: "any", count: 8 }],
+      unlocks: [],
+      terminal: true,
+    },
+    capital: {
+      id: "capital",
+      name: "Capital",
+      branch: "doctrine",
+      requireSameIdeology: true,
+      requirements: [{ pattern: "any", count: 5 }],
+      unlocks: [],
+      terminal: true,
+    },
+    monument: {
+      id: "monument",
+      name: "Monument",
+      branch: "wonder",
+      requirements: [
+        { pattern: "straight", count: 1 },
+        { pattern: "two-pair", count: 1 },
+        { pattern: "flush", count: 1, upgrade: true },
+      ],
+      unlocks: [],
+      terminal: true,
+    },
+  },
+};
+
 const STARTING_COLUMNS: ColumnConfig[] = [];
 
 export const HOMEWORLD: Setting = {
@@ -105,6 +154,7 @@ export const HOMEWORLD: Setting = {
   startingColumns: STARTING_COLUMNS,
   projects: PROJECTS,
   crisis: CRISIS,
+  crisisTree: CRISIS_TREE,
   transitions: {
     onWin: "generation-ship",
     onLoss: "ruined-homeworld",

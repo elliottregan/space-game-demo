@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, test, expect, it } from "bun:test";
 import {
   availableNodes,
   applyBuild,
@@ -6,6 +6,7 @@ import {
   type CrisisTree,
   type CrisisTreeState,
 } from "../src/core/engine/crisisTree.ts";
+import { SETTINGS } from "../src/core/settings/index.ts";
 import type { ProjectUnlock } from "../src/core/types.ts";
 import type { PatternKind } from "../src/core/types.ts";
 import type { Ideology } from "../src/core/data/ideologies.ts";
@@ -214,4 +215,77 @@ describe("isWon", () => {
     const state: CrisisTreeState = { ...seed(), cleared: ["settlement", "industry"] };
     expect(isWon(TREE, state)).toBe(true);
   });
+});
+
+/** Walk the DAG from the root, collecting every reachable node id. */
+function reachableFrom(tree: CrisisTree): Set<string> {
+  const seen = new Set<string>();
+  const stack = [tree.rootId];
+  while (stack.length > 0) {
+    const id = stack.pop()!;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const node = tree.nodes[id];
+    if (node) stack.push(...node.unlocks);
+  }
+  return seen;
+}
+
+describe("authored Setting crisisTrees", () => {
+  for (const setting of SETTINGS) {
+    const tree = setting.crisisTree;
+
+    describe(setting.id, () => {
+      it("has a rootId that resolves to a node", () => {
+        expect(tree.nodes[tree.rootId]).toBeDefined();
+      });
+
+      it("has exactly one establish-branch root and it is the rootId", () => {
+        const establishNodes = Object.values(tree.nodes).filter((n) => n.branch === "establish");
+        expect(establishNodes).toHaveLength(1);
+        expect(establishNodes[0]!.id).toBe(tree.rootId);
+      });
+
+      it("has every unlocks id resolve to a node in nodes", () => {
+        for (const node of Object.values(tree.nodes)) {
+          for (const childId of node.unlocks) {
+            expect(tree.nodes[childId]).toBeDefined();
+          }
+        }
+      });
+
+      it("declares each node's own id consistently with its key", () => {
+        for (const [key, node] of Object.entries(tree.nodes)) {
+          expect(node.id).toBe(key);
+        }
+      });
+
+      it("has at least one terminal node reachable from the root", () => {
+        const reachable = reachableFrom(tree);
+        const reachableTerminals = [...reachable].filter((id) => tree.nodes[id]?.terminal);
+        expect(reachableTerminals.length).toBeGreaterThan(0);
+      });
+
+      it("gives every node at least one count-bearing requirement", () => {
+        for (const node of Object.values(tree.nodes)) {
+          expect(node.requirements.length).toBeGreaterThan(0);
+          for (const req of node.requirements) {
+            expect(req.count).toBeGreaterThan(0);
+          }
+        }
+      });
+
+      it("uses only count-bearing (non-upgrade-only) reqs on requireSameIdeology nodes", () => {
+        for (const node of Object.values(tree.nodes)) {
+          if (!node.requireSameIdeology) continue;
+          // A Doctrine node binds a single ideology and counts builds of that
+          // color; an upgrade-only requirement can't be expressed as a simple
+          // per-ideology count, so forbid `upgrade` on these nodes.
+          for (const req of node.requirements) {
+            expect(req.upgrade ?? false).toBe(false);
+          }
+        }
+      });
+    });
+  }
 });

@@ -1,6 +1,6 @@
 // Ruined Homeworld Setting — column-based redesign.
 
-import type { Setting, KeystoneProject, Crisis } from "../types.ts";
+import type { Setting, KeystoneProject, Crisis, CrisisTree } from "../types.ts";
 import { ALL_CARDS } from "../data/cards.ts";
 import { DEFAULT_PROJECT_VALUE } from "../data/projects.ts";
 
@@ -86,6 +86,57 @@ const CRISIS: Crisis = {
   difficulty: 23,
 };
 
+// Crisis Tree (Ruined Homeworld, 16 turns / 5 columns, full deck). The
+// longest clock and the full ideology spread make every pattern reachable, so
+// the root demands a wider re-founding spread and the terminals are a touch
+// heavier than Homeworld. Counts are balance-pending strawman.
+const CRISIS_TREE: CrisisTree = {
+  rootId: "refounding",
+  nodes: {
+    refounding: {
+      id: "refounding",
+      name: "Re-founding",
+      branch: "establish",
+      requirements: [
+        { pattern: "two-pair", count: 4 },
+        { pattern: "pair", count: 4 },
+        { pattern: "high-card", count: 4 },
+      ],
+      unlocks: ["reclamation", "creed", "spire"],
+      terminal: false,
+    },
+    reclamation: {
+      id: "reclamation",
+      name: "Reclamation",
+      branch: "expansion",
+      requirements: [{ pattern: "any", count: 10 }],
+      unlocks: [],
+      terminal: true,
+    },
+    creed: {
+      id: "creed",
+      name: "Creed",
+      branch: "doctrine",
+      requireSameIdeology: true,
+      requirements: [{ pattern: "any", count: 6 }],
+      unlocks: [],
+      terminal: true,
+    },
+    spire: {
+      id: "spire",
+      name: "Spire",
+      branch: "wonder",
+      requirements: [
+        { pattern: "straight", count: 1 },
+        { pattern: "two-pair", count: 2 },
+        { pattern: "flush", count: 1, upgrade: true },
+      ],
+      unlocks: [],
+      terminal: true,
+    },
+  },
+};
+
 export const RUINED_HOMEWORLD: Setting = {
   id: "ruined-homeworld",
   name: "Ruined Homeworld",
@@ -102,6 +153,7 @@ export const RUINED_HOMEWORLD: Setting = {
   startingColumns: [],
   projects: PROJECTS,
   crisis: CRISIS,
+  crisisTree: CRISIS_TREE,
   transitions: {
     onWin: "campaign-end",
     onLoss: "campaign-end",
