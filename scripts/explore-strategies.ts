@@ -377,11 +377,29 @@ function seedStraight(api: GameAPI): boolean {
   return cols.length > 0 && api.placeCard(best.id, cols[0]).ok;
 }
 
-/** Tactic: set the active objective toward a terminal (root gate first, then the
- *  cheapest branch). Never "acts" on the board, so it returns false (the policy
- *  loop falls through to the real tactics). Binds an ideology for Doctrine nodes. */
+/** Patterns the currently-active Crisis-Tree node still needs (non-"any" only),
+ *  refreshed every step by `steerObjective`. `buildToward` reads it so every
+ *  policy first satisfies the active objective's recipe (the root gate's spread)
+ *  before leaning into its signature pattern. Mirrors analyze-crisis's `needed`. */
+let neededPatterns = new Set<PatternKind>();
+
+/** The branch this policy is BIASED to pursue once the shared root gate clears.
+ *  A flush/straight player aims for the Wonder (rare-shape) branch, a volume
+ *  player for Expansion, a single-color player for Doctrine. This is the
+ *  signature "late-game bias" the steerer applies as a tiebreaker over the raw
+ *  cheapest-branch ranking; null = no preference (take the cheapest). Set per run
+ *  by `runEpoch`, read by `steerObjective`. */
+let preferredBranch: ObjectiveNode["branch"] | null = null;
+
+/** Tactic: set the active objective toward a terminal. Root gate first; among the
+ *  unlocked terminals, prefer this policy's `preferredBranch` (its signature
+ *  late-game bias) when that branch is plausibly completable, else fall back to
+ *  the branch with the fewest remaining builds. Records the active node's still-
+ *  needed patterns into `neededPatterns` for `buildToward`. Never "acts" on the
+ *  board (returns false). Binds an ideology for Doctrine nodes. */
 function steerObjective(api: GameAPI): boolean {
   const snap = api.snapshot();
+  const tree = snap.setting.crisisTree;
   const state = snap.epoch.crisisTree;
   const avail = snap.availableNodes as ObjectiveNode[];
   const remaining = (n: ObjectiveNode) =>
@@ -392,7 +410,12 @@ function steerObjective(api: GameAPI): boolean {
   const ranked = [...avail].sort((a, b) => {
     const ag = a.branch === "establish" ? 0 : 1;
     const bg = b.branch === "establish" ? 0 : 1;
-    return ag - bg || remaining(a) - remaining(b);
+    if (ag !== bg) return ag - bg;
+    // Among terminals: the preferred branch sorts first (signature bias), then
+    // fewest remaining builds, then id for determinism.
+    const ap = a.branch === preferredBranch ? 0 : 1;
+    const bp = b.branch === preferredBranch ? 0 : 1;
+    return ap - bp || remaining(a) - remaining(b) || a.id.localeCompare(b.id);
   });
   const target = ranked[0];
   if (target && state.activeNodeId !== target.id) {
@@ -401,11 +424,66 @@ function steerObjective(api: GameAPI): boolean {
       : undefined;
     api.setActiveObjective(target.id, ideo);
   }
+  // Recompute the active node's outstanding (non-"any") patterns for buildToward.
+  neededPatterns = new Set<PatternKind>();
+  const activeId = api.snapshot().epoch.crisisTree.activeNodeId;
+  const node = activeId ? tree.nodes[activeId] : undefined;
+  if (node) {
+    const prog = api.snapshot().epoch.crisisTree.progress[node.id] ?? [];
+    node.requirements.forEach((r, i) => {
+      if (r.pattern !== "any" && (prog[i] ?? 0) < r.count) neededPatterns.add(r.pattern);
+    });
+  }
   return false; // steering never counts as a board action
+}
+
+/** Tactic: build the column whose pattern the active objective still needs (the
+ *  root gate's spread first, then any non-"any" branch patterns). Among needed
+ *  matches it takes the highest project value; only fires when a buildable column
+ *  matches a needed pattern, so it never pre-empts the signature build on an
+ *  "any"-only node. This is what lets a flush/straight/tall/monoculture policy
+ *  clear a shared root that demands two-pair / high-card. */
+function buildToward(api: GameAPI): boolean {
+  if (neededPatterns.size === 0) return false;
+  const snap = api.snapshot();
+  let best = -1;
+  let bestVal = -1;
+  for (let i = 0; i < snap.epoch.columns.length; i++) {
+    const m = columnMatch(api, snap.epoch.columns[i]);
+    if (m && neededPatterns.has(m.kind) && m.value > bestVal) {
+      bestVal = m.value;
+      best = i;
+    }
+  }
+  if (best < 0) return false;
+  return api.buildColumn(best, promoteFor(snap.epoch.columns[best])).ok;
+}
+
+/** Tactic: while the active objective still needs a concrete (non-"any") pattern
+ *  — i.e. we are clearing the shared root gate — lay groundwork toward those
+ *  patterns with generic builders (same-rank land commits, role pairs, any
+ *  placement). Gated on `neededPatterns`, so the instant the root is cleared it
+ *  goes inert and each policy's signature tactics take over. This is the realism
+ *  fix: a flush / straight / tall / monoculture player still builds the two-pairs
+ *  and high-cards the root demands instead of stalling at 0%. */
+function satisfyObjective(api: GameAPI): boolean {
+  if (neededPatterns.size === 0) return false;
+  // Order matters: pairs/two-pairs first (the usual root spread), then fall back
+  // to placing anything so columns keep filling toward buildable high-cards.
+  return (
+    commitLand(["two-pair", "three-of-a-kind", "straight", "pair"])(api) ||
+    commitRolePair(api) ||
+    placeAny(api)
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Policies — ordered tactic lists. Differentiation comes from what runs FIRST.
+//
+// Shape: steer the Crisis-Tree objective → build any column matching a pattern
+// the active node still needs (buildToward) → lay groundwork toward the root's
+// spread while it is unmet (satisfyObjective) → then the policy's SIGNATURE
+// tactics, which decide play once the root is cleared and the branch is "any".
 // ---------------------------------------------------------------------------
 
 export type Tactic = (api: GameAPI) => boolean;
@@ -413,6 +491,7 @@ export const POLICIES: Record<string, Tactic[]> = {
   // Build the best thing available, right now. The "pairs dominate" baseline.
   rush: [
     steerObjective,
+    buildToward,
     buildBest(0),
     commitLand(["four-of-a-kind", "full-house", "straight", "three-of-a-kind", "two-pair", "pair"]),
     commitRolePair,
@@ -421,6 +500,8 @@ export const POLICIES: Record<string, Tactic[]> = {
   // Grow same-rank stacks before building → trips / quads / full-house.
   tall: [
     steerObjective,
+    buildToward,
+    satisfyObjective,
     commitLand(["four-of-a-kind", "full-house", "three-of-a-kind"]),
     growStack,
     seedStack,
@@ -431,13 +512,22 @@ export const POLICIES: Record<string, Tactic[]> = {
   ],
   // Keep every column one ideology → flush family. Recycle the hand otherwise.
   // Columns may each pick a DIFFERENT suit → a mosaic, not a monoculture.
-  flush: [steerObjective, buildBest(0), placeFlush, buildLate(2)],
+  flush: [steerObjective, buildToward, satisfyObjective, buildBest(0), placeFlush, buildLate(2)],
   // Commit to ONE ideology for the whole society; play only that suit + wilds.
   // Tests what forcing a true monoculture costs in win rate / speed.
-  monoculture: [steerObjective, buildBest(0), placeMonoculture, buildLate(2)],
+  monoculture: [
+    steerObjective,
+    buildToward,
+    satisfyObjective,
+    buildBest(0),
+    placeMonoculture,
+    buildLate(2),
+  ],
   // Reserve a column, stage sequential lands, commit a straight. Recycle otherwise.
   straight: [
     steerObjective,
+    buildToward,
+    satisfyObjective,
     commitLand(["straight"], 1),
     buildBest(5),
     placeKind("role"),
@@ -445,6 +535,20 @@ export const POLICIES: Record<string, Tactic[]> = {
     seedStraight,
     buildLate(2),
   ],
+};
+
+/** Each policy's signature late-game branch bias (consumed by `steerObjective`).
+ *  Volume rushers lean Expansion; the single-color monoculture leans Doctrine;
+ *  the rare-shape flush/straight builders lean Wonder. `tall` has no strong
+ *  branch identity (it just stacks), so it takes whatever is cheapest. This is a
+ *  steering TIEBREAKER only — a branch the policy can't actually complete still
+ *  falls through to the cheapest reachable terminal. */
+export const PREFERRED_BRANCH: Record<string, ObjectiveNode["branch"] | null> = {
+  rush: "expansion",
+  tall: null,
+  flush: "wonder",
+  monoculture: "doctrine",
+  straight: "wonder",
 };
 
 // ---------------------------------------------------------------------------
@@ -460,6 +564,7 @@ interface RunStat {
   byPattern: Record<PatternKind, number>;
   distinctIdeologies: number; // # suits present across built projects
   topIdeologyShare: number; // share held by the single largest suit (0 if nothing built)
+  clearedBranches: string[]; // branch names of terminal nodes cleared this run
 }
 
 function runEpoch(api: GameAPI, tactics: Tactic[]): RunStat {
@@ -512,6 +617,11 @@ function runEpoch(api: GameAPI, tactics: Tactic[]): RunStat {
     (v) => v > 0,
   );
   const ideoTotal = ideoCounts.reduce((a, b) => a + b, 0);
+  // The terminal branches actually cleared (the win path); empties on a loss.
+  const tree = snap.setting.crisisTree;
+  const clearedBranches = outcome.clearedNodeIds
+    .map((id) => tree.nodes[id]?.branch)
+    .filter((b): b is string => b !== undefined);
   return {
     won: outcome.cleared,
     turnsToWin,
@@ -521,6 +631,7 @@ function runEpoch(api: GameAPI, tactics: Tactic[]): RunStat {
     byPattern,
     distinctIdeologies: ideoCounts.length,
     topIdeologyShare: ideoTotal ? Math.max(...ideoCounts) / ideoTotal : 0,
+    clearedBranches,
   };
 }
 
@@ -546,6 +657,7 @@ function report(settingId: string, policy: string) {
     const proj = getSetting(settingId).projects.find((p) => p.pattern === pat);
     if (proj) proj.value = v;
   }
+  preferredBranch = PREFERRED_BRANCH[policy] ?? null; // signature branch bias for steerObjective
   const stats: RunStat[] = [];
   for (let i = 0; i < RUNS; i++) {
     const api = new GameAPI(i + 1, { skipLoad: true, forceSettingId: settingId });
@@ -561,6 +673,10 @@ function report(settingId: string, policy: string) {
     const v = r1(mean(stats.map((s) => s.byPattern[p])));
     if (v) patternAvg[p] = v; // omit zeros for readability
   }
+  // How often each terminal branch is the cleared win path (over winning runs).
+  const branchCounts: Record<string, number> = {};
+  for (const s of stats)
+    for (const b of s.clearedBranches) branchCounts[b] = (branchCounts[b] ?? 0) + 1;
   return {
     setting: settingId,
     policy,
@@ -573,6 +689,7 @@ function report(settingId: string, policy: string) {
     avgTopIdeologyShare: r1(mean(stats.map((s) => s.topIdeologyShare * 100))),
     monocultureRuns: stats.filter((s) => s.topIdeologyShare >= 0.8).length,
     topPatternReached: topCounts,
+    clearedBranches: branchCounts,
     avgUnlocksByPattern: patternAvg,
   };
 }
@@ -607,6 +724,21 @@ if (import.meta.main) {
     const cells = settings.map((s) => {
       const row = rows.find((r) => r.setting === s && r.policy === p)!;
       return `${row.avgTopIdeologyShare}% (${row.avgDistinctIdeologies})`.padEnd(20);
+    });
+    console.log([p.padEnd(9), ...cells].join(" | "));
+  }
+
+  // Cleared-branch matrix: the dominant winning branch (count) per policy ×
+  // setting. Shows differentiation — which terminal each strategy steers into.
+  console.log("\n=== top cleared branch (count) — rows: policy, cols: setting ===");
+  console.log(header);
+  for (const p of policies) {
+    const cells = settings.map((s) => {
+      const row = rows.find((r) => r.setting === s && r.policy === p)!;
+      const entries = Object.entries(row.clearedBranches).sort((a, b) => b[1] - a[1]);
+      if (entries.length === 0) return "—".padEnd(20);
+      const summary = entries.map(([b, n]) => `${b}:${n}`).join(" ");
+      return summary.padEnd(20);
     });
     console.log([p.padEnd(9), ...cells].join(" | "));
   }
