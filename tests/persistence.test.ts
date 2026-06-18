@@ -4,6 +4,7 @@ import type { Card, Ideology } from "../src/core/data/cards.ts";
 import { projectMajority } from "../src/core/data/projects.ts";
 import { loadStore } from "../src/facade/persistence.ts";
 import { GameAPI } from "../src/facade/GameAPI.ts";
+import { getSetting } from "../src/core/settings/index.ts";
 
 // C1: cards.ts has NO `land` export — define a local helper mirroring the
 // other suites (column.test.ts) instead of importing a non-existent symbol.
@@ -29,7 +30,9 @@ function installLocalStorage(): Map<string, string> {
   return map;
 }
 
+const V8_KEY = "deck-demo-saves-v8";
 const V7_KEY = "deck-demo-saves-v7";
+const V7_ARCHIVE_KEY = "deck-demo-saves-v7-archive";
 const V6_KEY = "deck-demo-saves-v6";
 const V6_ARCHIVE_KEY = "deck-demo-saves-v6-archive";
 
@@ -88,10 +91,10 @@ describe("persistence v6 → v7 migration", () => {
 
     const migrated = loadStore();
 
-    expect(migrated.version).toBe(7);
+    expect(migrated.version).toBe(8);
     expect(migrated.slots).toHaveLength(1);
     const slot = migrated.slots[0];
-    expect(slot.state.version).toBe(7);
+    expect(slot.state.version).toBe(8);
 
     // Charter field stripped from every column.
     const col = slot.state.epoch.columns[0] as unknown as Record<string, unknown>;
@@ -122,19 +125,8 @@ describe("persistence v6 → v7 migration", () => {
 
     expect(store.get(V6_ARCHIVE_KEY)).toBe(raw); // RAW, unmigrated string
     expect(store.has(V6_KEY)).toBe(false);
-    // Migrated store written under the v7 key.
-    expect(JSON.parse(store.get(V7_KEY)!).version).toBe(7);
-  });
-
-  test("a v7 store is returned as-is (no re-migration)", () => {
-    const v7 = { version: 7, activeSlotId: null, slots: [] };
-    store.set(V7_KEY, JSON.stringify(v7));
-
-    const loaded = loadStore();
-    expect(loaded.version).toBe(7);
-    expect(loaded.slots).toHaveLength(0);
-    // v6 archival untouched when v7 already present.
-    expect(store.has(V6_ARCHIVE_KEY)).toBe(false);
+    // Migrated store chains v6→v7→v8 and is written under the final v8 key.
+    expect(JSON.parse(store.get(V8_KEY)!).version).toBe(8);
   });
 
   test("a corrupt slot is dropped without throwing", () => {
@@ -158,17 +150,151 @@ describe("persistence v6 → v7 migration", () => {
     expect(migrated.slots[0].id).toBe("slot-a");
   });
 
-  test("totally corrupt v6 JSON falls through to an empty v7 store", () => {
+  test("totally corrupt v6 JSON falls through to an empty v8 store", () => {
     store.set(V6_KEY, "{not json");
     const migrated = loadStore();
-    expect(migrated.version).toBe(7);
+    expect(migrated.version).toBe(8);
     expect(migrated.slots).toHaveLength(0);
   });
 
-  test("no localStorage ⇒ empty v7 store, no throw", () => {
+  test("no localStorage ⇒ empty v8 store, no throw", () => {
     delete (globalThis as { localStorage?: unknown }).localStorage;
     const migrated = loadStore();
-    expect(migrated.version).toBe(7);
+    expect(migrated.version).toBe(8);
+    expect(migrated.slots).toHaveLength(0);
+  });
+});
+
+/** A minimal v7 save slot whose epoch has NO `crisisTree` (predates P3) — the
+ *  migrator must backfill a seeded CrisisTreeState from the slot's Setting. */
+function v7SaveStore() {
+  return {
+    version: 7,
+    activeSlotId: "slot-a",
+    slots: [
+      {
+        id: "slot-a",
+        label: "E1 · Homeworld · T3",
+        createdAt: 1,
+        lastPlayedAt: 2,
+        state: {
+          version: 7,
+          settingId: "homeworld",
+          seed: 7,
+          endOfEpoch: null,
+          campaign: { seed: 7 },
+          epoch: {
+            settingId: "homeworld",
+            turn: 3,
+            phase: "play",
+            turnPhase: "play",
+            columns: [],
+            unlockedProjects: [
+              {
+                projectId: "homeworld-commons",
+                pattern: "pair",
+                turn: 1,
+                cards: [],
+                promotedIdeology: null,
+              },
+            ],
+            // NOTE: no `crisisTree` key — this is the pre-P3 shape.
+          },
+        },
+      },
+    ],
+  };
+}
+
+describe("persistence v7 → v8 migration", () => {
+  test("migrates a v7 save: crisisTree seeded, version 8", () => {
+    store.set(V7_KEY, JSON.stringify(v7SaveStore()));
+
+    const migrated = loadStore();
+
+    expect(migrated.version).toBe(8);
+    expect(migrated.slots).toHaveLength(1);
+    const slot = migrated.slots[0];
+    expect(slot.state.version).toBe(8);
+
+    // crisisTree seeded from the Homeworld tree: active node = its root.
+    const ct = (slot.state.epoch as unknown as { crisisTree: unknown }).crisisTree as {
+      activeNodeId: string;
+      cleared: unknown[];
+      progress: Record<string, number[]>;
+      boundIdeology: Record<string, unknown>;
+    };
+    const rootId = getSetting("homeworld").crisisTree.rootId;
+    expect(ct.activeNodeId).toBe(rootId);
+    expect(ct.cleared).toEqual([]);
+    expect(ct.boundIdeology).toEqual({});
+    // progress has one zero-filled array per node, sized to that node's reqs.
+    const tree = getSetting("homeworld").crisisTree;
+    for (const [nodeId, node] of Object.entries(tree.nodes)) {
+      expect(ct.progress[nodeId]).toEqual(node.requirements.map(() => 0));
+    }
+  });
+
+  test("a v7 slot that ALREADY has a crisisTree is left untouched", () => {
+    const raw = v7SaveStore();
+    const customTree = {
+      activeNodeId: "already-set",
+      cleared: ["establish-x"],
+      progress: { foo: [1, 2] },
+      boundIdeology: { bar: "solidarity" },
+    };
+    (raw.slots[0].state.epoch as unknown as { crisisTree: unknown }).crisisTree = customTree;
+    store.set(V7_KEY, JSON.stringify(raw));
+
+    const migrated = loadStore();
+    const ct = (migrated.slots[0].state.epoch as unknown as { crisisTree: unknown }).crisisTree;
+    expect(ct).toEqual(customTree); // not clobbered
+  });
+
+  test("archives the raw v7 string to v7-archive and removes the v7 key", () => {
+    const raw = JSON.stringify(v7SaveStore());
+    store.set(V7_KEY, raw);
+
+    loadStore();
+
+    expect(store.get(V7_ARCHIVE_KEY)).toBe(raw); // RAW, unmigrated string
+    expect(store.has(V7_KEY)).toBe(false);
+    expect(JSON.parse(store.get(V8_KEY)!).version).toBe(8);
+  });
+
+  test("a v8 store is returned as-is (no re-migration)", () => {
+    const v8 = { version: 8, activeSlotId: null, slots: [] };
+    store.set(V8_KEY, JSON.stringify(v8));
+
+    const loaded = loadStore();
+    expect(loaded.version).toBe(8);
+    expect(loaded.slots).toHaveLength(0);
+    expect(store.has(V7_ARCHIVE_KEY)).toBe(false); // v7 path untouched when v8 present
+  });
+
+  test("a corrupt v7 slot is dropped without throwing", () => {
+    const raw = v7SaveStore();
+    raw.slots.push({
+      id: "slot-bad",
+      label: "corrupt",
+      createdAt: 0,
+      lastPlayedAt: 0,
+      state: null as unknown as (typeof raw.slots)[0]["state"],
+    });
+    store.set(V7_KEY, JSON.stringify(raw));
+
+    let migrated!: ReturnType<typeof loadStore>;
+    expect(() => {
+      migrated = loadStore();
+    }).not.toThrow();
+    expect(migrated.slots).toHaveLength(1);
+    expect(migrated.slots[0].id).toBe("slot-a");
+  });
+
+  test("totally corrupt v7 JSON falls through to an empty v8 store", () => {
+    store.set(V7_KEY, "{not json");
+    const migrated = loadStore();
+    expect(migrated.version).toBe(8);
     expect(migrated.slots).toHaveLength(0);
   });
 });

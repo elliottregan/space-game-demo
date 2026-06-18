@@ -123,7 +123,7 @@ export class GameAPI {
   /** Serialize current state for persistence. */
   exportState(): SavedState {
     return {
-      version: 7,
+      version: 8,
       campaign: this.campaign,
       settingId: this.setting.id,
       epoch: this.epoch,
