@@ -1,6 +1,6 @@
 // Generation Ship Setting — column-based redesign.
 
-import type { Setting, KeystoneProject, Crisis } from "../types.ts";
+import type { Setting, KeystoneProject, Crisis, CrisisTree } from "../types.ts";
 import { ALL_CARDS } from "../data/cards.ts";
 import { DEFAULT_PROJECT_VALUE } from "../data/projects.ts";
 
@@ -108,7 +108,61 @@ const CRISIS: Crisis = {
   id: "ship-deep-cold",
   name: "Deep Cold",
   flavor: "The ship enters a silent corridor between stars.",
-  difficulty: 12,
+};
+
+// Crisis Tree (Generation Ship, 14 turns / 4 columns, 2-ideology deck).
+// Trips/quads/full-house are impossible here, so recipes stay on
+// high-card/pair/two-pair/flush/any (straights too are rare with hand 5 / 4
+// columns, so the Wonder branch leans on the deck's signature FLUSH rather than
+// a straight — otherwise it is an unreachable cheapest-looking trap). The
+// constrained deck makes monoculture the path of least resistance, so Doctrine
+// (Mission) is a natural terminal; Expansion is the volume path; the Beacon
+// rewards stacking flushes. Counts tuned for greedy ~45-70% + branch spread.
+const CRISIS_TREE: CrisisTree = {
+  rootId: "shakedown",
+  nodes: {
+    shakedown: {
+      id: "shakedown",
+      name: "Shakedown",
+      branch: "establish",
+      requirements: [
+        { pattern: "pair", count: 3 },
+        { pattern: "high-card", count: 4 },
+      ],
+      unlocks: ["fleet", "mission", "beacon"],
+      terminal: false,
+    },
+    fleet: {
+      id: "fleet",
+      name: "Fleet Standard",
+      branch: "expansion",
+      requirements: [{ pattern: "any", count: 9 }],
+      unlocks: [],
+      terminal: true,
+    },
+    mission: {
+      id: "mission",
+      name: "Mission",
+      branch: "doctrine",
+      requireSameIdeology: true,
+      // Doctrine teeth: same-color builds AND slotted policies of that color.
+      requirements: [{ pattern: "any", count: 7 }],
+      policyStrength: 2,
+      unlocks: [],
+      terminal: true,
+    },
+    beacon: {
+      id: "beacon",
+      name: "Beacon",
+      branch: "wonder",
+      // Flush-centric: the Ship's signature shape. A flush plus two upgrade
+      // builds of the same flush project — abundant on the 2-ideology deck (no
+      // straight/two-pair trap, both of which are rare for the greedy AI here).
+      requirements: [{ pattern: "flush", count: 6, upgrade: true }],
+      unlocks: [],
+      terminal: true,
+    },
+  },
 };
 
 export const GENERATION_SHIP: Setting = {
@@ -127,6 +181,7 @@ export const GENERATION_SHIP: Setting = {
   startingColumns: [],
   projects: PROJECTS,
   crisis: CRISIS,
+  crisisTree: CRISIS_TREE,
   transitions: {
     onWin: "campaign-end",
     onLoss: "campaign-end",

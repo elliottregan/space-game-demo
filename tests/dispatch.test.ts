@@ -6,7 +6,7 @@ import type { Column, Epoch, ProjectUnlock } from "../src/core/types.ts";
 import { countDissentInDeck } from "../src/core/engine/effects.ts";
 import { commitHand } from "../src/core/engine/commands.ts";
 import { createRng } from "../src/core/engine/rng.ts";
-import { emptyPolicyState } from "./fixtures.ts";
+import { emptyPolicyState, emptyCrisisTreeState } from "./fixtures.ts";
 
 function freshEpoch(columns: Column[] = []): Epoch {
   return {
@@ -26,6 +26,7 @@ function freshEpoch(columns: Column[] = []): Epoch {
     status: { kind: "in-progress" },
     crisis: { status: "pending" },
     policy: emptyPolicyState(),
+    crisisTree: emptyCrisisTreeState(),
   };
 }
 
@@ -277,7 +278,13 @@ describe("commitHand command", () => {
     const ep = epochWithHand([card0, card1]);
     ep.status = {
       kind: "won",
-      outcome: { totalValue: 0, cleared: true, contributingUnlocks: [], contributions: [] },
+      outcome: {
+        totalValue: 0,
+        cleared: true,
+        clearedNodeIds: [],
+        contributingUnlocks: [],
+        contributions: [],
+      },
     };
     const result = commitHand(ep, 0, "land", [card0.id, card1.id], rng);
     expect(result.ok).toBe(false);

@@ -5,7 +5,7 @@ import { getSetting } from "../src/core/settings/index.ts";
 import { getCard, landId } from "../src/core/data/cards.ts";
 import type { Epoch, PolicySlot, ProjectUnlock } from "../src/core/types.ts";
 import type { Ideology } from "../src/core/data/ideologies.ts";
-import { emptyPolicyState } from "./fixtures.ts";
+import { emptyPolicyState, emptyCrisisTreeState } from "./fixtures.ts";
 
 const setting = getSetting("homeworld");
 
@@ -52,6 +52,7 @@ function makeEpoch(tableau: PolicySlot[], unlocks: ProjectUnlock[] = []): Epoch 
     status: { kind: "in-progress" },
     crisis: { status: "pending" },
     policy: { ...emptyPolicyState(), tableau },
+    crisisTree: emptyCrisisTreeState(),
   };
 }
 

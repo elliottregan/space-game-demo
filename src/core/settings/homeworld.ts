@@ -1,6 +1,6 @@
 // Homeworld Setting — column-based redesign.
 
-import type { Setting, KeystoneProject, Crisis, ColumnConfig } from "../types.ts";
+import type { Setting, KeystoneProject, Crisis, ColumnConfig, CrisisTree } from "../types.ts";
 import { ALL_CARDS } from "../data/cards.ts";
 import { DEFAULT_PROJECT_VALUE } from "../data/projects.ts";
 
@@ -83,7 +83,60 @@ const CRISIS: Crisis = {
   id: "homeworld-arrival-storm",
   name: "Arrival Storm",
   flavor: "The first generation faces a dust-storm that will not pass.",
-  difficulty: 16,
+};
+
+// Crisis Tree (§6 Homeworld strawman, 12 turns / 7 columns). The root
+// demands a spread of basic infrastructure (two-pair + high-card), then forks
+// into three terminal victory branches. Counts are balance-pending strawman.
+const CRISIS_TREE: CrisisTree = {
+  rootId: "settlement",
+  nodes: {
+    settlement: {
+      id: "settlement",
+      name: "Settlement",
+      branch: "establish",
+      requirements: [
+        { pattern: "two-pair", count: 4 },
+        { pattern: "high-card", count: 4 },
+      ],
+      unlocks: ["industry", "capital", "monument"],
+      terminal: false,
+    },
+    industry: {
+      id: "industry",
+      name: "Industry",
+      branch: "expansion",
+      requirements: [{ pattern: "any", count: 12 }],
+      unlocks: [],
+      terminal: true,
+    },
+    capital: {
+      id: "capital",
+      name: "Capital",
+      branch: "doctrine",
+      requireSameIdeology: true,
+      // Doctrine teeth: same-color builds AND slotted policies of that color.
+      requirements: [{ pattern: "any", count: 7 }],
+      policyStrength: 3,
+      unlocks: [],
+      terminal: true,
+    },
+    monument: {
+      id: "monument",
+      name: "Monument",
+      branch: "wonder",
+      // The rare-shape branch: a straight, two-pairs, and an upgraded flush.
+      // Heavier than the strawman so it is a flush/straight SPECIALTY, not the
+      // universal cheapest terminal.
+      requirements: [
+        { pattern: "straight", count: 1 },
+        { pattern: "two-pair", count: 2 },
+        { pattern: "flush", count: 2, upgrade: true },
+      ],
+      unlocks: [],
+      terminal: true,
+    },
+  },
 };
 
 const STARTING_COLUMNS: ColumnConfig[] = [];
@@ -105,6 +158,7 @@ export const HOMEWORLD: Setting = {
   startingColumns: STARTING_COLUMNS,
   projects: PROJECTS,
   crisis: CRISIS,
+  crisisTree: CRISIS_TREE,
   transitions: {
     onWin: "generation-ship",
     onLoss: "ruined-homeworld",

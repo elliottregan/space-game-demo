@@ -10,6 +10,7 @@ import type {
 } from "../types.ts";
 import { ideologyInfluence, projectLevels, reversePatternOrder } from "../data/projects.ts";
 import { IDEOLOGIES } from "../data/ideologies.ts";
+import { isWon } from "./crisisTree.ts";
 import { addDissent, drawToHandSize, purgeDissent, resolveEndOfTurn } from "./effects.ts";
 import { dispatch } from "./dispatch.ts";
 import { effectiveRules } from "./effectiveRules.ts";
@@ -140,10 +141,14 @@ export function resolveCrisis(epoch: Epoch, setting: Setting): CrisisOutcome {
       });
     }
   }
-  const cleared = total >= setting.crisis.difficulty;
+  const cleared = isWon(setting.crisisTree, epoch.crisisTree);
+  const clearedNodeIds = cleared
+    ? epoch.crisisTree.cleared.filter((id) => setting.crisisTree.nodes[id]?.terminal)
+    : [];
   const outcome: CrisisOutcome = {
     totalValue: total,
     cleared,
+    clearedNodeIds,
     contributingUnlocks,
     contributions,
   };

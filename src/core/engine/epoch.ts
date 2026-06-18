@@ -16,6 +16,7 @@ import type { Ideology } from "../data/ideologies.ts";
 import { IDEOLOGIES } from "../data/ideologies.ts";
 import { POLICY_DECKS, type PolicyCard } from "../data/policies.ts";
 import type { TurnPhase } from "./turnPhase.ts";
+import type { CrisisTree, CrisisTreeState } from "./crisisTree.ts";
 
 // -------------------------------------------------------------------------
 // Epoch runtime state
@@ -44,6 +45,10 @@ export interface Epoch {
     outcome?: CrisisOutcome;
   };
   policy: PolicyState;
+  /** Per-Epoch Crisis Tree progress: active objective, cleared nodes, per-node
+   *  per-requirement build counts, and bound ideology for activated Doctrine
+   *  nodes. Seeded by createEpoch from setting.crisisTree. */
+  crisisTree: CrisisTreeState;
 }
 
 export type EpochPhase = "play" | "crisis" | "end-of-epoch";
@@ -80,6 +85,22 @@ function createPolicyState(rng: RNG): PolicyState {
     discards[ideology] = [];
   }
   return { decks, discards, tableau: [], candidates: [] };
+}
+
+/** Fresh Crisis Tree progress for a new Epoch: the root is the active objective,
+ *  nothing is cleared, every node's per-requirement progress is zero-filled, no
+ *  Doctrine ideology bound yet. */
+export function seedCrisisTreeState(tree: CrisisTree): CrisisTreeState {
+  const progress: Record<string, number[]> = {};
+  for (const [id, node] of Object.entries(tree.nodes)) {
+    progress[id] = node.requirements.map(() => 0);
+  }
+  return {
+    activeNodeId: tree.rootId,
+    cleared: [],
+    progress,
+    boundIdeology: {},
+  };
 }
 
 export type EpochStatus =
@@ -124,6 +145,7 @@ export function createEpoch(
     status: { kind: "in-progress" },
     crisis: { status: "pending" },
     policy: createPolicyState(rng),
+    crisisTree: seedCrisisTreeState(setting.crisisTree),
   };
 
   // Initial influence + hand are operative values: route through effectiveRules

@@ -33,17 +33,22 @@
       />
     </div>
 
-    <div class="crisis-bar-region">
-      <CrisisBar :crisis="setting.crisis" :turn="epoch.turn" :max-turns="setting.rules.maxTurns" />
-    </div>
-
     <div class="app-main">
       <aside class="info-column">
-        <ScoreMeter
-          :crisis="setting.crisis"
-          :unlocks="epoch.unlockedProjects"
-          :projects="setting.projects"
-        />
+        <div class="crisis-objectives">
+          <CrisisObjectivesPanel
+            :state="epoch.crisisTree"
+            :available-nodes="snapshot.availableNodes"
+            :tree="setting.crisisTree"
+            :crisis-name="setting.crisis.name"
+            :turn="epoch.turn"
+            :max-turns="setting.rules.maxTurns"
+            @set-active="onSetActiveObjective"
+          />
+          <button class="crisis-tree-open" @click="crisisTreeOpen = true">
+            View full Crisis Tree
+          </button>
+        </div>
         <IdeologyDisplay :vector="snapshot.vector" />
         <ProjectTreePanel :projects="setting.projects" :unlocks="epoch.unlockedProjects" />
       </aside>
@@ -144,6 +149,18 @@
       @close="statsOpen = false"
     />
 
+    <CrisisTreeModal
+      v-model:open="crisisTreeOpen"
+      :state="epoch.crisisTree"
+      :available-nodes="snapshot.availableNodes"
+      :tree="setting.crisisTree"
+      :policy="snapshot.policy"
+      :crisis-name="setting.crisis.name"
+      :turn="epoch.turn"
+      :max-turns="setting.rules.maxTurns"
+      @set-active="onSetActiveObjective"
+    />
+
     <CampaignEnd v-if="campaignEnded" @restart="onNewSlot" />
 
     <ConfirmDialog
@@ -195,8 +212,8 @@ import CardListModal from "./components/shell/CardListModal.vue";
 import StatsModal from "./components/shell/StatsModal.vue";
 import SaveSlotMenu from "./components/shell/SaveSlotMenu.vue";
 import ThemeToggle from "./components/shell/ThemeToggle.vue";
-import CrisisBar from "./components/game/CrisisBar.vue";
-import ScoreMeter from "./components/game/ScoreMeter.vue";
+import CrisisObjectivesPanel from "./components/game/CrisisObjectivesPanel.vue";
+import CrisisTreeModal from "./components/game/CrisisTreeModal.vue";
 import PolicyHandModal from "./components/game/PolicyHandModal.vue";
 import PolicyTableau from "./components/game/PolicyTableau.vue";
 import PolicyPiles from "./components/game/PolicyPiles.vue";
@@ -230,6 +247,7 @@ const pendingConfirm = ref<{
 const pendingPromotion = ref<{ columnIndex: number; ideologies: Ideology[] } | null>(null);
 
 const statsOpen = ref(false);
+const crisisTreeOpen = ref(false);
 
 const snapshot = computed(() => game.snapshot.value);
 const setting = computed(() => snapshot.value.setting);
@@ -396,6 +414,10 @@ function onBuild(i: number): void {
   } else {
     pendingPromotion.value = { columnIndex: i, ideologies: options };
   }
+}
+
+function onSetActiveObjective(payload: { nodeId: string; ideology?: Ideology }): void {
+  game.setActiveObjective(payload.nodeId, payload.ideology);
 }
 
 function onPromote(ideology: Ideology): void {

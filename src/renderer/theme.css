@@ -293,13 +293,6 @@
     gap: 8px;
   }
 
-  /* Slim full-width band under the TurnBar: the always-visible Crisis clock. */
-  .crisis-bar-region {
-    padding: 6px 16px;
-    border-bottom: 1px solid var(--rule-strong);
-    background: var(--ground);
-  }
-
   .app-main {
     display: grid;
     grid-template-columns: var(--tree-width) minmax(0, 1fr);
@@ -321,6 +314,28 @@
   .project-tree {
     overflow: hidden;
     min-height: 0;
+  }
+
+  /* Crisis objectives: the minimal inline panel plus a trigger that opens the
+     full Crisis-Tree DAG modal (CrisisTreeModal), mirroring the Stats opener. */
+  .crisis-objectives {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+  .crisis-tree-open {
+    align-self: flex-start;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-bottom: 2px solid var(--accent);
+    color: var(--accent);
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .crisis-tree-open:hover {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
   }
 
   .play-area {

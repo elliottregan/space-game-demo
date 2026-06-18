@@ -13,7 +13,7 @@ import { createCampaign } from "../src/core/engine/campaign.ts";
 import { createRng } from "../src/core/engine/rng.ts";
 import type { Column, Epoch, PolicySlot } from "../src/core/types.ts";
 import { createEmptyColumn } from "../src/core/engine/column.ts";
-import { emptyPolicyState } from "./fixtures.ts";
+import { emptyPolicyState, emptyCrisisTreeState } from "./fixtures.ts";
 
 const SETTING = getSetting("homeworld"); // storageCapacity: 1
 const rng = createRng(13);
@@ -42,6 +42,7 @@ function epochWith(tableau: PolicySlot[], columns: Column[] = [createEmptyColumn
     status: { kind: "in-progress" },
     crisis: { status: "pending" },
     policy: { ...emptyPolicyState(), tableau },
+    crisisTree: emptyCrisisTreeState(),
   };
 }
 

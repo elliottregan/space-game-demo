@@ -20,6 +20,12 @@ export function patternLabel(p: PatternKind): string {
   return PATTERN_LABELS[p];
 }
 
+/** Label for a recipe requirement's pattern, including the "any" sentinel used
+ *  by volume (Expansion) nodes. patternLabel only covers concrete PatternKinds. */
+export function requirementLabel(p: PatternKind | "any"): string {
+  return p === "any" ? "Any build" : patternLabel(p);
+}
+
 export function rankLabel(rank: number): string {
   if (rank === 11) return "J";
   if (rank === 12) return "Q";
