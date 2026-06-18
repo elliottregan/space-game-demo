@@ -4,6 +4,7 @@
 import type { KeystoneProject, ProjectUnlock } from "../data/projects.ts";
 import { IDEOLOGIES, type Ideology } from "../data/ideologies.ts";
 import { type Column, columnCards } from "./column.ts";
+import { effectiveCard } from "./countsAs.ts";
 
 // -------------------------------------------------------------------------
 // Ideology vector + terrain
@@ -57,7 +58,10 @@ export function deriveVector(
   const v = { axis1: 0, axis2: 0 };
   for (const col of columns) {
     for (const c of columnCards(col)) {
-      if (c.ideology === "wild") continue;
+      // Skip color-indeterminate cards (full jokers + bare-"wild"); a rank-only
+      // partial with a real literal color is kept. Identity = what you played.
+      if (effectiveCard(c).ideologyWild) continue;
+      if (c.ideology === "wild") continue; // narrows CardIdeology → Ideology for indexing
       const { axis, sign } = IDEOLOGY_AXIS[c.ideology];
       v[axis] += sign;
     }
@@ -66,7 +70,8 @@ export function deriveVector(
     const value = projects.find((p) => p.id === u.projectId)?.value ?? 0;
     const net = { axis1: 0, axis2: 0 };
     for (const c of u.cards) {
-      if (c.ideology === "wild") continue;
+      if (effectiveCard(c).ideologyWild) continue;
+      if (c.ideology === "wild") continue; // narrows CardIdeology → Ideology for indexing
       const { axis, sign } = IDEOLOGY_AXIS[c.ideology];
       net[axis] += sign;
     }

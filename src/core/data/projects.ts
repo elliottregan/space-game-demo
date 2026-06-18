@@ -5,6 +5,7 @@
 
 import type { Card, EffectSpec, Ideology } from "./cards.ts";
 import { zeroIdeologyBreakdown } from "./ideologies.ts";
+import { effectiveCard } from "../engine/countsAs.ts";
 
 // -------------------------------------------------------------------------
 // Pattern + Project + Crisis types
@@ -152,7 +153,9 @@ export function unlockedIdeologyBreakdown(unlocks: ProjectUnlock[]): Record<Ideo
   const out = zeroIdeologyBreakdown();
   for (const u of unlocks) {
     for (const c of u.cards) {
-      if (c.ideology === "wild") continue;
+      // Crisis/Monument identity record excludes wilds, matching deriveVector.
+      if (effectiveCard(c).ideologyWild) continue;
+      if (c.ideology === "wild") continue; // narrows CardIdeology → Ideology for indexing
       out[c.ideology] += 1;
     }
   }

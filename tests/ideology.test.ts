@@ -4,6 +4,8 @@ import { unlockedIdeologyBreakdown } from "../src/core/data/projects.ts";
 import { getCard, landId, roleId } from "../src/core/data/cards.ts";
 import { createEmptyColumn, placeLand, placeInfluence } from "../src/core/engine/column.ts";
 import type { Column, KeystoneProject, ProjectUnlock } from "../src/core/types.ts";
+import { fullJoker } from "./fixtures.ts";
+import type { Card } from "../src/core/types.ts";
 
 function col(lands: string[], topper?: string): Column {
   const c = createEmptyColumn();
@@ -132,5 +134,81 @@ describe("unlockedIdeologyBreakdown", () => {
     expect(b.solidarity).toBe(1);
     expect(b.heritage).toBe(1);
     expect(b.sovereignty).toBe(0);
+  });
+});
+
+describe("deriveVector — counts-as wilds skipped by ideologyWild", () => {
+  test("a literal-color full joker in a column is skipped (contributes 0)", () => {
+    const c = createEmptyColumn();
+    placeLand(c, getCard(landId(3, "solidarity")));
+    placeInfluence(c, fullJoker()); // FULL_JOKER carries a literal color but is ideologyWild
+    const v = deriveVector([c], [], []);
+    // Only the one solidarity land counts ⇒ axis1 = -1; the joker adds nothing.
+    expect(v.axis1).toBe(-1);
+    expect(v.axis2).toBe(0);
+  });
+
+  test("a rank-only partial wild with a REAL color is NOT skipped", () => {
+    // countsAs.rank only ⇒ ideologyWild=false ⇒ its literal color (heritage) counts.
+    const partial: Card = {
+      ...getCard(landId(7, "heritage")),
+      countsAs: { rank: [5, 10] },
+    };
+    const c = createEmptyColumn();
+    placeLand(c, partial);
+    const v = deriveVector([c], [], []);
+    // heritage is axis2 sign -1 ⇒ axis2 = -1; rank-only wild keeps its color.
+    expect(v.axis2).toBe(-1);
+    expect(v.axis1).toBe(0);
+  });
+
+  test("an unlock of all full jokers contributes 0 to the vector", () => {
+    const project: KeystoneProject = {
+      id: "p-flush",
+      pattern: "flush",
+      name: "Flush",
+      flavor: "",
+      value: 4,
+    };
+    const unlock: ProjectUnlock = {
+      projectId: "p-flush",
+      pattern: "flush",
+      turn: 1,
+      cards: [fullJoker(), fullJoker(), fullJoker()],
+    };
+    const v = deriveVector([], [unlock], [project]);
+    expect(v).toEqual({ axis1: 0, axis2: 0 });
+  });
+});
+
+describe("unlockedIdeologyBreakdown — full jokers excluded", () => {
+  test("an all-joker column contributes 0 to the breakdown", () => {
+    const u: ProjectUnlock = {
+      projectId: "x",
+      pattern: "flush",
+      turn: 1,
+      cards: [fullJoker(), fullJoker(), fullJoker()],
+    };
+    const b = unlockedIdeologyBreakdown([u]);
+    expect(b.solidarity).toBe(0);
+    expect(b.sovereignty).toBe(0);
+    expect(b.transformation).toBe(0);
+    expect(b.heritage).toBe(0);
+  });
+
+  test("a partial rank-only wild with a real color IS counted", () => {
+    const partial: Card = {
+      ...getCard(landId(7, "heritage")),
+      countsAs: { rank: [5, 10] },
+    };
+    const u: ProjectUnlock = {
+      projectId: "y",
+      pattern: "pair",
+      turn: 1,
+      cards: [getCard(landId(7, "solidarity")), partial],
+    };
+    const b = unlockedIdeologyBreakdown([u]);
+    expect(b.solidarity).toBe(1);
+    expect(b.heritage).toBe(1);
   });
 });
