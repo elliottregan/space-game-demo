@@ -1,17 +1,18 @@
 // Multi-slot save store in localStorage.
 // Up to 10 saves; each is the full serialized game state.
 
-import type { Campaign, Epoch } from "../core/types.ts";
+import type { Campaign, Epoch, ProjectUnlock } from "../core/types.ts";
 import type { EndOfEpochState } from "../core/engine/campaign.ts";
+import { projectMajority } from "../core/data/projects.ts";
 
-const STORE_KEY = "deck-demo-saves-v6";
-const PREV_KEY = "deck-demo-saves-v5";
-const ARCHIVE_KEY = "deck-demo-saves-v5-archive";
+const STORE_KEY = "deck-demo-saves-v7";
+const PREV_KEY = "deck-demo-saves-v6";
+const ARCHIVE_KEY = "deck-demo-saves-v6-archive";
 
 export const MAX_SLOTS = 10;
 
 export interface SavedState {
-  version: 6;
+  version: 7;
   campaign: Campaign;
   settingId: string;
   epoch: Epoch;
@@ -28,28 +29,74 @@ export interface SaveSlot {
 }
 
 export interface SaveStore {
-  version: 6;
+  version: 7;
   activeSlotId: string | null;
   slots: SaveSlot[];
 }
 
 function emptyStore(): SaveStore {
-  return { version: 6, activeSlotId: null, slots: [] };
+  return { version: 7, activeSlotId: null, slots: [] };
+}
+
+/** In-place migrate a parsed v6 store to v7: strip the dead `charter` row from
+ *  every column, and backfill each unlock's `promotedIdeology` via
+ *  projectMajority (color choice faithful, magnitude rescaled to match a fresh
+ *  run — NOT the pre-redesign flat-1 magnitude). Corrupt slots are dropped, not
+ *  fatal; the whole call is wrapped in try/catch by loadStore. */
+function migrateV6toV7(parsed: { activeSlotId: string | null; slots: unknown[] }): SaveStore {
+  const slots: SaveSlot[] = [];
+  for (const rawSlot of parsed.slots) {
+    try {
+      const slot = rawSlot as SaveSlot;
+      const epoch = slot.state.epoch as unknown as {
+        columns: Array<Record<string, unknown>>;
+        unlockedProjects: Array<ProjectUnlock & { cards: unknown }>;
+      };
+      for (const col of epoch.columns ?? []) {
+        delete col.charter;
+      }
+      for (const u of epoch.unlockedProjects ?? []) {
+        if (u.promotedIdeology === undefined) {
+          u.promotedIdeology = projectMajority((u.cards as ProjectUnlock["cards"]) ?? []);
+        }
+      }
+      slot.state.version = 7;
+      slots.push(slot);
+    } catch {
+      // drop the corrupt slot, keep migrating the rest
+    }
+  }
+  const activeSlotId =
+    parsed.activeSlotId && slots.some((s) => s.id === parsed.activeSlotId)
+      ? parsed.activeSlotId
+      : (slots[slots.length - 1]?.id ?? null);
+  return { version: 7, activeSlotId, slots };
 }
 
 export function loadStore(): SaveStore {
   if (typeof localStorage === "undefined") return emptyStore();
   try {
+    // 1. Current v7 store — return as-is.
     const raw = localStorage.getItem(STORE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as SaveStore;
-      if (parsed.version === 6 && Array.isArray(parsed.slots)) return parsed;
+      if (parsed.version === 7 && Array.isArray(parsed.slots)) return parsed;
     }
-    // One-time v5 archival (no migration).
-    const prev = localStorage.getItem(PREV_KEY);
-    if (prev && !localStorage.getItem(ARCHIVE_KEY)) {
-      localStorage.setItem(ARCHIVE_KEY, prev);
-      localStorage.removeItem(PREV_KEY);
+    // 2. Previous v6 store — migrate, persist under v7, archive the raw string.
+    const prevRaw = localStorage.getItem(PREV_KEY);
+    if (prevRaw) {
+      const prev = JSON.parse(prevRaw) as {
+        version?: number;
+        activeSlotId: string | null;
+        slots?: unknown[];
+      };
+      if (prev.version === 6 && Array.isArray(prev.slots)) {
+        const migrated = migrateV6toV7(prev as { activeSlotId: string | null; slots: unknown[] });
+        writeStore(migrated);
+        localStorage.setItem(ARCHIVE_KEY, prevRaw); // raw, unmigrated v6
+        localStorage.removeItem(PREV_KEY);
+        return migrated;
+      }
     }
   } catch {
     // corrupted — start fresh

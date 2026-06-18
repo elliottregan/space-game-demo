@@ -90,6 +90,13 @@ export class GameAPI {
       // Defensive: a v6 save predating `turnPhase` would otherwise load
       // `undefined` and lock the board (every verb gated off the play phase).
       if (this.epoch.turnPhase === undefined) this.epoch.turnPhase = "play";
+      // Defensive: runs AFTER migrateV6toV7's projectMajority backfill — only
+      // fills a STILL-undefined promotedIdeology (hand-edit / migrator-skipped)
+      // to null, never overwriting a migrator-set real null. Keeps
+      // ideologyInfluence from doing out[undefined] += n ⇒ NaN.
+      for (const u of this.epoch.unlockedProjects) {
+        if (u.promotedIdeology === undefined) u.promotedIdeology = null;
+      }
       this.endOfEpoch = saved.endOfEpoch;
       this.rng = createRng(saved.seed);
     } else {
@@ -105,7 +112,7 @@ export class GameAPI {
   /** Serialize current state for persistence. */
   exportState(): SavedState {
     return {
-      version: 6,
+      version: 7,
       campaign: this.campaign,
       settingId: this.setting.id,
       epoch: this.epoch,
@@ -181,9 +188,16 @@ export class GameAPI {
     this.campaign = state.campaign;
     this.setting = getSetting(state.settingId);
     this.epoch = state.epoch;
-    // Defensive: v6 is unmerged, so an older dev save may predate `turnPhase`.
+    // Defensive: an older dev save may predate `turnPhase`.
     // Default it to "play" so a loaded epoch is immediately interactive.
     if (this.epoch.turnPhase === undefined) this.epoch.turnPhase = "play";
+    // Defensive: runs AFTER migrateV6toV7's projectMajority backfill — only
+    // fills a STILL-undefined promotedIdeology (hand-edit / migrator-skipped)
+    // to null, never overwriting a migrator-set real null. Keeps
+    // ideologyInfluence from doing out[undefined] += n ⇒ NaN.
+    for (const u of this.epoch.unlockedProjects) {
+      if (u.promotedIdeology === undefined) u.promotedIdeology = null;
+    }
     this.endOfEpoch = state.endOfEpoch;
     this.rng = createRng(state.seed);
   }
