@@ -10,7 +10,10 @@ export type DiscardSource =
   | "column"
   | "hand"
   | "influence-recall"
-  | "storage";
+  | "storage"
+  // Cards consumed by completing a project. Unlike every other discard, a
+  // build is the reward path, not a wasteful toss — it breeds NO Dissent.
+  | "build";
 
 export type GameEvent =
   | { type: "card-played-to-land"; card: Card; columnIndex: number }

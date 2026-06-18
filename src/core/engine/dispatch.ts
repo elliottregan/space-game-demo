@@ -44,10 +44,14 @@ export function dispatch(epoch: Epoch, ev: GameEvent, rng?: RNG): void {
     case "card-discarded": {
       epoch.discard.push(ev.card);
       epoch.eventLog.push(ev);
-      // Centralized rule: every discard adds one Dissent. Recurse
+      // Centralized rule: every WASTEFUL discard adds one Dissent. Recurse
       // through dispatch so any future hooks on `dissent-added` apply.
       // Forward rng so the bred Dissent shuffles in rather than stacking on top.
-      dispatch(epoch, { type: "dissent-added" }, rng);
+      // Exception: cards consumed by a Build (`source: "build"`) are the reward
+      // path — they cycle back via the discard pile but breed no Dissent.
+      if (ev.source !== "build") {
+        dispatch(epoch, { type: "dissent-added" }, rng);
+      }
       return; // eventLog already appended above
     }
     case "column-built": {
@@ -60,7 +64,7 @@ export function dispatch(epoch: Epoch, ev: GameEvent, rng?: RNG): void {
         // log records the build atomically before its consequences.
         epoch.eventLog.push(ev);
         for (const c of cards) {
-          dispatch(epoch, { type: "card-discarded", card: c, source: "column" }, rng);
+          dispatch(epoch, { type: "card-discarded", card: c, source: "build" }, rng);
         }
       }
       return;

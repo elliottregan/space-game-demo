@@ -66,7 +66,7 @@ describe("dispatch", () => {
     expect(ep.draw[0]?.tags.includes("dissent")).toBe(true);
   });
 
-  test("column-built cascades discards through the discard handler (one dissent per card) and clears the column", () => {
+  test("column-built cascades consumed cards to the discard pile, clears the column, and breeds NO dissent (build is the reward path)", () => {
     const col = createEmptyColumn();
     placeLand(col, land(7, "solidarity"));
     placeLand(col, land(7, "heritage"));
@@ -87,9 +87,20 @@ describe("dispatch", () => {
     expect(col.lands.cards.length).toBe(0);
     expect(col.influence.cards.length).toBe(0);
     expect(col.charter.card).toBeNull();
-    // 4 cards discarded → 4 dissent added.
-    expect(ep.draw.filter((c) => c.tags.includes("dissent")).length).toBe(4);
+    // 4 cards cycle back via the discard pile, but a Build breeds no Dissent.
+    expect(ep.draw.filter((c) => c.tags.includes("dissent")).length).toBe(0);
     expect(ep.discard.length).toBe(4);
+  });
+
+  test("manual column-trash (source=column) STILL breeds one dissent per card — only Build is exempt", () => {
+    const ep = freshEpoch();
+    const cards = [land(7, "solidarity"), land(7, "heritage")];
+    for (const card of cards) {
+      dispatch(ep, { type: "card-discarded", card, source: "column" });
+    }
+    // Wasteful column trash clogs the deck: one Dissent per discarded card.
+    expect(ep.draw.filter((c) => c.tags.includes("dissent")).length).toBe(2);
+    expect(ep.discard.length).toBe(2);
   });
 
   test("event is appended to eventLog", () => {
