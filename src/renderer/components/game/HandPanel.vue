@@ -92,7 +92,8 @@ import Card from "../core/Card.vue";
 import Panel from "../core/Panel.vue";
 import { beginDrag, endDrag, dragging } from "../../util/dragState.ts";
 import { identifyRowHand, canCommitHand } from "../../../core/engine/rowHands.ts";
-import { canPlaceLand, canPlaceInfluence, canPlaceCharter } from "../../../core/engine/column.ts";
+import { canPlaceLand, canPlaceInfluence } from "../../../core/engine/column.ts";
+import { canOccupyRow } from "../../../core/engine/countsAs.ts";
 import { animateDiscard, animateDraw, animatePlaced } from "../../animation/cardFlight.ts";
 
 const props = defineProps<{
@@ -182,8 +183,8 @@ const rowHandLabel = computed<string | null>(() => {
 function rowHandForRow(row: "land" | "influence"): string | null {
   const cards = combinedSelection.value;
   if (cards.length === 0) return null;
-  const requiredKind = row === "land" ? "land" : "role";
-  if (cards.some((c) => c.kind !== requiredKind)) return null;
+  const requiredRow = row === "land" ? "land" : "role";
+  if (cards.some((c) => !canOccupyRow(c, requiredRow))) return null;
   return identifyRowHand(cards);
 }
 
@@ -197,21 +198,21 @@ function formatHand(hand: string): string {
 /**
  * Returns true if every card in `cards` can be placed onto `col` one after
  * another. Delegates to the real core helpers (`canPlaceLand`,
- * `canPlaceInfluence`, `canPlaceCharter`) on a shallow column copy so this
- * function can never drift from the authoritative placement rules.
+ * `canPlaceInfluence`) on a shallow column copy so this function can never
+ * drift from the authoritative placement rules. A full joker (literal
+ * kind:"role") is tried against the land row first, then influence, so it
+ * routes into whichever row its row-eligibility allows.
  */
 function canPlaceAllSequentially(cards: CardT[], col: Column): boolean {
   // Simulate sequential single-card placement with the real core rules.
   const sim: Column = {
     lands: { cards: [...col.lands.cards] },
     influence: { cards: [...col.influence.cards] },
-    charter: { card: col.charter.card },
     storage: [...col.storage],
   };
   for (const c of cards) {
-    if (c.kind === "land" && canPlaceLand(sim, c)) sim.lands.cards.push(c);
-    else if (c.kind === "role" && canPlaceInfluence(sim, c)) sim.influence.cards.push(c);
-    else if (c.kind === "charter" && canPlaceCharter(sim, c)) sim.charter.card = c;
+    if (canPlaceLand(sim, c)) sim.lands.cards.push(c);
+    else if (canPlaceInfluence(sim, c)) sim.influence.cards.push(c);
     else return false;
   }
   return true;

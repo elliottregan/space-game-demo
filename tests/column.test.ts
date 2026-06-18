@@ -3,15 +3,14 @@ import {
   createEmptyColumn,
   canPlaceLand,
   canPlaceInfluence,
-  canPlaceCharter,
   placeLand,
   placeInfluence,
-  placeCharter,
   clearColumn,
   columnCards,
-  columnLandRank,
+  isBuildable,
 } from "../src/core/engine/column.ts";
 import { getCard, landId, roleId } from "../src/core/data/cards.ts";
+import { fullJoker } from "./fixtures.ts";
 
 const land = (
   rank: number,
@@ -21,7 +20,6 @@ const role = (
   r: "agitator" | "scholar" | "preacher" | "engineer" | "architect",
   i: "solidarity" | "sovereignty" | "transformation" | "heritage",
 ) => getCard(roleId(r, i));
-const charter = () => getCard("keystone-founding-charter");
 
 describe("column placement", () => {
   test("empty column accepts any land", () => {
@@ -60,48 +58,24 @@ describe("column placement", () => {
     expect(canPlaceInfluence(col, role("engineer", "solidarity"))).toBe(false);
   });
 
-  test("charter row rejected without influence", () => {
-    const col = createEmptyColumn();
-    placeLand(col, land(7, "solidarity"));
-    expect(canPlaceCharter(col, charter())).toBe(false);
-  });
-
-  test("charter row accepted once influence filled", () => {
-    const col = createEmptyColumn();
-    placeLand(col, land(7, "solidarity"));
-    placeInfluence(col, role("scholar", "solidarity"));
-    expect(canPlaceCharter(col, charter())).toBe(true);
-  });
-
   test("clearColumn empties all rows", () => {
     const col = createEmptyColumn();
     placeLand(col, land(7, "solidarity"));
     placeInfluence(col, role("scholar", "solidarity"));
-    placeCharter(col, charter());
     clearColumn(col);
     expect(col.lands.cards.length).toBe(0);
     expect(col.influence.cards.length).toBe(0);
-    expect(col.charter.card).toBeNull();
   });
 
-  test("columnCards returns all cards in lands+influence+charter order", () => {
+  test("columnCards returns all cards in lands+influence order", () => {
     const col = createEmptyColumn();
     const l1 = land(7, "solidarity");
     const l2 = land(7, "heritage");
     const r = role("scholar", "solidarity");
-    const ch = charter();
     placeLand(col, l1);
     placeLand(col, l2);
     placeInfluence(col, r);
-    placeCharter(col, ch);
-    expect(columnCards(col)).toEqual([l1, l2, r, ch]);
-  });
-
-  test("columnLandRank returns the rank of the first land, or null if empty", () => {
-    const col = createEmptyColumn();
-    expect(columnLandRank(col)).toBeNull();
-    placeLand(col, land(7, "solidarity"));
-    expect(columnLandRank(col)).toBe(7);
+    expect(columnCards(col)).toEqual([l1, l2, r]);
   });
 });
 
@@ -157,5 +131,56 @@ describe("single-card placement routing through validateRowHand", () => {
   test("influence placement still requires at least one land in the column", () => {
     const col = createEmptyColumn();
     expect(canPlaceInfluence(col, role("scholar", "solidarity"))).toBe(false);
+  });
+});
+
+describe("two-row buildability + joker placement", () => {
+  test("a column is buildable with >=1 land + >=1 influence (no charter)", () => {
+    const col = createEmptyColumn();
+    expect(isBuildable(col)).toBe(false);
+    placeLand(col, land(7, "solidarity"));
+    expect(isBuildable(col)).toBe(false);
+    placeInfluence(col, role("scholar", "solidarity"));
+    expect(isBuildable(col)).toBe(true);
+  });
+
+  test("a full joker places into the land row (canOccupyRow, not card.kind)", () => {
+    const col = createEmptyColumn();
+    expect(canPlaceLand(col, fullJoker())).toBe(true);
+  });
+
+  test("a full joker places into the influence row once a land is below", () => {
+    const col = createEmptyColumn();
+    placeLand(col, land(7, "solidarity"));
+    expect(canPlaceInfluence(col, fullJoker())).toBe(true);
+  });
+
+  test("a plain land is still rejected from the influence row", () => {
+    const col = createEmptyColumn();
+    placeLand(col, land(7, "solidarity"));
+    expect(canPlaceInfluence(col, land(5, "solidarity"))).toBe(false);
+  });
+
+  test("single-card wild allowed onto a same-rank stack [5,5] (grows to trips)", () => {
+    const col = createEmptyColumn();
+    placeLand(col, land(5, "solidarity"));
+    placeLand(col, land(5, "heritage"));
+    expect(canPlaceLand(col, fullJoker())).toBe(true);
+  });
+
+  test("single-card wild allowed onto an empty land row", () => {
+    const col = createEmptyColumn();
+    expect(canPlaceLand(col, fullJoker())).toBe(true);
+  });
+
+  test("single-card NON-wild 7 rejected onto a mixed [5,5,wild] row (would make two-pair via single placement)", () => {
+    const col = createEmptyColumn();
+    placeLand(col, land(5, "solidarity"));
+    placeLand(col, land(5, "heritage"));
+    placeLand(col, fullJoker()); // row is now [5,5,wild] -> trips, a same-rank stack
+    // A single non-wild 7 would make [5,5,wild,7] = two-pair, which single
+    // placement must never reach (commitHand only). The same-rank-growth gate
+    // rejects it.
+    expect(canPlaceLand(col, land(7, "solidarity"))).toBe(false);
   });
 });

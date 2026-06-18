@@ -25,20 +25,20 @@ export const ROLE_RANK: Record<Role, 10 | 11 | 12 | 13 | 14> = {
 export type Rank = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
 
 /** The ranks a live card may hold: lands 2–9, roles 10–14. EXCLUDES 15
- *  (the deleted charter rank — charters are removed in a later phase). This
- *  — NOT the `Rank` type union (which still contains 15) — is the domain a
- *  `countsAs.rank: "any"` expands to and the straight window scans. */
+ *  (the deleted charter rank — charters are gone). This — NOT the `Rank` type
+ *  union (which still contains 15) — is the domain a `countsAs.rank: "any"`
+ *  expands to and the straight window scans. */
 export const RANKS: readonly Rank[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
 
 // -------------------------------------------------------------------------
 // Card kinds and tags
 // -------------------------------------------------------------------------
 
-export type CardKind = "land" | "role" | "charter" | "dissent" | "legacy";
+export type CardKind = "land" | "role" | "dissent" | "legacy";
 
-export type CardTag = "dissent" | "charter" | "legacy";
+export type CardTag = "dissent" | "legacy";
 
-export type RowKind = "land" | "role"; // the two playable rows (charter is being removed)
+export type RowKind = "land" | "role"; // the two playable rows (charter is gone)
 
 /** One substitution descriptor: the dimensions this card MAY count as for
  *  EVALUATION only (pattern, flush, promotion-detection). Each field is
@@ -298,62 +298,71 @@ function buildLands(): Card[] {
   return cards;
 }
 
-function buildCharters(): Card[] {
-  const tags: CardTag[] = ["charter"];
+function buildJokers(): Card[] {
+  // Former charter cards. They lose kind:"charter" (that row is gone) and
+  // become full-joker wilds via countsAs: FULL_JOKER — any rank, any ideology,
+  // either row, for EVALUATION only. Their literal kind/rank/ideology survive
+  // for display, cost, effect, and deck-filter identity (the resolver ignores
+  // all three). Literal ranks are pinned inside RANKS [2..14], never 15.
   return [
     {
       id: "keystone-pioneer",
       name: "The Pioneer",
-      kind: "charter",
-      rank: 15,
-      ideology: "wild",
+      kind: "role",
+      rank: 14,
+      ideology: "transformation",
       influenceCost: 3,
       effect: draw(2),
-      tags,
+      tags: [],
+      countsAs: FULL_JOKER,
       flavor: "Wild role, wild suit. No Dissent.",
     },
     {
       id: "keystone-apostle",
       name: "The Apostle",
-      kind: "charter",
-      rank: 15,
-      ideology: "wild",
+      kind: "role",
+      rank: 14,
+      ideology: "heritage",
       influenceCost: 2,
       effect: compound(gainInf(2), addDissent(1)),
-      tags,
+      tags: [],
+      countsAs: FULL_JOKER,
       flavor: "Wild role, wild suit. Stirs Dissent.",
     },
     {
       id: "keystone-navigators-compass",
       name: "The Navigator's Compass",
-      kind: "charter",
-      rank: 15,
+      kind: "role",
+      rank: 14,
       ideology: "transformation",
       influenceCost: 2,
       effect: draw(2),
-      tags,
+      tags: [],
+      countsAs: FULL_JOKER,
       flavor: "Keystone — The Ark.",
     },
     {
       id: "keystone-founding-charter",
       name: "The Founding Charter",
-      kind: "charter",
-      rank: 15,
+      kind: "land",
+      rank: 9,
       ideology: "solidarity",
       influenceCost: 2,
       effect: gainInf(2),
-      tags,
+      tags: [],
+      countsAs: FULL_JOKER,
       flavor: "Keystone — The Commune.",
     },
     {
       id: "keystone-critical-mass",
       name: "Critical Mass",
-      kind: "charter",
-      rank: 15,
+      kind: "role",
+      rank: 14,
       ideology: "sovereignty",
       influenceCost: 3,
       effect: compound(gainInf(2), draw(1)),
-      tags,
+      tags: [],
+      countsAs: FULL_JOKER,
       flavor: "Keystone — The Reactor.",
     },
   ];
@@ -363,18 +372,18 @@ function buildCharters(): Card[] {
 // Export: the full card registry
 // -------------------------------------------------------------------------
 
-export const ALL_CARDS: Card[] = [...buildRoles(), ...buildLands(), ...buildCharters()];
+export const ALL_CARDS: Card[] = [...buildRoles(), ...buildLands(), ...buildJokers()];
 
 // -------------------------------------------------------------------------
 // Boot-time data asserts (run once at module load over ALL_CARDS).
 // -------------------------------------------------------------------------
 
 // RANKS must equal the distinct rank set across live evaluable cards. We
-// exclude dissent + legacy (never evaluated) and charter (a dead kind being
-// removed — its rank 15 is not part of the live domain). After charters are
-// deleted this exclusion is a no-op, so the assert stays correct unchanged.
+// exclude dissent + legacy (never evaluated). The charter kind has been removed
+// (its ex-cards are now land/role jokers carrying real ranks 9/14), so it no
+// longer appears here — the assert stays correct.
 {
-  const NON_EVALUABLE: ReadonlySet<CardKind> = new Set(["dissent", "legacy", "charter"]);
+  const NON_EVALUABLE: ReadonlySet<CardKind> = new Set(["dissent", "legacy"]);
   const live = new Set<Rank>(
     ALL_CARDS.filter((c) => !NON_EVALUABLE.has(c.kind)).map((c) => c.rank),
   );
@@ -391,17 +400,11 @@ export const ALL_CARDS: Card[] = [...buildRoles(), ...buildLands(), ...buildChar
 
 // A bare `ideology: "wild"` on a PLAYABLE card with no `countsAs` is a data
 // error (it would block every flush and is not a joker). The only legal
-// bare-"wild" shapes are a dissent-kind card (the unplayable deck clog) and the
-// charter-kind cards (a dead kind being removed in a later phase — they are
-// recolored to concrete-home FULL_JOKER wilds then, so no countsAs is attached
-// to any card in this additive phase).
+// bare-"wild" shape is a dissent-kind card (the unplayable deck clog). The
+// ex-charter jokers now carry concrete colors + countsAs, so they pass this
+// trivially.
 for (const c of ALL_CARDS) {
-  if (
-    c.ideology === "wild" &&
-    c.countsAs === undefined &&
-    c.kind !== "dissent" &&
-    c.kind !== "charter"
-  ) {
+  if (c.ideology === "wild" && c.countsAs === undefined && c.kind !== "dissent") {
     throw new Error(
       `Data error: playable card "${c.id}" has ideology:"wild" without countsAs. ` +
         `Wildness must be expressed via countsAs (e.g. FULL_JOKER), never a bare "wild".`,

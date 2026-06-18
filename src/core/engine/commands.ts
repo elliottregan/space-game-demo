@@ -6,13 +6,13 @@ import type {
   Campaign,
   Card,
   Epoch,
-  GameEvent,
+  Ideology,
   PolicyCard,
   ProjectUnlock,
   Setting,
 } from "../types.ts";
 import { POLICY_SLOT_CAP, wouldFitInTableau } from "../data/policies.ts";
-import { canPlaceCharter, canPlaceInfluence, canPlaceLand, columnCards } from "./column.ts";
+import { canPlaceInfluence, canPlaceLand, columnCards } from "./column.ts";
 import { evaluateColumn } from "./columnPatterns.ts";
 import { dispatch } from "./dispatch.ts";
 import { applyEffect } from "./effects.ts";
@@ -75,8 +75,19 @@ export function placeCard(
     if (!canPlaceLand(col, card)) {
       return { ok: false, error: "Land cannot be placed there (would not form a valid hand)." };
     }
+    // Plain lands are cost-0/noop, but a land-home joker (the ex-Founding
+    // Charter) carries a real cost + effect. Charge + fire them at play time so
+    // a wild pays its literal cost and fires its own effect (spec §3.2).
+    if (epoch.influence < card.influenceCost) {
+      return {
+        ok: false,
+        error: `Need ${card.influenceCost} Influence (have ${epoch.influence}).`,
+      };
+    }
+    epoch.influence -= card.influenceCost;
     pool.splice(poolIdx, 1);
     dispatch(epoch, { type: "card-played-to-land", card, columnIndex });
+    applyEffect(card.effect, { epoch, rng });
     return { ok: true, card };
   }
 
@@ -96,22 +107,6 @@ export function placeCard(
     );
   }
 
-  if (card.kind === "charter") {
-    if (!canPlaceCharter(col, card)) {
-      return { ok: false, error: "Charter row needs the Influence row filled." };
-    }
-    return playToTopRow(
-      epoch,
-      setting,
-      card,
-      columnIndex,
-      pool,
-      poolIdx,
-      "card-played-to-charter",
-      rng,
-    );
-  }
-
   return { ok: false, error: "Card kind cannot be played." };
 }
 
@@ -122,7 +117,7 @@ function playToTopRow(
   columnIndex: number,
   pool: Card[],
   poolIdx: number,
-  eventType: GameEvent["type"] & ("card-played-to-influence" | "card-played-to-charter"),
+  eventType: "card-played-to-influence",
   rng: RNG,
 ): PlaceResult {
   if (epoch.influence < card.influenceCost) {
@@ -133,7 +128,7 @@ function playToTopRow(
   }
   epoch.influence -= card.influenceCost;
   pool.splice(poolIdx, 1);
-  dispatch(epoch, { type: eventType, card, columnIndex } as GameEvent);
+  dispatch(epoch, { type: eventType, card, columnIndex });
 
   applyEffect(card.effect, { epoch, rng });
 
@@ -151,27 +146,12 @@ export function discardLand(epoch: Epoch, columnIndex: number, rng: RNG): CmdRes
   return { ok: true, value: card };
 }
 
-export function discardCharter(epoch: Epoch, columnIndex: number, rng: RNG): CmdResult<Card> {
-  const blocked = requirePlayable(epoch);
-  if (blocked) return blocked;
-  const col = epoch.columns[columnIndex];
-  if (!col) return { ok: false, error: "Invalid column." };
-  const card = col.charter.card;
-  if (!card) return { ok: false, error: "No Charter to discard." };
-  col.charter.card = null;
-  dispatch(epoch, { type: "card-discarded", card, source: "tableau-charter" }, rng);
-  return { ok: true, value: card };
-}
-
 export function recallInfluence(epoch: Epoch, columnIndex: number, rng: RNG): CmdResult<Card[]> {
   const blocked = requirePlayable(epoch);
   if (blocked) return blocked;
   const col = epoch.columns[columnIndex];
   if (!col) return { ok: false, error: "Invalid column." };
   if (col.influence.cards.length === 0) return { ok: false, error: "No Influence to recall." };
-  if (col.charter.card !== null) {
-    return { ok: false, error: "Discard the Charter first." };
-  }
   const recalled = [...col.influence.cards];
   // Emit a discard event per recalled card so Dissent + discard piles get the
   // same treatment as today's single-recall.
@@ -192,7 +172,6 @@ export function discardColumn(epoch: Epoch, columnIndex: number, rng: RNG): CmdR
   // Clear first so the cascade does not double-touch.
   col.lands.cards.length = 0;
   col.influence.cards.length = 0;
-  col.charter.card = null;
   for (const c of cards) {
     dispatch(epoch, { type: "card-discarded", card: c, source: "column" }, rng);
   }
@@ -215,6 +194,8 @@ export function buildColumn(
   setting: Setting,
   columnIndex: number,
   rng: RNG,
+  // P2: accepted but unused — promotion validation + promotedIdeology land in P3.
+  _promote?: Ideology,
 ): CmdResult<ProjectUnlock> {
   const blocked = requirePlayable(epoch);
   if (blocked) return blocked;

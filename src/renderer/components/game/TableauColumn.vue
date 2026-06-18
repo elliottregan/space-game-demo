@@ -1,12 +1,5 @@
 <template>
   <div class="tableau-column">
-    <CharterCell
-      :card="column.charter.card"
-      :locked="column.influence.cards.length === 0"
-      :accepts-drop="validForDrag.charter"
-      @place="(id) => $emit('place-card', id)"
-      @discard="$emit('discard-charter')"
-    />
     <InfluenceCell
       :cards="column.influence.cards"
       :locked="column.lands.cards.length === 0"
@@ -39,7 +32,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Card as CardT, Column } from "../../../core/types.ts";
-import CharterCell from "./CharterCell.vue";
 import InfluenceCell from "./InfluenceCell.vue";
 import LandCell from "./LandCell.vue";
 import ColumnFooter from "./ColumnFooter.vue";
@@ -48,7 +40,7 @@ const props = defineProps<{
   column: Column;
   buildable: boolean;
   buildTooltip: string;
-  validForDrag: { land: boolean; influence: boolean; charter: boolean };
+  validForDrag: { land: boolean; influence: boolean };
   selectedStorageIds: string[];
   canPlaceFromStorage: (card: CardT) => boolean;
 }>();
@@ -59,17 +51,13 @@ defineEmits<{
   "toggle-storage-select": [cardId: string];
   "place-from-storage": [cardId: string];
   "discard-land": [];
-  "discard-charter": [];
   "recall-influence": [];
   "discard-column": [];
   build: [];
 }>();
 
 const empty = computed(
-  () =>
-    props.column.lands.cards.length === 0 &&
-    props.column.influence.cards.length === 0 &&
-    props.column.charter.card === null,
+  () => props.column.lands.cards.length === 0 && props.column.influence.cards.length === 0,
 );
 </script>
 
@@ -78,7 +66,7 @@ const empty = computed(
   display: grid;
   /* Matches the row heights in TableauPanel's row-labels so rows align
      across all columns and the row labels in the left margin. */
-  grid-template-rows: 150px 150px 150px auto;
+  grid-template-rows: 150px 150px auto;
   gap: 6px;
 }
 </style>

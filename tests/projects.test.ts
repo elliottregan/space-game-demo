@@ -124,7 +124,7 @@ describe("projects helpers", () => {
           land(7, "solidarity"),
           land(7, "heritage"),
           role("scholar", "solidarity"),
-          getCard("keystone-founding-charter"), // solidarity
+          getCard("keystone-founding-charter"), // now a FULL_JOKER wild — excluded
         ],
       },
       {
@@ -135,11 +135,11 @@ describe("projects helpers", () => {
           land(3, "sovereignty"),
           role("scholar", "sovereignty"),
           getCard("keystone-pioneer"),
-        ], // wild keystone
+        ], // wild keystone — excluded
       },
     ];
     const b = unlockedIdeologyBreakdown(unlocks);
-    expect(b.solidarity).toBe(3); // land7s + role + charter
+    expect(b.solidarity).toBe(2); // land7 + role (founding-charter is now a wild, excluded)
     expect(b.heritage).toBe(1);
     expect(b.sovereignty).toBe(2); // land3 + role
     expect(b.transformation).toBe(0);

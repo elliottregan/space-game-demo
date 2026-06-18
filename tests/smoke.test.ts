@@ -12,10 +12,7 @@ describe("GameAPI smoke", () => {
     expect(s.epoch.columns.length).toBe(s.setting.rules.columnCount);
     expect(
       s.epoch.columns.every(
-        (col) =>
-          col.lands.cards.length === 0 &&
-          col.influence.cards.length === 0 &&
-          col.charter.card === null,
+        (col) => col.lands.cards.length === 0 && col.influence.cards.length === 0,
       ),
     ).toBe(true);
   });

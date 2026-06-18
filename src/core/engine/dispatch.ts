@@ -29,11 +29,6 @@ export function dispatch(epoch: Epoch, ev: GameEvent, rng?: RNG): void {
       if (col) col.influence.cards.push(ev.card);
       break;
     }
-    case "card-played-to-charter": {
-      const col = epoch.columns[ev.columnIndex];
-      if (col) col.charter.card = ev.card;
-      break;
-    }
     case "cards-committed": {
       const col = epoch.columns[ev.columnIndex];
       if (!col) return;

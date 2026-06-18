@@ -6,7 +6,6 @@
         :style="{ '--col-count': columns.length, '--col-min-width': colMinWidth + 'px' }"
       >
         <div class="row-labels">
-          <div class="row-label">Charter</div>
           <div class="row-label">Influence</div>
           <div class="row-label">Land</div>
           <div class="row-label"></div>
@@ -25,7 +24,6 @@
           @toggle-storage-select="(cardId) => $emit('toggleStorageSelect', i, cardId)"
           @place-from-storage="(cardId) => $emit('placeFromStorage', cardId, i)"
           @discard-land="$emit('discardLand', i)"
-          @discard-charter="$emit('discardCharter', i)"
           @recall-influence="$emit('recallInfluence', i)"
           @discard-column="$emit('discardColumn', i)"
           @build="$emit('build', i)"
@@ -41,7 +39,7 @@ import type { Card, Column } from "../../../core/types.ts";
 import TableauColumn from "./TableauColumn.vue";
 import Panel from "../core/Panel.vue";
 import { dragging } from "../../util/dragState.ts";
-import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../../../core/engine/column.ts";
+import { canPlaceInfluence, canPlaceLand } from "../../../core/engine/column.ts";
 
 const STACK_OFFSET = 28;
 const CARD_WIDTH = 112;
@@ -61,7 +59,6 @@ defineEmits<{
   toggleStorageSelect: [columnIndex: number, cardId: string];
   placeFromStorage: [cardId: string, columnIndex: number];
   discardLand: [columnIndex: number];
-  discardCharter: [columnIndex: number];
   recallInfluence: [columnIndex: number];
   discardColumn: [columnIndex: number];
   build: [columnIndex: number];
@@ -80,14 +77,13 @@ function buildTooltip(i: number): string {
   return label || "Build";
 }
 
-function validForDrag(i: number): { land: boolean; influence: boolean; charter: boolean } {
+function validForDrag(i: number): { land: boolean; influence: boolean } {
   const card = dragging.value ? props.getCardFromHand(dragging.value.cardId) : null;
-  if (!card) return { land: false, influence: false, charter: false };
+  if (!card) return { land: false, influence: false };
   const col = props.columns[i];
   return {
-    land: card.kind === "land" && canPlaceLand(col, card),
-    influence: card.kind === "role" && canPlaceInfluence(col, card),
-    charter: card.kind === "charter" && canPlaceCharter(col, card),
+    land: canPlaceLand(col, card),
+    influence: canPlaceInfluence(col, card),
   };
 }
 </script>
@@ -113,7 +109,7 @@ function validForDrag(i: number): { land: boolean; influence: boolean; charter: 
 }
 .row-labels {
   display: grid;
-  grid-template-rows: 150px 150px 150px auto;
+  grid-template-rows: 150px 150px auto;
   /* Must match .tableau-column's row gap exactly or labels drift downward
      row by row. */
   gap: 6px;

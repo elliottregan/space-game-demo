@@ -70,9 +70,6 @@ class GameService {
   discardLand(columnIndex: number): void {
     this.run(() => this.api.discardLand(columnIndex));
   }
-  discardCharter(columnIndex: number): void {
-    this.run(() => this.api.discardCharter(columnIndex));
-  }
   recallInfluence(columnIndex: number): void {
     this.run(() => this.api.recallInfluence(columnIndex));
   }

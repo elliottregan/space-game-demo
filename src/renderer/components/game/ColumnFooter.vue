@@ -9,7 +9,9 @@
     </button>
     <button
       :disabled="!buildable"
-      :title="buildable ? buildTooltip : 'Build needs Land + Influence + Charter'"
+      :title="
+        buildable ? buildTooltip : 'Build needs a Land and an Influence row that form a pattern.'
+      "
       @click="$emit('build')"
     >
       Build

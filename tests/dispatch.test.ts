@@ -1,11 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { dispatch } from "../src/core/engine/dispatch.ts";
-import {
-  createEmptyColumn,
-  placeLand,
-  placeInfluence,
-  placeCharter,
-} from "../src/core/engine/column.ts";
+import { createEmptyColumn, placeLand, placeInfluence } from "../src/core/engine/column.ts";
 import { getCard, landId, roleId } from "../src/core/data/cards.ts";
 import type { Column, Epoch, ProjectUnlock } from "../src/core/types.ts";
 import { countDissentInDeck } from "../src/core/engine/effects.ts";
@@ -71,25 +66,22 @@ describe("dispatch", () => {
     placeLand(col, land(7, "solidarity"));
     placeLand(col, land(7, "heritage"));
     placeInfluence(col, getCard(roleId("scholar", "solidarity")));
-    placeCharter(col, getCard("keystone-founding-charter"));
     const ep = freshEpoch([col]);
     const influence = col.influence.cards[0];
-    const charter = col.charter.card;
-    if (!influence || !charter) throw new Error("expected placed cards");
+    if (!influence) throw new Error("expected placed cards");
     const unlock: ProjectUnlock = {
       projectId: "p-pair",
       pattern: "pair",
       turn: ep.turn,
-      cards: [...col.lands.cards, influence, charter],
+      cards: [...col.lands.cards, influence],
     };
     dispatch(ep, { type: "column-built", columnIndex: 0, unlock });
     expect(ep.unlockedProjects).toContain(unlock);
     expect(col.lands.cards.length).toBe(0);
     expect(col.influence.cards.length).toBe(0);
-    expect(col.charter.card).toBeNull();
-    // 4 cards cycle back via the discard pile, but a Build breeds no Dissent.
+    // 3 cards cycle back via the discard pile, but a Build breeds no Dissent.
     expect(ep.draw.filter((c) => c.tags.includes("dissent")).length).toBe(0);
-    expect(ep.discard.length).toBe(4);
+    expect(ep.discard.length).toBe(3);
   });
 
   test("manual column-trash (source=column) STILL breeds one dissent per card — only Build is exempt", () => {

@@ -31,7 +31,7 @@ export type {
 
 export type { Demonym, IdeologyVector } from "./engine/ideology.ts";
 
-export type { CharterRow, Column, ColumnConfig, InfluenceRow, LandRow } from "./engine/column.ts";
+export type { Column, ColumnConfig, InfluenceRow, LandRow } from "./engine/column.ts";
 
 export type { DiscardSource, GameEvent } from "./engine/events.ts";
 

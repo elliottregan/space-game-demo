@@ -167,7 +167,10 @@ export function unlockedIdeologyBreakdown(unlocks: ProjectUnlock[]): Record<Ideo
 export function projectMajority(cards: Card[]): Ideology | null {
   const tally = zeroIdeologyBreakdown();
   for (const c of cards) {
-    if (c.ideology === "wild") continue;
+    // Wilds (countsAs jokers) are swing voters — excluded from majority/promotion,
+    // matching deriveVector + unlockedIdeologyBreakdown.
+    if (effectiveCard(c).ideologyWild) continue;
+    if (c.ideology === "wild") continue; // narrows CardIdeology → Ideology for indexing
     tally[c.ideology] += 1;
   }
   const ranked = (Object.entries(tally) as [Ideology, number][])

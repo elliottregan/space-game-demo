@@ -62,7 +62,6 @@
           @toggle-storage-select="onToggleStorageSelect"
           @place-from-storage="onPlaceFromStorage"
           @discard-land="onDiscardLand"
-          @discard-charter="onDiscardCharter"
           @recall-influence="onRecallInfluence"
           @discard-column="onDiscardColumn"
           @build="onBuild"
@@ -199,7 +198,7 @@ import { SETTING_BY_ID } from "../core/settings/index.ts";
 import { MAX_SLOTS } from "../facade/persistence.ts";
 import { evaluateColumn } from "../core/engine/columnPatterns.ts";
 import { patternLabel } from "./util/labels.ts";
-import { canPlaceLand, canPlaceInfluence, canPlaceCharter } from "../core/engine/column.ts";
+import { canPlaceLand, canPlaceInfluence } from "../core/engine/column.ts";
 
 const game = getGameService();
 
@@ -341,11 +340,8 @@ function selectedStorageFor(col: number): string[] {
 function canPlaceStored(col: number, card: Card): boolean {
   const column = epoch.value.columns[col];
   if (!column || card.tags.includes("dissent")) return false;
-  if (card.kind === "land") return canPlaceLand(column, card);
-  if (card.kind === "role")
-    return canPlaceInfluence(column, card) && epoch.value.influence >= card.influenceCost;
-  if (card.kind === "charter")
-    return canPlaceCharter(column, card) && epoch.value.influence >= card.influenceCost;
+  if (canPlaceLand(column, card)) return true;
+  if (canPlaceInfluence(column, card)) return epoch.value.influence >= card.influenceCost;
   return false;
 }
 
@@ -372,9 +368,6 @@ function onCommitToRow(columnIndex: number, row: "land" | "influence"): void {
 }
 function onDiscardLand(i: number): void {
   game.discardLand(i);
-}
-function onDiscardCharter(i: number): void {
-  game.discardCharter(i);
 }
 function onRecallInfluence(i: number): void {
   game.recallInfluence(i);

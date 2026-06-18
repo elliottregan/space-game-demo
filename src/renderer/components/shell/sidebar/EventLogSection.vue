@@ -24,7 +24,6 @@ function formatEvent(e: GameEvent): string {
   switch (e.type) {
     case "card-played-to-land":
     case "card-played-to-influence":
-    case "card-played-to-charter":
       return `${e.type.replace(/-/g, " ")}: ${e.card.name} → col ${e.columnIndex + 1}`;
     case "card-discarded":
       return `card discarded (${e.source}): ${e.card.name}`;

@@ -21,6 +21,7 @@ import { GameAPI } from "../src/facade/GameAPI.ts";
 import { getSetting } from "../src/core/settings/index.ts";
 import { evaluateColumn } from "../src/core/engine/columnPatterns.ts";
 import { canCommitHand } from "../src/core/engine/rowHands.ts";
+import { isWildCard } from "../src/core/engine/countsAs.ts";
 import { PATTERNS_IN_ORDER, unlockedIdeologyBreakdown } from "../src/core/data/projects.ts";
 import type { Card, Column, PatternKind } from "../src/core/types.ts";
 import { pickPolicyKeepIds } from "./policyKeep.ts";
@@ -59,8 +60,9 @@ function groupByRank(cards: Card[]): Map<number, Card[]> {
 function lockedIdeology(col: Column): string | null | "mixed" {
   const ids = new Set<string>();
   const all: Card[] = [...col.lands.cards, ...col.influence.cards];
-  if (col.charter.card) all.push(col.charter.card);
-  for (const c of all) if (c.ideology !== "wild") ids.add(c.ideology);
+  // Wilds (countsAs jokers) complete any color, so they never lock or mix the
+  // column's ideology — skip them, mirroring the flush evaluator.
+  for (const c of all) if (!isWildCard(c)) ids.add(c.ideology);
   if (ids.size === 0) return null;
   if (ids.size === 1) return [...ids][0];
   return "mixed";
@@ -235,7 +237,7 @@ function seedStack(api: GameAPI): boolean {
   return false;
 }
 
-/** Place the first placeable card of a kind (charter/role) into a valid column. */
+/** Place the first placeable card of a kind (land/role) into a valid column. */
 function placeKind(kind: Card["kind"]) {
   return (api: GameAPI): boolean => {
     const snap = api.snapshot();
@@ -268,7 +270,7 @@ function placeFlush(api: GameAPI): boolean {
       for (const ci of api.validColumns(card.id)) {
         const lock = lockedIdeology(snap.epoch.columns[ci]);
         if (lock === "mixed") continue;
-        const fits = card.ideology === "wild" || lock === card.ideology;
+        const fits = isWildCard(card) || lock === card.ideology;
         if (phase === "extend" ? fits : lock === null) {
           if (api.placeCard(card.id, ci).ok) return true;
         }
@@ -287,14 +289,12 @@ function globalTarget(api: GameAPI): string | null {
   const snap = api.snapshot();
   const tally = (cards: Card[]) => {
     const m = new Map<string, number>();
-    for (const c of cards)
-      if (c.ideology !== "wild") m.set(c.ideology, (m.get(c.ideology) ?? 0) + 1);
+    for (const c of cards) if (!isWildCard(c)) m.set(c.ideology, (m.get(c.ideology) ?? 0) + 1);
     return m;
   };
   const tableau: Card[] = [];
   for (const col of snap.epoch.columns) {
     tableau.push(...col.lands.cards, ...col.influence.cards);
-    if (col.charter.card) tableau.push(col.charter.card);
   }
   let m = tally(tableau);
   if (m.size === 0) m = tally(snap.epoch.hand.filter((c) => !isDissent(c)));
@@ -309,7 +309,7 @@ function placeMonoculture(api: GameAPI): boolean {
   const snap = api.snapshot();
   for (const card of snap.epoch.hand) {
     if (isDissent(card)) continue;
-    if (card.ideology !== target && card.ideology !== "wild") continue; // off-suit → recycle
+    if (card.ideology !== target && !isWildCard(card)) continue; // off-suit → recycle
     for (const ci of api.validColumns(card.id)) {
       const lock = lockedIdeology(snap.epoch.columns[ci]);
       if (lock === null || lock === target) {
@@ -376,7 +376,6 @@ export const POLICIES: Record<string, Tactic[]> = {
     growStack,
     seedStack,
     commitRolePair,
-    placeKind("charter"),
     placeKind("role"),
     buildBest(4), // only trips+ on purpose
     buildLate(2), // salvage near the cap
@@ -392,7 +391,6 @@ export const POLICIES: Record<string, Tactic[]> = {
     commitLand(["straight"], 1),
     buildBest(5),
     placeKind("role"),
-    placeKind("charter"),
     storeTowardStraight,
     seedStraight,
     buildLate(2),

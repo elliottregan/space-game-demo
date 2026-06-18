@@ -4,7 +4,6 @@ import {
   columnCards,
   placeLand,
   placeInfluence,
-  placeCharter,
 } from "../src/core/engine/column.ts";
 import { dispatch } from "../src/core/engine/dispatch.ts";
 import { getCard, landId, makeDissent, roleId } from "../src/core/data/cards.ts";
@@ -13,7 +12,7 @@ import { getSetting } from "../src/core/settings/index.ts";
 import { createCampaign } from "../src/core/engine/campaign.ts";
 import { createRng } from "../src/core/engine/rng.ts";
 import type { Column, Epoch } from "../src/core/types.ts";
-import { emptyPolicyState } from "./fixtures.ts";
+import { emptyPolicyState, fullJoker } from "./fixtures.ts";
 
 export function freshEpoch(columns: Column[] = [createEmptyColumn()]): Epoch {
   return {
@@ -103,17 +102,17 @@ describe("storeCard command", () => {
     expect(ep.columns[0].storage.length).toBe(0);
   });
 
-  test("any card kind is storable — role, charter, even Dissent", () => {
+  test("any card kind is storable — role, joker, even Dissent", () => {
     const ep = freshEpoch([createEmptyColumn(), createEmptyColumn(), createEmptyColumn()]);
     seedLand(ep, 0);
     seedLand(ep, 1);
     seedLand(ep, 2);
     const role = getCard(roleId("scholar", "heritage"));
-    const charter = getCard("keystone-pioneer");
+    const joker = getCard("keystone-pioneer"); // a full-joker wild
     const dissent = makeDissent();
-    ep.hand = [role, charter, dissent];
+    ep.hand = [role, joker, dissent];
     expect(storeCard(ep, SETTING, role.id, 0, rng).ok).toBe(true);
-    expect(storeCard(ep, SETTING, charter.id, 1, rng).ok).toBe(true);
+    expect(storeCard(ep, SETTING, joker.id, 1, rng).ok).toBe(true);
     expect(storeCard(ep, SETTING, dissent.id, 2, rng).ok).toBe(true);
   });
 
@@ -246,17 +245,20 @@ describe("pulling from storage", () => {
     expect(col.storage).toEqual([storedRole]);
   });
 
-  test("placeCard with source 'storage' plays a stored charter", () => {
+  test("placeCard with source 'storage' replays a stored full joker into the land row", () => {
+    // The fullJoker() fixture is land-home (kind:"land", cost 0), so placeCard —
+    // which routes by the LITERAL card.kind, not canOccupyRow — sends it through
+    // the land branch (C4). canPlaceLand accepts it via canOccupyRow onto the
+    // empty land row. Cross-row replay into the influence row is the commitHand
+    // path, not single placeCard.
     const ep = freshEpoch();
     const col = ep.columns[0];
-    placeLand(col, land(7, "solidarity"));
-    placeInfluence(col, getCard(roleId("scholar", "solidarity")));
-    const charter = getCard("keystone-founding-charter"); // cost 2, +2 Influence
-    col.storage = [charter];
+    const joker = fullJoker(); // cost 0 in the fixture; no Influence needed
+    col.storage = [joker];
     const campaign = createCampaign(1);
-    const r = placeCard(ep, campaign, getSetting("homeworld"), charter.id, 0, rng, "storage");
+    const r = placeCard(ep, campaign, getSetting("homeworld"), joker.id, 0, rng, "storage");
     expect(r.ok).toBe(true);
-    expect(col.charter.card).toBe(charter);
+    expect(col.lands.cards).toContain(joker);
     expect(col.storage.length).toBe(0);
   });
 
@@ -275,7 +277,6 @@ describe("pulling from storage", () => {
     placeLand(col, land(7, "solidarity"));
     placeLand(col, land(7, "heritage"));
     placeInfluence(col, getCard(roleId("scholar", "solidarity")));
-    placeCharter(col, getCard("keystone-founding-charter"));
     const kept = land(2, "solidarity");
     col.storage = [kept];
     const r = buildColumn(ep, getSetting("homeworld"), 0, rng);

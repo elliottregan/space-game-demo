@@ -10,7 +10,6 @@ import { createEpoch, currentVector } from "../core/engine/epoch.ts";
 import {
   buildColumn as buildColumnCore,
   commitHand as commitHandCore,
-  discardCharter as discardCharterCore,
   discardColumn as discardColumnCore,
   discardFromHand as discardFromHandCore,
   discardLand as discardLandCore,
@@ -48,7 +47,7 @@ import type {
   TurnPhase,
 } from "../core/types.ts";
 import { demonym, demonymName } from "../core/engine/ideology.ts";
-import { canPlaceCharter, canPlaceInfluence, canPlaceLand } from "../core/engine/column.ts";
+import { canPlaceInfluence, canPlaceLand } from "../core/engine/column.ts";
 import { evaluateColumn } from "../core/engine/columnPatterns.ts";
 import { countDissentInDeck } from "../core/engine/effects.ts";
 import { effectiveRules } from "../core/engine/effectiveRules.ts";
@@ -197,7 +196,6 @@ export class GameAPI {
     const columnsView: Column[] = this.epoch.columns.map((c) => ({
       lands: { cards: [...c.lands.cards] },
       influence: { cards: c.influence.cards.map((card) => ({ ...card })) },
-      charter: { card: c.charter.card },
       storage: [...c.storage],
     }));
     const columnBuildable = columnsView.map(
@@ -269,9 +267,8 @@ export class GameAPI {
     const out: number[] = [];
     for (let i = 0; i < this.epoch.columns.length; i++) {
       const col = this.epoch.columns[i];
-      if (card.kind === "land" && canPlaceLand(col, card)) out.push(i);
-      else if (card.kind === "role" && canPlaceInfluence(col, card)) out.push(i);
-      else if (card.kind === "charter" && canPlaceCharter(col, card)) out.push(i);
+      if (canPlaceLand(col, card)) out.push(i);
+      else if (canPlaceInfluence(col, card)) out.push(i);
     }
     return out;
   }
@@ -288,9 +285,6 @@ export class GameAPI {
   discardLand(columnIndex: number): CommandResult<Card> {
     return discardLandCore(this.epoch, columnIndex, this.rng);
   }
-  discardCharter(columnIndex: number): CommandResult<Card> {
-    return discardCharterCore(this.epoch, columnIndex, this.rng);
-  }
   recallInfluence(columnIndex: number): CommandResult<Card[]> {
     return recallInfluenceCore(this.epoch, columnIndex, this.rng);
   }
@@ -300,8 +294,11 @@ export class GameAPI {
   discardFromHand(cardId: string): CommandResult<Card> {
     return discardFromHandCore(this.epoch, cardId, this.rng);
   }
-  buildColumn(columnIndex: number): CommandResult<{ projectId: string; pattern: string }> {
-    const r = buildColumnCore(this.epoch, this.setting, columnIndex, this.rng);
+  buildColumn(
+    columnIndex: number,
+    promote?: Ideology,
+  ): CommandResult<{ projectId: string; pattern: string }> {
+    const r = buildColumnCore(this.epoch, this.setting, columnIndex, this.rng, promote);
     return r.ok
       ? { ok: true, value: { projectId: r.value.projectId, pattern: r.value.pattern } }
       : r;

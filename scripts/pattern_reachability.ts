@@ -1,4 +1,5 @@
 import { ALL_CARDS } from "../src/core/data/cards.ts";
+import { isWildCard } from "../src/core/engine/countsAs.ts";
 import { HOMEWORLD } from "../src/core/settings/homeworld.ts";
 import { GENERATION_SHIP } from "../src/core/settings/generationShip.ts";
 import { RUINED_HOMEWORLD } from "../src/core/settings/ruinedHomeworld.ts";
@@ -10,10 +11,18 @@ function analyzePatterns(name: string, cardIds: string[]) {
   const landsByRank = new Map<number, number>(); // rank -> count across ideologies
   const landsByIdeology = new Map<string, Set<number>>(); // ideology -> set of ranks
   const roles = new Set<string>();
+  let jokers = 0; // full-joker wilds (ex-charters): complete any rank/color/row
 
   for (const id of cardIds) {
     const card = cardMap.get(id);
     if (!card) continue;
+
+    // Jokers (countsAs wilds) are universal completers, not real same-rank or
+    // flush contributors — count them separately and skip the literal tallies.
+    if (isWildCard(card)) {
+      jokers++;
+      continue;
+    }
 
     ideologies.add(card.ideology);
 
@@ -85,77 +94,67 @@ function analyzePatterns(name: string, cardIds: string[]) {
   if (hasFullHouse) reachable.push("full-house");
   else locked.push("full-house");
 
-  // flush: all cards (lands + roles + charters) share one ideology
-  if (ideologies.size === 1) reachable.push("flush");
-  else {
-    // Can we make a flush with one ideology?
-    let flushable = false;
-    for (const ideology of ideologies) {
-      if (ideology === "wild") continue; // wild doesn't make a flush
-      const landsOfIdeology = landsByIdeology.get(ideology)?.size ?? 0;
-      const rolesOfIdeology = Array.from(cardMap.values()).filter(
-        (c) => c.kind === "role" && c.ideology === ideology && cardIds.includes(c.id),
-      ).length;
-      const chartersOfIdeology = Array.from(cardMap.values()).filter(
-        (c) => c.kind === "charter" && c.ideology === ideology && cardIds.includes(c.id),
-      ).length;
-      // Need at least 1 of each kind for a column
-      if (landsOfIdeology > 0 && rolesOfIdeology > 0) {
-        flushable = true;
-        break;
-      }
-    }
-    if (flushable) reachable.push("flush");
-    else locked.push("flush");
-  }
+  // Real (non-joker) role cards of a given ideology present in the deck.
+  const rolesOf = (ideology: string) =>
+    Array.from(cardMap.values()).filter(
+      (c) =>
+        c.kind === "role" && !isWildCard(c) && c.ideology === ideology && cardIds.includes(c.id),
+    );
 
-  // straight-flush: land straight of one ideology + role + charter of same ideology
+  // flush: a single-color column over Land + Influence (charter is gone). Need
+  // ≥1 land-row card AND ≥1 role-row card all admitting one color. Jokers admit
+  // any color and either row, so they can supply a missing land or role.
+  let flushable = false;
+  for (const ideology of ideologies) {
+    const hasLand = (landsByIdeology.get(ideology)?.size ?? 0) > 0;
+    const hasRole = rolesOf(ideology).length > 0;
+    let need = 0;
+    if (!hasLand) need++;
+    if (!hasRole) need++;
+    if (jokers >= need) {
+      flushable = true;
+      break;
+    }
+  }
+  // An all-joker column (≥2 jokers) trivially flushes (intersection = all colors).
+  if (!flushable && jokers >= 2) flushable = true;
+  if (flushable) reachable.push("flush");
+  else locked.push("flush");
+
+  // straight-flush: a land-row straight of one color + a role-row card of that
+  // color. Jokers fill straight gaps and/or the role slot.
   let straightFlushable = false;
   for (const ideology of ideologies) {
-    if (ideology === "wild") continue;
     const landsOfIdeology = Array.from(landsByIdeology.get(ideology) ?? []).sort((a, b) => a - b);
-    let maxConsecOfIdeology = 1;
-    for (let i = 0; i < landsOfIdeology.length - 1; i++) {
-      if (landsOfIdeology[i + 1] === landsOfIdeology[i] + 1) maxConsecOfIdeology++;
-      else maxConsecOfIdeology = 1;
+    // Best run of consecutive distinct ranks; jokers fill the remaining gaps.
+    let bestRun = landsOfIdeology.length === 0 ? 0 : 1;
+    for (let lo = 2; lo <= 10; lo++) {
+      const window = new Set([lo, lo + 1, lo + 2, lo + 3, lo + 4]);
+      const inWindow = landsOfIdeology.filter((r) => window.has(r)).length;
+      bestRun = Math.max(bestRun, inWindow);
     }
-    if (maxConsecOfIdeology >= 5) {
-      const rolesOfIdeology = Array.from(cardMap.values()).filter(
-        (c) => c.kind === "role" && c.ideology === ideology && cardIds.includes(c.id),
-      ).length;
-      if (rolesOfIdeology > 0) {
-        straightFlushable = true;
-        break;
-      }
+    const landGap = Math.max(0, 5 - bestRun); // jokers needed to complete the land straight
+    const hasRole = rolesOf(ideology).length > 0;
+    const roleGap = hasRole ? 0 : 1; // a joker can supply the role-row card
+    if (jokers >= landGap + roleGap && bestRun >= 1) {
+      straightFlushable = true;
+      break;
     }
   }
   if (straightFlushable) reachable.push("straight-flush");
   else locked.push("straight-flush");
 
-  // royal-flush: all 5 role types of one ideology + land straight of same ideology + charter of same ideology
+  // royal-flush: all 5 role types of one color in the role row + ≥1 land of that
+  // color, all one color. Jokers fill missing role types and/or the land slot.
   let royalFlushable = false;
   for (const ideology of ideologies) {
-    if (ideology === "wild") continue;
-    const rolesOfIdeology = Array.from(cardMap.values()).filter(
-      (c) => c.kind === "role" && c.ideology === ideology && cardIds.includes(c.id),
-    );
-    const roleTypesOfIdeology = new Set(rolesOfIdeology.map((c) => c.role));
-    if (roleTypesOfIdeology.size === 5) {
-      const landsOfIdeology = Array.from(landsByIdeology.get(ideology) ?? []).sort((a, b) => a - b);
-      let maxConsecOfIdeology = 1;
-      for (let i = 0; i < landsOfIdeology.length - 1; i++) {
-        if (landsOfIdeology[i + 1] === landsOfIdeology[i] + 1) maxConsecOfIdeology++;
-        else maxConsecOfIdeology = 1;
-      }
-      if (maxConsecOfIdeology >= 5) {
-        const chartersOfIdeology = Array.from(cardMap.values()).filter(
-          (c) => c.kind === "charter" && c.ideology === ideology && cardIds.includes(c.id),
-        ).length;
-        if (chartersOfIdeology > 0) {
-          royalFlushable = true;
-          break;
-        }
-      }
+    const roleTypesOfIdeology = new Set(rolesOf(ideology).map((c) => c.role));
+    const roleGap = Math.max(0, 5 - roleTypesOfIdeology.size); // jokers to complete the 5 role types
+    const hasLand = (landsByIdeology.get(ideology)?.size ?? 0) > 0;
+    const landGap = hasLand ? 0 : 1; // a joker can supply the land-row card
+    if (jokers >= roleGap + landGap) {
+      royalFlushable = true;
+      break;
     }
   }
   if (royalFlushable) reachable.push("royal-flush");

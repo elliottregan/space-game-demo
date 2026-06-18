@@ -5,11 +5,23 @@ import { ALL_CARDS } from "../data/cards.ts";
 import { DEFAULT_PROJECT_VALUE } from "../data/projects.ts";
 
 // Generation Ship runs on a constrained deck: only Sovereignty + Transformation
-// (captaincy + technological progress) plus wild base charters. The Solidarity
-// and Heritage ideologies, and their Founding Charter, are Homeworld concerns
-// the migrants left behind. ~30 cards total (vs ~56 for Homeworld).
-const SHIP_IDEOLOGIES = new Set<string>(["sovereignty", "transformation", "wild"]);
-const STARTING_DECK = ALL_CARDS.filter((c) => SHIP_IDEOLOGIES.has(c.ideology)).map((c) => c.id);
+// (captaincy + technological progress). The Solidarity and Heritage ideologies
+// are Homeworld concerns the migrants left behind. The former charter cards are
+// now universal jokers (countsAs: FULL_JOKER, complete any shape); the Ship
+// keeps exactly the three whose literal color is sovereignty/transformation —
+// Pioneer, Navigator's Compass, Critical Mass — and leaves behind the heritage
+// Apostle and the solidarity Founding Charter. ~30 cards total (vs ~56 for
+// Homeworld). The joker allowlist is an explicit, drift-proof knob (rather than
+// an emergent side effect of the recolor choices).
+const SHIP_IDEOLOGIES = new Set<string>(["sovereignty", "transformation"]);
+const SHIP_JOKERS = new Set<string>([
+  "keystone-pioneer",
+  "keystone-navigators-compass",
+  "keystone-critical-mass",
+]);
+const STARTING_DECK = ALL_CARDS.filter(
+  (c) => SHIP_IDEOLOGIES.has(c.ideology) || SHIP_JOKERS.has(c.id),
+).map((c) => c.id);
 
 // The 2-ideology deck caps any rank at 2 copies per row, so three-of-a-kind,
 // four-of-a-kind, and full-house are mathematically impossible here. Straights,

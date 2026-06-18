@@ -747,8 +747,7 @@
     pointer-events: auto;
   }
   .cell.land-cell,
-  .cell.influence-cell,
-  .cell.charter-cell {
+  .cell.influence-cell {
     height: 150px;
   }
   /* Land and Influence cells grow horizontally with their CardStacks. */

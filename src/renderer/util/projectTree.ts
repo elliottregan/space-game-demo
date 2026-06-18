@@ -9,6 +9,7 @@ import {
   projectContribution,
   projectMajority,
 } from "../../core/data/projects.ts";
+import { effectiveCard } from "../../core/engine/countsAs.ts";
 import { patternLabel } from "./labels.ts";
 
 export interface ProjectTreeNode {
@@ -49,7 +50,12 @@ export function buildProjectTree(
     if (!project) continue;
     const builds = unlocks.filter((u) => u.pattern === pattern);
     const cards = builds.flatMap((u) => u.cards);
-    const cardIdeologies = cards.map((c) => c.ideology).filter((i): i is Ideology => i !== "wild");
+    // Wilds (countsAs jokers) are excluded — they carry a concrete literal color but
+    // are swing voters in identity terms, matching projectMajority / unlockedIdeologyBreakdown.
+    const cardIdeologies = cards
+      .filter((c) => !effectiveCard(c).ideologyWild)
+      .map((c) => c.ideology)
+      .filter((i): i is Ideology => i !== "wild");
     // One majority per build (per completed project) — never pooled across repeat builds, so
     // the rendered big counters stay in lockstep with `ideologyInfluence` (per-unlock).
     const majorities = builds.map((u) => projectMajority(u.cards));
