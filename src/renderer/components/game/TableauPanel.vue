@@ -100,7 +100,7 @@ function validForDrag(i: number): { land: boolean; influence: boolean; charter: 
   flex: 1 1 auto;
   /* Confine the row-labels' very high z-index (needed to beat hovered land
      stacks and cell-action buttons) to a local stacking context so it can't
-     punch through overlays like RailFlyout above the play area. */
+     punch through overlays like the policy/stats modals above the play area. */
   isolation: isolate;
 }
 .tableau-grid {

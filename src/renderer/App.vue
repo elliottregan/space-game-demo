@@ -4,6 +4,7 @@
       <h1>Deck-Building Demo</h1>
       <span class="app-sub"> Throwaway prototype · {{ demonymLabel }} </span>
       <div class="spacer"></div>
+      <button class="stats-open" @click="statsOpen = true">Stats</button>
       <SaveSlotMenu
         :slots="slots"
         :active-slot-id="activeSlotId"
@@ -32,10 +33,20 @@
       />
     </div>
 
-    <div class="app-main">
-      <Rail side="left" :items="leftRailItems" :active-key="leftRailActive" @toggle="toggleLeft" />
+    <div class="crisis-bar-region">
+      <CrisisBar :crisis="setting.crisis" :turn="epoch.turn" :max-turns="setting.rules.maxTurns" />
+    </div>
 
-      <ProjectTreePanel :projects="setting.projects" :unlocks="epoch.unlockedProjects" />
+    <div class="app-main">
+      <aside class="info-column">
+        <ScoreMeter
+          :crisis="setting.crisis"
+          :unlocks="epoch.unlockedProjects"
+          :projects="setting.projects"
+        />
+        <IdeologyDisplay :vector="snapshot.vector" />
+        <ProjectTreePanel :projects="setting.projects" :unlocks="epoch.unlockedProjects" />
+      </aside>
 
       <div class="play-area">
         <TableauPanel
@@ -105,70 +116,7 @@
         </button>
 
         <div v-if="lastError" class="error-bar">{{ lastError }}</div>
-
-        <RailFlyout
-          v-if="leftRailActive === 'crisis'"
-          side="left"
-          title="Crisis counter"
-          @close="leftRailActive = null"
-        >
-          <CrisisCounterPanel
-            :crisis="setting.crisis"
-            :unlocks="epoch.unlockedProjects"
-            :projects="setting.projects"
-            :turn="epoch.turn"
-            :max-turns="setting.rules.maxTurns"
-          />
-        </RailFlyout>
-        <RailFlyout
-          v-else-if="leftRailActive === 'ideology'"
-          side="left"
-          title="Ideology"
-          @close="leftRailActive = null"
-        >
-          <IdeologyDisplay :vector="snapshot.vector" />
-        </RailFlyout>
-
-        <RailFlyout
-          v-if="rightRailActive === 'monuments'"
-          side="right"
-          title="Monuments"
-          @close="rightRailActive = null"
-        >
-          <MonumentsSection :monuments="snapshot.campaign.monuments" />
-        </RailFlyout>
-        <RailFlyout
-          v-else-if="rightRailActive === 'legacy'"
-          side="right"
-          title="Legacy cards"
-          @close="rightRailActive = null"
-        >
-          <LegacyCardsSection :cards="snapshot.campaign.legacyCards" />
-        </RailFlyout>
-        <RailFlyout
-          v-else-if="rightRailActive === 'counts'"
-          side="right"
-          title="Deck counts"
-          @close="rightRailActive = null"
-        >
-          <DeckCountsSection :counts="snapshot.deckCounts" />
-        </RailFlyout>
-        <RailFlyout
-          v-else-if="rightRailActive === 'log'"
-          side="right"
-          title="Event log"
-          @close="rightRailActive = null"
-        >
-          <EventLogSection :events="epoch.eventLog" />
-        </RailFlyout>
       </div>
-
-      <Rail
-        side="right"
-        :items="rightRailItems"
-        :active-key="rightRailActive"
-        @toggle="toggleRight"
-      />
     </div>
 
     <CrisisScreen
@@ -186,6 +134,15 @@
       :title="pileView === 'deck' ? 'Deck' : 'Discard'"
       :cards="pileView === 'deck' ? epoch.draw : epoch.discard"
       @close="pileView = null"
+    />
+
+    <StatsModal
+      v-if="statsOpen"
+      :monuments="snapshot.campaign.monuments"
+      :legacy-cards="snapshot.campaign.legacyCards"
+      :counts="snapshot.deckCounts"
+      :events="epoch.eventLog"
+      @close="statsOpen = false"
     />
 
     <CampaignEnd v-if="campaignEnded" @restart="onNewSlot" />
@@ -229,18 +186,14 @@ import CampaignEnd from "./components/shell/CampaignEnd.vue";
 import DeckPilePanel from "./components/game/DeckPilePanel.vue";
 import DiscardPilePanel from "./components/game/DiscardPilePanel.vue";
 import CardListModal from "./components/shell/CardListModal.vue";
+import StatsModal from "./components/shell/StatsModal.vue";
 import SaveSlotMenu from "./components/shell/SaveSlotMenu.vue";
 import ThemeToggle from "./components/shell/ThemeToggle.vue";
-import CrisisCounterPanel from "./components/game/CrisisCounterPanel.vue";
+import CrisisBar from "./components/game/CrisisBar.vue";
+import ScoreMeter from "./components/game/ScoreMeter.vue";
 import PolicyHandModal from "./components/game/PolicyHandModal.vue";
 import PolicyTableau from "./components/game/PolicyTableau.vue";
 import PolicyPiles from "./components/game/PolicyPiles.vue";
-import Rail, { type RailItem } from "./components/shell/Rail.vue";
-import RailFlyout from "./components/shell/RailFlyout.vue";
-import MonumentsSection from "./components/shell/sidebar/MonumentsSection.vue";
-import LegacyCardsSection from "./components/shell/sidebar/LegacyCardsSection.vue";
-import DeckCountsSection from "./components/shell/sidebar/DeckCountsSection.vue";
-import EventLogSection from "./components/shell/sidebar/EventLogSection.vue";
 import type { Card, Ideology, LegacyUpgrade } from "../core/types.ts";
 import { SETTING_BY_ID } from "../core/settings/index.ts";
 import { MAX_SLOTS } from "../facade/persistence.ts";
@@ -265,27 +218,7 @@ const pendingConfirm = ref<{
   action: () => void;
 } | null>(null);
 
-const leftRailActive = ref<string | null>(null);
-const rightRailActive = ref<string | null>(null);
-
-const leftRailItems: RailItem[] = [
-  { key: "crisis", label: "Crisis counter", icon: "crisis" },
-  { key: "ideology", label: "Ideology", icon: "ideology" },
-];
-
-const rightRailItems: RailItem[] = [
-  { key: "monuments", label: "Monuments", icon: "monuments" },
-  { key: "legacy", label: "Legacy cards", icon: "legacy" },
-  { key: "counts", label: "Deck counts", icon: "counts" },
-  { key: "log", label: "Event log", icon: "log" },
-];
-
-function toggleLeft(key: string): void {
-  leftRailActive.value = leftRailActive.value === key ? null : key;
-}
-function toggleRight(key: string): void {
-  rightRailActive.value = rightRailActive.value === key ? null : key;
-}
+const statsOpen = ref(false);
 
 const snapshot = computed(() => game.snapshot.value);
 const setting = computed(() => snapshot.value.setting);
