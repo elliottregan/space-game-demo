@@ -23,7 +23,7 @@ import { evaluateColumn } from "../src/core/engine/columnPatterns.ts";
 import { canCommitHand } from "../src/core/engine/rowHands.ts";
 import { isWildCard } from "../src/core/engine/countsAs.ts";
 import { PATTERNS_IN_ORDER, unlockedIdeologyBreakdown } from "../src/core/data/projects.ts";
-import type { Card, Column, PatternKind } from "../src/core/types.ts";
+import type { Card, Column, Ideology, PatternKind } from "../src/core/types.ts";
 import { pickPolicyKeepIds } from "./policyKeep.ts";
 
 const RUNS = Number(process.argv[2] ?? 200);
@@ -131,6 +131,26 @@ function columnMatch(api: GameAPI, col: Column): { kind: PatternKind; value: num
   return { kind: m.kind as PatternKind, value: proj?.value ?? 0 };
 }
 
+/** Promote the present non-wild color with the most cards (count-scaled policy
+ *  fuel; wilds are swing voters). undefined for an all-wild column (core → null).
+ *  Required: buildColumn rejects a ≥2-color column with no promote arg. */
+function promoteFor(col: Column): Ideology | undefined {
+  const tally = new Map<Ideology, number>();
+  for (const c of [...col.lands.cards, ...col.influence.cards]) {
+    if (isWildCard(c) || c.ideology === "wild") continue;
+    tally.set(c.ideology, (tally.get(c.ideology) ?? 0) + 1);
+  }
+  let best: Ideology | undefined;
+  let bestN = 0;
+  for (const [ideo, n] of tally) {
+    if (n > bestN) {
+      bestN = n;
+      best = ideo;
+    }
+  }
+  return best;
+}
+
 /** Build the highest-value buildable column whose value ≥ minValue. */
 function buildBest(minValue: number) {
   return (api: GameAPI): boolean => {
@@ -145,7 +165,7 @@ function buildBest(minValue: number) {
       }
     }
     if (best < 0) return false;
-    return api.buildColumn(best).ok;
+    return api.buildColumn(best, promoteFor(snap.epoch.columns[best])).ok;
   };
 }
 
