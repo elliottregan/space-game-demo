@@ -136,3 +136,7 @@ Bun test runner, tests in `tests/`:
 ## Git workflow
 
 Feature branches; PRs against `main`. Pre-commit hooks (`lefthook`) run `oxlint --fix` + `prettier --write` on staged files in parallel, then `tsc --noEmit` on the full project. Never push `--force` to `main`.
+
+## Code review
+
+Review for **scope** as well as correctness: explicitly flag anything a change adds **beyond its stated task** — unrequested behavior or UX, new features/"nice-to-haves", and magic constants (e.g. an arbitrary `setTimeout` delay). A change should do what was asked, nothing more. Treat unrequested additions as findings, not bonuses.
