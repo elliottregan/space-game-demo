@@ -38,14 +38,9 @@ class GameService {
    */
   private run<T>(fn: () => CommandResult<T>): CommandResult<T> {
     const r = fn();
-    if (!r.ok) {
-      this.lastError.value = r.error;
-      setTimeout(() => {
-        if (this.lastError.value === r.error) this.lastError.value = null;
-      }, 2500);
-    } else {
-      this.lastError.value = null;
-    }
+    // An error persists until the next command (success clears it, another
+    // failure replaces it) — no time-based auto-dismiss.
+    this.lastError.value = r.ok ? null : r.error;
     this.refresh();
     return r;
   }
