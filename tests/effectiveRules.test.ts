@@ -11,13 +11,25 @@ const setting = getSetting("homeworld");
 
 const L = (rank: number, ideo: Ideology) => getCard(landId(rank, ideo));
 
-/** An unlock whose projectMajority is `ideo` (a same-ideology land pair). */
+/** A pair-unlock that fuels `ideo` by 2 (count-scaled same-ideology land pair). */
 function influenceUnlock(ideo: Ideology, rank: number): ProjectUnlock {
   return {
     projectId: `u-${ideo}-${rank}`,
     pattern: "pair",
     turn: 1,
     cards: [L(rank, ideo), L(rank, ideo)],
+    promotedIdeology: ideo,
+  };
+}
+
+/** A single-card unlock that fuels `ideo` by exactly 1 (for below-`per` tests). */
+function singleUnlock(ideo: Ideology, rank: number): ProjectUnlock {
+  return {
+    projectId: `s-${ideo}-${rank}`,
+    pattern: "high-card",
+    turn: 1,
+    cards: [L(rank, ideo)],
+    promotedIdeology: ideo,
   };
 }
 
@@ -74,14 +86,9 @@ describe("effectiveRules", () => {
   });
 
   test("Deep Reserves with 4 transformation influence: +1 base +2 scaled = +3 storage", () => {
-    const unlocks = [
-      influenceUnlock("transformation", 2),
-      influenceUnlock("transformation", 3),
-      influenceUnlock("transformation", 4),
-      influenceUnlock("transformation", 5),
-    ];
+    const unlocks = [influenceUnlock("transformation", 2), influenceUnlock("transformation", 3)]; // 2 pair-unlocks × 2 = 4 transformation influence
     const r = effectiveRules(makeEpoch([slot("deep-reserves")], unlocks), setting);
-    expect(r.storageCapacity).toBe(setting.rules.baseStorageCapacity + 3);
+    expect(r.storageCapacity).toBe(setting.rules.baseStorageCapacity + 3); // +1 base + floor(4/2)
   });
 
   test("Conscription adds influence +2 and dissentAdd 1", () => {
@@ -91,27 +98,27 @@ describe("effectiveRules", () => {
   });
 
   test("Solidarity Forever with 8 solidarity influence: handSize +1 base +2 scaled", () => {
-    const unlocks = Array.from({ length: 8 }, (_, i) => influenceUnlock("solidarity", i + 2));
+    const unlocks = Array.from({ length: 4 }, (_, i) => influenceUnlock("solidarity", i + 2)); // 8
     const r = effectiveRules(makeEpoch([slot("solidarity-forever")], unlocks), setting);
-    expect(r.handSize).toBe(setting.rules.baseHandSize + 3);
+    expect(r.handSize).toBe(setting.rules.baseHandSize + 3); // +1 base + floor(8/4)=2
   });
 
   test("Deep Reserves with influence below per: floor(1/2)=0, base only (+1 storage)", () => {
-    const unlocks = [influenceUnlock("transformation", 2)];
+    const unlocks = [singleUnlock("transformation", 2)]; // 1 transformation influence
     const r = effectiveRules(makeEpoch([slot("deep-reserves")], unlocks), setting);
     expect(r.storageCapacity).toBe(setting.rules.baseStorageCapacity + 1);
   });
 
   test("Solidarity Forever with influence below per: floor(3/4)=0, base only (+1 handSize)", () => {
-    const unlocks = Array.from({ length: 3 }, (_, i) => influenceUnlock("solidarity", i + 2));
+    const unlocks = [influenceUnlock("solidarity", 2), singleUnlock("solidarity", 3)]; // 3
     const r = effectiveRules(makeEpoch([slot("solidarity-forever")], unlocks), setting);
     expect(r.handSize).toBe(setting.rules.baseHandSize + 1);
   });
 
   test("Deep Reserves x2 at 4 influence: (+1 base +2 scaled) x2 stacks = +6 storage", () => {
-    const unlocks = Array.from({ length: 4 }, (_, i) => influenceUnlock("transformation", i + 2));
+    const unlocks = [influenceUnlock("transformation", 2), influenceUnlock("transformation", 3)]; // 4 transformation influence
     const r = effectiveRules(makeEpoch([slot("deep-reserves", 2)], unlocks), setting);
-    expect(r.storageCapacity).toBe(setting.rules.baseStorageCapacity + 6);
+    expect(r.storageCapacity).toBe(setting.rules.baseStorageCapacity + 6); // (1 + floor(4/2)) × 2
   });
 
   test("Mandate + Conscription accumulate across slots: influenceBaseline +3", () => {

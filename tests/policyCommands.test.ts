@@ -22,7 +22,8 @@ import {
   projectedNewSlots,
   wouldFitInTableau,
 } from "../src/core/data/policies.ts";
-import { getCard, landId } from "../src/core/data/cards.ts";
+import { getCard, landId, roleId } from "../src/core/data/cards.ts";
+import { createEmptyColumn, placeLand, placeInfluence } from "../src/core/engine/column.ts";
 import { getSetting } from "../src/core/settings/index.ts";
 import { createCampaign } from "../src/core/engine/campaign.ts";
 import { createRng } from "../src/core/engine/rng.ts";
@@ -35,13 +36,15 @@ const campaign = createCampaign(1);
 
 const L = (rank: number, ideo: Ideology) => getCard(landId(rank, ideo));
 
-/** A built unlock whose projectMajority is `ideo` (a same-ideology land pair). */
+/** A built unlock that fuels `ideo` by `count` (default 2): a same-ideology
+ *  land pair promoted to `ideo` contributes 2 under count-scaling. */
 function influenceUnlock(ideo: Ideology, rank: number): ProjectUnlock {
   return {
     projectId: `u-${ideo}-${rank}`,
     pattern: "pair",
     turn: 1,
     cards: [L(rank, ideo), L(rank, ideo)],
+    promotedIdeology: ideo,
   };
 }
 
@@ -87,23 +90,29 @@ function makeEpoch(
 describe("drawPolicies — draw scales with influence", () => {
   test("draws ideologyInfluence[I] cards from each ideology's deck", () => {
     const ep = makeEpoch({
-      // 2 solidarity unlocks → infl.solidarity = 2; 1 heritage unlock.
+      // 2 solidarity pair-unlocks → infl.solidarity = 4; 1 heritage pair → infl.heritage = 2.
       unlocks: [
         influenceUnlock("solidarity", 2),
         influenceUnlock("solidarity", 3),
         influenceUnlock("heritage", 4),
       ],
       decks: {
-        solidarity: [getPolicy("mobilize"), getPolicy("mobilize"), getPolicy("mobilize")],
-        heritage: [getPolicy("continuity"), getPolicy("archive")],
+        solidarity: [
+          getPolicy("mobilize"),
+          getPolicy("mobilize"),
+          getPolicy("mobilize"),
+          getPolicy("mobilize"),
+          getPolicy("mobilize"),
+        ],
+        heritage: [getPolicy("continuity"), getPolicy("archive"), getPolicy("continuity")],
       },
     });
     drawPolicies(ep, createRng(1));
     const cands = ep.policy.candidates;
-    expect(cands.filter((c) => c.ideology === "solidarity")).toHaveLength(2);
-    expect(cands.filter((c) => c.ideology === "heritage")).toHaveLength(1);
-    expect(cands).toHaveLength(3);
-    // 2 of 3 solidarity drawn; 1 of 2 heritage drawn.
+    expect(cands.filter((c) => c.ideology === "solidarity")).toHaveLength(4);
+    expect(cands.filter((c) => c.ideology === "heritage")).toHaveLength(2);
+    expect(cands).toHaveLength(6);
+    // 4 of 5 solidarity drawn; 2 of 3 heritage drawn.
     expect(ep.policy.decks.solidarity).toHaveLength(1);
     expect(ep.policy.decks.heritage).toHaveLength(1);
   });
@@ -119,20 +128,22 @@ describe("drawPolicies — draw scales with influence", () => {
 
   test("reshuffles discard into deck when the deck empties mid-draw", () => {
     const ep = makeEpoch({
-      // Need 2 solidarity draws; deck has 1, discard has 1 → reshuffle to get both.
+      // Need 4 solidarity draws; deck has 2, discard has 2 → reshuffle to get all four.
       unlocks: [influenceUnlock("solidarity", 2), influenceUnlock("solidarity", 3)],
-      decks: { solidarity: [getPolicy("mobilize")] },
-      discards: { solidarity: [getPolicy("solidarity-forever")] },
+      decks: { solidarity: [getPolicy("mobilize"), getPolicy("mobilize")] },
+      discards: {
+        solidarity: [getPolicy("solidarity-forever"), getPolicy("solidarity-forever")],
+      },
     });
     drawPolicies(ep, createRng(7));
-    expect(ep.policy.candidates).toHaveLength(2);
+    expect(ep.policy.candidates).toHaveLength(4);
     expect(ep.policy.discards.solidarity).toHaveLength(0);
     expect(ep.policy.decks.solidarity).toHaveLength(0);
   });
 
   test("when deck + discard both run dry, draws fewer than requested", () => {
     const ep = makeEpoch({
-      // Need 2 solidarity draws but only 1 card total exists.
+      // Need 4 solidarity draws but only 1 card total exists.
       unlocks: [influenceUnlock("solidarity", 2), influenceUnlock("solidarity", 3)],
       decks: { solidarity: [getPolicy("mobilize")] },
     });
@@ -400,5 +411,68 @@ describe("shared slot projection (single source for cap math)", () => {
     // 4 slots + 2 new distinct = 6 > cap → rejects (matches the enact test above).
     expect(wouldFitInTableau(tableau, ["mobilize", "deep-reserves"])).toBe(false);
     expect(POLICY_SLOT_CAP).toBe(5);
+  });
+});
+
+describe("buildColumn promotion", () => {
+  /** A live (play-phase, in-progress) epoch whose single column is `col`. */
+  function epochWithColumn(col: ReturnType<typeof createEmptyColumn>): Epoch {
+    const ep = makeEpoch();
+    ep.columns = [col];
+    return ep;
+  }
+
+  test("all-wild column ⇒ promotedIdeology: null (auto)", () => {
+    const col = createEmptyColumn();
+    placeLand(col, getCard("keystone-founding-charter")); // a full joker (land-home)
+    placeInfluence(col, getCard("keystone-pioneer")); // a full joker (role-home)
+    const ep = epochWithColumn(col);
+    const r = buildColumn(ep, SETTING, 0, createRng(1));
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.promotedIdeology).toBeNull();
+  });
+
+  test("exactly one present ideology ⇒ auto-promotes without a promote arg", () => {
+    const col = createEmptyColumn();
+    placeLand(col, getCard(landId(2, "solidarity")));
+    placeLand(col, getCard(landId(2, "solidarity")));
+    placeInfluence(col, getCard(roleId("scholar", "solidarity")));
+    const ep = epochWithColumn(col);
+    const r = buildColumn(ep, SETTING, 0, createRng(1));
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.promotedIdeology).toBe("solidarity");
+  });
+
+  test("≥2 present ideologies + no promote ⇒ rejects", () => {
+    const col = createEmptyColumn();
+    placeLand(col, getCard(landId(2, "solidarity")));
+    placeLand(col, getCard(landId(2, "heritage")));
+    placeInfluence(col, getCard(roleId("scholar", "solidarity")));
+    const ep = epochWithColumn(col);
+    const r = buildColumn(ep, SETTING, 0, createRng(1));
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toBe("Choose an ideology to promote.");
+  });
+
+  test("promote not present in the column ⇒ rejects", () => {
+    const col = createEmptyColumn();
+    placeLand(col, getCard(landId(2, "solidarity")));
+    placeLand(col, getCard(landId(2, "heritage")));
+    placeInfluence(col, getCard(roleId("scholar", "solidarity")));
+    const ep = epochWithColumn(col);
+    const r = buildColumn(ep, SETTING, 0, createRng(1), "sovereignty");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toBe("Cannot promote an ideology not present in the column.");
+  });
+
+  test("valid promote among present ⇒ set on the unlock", () => {
+    const col = createEmptyColumn();
+    placeLand(col, getCard(landId(2, "solidarity")));
+    placeLand(col, getCard(landId(2, "heritage")));
+    placeInfluence(col, getCard(roleId("scholar", "solidarity")));
+    const ep = epochWithColumn(col);
+    const r = buildColumn(ep, SETTING, 0, createRng(1), "heritage");
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.promotedIdeology).toBe("heritage");
   });
 });

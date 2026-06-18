@@ -51,7 +51,7 @@ import { canPlaceInfluence, canPlaceLand } from "../core/engine/column.ts";
 import { evaluateColumn } from "../core/engine/columnPatterns.ts";
 import { countDissentInDeck } from "../core/engine/effects.ts";
 import { effectiveRules } from "../core/engine/effectiveRules.ts";
-import { ideologyInfluence } from "../core/data/projects.ts";
+import { ideologyInfluence, presentIdeologies } from "../core/data/projects.ts";
 
 export interface Snapshot {
   campaign: Campaign;
@@ -297,11 +297,29 @@ export class GameAPI {
   buildColumn(
     columnIndex: number,
     promote?: Ideology,
-  ): CommandResult<{ projectId: string; pattern: string }> {
+  ): CommandResult<{ projectId: string; pattern: string; promotedIdeology: Ideology | null }> {
     const r = buildColumnCore(this.epoch, this.setting, columnIndex, this.rng, promote);
     return r.ok
-      ? { ok: true, value: { projectId: r.value.projectId, pattern: r.value.pattern } }
+      ? {
+          ok: true,
+          value: {
+            projectId: r.value.projectId,
+            pattern: r.value.pattern,
+            promotedIdeology: r.value.promotedIdeology,
+          },
+        }
       : r;
+  }
+
+  /** The promotable ideologies for a column at Build: the non-wild colors of the
+   *  column's evaluated pattern cards. [] when the column is not buildable or is
+   *  all-wild. The renderer uses this to decide whether to open the picker. */
+  promotableIdeologies(columnIndex: number): Ideology[] {
+    const col = this.epoch.columns[columnIndex];
+    if (!col) return [];
+    const match = evaluateColumn(col, this.setting.projects);
+    if (!match) return [];
+    return presentIdeologies(match.cards);
   }
 
   storeCard(cardId: string, columnIndex: number, replaceId?: string): CommandResult<Card> {

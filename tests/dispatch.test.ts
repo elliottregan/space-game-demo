@@ -74,6 +74,7 @@ describe("dispatch", () => {
       pattern: "pair",
       turn: ep.turn,
       cards: [...col.lands.cards, influence],
+      promotedIdeology: "solidarity",
     };
     dispatch(ep, { type: "column-built", columnIndex: 0, unlock });
     expect(ep.unlockedProjects).toContain(unlock);

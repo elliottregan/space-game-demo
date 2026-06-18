@@ -74,6 +74,7 @@ describe("deriveVector", () => {
         getCard(landId(4, "sovereignty")),
         getCard(roleId("agitator", "sovereignty")),
       ],
+      promotedIdeology: "sovereignty",
     };
     const v = deriveVector([], [unlock], [project]);
     expect(v.axis1).toBe(4);
@@ -94,6 +95,7 @@ describe("deriveVector", () => {
       pattern: "pair",
       turn: 1,
       cards: [getCard(landId(3, "solidarity")), getCard(landId(3, "sovereignty"))],
+      promotedIdeology: "solidarity",
     };
     const v = deriveVector([], [unlock], [project]);
     expect(v.axis1).toBe(0);
@@ -106,6 +108,7 @@ describe("deriveVector", () => {
       pattern: "pair",
       turn: 1,
       cards: [getCard(landId(3, "sovereignty")), getCard(landId(3, "sovereignty"))],
+      promotedIdeology: "sovereignty",
     };
     const v = deriveVector([], [unlock], []);
     expect(v).toEqual({ axis1: 0, axis2: 0 });
@@ -129,6 +132,7 @@ describe("unlockedIdeologyBreakdown", () => {
       pattern: "pair",
       turn: 1,
       cards: [getCard(landId(7, "solidarity")), getCard(landId(7, "heritage"))],
+      promotedIdeology: "solidarity",
     };
     const b = unlockedIdeologyBreakdown([u]);
     expect(b.solidarity).toBe(1);
@@ -175,6 +179,7 @@ describe("deriveVector — counts-as wilds skipped by ideologyWild", () => {
       pattern: "flush",
       turn: 1,
       cards: [fullJoker(), fullJoker(), fullJoker()],
+      promotedIdeology: null, // all-wild build ⇒ no promotion
     };
     const v = deriveVector([], [unlock], [project]);
     expect(v).toEqual({ axis1: 0, axis2: 0 });
@@ -188,6 +193,7 @@ describe("unlockedIdeologyBreakdown — full jokers excluded", () => {
       pattern: "flush",
       turn: 1,
       cards: [fullJoker(), fullJoker(), fullJoker()],
+      promotedIdeology: null, // all-wild build ⇒ no promotion
     };
     const b = unlockedIdeologyBreakdown([u]);
     expect(b.solidarity).toBe(0);
@@ -206,6 +212,7 @@ describe("unlockedIdeologyBreakdown — full jokers excluded", () => {
       pattern: "pair",
       turn: 1,
       cards: [getCard(landId(7, "solidarity")), partial],
+      promotedIdeology: "solidarity",
     };
     const b = unlockedIdeologyBreakdown([u]);
     expect(b.solidarity).toBe(1);

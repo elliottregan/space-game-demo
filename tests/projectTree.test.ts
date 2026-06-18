@@ -3,7 +3,7 @@ import { buildProjectTree } from "../src/renderer/util/projectTree.ts";
 import type { Ideology } from "../src/core/types.ts";
 import { getCard, landId } from "../src/core/data/cards.ts";
 import { zeroIdeologyBreakdown } from "../src/core/data/ideologies.ts";
-import { PATTERNS_IN_ORDER } from "../src/core/data/projects.ts";
+import { PATTERNS_IN_ORDER, projectMajority } from "../src/core/data/projects.ts";
 import type { KeystoneProject, ProjectUnlock } from "../src/core/types.ts";
 
 const PROJECTS: KeystoneProject[] = PATTERNS_IN_ORDER.map((pattern, i) => ({
@@ -20,6 +20,7 @@ function unlock(pattern: ProjectUnlock["pattern"], turn: number): ProjectUnlock 
     pattern,
     turn,
     cards: [getCard(landId(7, "solidarity"))],
+    promotedIdeology: "solidarity",
   };
 }
 
@@ -28,7 +29,17 @@ function unlockWith(
   turn: number,
   cards: ProjectUnlock["cards"],
 ): ProjectUnlock {
-  return { projectId: `test-${pattern}`, pattern, turn, cards };
+  // Promote the build's plurality color (null on a tie/all-wild). The renderer's
+  // semantic re-point of the big-counters from projectMajority → promotedIdeology
+  // is owned by P6 (Task 29); here promotedIdeology mirrors projectMajority so the
+  // count-scaled ideologyInfluence (already live in buildProjectTree) is correct.
+  return {
+    projectId: `test-${pattern}`,
+    pattern,
+    turn,
+    cards,
+    promotedIdeology: projectMajority(cards),
+  };
 }
 
 describe("buildProjectTree", () => {
@@ -132,39 +143,47 @@ describe("buildProjectTree ideology view-model", () => {
     expect(pair?.cardIdeologies).toEqual(["solidarity", "solidarity", "heritage", "heritage"]);
   });
 
-  test("the big-counter tally equals the influence readout under repeat builds", () => {
-    // Spec invariant: big-counter tally per color = that ideology's influence.
-    // Build the SAME pattern multiple times (mix of majorities + a tie) so the
-    // per-unlock-vs-pooled boundary is crossed — this would fail under the old pooled model.
+  test("influence is the count-scaled tally of each unlock's promoted color", () => {
+    // Build the SAME pattern multiple times (mix of promoted colors + a tie that
+    // promotes nothing). Under count-scaling (live in buildProjectTree) each
+    // promoted-color pair contributes 2; the tie unlock promotes null ⇒ 0.
     const tree = buildProjectTree(PROJECTS, [
-      unlockWith("pair", 1, [L(2, "solidarity"), L(2, "solidarity")]),
-      unlockWith("pair", 2, [L(3, "solidarity"), L(3, "solidarity")]),
-      unlockWith("pair", 3, [L(4, "heritage"), L(4, "heritage")]),
-      unlockWith("pair", 4, [L(5, "solidarity"), L(6, "heritage")]), // tie → no counter
+      unlockWith("pair", 1, [L(2, "solidarity"), L(2, "solidarity")]), // promote sol ⇒ +2
+      unlockWith("pair", 2, [L(3, "solidarity"), L(3, "solidarity")]), // promote sol ⇒ +2
+      unlockWith("pair", 3, [L(4, "heritage"), L(4, "heritage")]), // promote her ⇒ +2
+      unlockWith("pair", 4, [L(5, "solidarity"), L(6, "heritage")]), // tie ⇒ null ⇒ +0
     ]);
 
-    // Tally the rendered large counters across every node, exactly as the template does.
+    // The per-build big counters still come from projectMajority (re-pointed to
+    // promotedIdeology in P6 / Task 29): one non-null entry per non-tie build.
     const counterTally = zeroIdeologyBreakdown();
     for (const n of tree.nodes) {
       for (const maj of n.majorities) {
         if (maj) counterTally[maj] += 1;
       }
     }
+    expect(counterTally.solidarity).toBe(2);
+    expect(counterTally.heritage).toBe(1);
 
-    expect(counterTally).toEqual(tree.influence);
-    expect(tree.influence.solidarity).toBe(2);
-    expect(tree.influence.heritage).toBe(1);
+    // tree.influence is count-scaled (promoted color's own non-wild cards), so it
+    // is DOUBLE the per-build counter for these pair builds. The big-counter ↔
+    // influence equality the old test asserted is re-established by P6's re-point
+    // of the renderer majorities — out of P3 scope (which only count-scales core).
+    expect(tree.influence.solidarity).toBe(4); // 2 + 2
+    expect(tree.influence.heritage).toBe(2);
+    expect(tree.influence.sovereignty).toBe(0);
+    expect(tree.influence.transformation).toBe(0);
   });
 
-  test("panel influence summary counts the majority per unlock", () => {
+  test("panel influence summary count-scales the promoted color per unlock", () => {
     const { influence } = buildProjectTree(PROJECTS, [
-      unlockWith("pair", 1, [L(2, "solidarity"), L(2, "solidarity")]),
-      unlockWith("two-pair", 2, [L(3, "solidarity"), L(3, "solidarity")]),
-      unlockWith("three-of-a-kind", 3, [L(4, "heritage"), L(4, "heritage")]),
-      unlockWith("straight", 4, [L(5, "solidarity"), L(6, "heritage")]), // tie → skipped
+      unlockWith("pair", 1, [L(2, "solidarity"), L(2, "solidarity")]), // promote sol ⇒ +2
+      unlockWith("two-pair", 2, [L(3, "solidarity"), L(3, "solidarity")]), // promote sol ⇒ +2
+      unlockWith("three-of-a-kind", 3, [L(4, "heritage"), L(4, "heritage")]), // promote her ⇒ +2
+      unlockWith("straight", 4, [L(5, "solidarity"), L(6, "heritage")]), // tie ⇒ null ⇒ +0
     ]);
-    expect(influence.solidarity).toBe(2);
-    expect(influence.heritage).toBe(1);
+    expect(influence.solidarity).toBe(4); // count-scaled: 2 + 2
+    expect(influence.heritage).toBe(2);
     expect(influence.sovereignty).toBe(0);
     expect(influence.transformation).toBe(0);
   });

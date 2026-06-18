@@ -16,14 +16,15 @@ import type { ProjectUnlock } from "../src/core/types.ts";
 
 const L = (rank: number, ideo: Ideology) => getCard(landId(rank, ideo));
 
-/** A built unlock whose projectMajority is `ideo` (a same-ideology land pair),
- *  so ideologyInfluence[ideo] > 0 and endTurn draws ≥1 candidate. */
+/** A built unlock that fuels `ideo` (a same-ideology land pair, count-scaled to
+ *  2), so ideologyInfluence[ideo] > 0 and endTurn draws ≥1 candidate. */
 function influenceUnlock(ideo: Ideology, rank: number): ProjectUnlock {
   return {
     projectId: `u-${ideo}-${rank}`,
     pattern: "pair",
     turn: 1,
     cards: [L(rank, ideo), L(rank, ideo)],
+    promotedIdeology: ideo,
   };
 }
 

@@ -10,6 +10,7 @@ import {
   marginalContribution,
   projectMajority,
   ideologyInfluence,
+  presentIdeologies,
 } from "../src/core/data/projects.ts";
 import type { KeystoneProject, ProjectUnlock } from "../src/core/types.ts";
 import { getCard, landId, roleId } from "../src/core/data/cards.ts";
@@ -126,6 +127,7 @@ describe("projects helpers", () => {
           role("scholar", "solidarity"),
           getCard("keystone-founding-charter"), // now a FULL_JOKER wild — excluded
         ],
+        promotedIdeology: "solidarity",
       },
       {
         projectId: "y",
@@ -136,6 +138,7 @@ describe("projects helpers", () => {
           role("scholar", "sovereignty"),
           getCard("keystone-pioneer"),
         ], // wild keystone — excluded
+        promotedIdeology: "sovereignty",
       },
     ];
     const b = unlockedIdeologyBreakdown(unlocks);
@@ -204,23 +207,78 @@ describe("project majority", () => {
   });
 });
 
-describe("ideologyInfluence", () => {
-  test("counts unlocks per majority ideology, skipping ties", () => {
-    const u = (cards: ReturnType<typeof getCard>[]) => ({
-      projectId: "p",
-      pattern: "pair" as const,
-      turn: 1,
-      cards,
-    });
-    const inf = ideologyInfluence([
-      u([L(2, "solidarity"), L(2, "solidarity")]),
-      u([L(3, "solidarity"), L(3, "solidarity")]),
-      u([L(4, "heritage"), L(4, "heritage")]),
-      u([L(5, "solidarity"), L(6, "heritage")]),
-    ]);
+// A full-joker keystone (countsAs: FULL_JOKER), carries a concrete literal color.
+const W = () => getCard("keystone-pioneer"); // transformation-colored full joker
+
+describe("ideologyInfluence (count-scaled, promoted-color-only)", () => {
+  const u = (
+    cards: ReturnType<typeof getCard>[],
+    promotedIdeology: "solidarity" | "sovereignty" | "transformation" | "heritage" | null,
+  ): ProjectUnlock => ({
+    projectId: "p",
+    pattern: "pair" as const,
+    turn: 1,
+    cards,
+    promotedIdeology,
+  });
+
+  test("a 2-solidarity build promoting solidarity contributes 2 (count-scaled)", () => {
+    const inf = ideologyInfluence([u([L(2, "solidarity"), L(2, "solidarity")], "solidarity")]);
     expect(inf.solidarity).toBe(2);
-    expect(inf.heritage).toBe(1);
+    expect(inf.heritage).toBe(0);
+  });
+
+  test("a wild adds NO fuel: 2 solidarity + 1 wild, promote solidarity ⇒ 2", () => {
+    const inf = ideologyInfluence([u([L(2, "solidarity"), L(2, "solidarity"), W()], "solidarity")]);
+    expect(inf.solidarity).toBe(2);
+    expect(inf.transformation).toBe(0); // the wild's literal color does NOT count
+  });
+
+  test("off-color cards excluded: 3 sol + 1 her + 1 wild, promote solidarity ⇒ 3", () => {
+    const inf = ideologyInfluence([
+      u(
+        [L(2, "solidarity"), L(3, "solidarity"), L(4, "solidarity"), L(5, "heritage"), W()],
+        "solidarity",
+      ),
+    ]);
+    expect(inf.solidarity).toBe(3);
+    expect(inf.heritage).toBe(0);
+    expect(inf.transformation).toBe(0);
+  });
+
+  test("a null (all-wild) promotion contributes nothing", () => {
+    const inf = ideologyInfluence([u([W(), W()], null)]);
+    expect(inf.solidarity).toBe(0);
     expect(inf.sovereignty).toBe(0);
     expect(inf.transformation).toBe(0);
+    expect(inf.heritage).toBe(0);
+  });
+
+  test("sums across unlocks by promoted color", () => {
+    const inf = ideologyInfluence([
+      u([L(2, "solidarity"), L(2, "solidarity")], "solidarity"),
+      u([L(3, "solidarity"), L(3, "solidarity")], "solidarity"),
+      u([L(4, "heritage"), L(4, "heritage")], "heritage"),
+    ]);
+    expect(inf.solidarity).toBe(4); // 2 + 2
+    expect(inf.heritage).toBe(2);
+    expect(inf.sovereignty).toBe(0);
+    expect(inf.transformation).toBe(0);
+  });
+});
+
+describe("presentIdeologies", () => {
+  test("lists only the non-wild colors in the column", () => {
+    const p = presentIdeologies([L(2, "solidarity"), L(2, "solidarity"), L(3, "heritage")]);
+    expect(p.sort()).toEqual(["heritage", "solidarity"]);
+  });
+
+  test("wilds are swing voters: an all-wild column has NO present ideology ⇒ []", () => {
+    expect(presentIdeologies([W(), W()])).toEqual([]);
+  });
+
+  test("a wild's literal color does not make that color promotable", () => {
+    // 1 heritage + 1 wild (transformation-colored joker): only heritage present.
+    expect(presentIdeologies([L(2, "heritage"), W()])).toEqual(["heritage"]);
   });
 });

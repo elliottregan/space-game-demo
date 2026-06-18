@@ -49,6 +49,12 @@ export interface ProjectUnlock {
   turn: number;
   /** Snapshot of the built column at Build time (used for the unlock log). */
   cards: Card[];
+  /** Ideology the player promoted at Build. Drives ideologyInfluence ONLY.
+   *  null when the built column had no non-wild ideology (all-wild build).
+   *  REQUIRED (non-optional): every literal must set it (see P3 test scope) — a
+   *  missing value would make ideologyInfluence read out[undefined] ⇒ NaN, so we
+   *  force the type system to surface every site at tsc time. */
+  promotedIdeology: Ideology | null;
 }
 
 export interface Crisis {
@@ -162,6 +168,21 @@ export function unlockedIdeologyBreakdown(unlocks: ProjectUnlock[]): Record<Ideo
   return out;
 }
 
+/** Ideologies with ≥1 non-wild card in the column — the legal promotion
+ *  choices at Build. Wilds (countsAs) are swing voters: they never make a
+ *  color promotable, so an all-wild column returns []. The legacy "wild"
+ *  sentinel (Dissent / old data) is skipped too. Reads the LITERAL
+ *  `c.ideology`, never the countsAs-resolved value (consistent with
+ *  deriveVector / unlockedIdeologyBreakdown). */
+export function presentIdeologies(cards: Card[]): Ideology[] {
+  const tally = zeroIdeologyBreakdown();
+  for (const c of cards) {
+    if (c.countsAs !== undefined || c.ideology === "wild") continue;
+    tally[c.ideology] += 1;
+  }
+  return (Object.keys(tally) as Ideology[]).filter((i) => tally[i] > 0);
+}
+
 /** Strict plurality of non-wild card ideologies in a set of cards.
  *  Returns null on a tie or if all cards are wild. */
 export function projectMajority(cards: Card[]): Ideology | null {
@@ -181,12 +202,22 @@ export function projectMajority(cards: Card[]): Ideology | null {
   return ranked[0][0];
 }
 
-/** Count of unlocks whose projectMajority equals each ideology; ties skipped. */
+/** Each unlock contributes, to its promotedIdeology, the count of its OWN
+ *  non-wild cards of that color. Swing voters: wilds (countsAs) complete the
+ *  shape but add no fuel; off-color cards don't fuel the promoted color; a null
+ *  promotion (all-wild build) contributes nothing. This is the count-scaled
+ *  replacement for the old flat-+1-to-plurality derivation. (deriveVector and
+ *  unlockedIdeologyBreakdown — the IDENTITY record — deliberately diverge: they
+ *  skip wilds entirely. Do not "unify" the two.) */
 export function ideologyInfluence(unlocks: ProjectUnlock[]): Record<Ideology, number> {
   const out = zeroIdeologyBreakdown();
   for (const u of unlocks) {
-    const m = projectMajority(u.cards);
-    if (m) out[m] += 1;
+    if (u.promotedIdeology === null) continue;
+    for (const c of u.cards) {
+      if (c.countsAs === undefined && c.ideology === u.promotedIdeology) {
+        out[u.promotedIdeology] += 1;
+      }
+    }
   }
   return out;
 }

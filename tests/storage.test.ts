@@ -279,7 +279,9 @@ describe("pulling from storage", () => {
     placeInfluence(col, getCard(roleId("scholar", "solidarity")));
     const kept = land(2, "solidarity");
     col.storage = [kept];
-    const r = buildColumn(ep, getSetting("homeworld"), 0, rng);
+    // Two present ideologies (solidarity land + heritage land) ⇒ promotion is
+    // required; the promoted color is immaterial to this storage-survival test.
+    const r = buildColumn(ep, getSetting("homeworld"), 0, rng, "solidarity");
     expect(r.ok).toBe(true);
     expect(col.lands.cards.length).toBe(0);
     expect(col.storage).toEqual([kept]);

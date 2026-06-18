@@ -3,7 +3,7 @@
 import { shallowRef, ref, type Ref, type ShallowRef } from "vue";
 import { GameAPI, type CommandResult, type Snapshot } from "../facade/GameAPI.ts";
 import type { SaveSlot } from "../facade/persistence.ts";
-import type { LegacyUpgrade } from "../core/types.ts";
+import type { Ideology, LegacyUpgrade } from "../core/types.ts";
 
 class GameService {
   private api: GameAPI;
@@ -62,6 +62,9 @@ class GameService {
   validColumns(cardId: string): number[] {
     return this.api.validColumns(cardId);
   }
+  promotableIdeologies(columnIndex: number): Ideology[] {
+    return this.api.promotableIdeologies(columnIndex);
+  }
 
   // Commands
   placeCard(cardId: string, columnIndex: number): void {
@@ -79,8 +82,8 @@ class GameService {
   discardFromHand(cardId: string): void {
     this.run(() => this.api.discardFromHand(cardId));
   }
-  buildColumn(columnIndex: number): void {
-    this.run(() => this.api.buildColumn(columnIndex));
+  buildColumn(columnIndex: number, promote?: Ideology): void {
+    this.run(() => this.api.buildColumn(columnIndex, promote));
   }
   storeCard(cardId: string, columnIndex: number, replaceId?: string): void {
     this.run(() => this.api.storeCard(cardId, columnIndex, replaceId));

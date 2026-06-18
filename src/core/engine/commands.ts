@@ -12,6 +12,7 @@ import type {
   Setting,
 } from "../types.ts";
 import { POLICY_SLOT_CAP, wouldFitInTableau } from "../data/policies.ts";
+import { presentIdeologies } from "../data/projects.ts";
 import { canPlaceInfluence, canPlaceLand, columnCards } from "./column.ts";
 import { evaluateColumn } from "./columnPatterns.ts";
 import { dispatch } from "./dispatch.ts";
@@ -194,8 +195,7 @@ export function buildColumn(
   setting: Setting,
   columnIndex: number,
   rng: RNG,
-  // P2: accepted but unused — promotion validation + promotedIdeology land in P3.
-  _promote?: Ideology,
+  promote?: Ideology,
 ): CmdResult<ProjectUnlock> {
   const blocked = requirePlayable(epoch);
   if (blocked) return blocked;
@@ -205,11 +205,25 @@ export function buildColumn(
   const match = evaluateColumn(col, setting.projects);
   if (!match) return { ok: false, error: "Column is not buildable." };
 
+  // Promotion: the player promotes one PRESENT ideology (drives ideologyInfluence).
+  // Core auto-promotes the unambiguous cases so headless callers (sim/tests/AI)
+  // need not re-implement the picker: 0 present ⇒ null; exactly 1 ⇒ that one;
+  // a valid explicit promote ⇒ honored; ≥2 with none chosen ⇒ reject.
+  const present = presentIdeologies(match.cards);
+  let promotedIdeology: Ideology | null;
+  if (present.length === 0) promotedIdeology = null;
+  else if (promote && present.includes(promote)) promotedIdeology = promote;
+  else if (promote)
+    return { ok: false, error: "Cannot promote an ideology not present in the column." };
+  else if (present.length === 1) promotedIdeology = present[0];
+  else return { ok: false, error: "Choose an ideology to promote." };
+
   const unlock: ProjectUnlock = {
     projectId: match.projectId,
     pattern: match.kind,
     turn: epoch.turn,
     cards: [...match.cards],
+    promotedIdeology,
   };
   dispatch(epoch, { type: "column-built", columnIndex, unlock }, rng);
   return { ok: true, value: unlock };

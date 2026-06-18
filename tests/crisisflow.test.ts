@@ -67,6 +67,7 @@ const pairUnlock = (turn: number): ProjectUnlock => ({
   pattern: "pair",
   turn,
   cards: [getCard(landId(7, "solidarity"))],
+  promotedIdeology: "solidarity",
 });
 
 describe("Crisis leveling", () => {
