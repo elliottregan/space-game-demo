@@ -83,7 +83,6 @@
     --space-6: 32px;
 
     /* Layout */
-    --rail-width: 44px;
     --tree-width: 200px;
   }
 
@@ -240,7 +239,7 @@
 @layer layout {
   .app-root {
     display: grid;
-    grid-template-rows: auto auto 1fr;
+    grid-template-rows: auto auto auto 1fr;
     height: 100%;
   }
 
@@ -265,6 +264,20 @@
     color: color-mix(in srgb, var(--ground) 72%, var(--ink));
     font-size: 12px;
   }
+  /* Stats opener: sits in the inverted header next to the theme/save controls,
+     styled to match ThemeToggle's underlined ghost button. */
+  .stats-open {
+    background: transparent;
+    color: var(--ground);
+    border: none;
+    box-shadow: none;
+    border-bottom: 2px solid var(--ground);
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .stats-open:hover {
+    background: color-mix(in srgb, var(--ground) 15%, transparent);
+  }
 
   .stats-bar {
     display: flex;
@@ -280,15 +293,32 @@
     gap: 8px;
   }
 
+  /* Slim full-width band under the TurnBar: the always-visible Crisis clock. */
+  .crisis-bar-region {
+    padding: 6px 16px;
+    border-bottom: 1px solid var(--rule-strong);
+    background: var(--ground);
+  }
+
   .app-main {
     display: grid;
-    grid-template-columns: var(--rail-width) var(--tree-width) minmax(0, 1fr) var(--rail-width);
+    grid-template-columns: var(--tree-width) minmax(0, 1fr);
     overflow: hidden;
     min-height: 0;
   }
 
-  .project-tree {
+  /* Left sidebar stacking Score · Ideology · Projects; scrolls vertically when
+     the stacked panels exceed the available height. */
+  .info-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
     border-right: 1px solid var(--rule-strong);
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .project-tree {
     overflow: hidden;
     min-height: 0;
   }

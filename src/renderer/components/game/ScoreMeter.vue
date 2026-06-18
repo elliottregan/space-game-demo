@@ -1,15 +1,5 @@
 <template>
-  <Panel class="crisis-counter" :title="`Crisis · ${crisis.name}`">
-    <div class="meter-section">
-      <div class="meter-label">
-        <span class="meter-name">Turns until Crisis</span>
-        <span class="meter-value" :class="countdownClass">{{ countdownValue }}</span>
-      </div>
-      <div class="meter-track">
-        <div class="meter-fill" :class="countdownClass" :style="{ width: turnsBarWidth }" />
-      </div>
-    </div>
-
+  <Panel title="Score">
     <div class="meter-section">
       <div class="meter-label">
         <span class="meter-name">Score</span>
@@ -38,8 +28,6 @@ const props = defineProps<{
   crisis: Crisis;
   unlocks: ProjectUnlock[];
   projects: KeystoneProject[];
-  turn: number;
-  maxTurns: number;
 }>();
 
 const currentScore = computed(() =>
@@ -59,27 +47,6 @@ const statusLabel = computed(() => {
   const gap = props.crisis.difficulty - currentScore.value;
   return `${gap} more needed`;
 });
-
-// turns-left semantics: Crisis fires when turn > maxTurns. While playing turn N
-// of M, the player still gets to play turns N, N+1, …, M before Crisis hits,
-// which is (M - N + 1) turns. Clamps at 0 once the Crisis phase has begun.
-const turnsLeft = computed(() => Math.max(0, props.maxTurns - props.turn + 1));
-
-const turnsBarWidth = computed(() => {
-  const pct = (turnsLeft.value / props.maxTurns) * 100;
-  return `${pct}%`;
-});
-
-const countdownValue = computed(() => {
-  if (turnsLeft.value === 0) return "now";
-  if (turnsLeft.value === 1) return "1 turn";
-  return `${turnsLeft.value} turns`;
-});
-
-const countdownClass = computed(() => ({
-  edge: turnsLeft.value <= 1,
-  near: turnsLeft.value > 1 && turnsLeft.value <= Math.ceil(props.maxTurns * 0.34),
-}));
 </script>
 
 <style scoped>
@@ -108,12 +75,6 @@ const countdownClass = computed(() => ({
 .meter-value.passing {
   color: var(--status-positive);
 }
-.meter-value.near {
-  color: var(--status-warning);
-}
-.meter-value.edge {
-  color: var(--status-negative);
-}
 .meter-track {
   height: 8px;
   background: var(--mat-strong);
@@ -128,12 +89,6 @@ const countdownClass = computed(() => ({
 }
 .meter-fill.passing {
   background: var(--status-positive);
-}
-.meter-fill.near {
-  background: var(--status-warning);
-}
-.meter-fill.edge {
-  background: var(--status-negative);
 }
 .meter-hint {
   font-size: 11px;
