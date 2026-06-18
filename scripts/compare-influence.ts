@@ -8,6 +8,7 @@ import { GameAPI } from "../src/facade/GameAPI.ts";
 import { evaluateColumn } from "../src/core/engine/columnPatterns.ts";
 import { getSetting } from "../src/core/settings/index.ts";
 import { pickPolicyKeepIds } from "./policyKeep.ts";
+import type { Ideology } from "../src/core/types.ts";
 
 const runs = Number(process.argv[2] ?? 200);
 const settingArg = String(process.argv[3] ?? "all");
@@ -48,7 +49,22 @@ function runEpoch(api: GameAPI): { won: boolean; margin: number } {
       for (let i = 0; i < snap2.epoch.columns.length; i++) {
         const m = evaluateColumn(snap2.epoch.columns[i], snap2.setting.projects);
         if (!m) continue;
-        if (api.buildColumn(i).ok) {
+        // Promote the most-present non-wild color (multi-color builds are rejected
+        // without a promote arg; wilds are swing voters).
+        const tally = new Map<Ideology, number>();
+        for (const c of m.cards) {
+          if (c.countsAs !== undefined || c.ideology === "wild") continue;
+          tally.set(c.ideology, (tally.get(c.ideology) ?? 0) + 1);
+        }
+        let promote: Ideology | undefined;
+        let bestN = 0;
+        for (const [k, n] of tally) {
+          if (n > bestN) {
+            bestN = n;
+            promote = k;
+          }
+        }
+        if (api.buildColumn(i, promote).ok) {
           acted = true;
           break;
         }
