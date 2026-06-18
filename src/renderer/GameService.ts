@@ -160,6 +160,16 @@ class GameService {
   removePolicy(slotIndex: number): void {
     this.run(() => this.api.removePolicy(slotIndex));
   }
+
+  // -----------------------------------------------------------------------
+  // Crisis Tree — active objective selection
+  // -----------------------------------------------------------------------
+
+  /** Select an available Crisis Tree node as the active objective. For a
+   *  requireSameIdeology (Doctrine) node, `ideology` binds the counted color. */
+  setActiveObjective(nodeId: string, ideology?: Ideology): void {
+    this.run(() => this.api.setActiveObjective(nodeId, ideology));
+  }
 }
 
 let instance: GameService | null = null;
