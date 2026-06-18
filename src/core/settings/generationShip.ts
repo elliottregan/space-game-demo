@@ -143,7 +143,10 @@ const CRISIS_TREE: CrisisTree = {
       name: "Mission",
       branch: "doctrine",
       requireSameIdeology: true,
+      // Doctrine teeth: 3 same-color builds AND 2 slotted policies of that color.
+      // Strawman; balance pending.
       requirements: [{ pattern: "any", count: 3 }],
+      policyStrength: 2,
       unlocks: [],
       terminal: true,
     },

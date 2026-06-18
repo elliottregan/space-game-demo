@@ -20,7 +20,7 @@ import { applyEffect } from "./effects.ts";
 import { effectiveRules } from "./effectiveRules.ts";
 import { canCommitHand } from "./rowHands.ts";
 import { isPlayPhase, isPolicyPhase } from "./turnPhase.ts";
-import { availableNodes, applyBuild } from "./crisisTree.ts";
+import { availableNodes, applyBuild, recheckActiveClear } from "./crisisTree.ts";
 import type { RNG } from "./rng.ts";
 
 export type PlaceResult = { ok: true; card: Card } | { ok: false; error: string };
@@ -263,7 +263,16 @@ export function buildColumn(
   const projectBuildCount = epoch.unlockedProjects.filter(
     (u) => u.projectId === unlock.projectId,
   ).length;
-  epoch.crisisTree = applyBuild(setting.crisisTree, epoch.crisisTree, unlock, projectBuildCount);
+  // Pass the live policy tableau so a Doctrine `policyStrength` node only clears
+  // when its bound ideology's slotted policies are strong enough (not on builds
+  // alone). enactPolicies handles the inverse — clearing on a fresh slot.
+  epoch.crisisTree = applyBuild(
+    setting.crisisTree,
+    epoch.crisisTree,
+    unlock,
+    projectBuildCount,
+    epoch.policy,
+  );
   return { ok: true, value: unlock };
 }
 
@@ -439,7 +448,7 @@ function discardPolicyCard(epoch: Epoch, card: PolicyCard): void {
  *    `tableau.length + distinctNew > 5`. Two kept copies of one id fill a single
  *    slot (one distinct), the extra copy stacks.
  */
-export function enactPolicies(epoch: Epoch, keepIds: string[]): CmdResult<void> {
+export function enactPolicies(epoch: Epoch, setting: Setting, keepIds: string[]): CmdResult<void> {
   const blocked = requirePolicyResolution(epoch);
   if (blocked) return blocked;
 
@@ -484,6 +493,10 @@ export function enactPolicies(epoch: Epoch, keepIds: string[]): CmdResult<void> 
   }
   epoch.policy.candidates = [];
   epoch.turnPhase = "play";
+  // Slotting a policy can satisfy a Doctrine `policyStrength` node whose build
+  // requirements were already met (no new build to drive applyBuild), so
+  // re-evaluate the active node's clear condition against the new tableau.
+  epoch.crisisTree = recheckActiveClear(setting.crisisTree, epoch.crisisTree, epoch.policy);
   return { ok: true, value: undefined };
 }
 

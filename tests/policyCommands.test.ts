@@ -195,7 +195,7 @@ describe("enactPolicies", () => {
       candidates: [getPolicy("mobilize"), getPolicy("mandate"), getPolicy("archive")],
       turnPhase: "policy",
     });
-    const r = enactPolicies(ep, ["mobilize"]);
+    const r = enactPolicies(ep, SETTING, ["mobilize"]);
     expect(r.ok).toBe(true);
     // mobilize slotted.
     expect(ep.policy.tableau).toHaveLength(1);
@@ -214,7 +214,7 @@ describe("enactPolicies", () => {
       candidates: [getPolicy("mobilize"), getPolicy("mandate")],
       turnPhase: "policy",
     });
-    const r = enactPolicies(ep, []);
+    const r = enactPolicies(ep, SETTING, []);
     expect(r.ok).toBe(true);
     expect(ep.policy.tableau).toHaveLength(0);
     expect(ep.policy.discards.solidarity.map((c) => c.id)).toEqual(["mobilize"]);
@@ -229,7 +229,7 @@ describe("enactPolicies", () => {
       candidates: [getPolicy("mobilize")],
       turnPhase: "policy",
     });
-    const r = enactPolicies(ep, ["mobilize"]);
+    const r = enactPolicies(ep, SETTING, ["mobilize"]);
     expect(r.ok).toBe(true);
     expect(ep.policy.tableau).toHaveLength(1);
     expect(ep.policy.tableau[0].stacks).toBe(2);
@@ -242,7 +242,7 @@ describe("enactPolicies", () => {
       turnPhase: "policy",
     });
     // keepIds names mobilize ONCE → keep one copy (stacks 1), discard the other.
-    const r = enactPolicies(ep, ["mobilize"]);
+    const r = enactPolicies(ep, SETTING, ["mobilize"]);
     expect(r.ok).toBe(true);
     expect(ep.policy.tableau).toHaveLength(1);
     expect(ep.policy.tableau[0].card.id).toBe("mobilize");
@@ -258,7 +258,7 @@ describe("enactPolicies", () => {
       candidates: [getPolicy("mobilize"), getPolicy("mobilize")],
       turnPhase: "policy",
     });
-    const r = enactPolicies(ep, ["mobilize", "mobilize"]);
+    const r = enactPolicies(ep, SETTING, ["mobilize", "mobilize"]);
     expect(r.ok).toBe(true);
     expect(ep.policy.tableau).toHaveLength(1);
     expect(ep.policy.tableau[0].card.id).toBe("mobilize");
@@ -274,7 +274,7 @@ describe("enactPolicies", () => {
       candidates: [getPolicy("mobilize"), getPolicy("mobilize")],
       turnPhase: "policy",
     });
-    const r = enactPolicies(ep, ["mobilize", "mobilize", "mobilize"]);
+    const r = enactPolicies(ep, SETTING, ["mobilize", "mobilize", "mobilize"]);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toBe("Policy not among this turn's candidates.");
     expect(ep.policy.tableau).toHaveLength(0);
@@ -288,7 +288,7 @@ describe("enactPolicies", () => {
       candidates: [getPolicy("mobilize")],
       turnPhase: "policy",
     });
-    const r = enactPolicies(ep, ["mandate"]);
+    const r = enactPolicies(ep, SETTING, ["mandate"]);
     expect(r.ok).toBe(false);
     expect(ep.policy.tableau).toHaveLength(0);
     expect(ep.policy.candidates).toHaveLength(1);
@@ -302,7 +302,7 @@ describe("enactPolicies", () => {
       candidates: [getPolicy("mobilize"), getPolicy("deep-reserves")],
       turnPhase: "policy",
     });
-    const r = enactPolicies(ep, ["mobilize", "deep-reserves"]);
+    const r = enactPolicies(ep, SETTING, ["mobilize", "deep-reserves"]);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toBe("Too many policies for the tableau (5 slots).");
     expect(ep.policy.tableau).toHaveLength(4); // untouched
@@ -323,7 +323,7 @@ describe("enactPolicies", () => {
       candidates: [getPolicy("mandate")],
       turnPhase: "policy",
     });
-    const r = enactPolicies(ep, ["mandate"]);
+    const r = enactPolicies(ep, SETTING, ["mandate"]);
     expect(r.ok).toBe(true);
     expect(ep.policy.tableau).toHaveLength(5);
     expect(ep.policy.tableau[0].stacks).toBe(2);
@@ -335,7 +335,7 @@ describe("enactPolicies", () => {
       candidates: [getPolicy("mobilize")],
       turnPhase: "play",
     });
-    const r = enactPolicies(ep, ["mobilize"]);
+    const r = enactPolicies(ep, SETTING, ["mobilize"]);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toBe("Not in the policy phase.");
   });

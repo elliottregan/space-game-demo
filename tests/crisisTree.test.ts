@@ -3,11 +3,15 @@ import {
   availableNodes,
   applyBuild,
   isWon,
+  policyStrengthFor,
+  recheckActiveClear,
   type CrisisTree,
   type CrisisTreeState,
+  type PolicyStrengthView,
 } from "../src/core/engine/crisisTree.ts";
 import { SETTINGS } from "../src/core/settings/index.ts";
-import type { ProjectUnlock } from "../src/core/types.ts";
+import { getPolicy } from "../src/core/data/policies.ts";
+import type { PolicySlot, ProjectUnlock } from "../src/core/types.ts";
 import type { PatternKind } from "../src/core/types.ts";
 import type { Ideology } from "../src/core/data/ideologies.ts";
 
@@ -40,6 +44,7 @@ const TREE: CrisisTree = {
       branch: "doctrine",
       requirements: [{ pattern: "any", count: 5 }],
       requireSameIdeology: true,
+      policyStrength: 2,
       unlocks: [],
       terminal: true,
     },
@@ -161,6 +166,134 @@ describe("applyBuild — requireSameIdeology binding", () => {
     // null promotion never counts toward a bound node.
     const none = applyBuild(TREE, state, mkUnlock("pair", null), 1);
     expect(none.progress.capital).toEqual([0]);
+  });
+});
+
+// -------------------------------------------------------------------------
+// Doctrine policyStrength teeth: a requireSameIdeology node with policyStrength
+// clears ONLY once its build requirements are met AND the bound ideology has
+// that many slotted policy cards (stacks counted).
+// -------------------------------------------------------------------------
+
+const policySlot = (id: string, stacks = 1): PolicySlot => ({ card: getPolicy(id), stacks });
+const policyView = (...slots: PolicySlot[]): PolicyStrengthView => ({ tableau: slots });
+
+describe("policyStrengthFor", () => {
+  test("counts slotted same-ideology cards including stacks; 0 for absent/undefined", () => {
+    // mobilize + solidarity-forever are solidarity; mandate is sovereignty.
+    const view = policyView(policySlot("mobilize", 2), policySlot("mandate", 1));
+    expect(policyStrengthFor(view, "solidarity")).toBe(2); // 2 stacks of one solidarity card
+    expect(policyStrengthFor(view, "sovereignty")).toBe(1);
+    expect(policyStrengthFor(view, "heritage")).toBe(0); // none slotted
+    expect(policyStrengthFor(undefined, "solidarity")).toBe(0);
+  });
+
+  test("sums distinct same-color slots", () => {
+    const view = policyView(policySlot("mobilize", 1), policySlot("solidarity-forever", 2));
+    expect(policyStrengthFor(view, "solidarity")).toBe(3);
+  });
+});
+
+describe("applyBuild — Doctrine policyStrength gate", () => {
+  // capital: requireSameIdeology, requirements [{any,5}], policyStrength 2.
+  function boundFiveBuilds(view?: PolicyStrengthView): CrisisTreeState {
+    let state: CrisisTreeState = {
+      ...seed("capital"),
+      cleared: ["settlement"],
+      boundIdeology: { capital: "solidarity" },
+    };
+    for (let i = 0; i < 5; i++) {
+      state = applyBuild(TREE, state, mkUnlock("pair", "solidarity"), 1, view);
+    }
+    return state;
+  }
+
+  test("does NOT clear on builds alone — 5 on-color builds, no policies", () => {
+    const state = boundFiveBuilds(); // no policy view → strength 0
+    expect(state.progress.capital).toEqual([5]); // build requirement satisfied
+    expect(state.cleared).not.toContain("capital"); // but policy gate blocks the clear
+  });
+
+  test("does NOT clear when slotted policy strength is below the threshold", () => {
+    const state = boundFiveBuilds(policyView(policySlot("mobilize", 1))); // strength 1 < 2
+    expect(state.progress.capital).toEqual([5]);
+    expect(state.cleared).not.toContain("capital");
+  });
+
+  test("does NOT clear when the slotted policies are the WRONG color", () => {
+    // 2 sovereignty policies do nothing for a solidarity-bound node.
+    const state = boundFiveBuilds(policyView(policySlot("mandate", 2)));
+    expect(state.cleared).not.toContain("capital");
+  });
+
+  test("clears on the build that completes builds when policy strength is already met", () => {
+    const view = policyView(policySlot("mobilize", 2)); // solidarity strength 2 == threshold
+    const state = boundFiveBuilds(view);
+    expect(state.progress.capital).toEqual([5]);
+    expect(state.cleared).toContain("capital");
+    expect(isWon(TREE, state)).toBe(true);
+  });
+});
+
+describe("recheckActiveClear — Doctrine clears when policies are slotted post-build", () => {
+  function buildsMetNoPolicies(): CrisisTreeState {
+    const state = (() => {
+      let s: CrisisTreeState = {
+        ...seed("capital"),
+        cleared: ["settlement"],
+        boundIdeology: { capital: "solidarity" },
+      };
+      for (let i = 0; i < 5; i++) s = applyBuild(TREE, s, mkUnlock("pair", "solidarity"), 1);
+      return s;
+    })();
+    expect(state.cleared).not.toContain("capital"); // builds met, policy gate open
+    return state;
+  }
+
+  test("a no-op until policy strength reaches the threshold, then clears", () => {
+    const state = buildsMetNoPolicies();
+    // Below threshold: unchanged (same reference, nothing cleared).
+    const still = recheckActiveClear(TREE, state, policyView(policySlot("mobilize", 1)));
+    expect(still.cleared).not.toContain("capital");
+    // At threshold: clears without any new build.
+    const won = recheckActiveClear(TREE, state, policyView(policySlot("mobilize", 2)));
+    expect(won.cleared).toContain("capital");
+    expect(isWon(TREE, won)).toBe(true);
+  });
+
+  test("wrong-color policies never clear the node", () => {
+    const state = buildsMetNoPolicies();
+    const after = recheckActiveClear(TREE, state, policyView(policySlot("mandate", 2)));
+    expect(after.cleared).not.toContain("capital");
+  });
+
+  test("is a no-op for a node whose build requirements are NOT yet met", () => {
+    let state: CrisisTreeState = {
+      ...seed("capital"),
+      cleared: ["settlement"],
+      boundIdeology: { capital: "solidarity" },
+    };
+    state = applyBuild(TREE, state, mkUnlock("pair", "solidarity"), 1); // only 1/5 builds
+    const after = recheckActiveClear(TREE, state, policyView(policySlot("mobilize", 2)));
+    expect(after.cleared).not.toContain("capital");
+  });
+
+  test("does not touch a non-Doctrine active node", () => {
+    // industry has no policyStrength; recheck is a pure no-op for it.
+    let state: CrisisTreeState = { ...seed("industry"), cleared: ["settlement"] };
+    for (let i = 0; i < 8; i++) state = applyBuild(TREE, state, mkUnlock("high-card"), 1);
+    expect(state.cleared).toContain("industry"); // cleared on builds alone (no policy gate)
+    // recheck against any tableau leaves it exactly as-is.
+    const after = recheckActiveClear(TREE, state, policyView(policySlot("mandate", 5)));
+    expect(after).toBe(state); // already cleared → untouched reference
+  });
+});
+
+describe("applyBuild — non-Doctrine nodes are unaffected by policy", () => {
+  test("a node without policyStrength still clears on builds alone, no tableau needed", () => {
+    let state: CrisisTreeState = { ...seed("industry"), cleared: ["settlement"] };
+    for (let i = 0; i < 8; i++) state = applyBuild(TREE, state, mkUnlock("high-card"), 1);
+    expect(state.cleared).toContain("industry");
   });
 });
 
@@ -296,7 +429,7 @@ describe("authored Setting crisisTrees", () => {
 
 import { GameAPI } from "../src/facade/GameAPI.ts";
 import { createEpoch } from "../src/core/engine/epoch.ts";
-import { setActiveObjective, buildColumn } from "../src/core/engine/commands.ts";
+import { setActiveObjective, buildColumn, enactPolicies } from "../src/core/engine/commands.ts";
 import { createCampaign } from "../src/core/engine/campaign.ts";
 import { createRng } from "../src/core/engine/rng.ts";
 import { getSetting } from "../src/core/settings/index.ts";
@@ -380,3 +513,56 @@ describe("buildColumn advances the active node (P3)", () => {
     expect(advanced).toBe(1);
   });
 });
+
+describe("enactPolicies clears a Doctrine policyStrength node post-build (P3)", () => {
+  // The homeworld Capital node: requireSameIdeology, requirements [{any,5}],
+  // policyStrength 2. Drive it through core commands: bind solidarity, satisfy
+  // the 5 on-color builds (the build path passes the empty tableau, so it does
+  // NOT clear), then slot 2 solidarity policies via enactPolicies and assert the
+  // node clears with no further build.
+  test("builds alone leave it open; slotting 2 same-color policies clears it", () => {
+    const setting = getSetting("homeworld");
+    const ep = createEpoch(setting, createCampaign(1), createRng(7), 1);
+    // Activate Capital directly (it is gated behind the root in normal play).
+    ep.crisisTree.activeNodeId = "capital";
+    ep.crisisTree.boundIdeology = { capital: "solidarity" };
+    ep.crisisTree.cleared = [setting.crisisTree.rootId];
+
+    // Five solidarity-promoted builds (any pattern; use a same-rank pair).
+    for (let i = 0; i < 5; i++) {
+      const unlock = {
+        projectId: `p-${i}`,
+        pattern: "pair" as const,
+        turn: 1,
+        cards: [getCard(landId(5, "solidarity")), getCard(landId(5, "solidarity"))],
+        promotedIdeology: "solidarity" as const,
+      };
+      ep.crisisTree = applyBuildViaCommand(ep, setting, unlock);
+    }
+    // Build requirement met, but the empty tableau keeps the node OPEN.
+    expect(ep.crisisTree.progress.capital).toEqual([5]);
+    expect(ep.crisisTree.cleared).not.toContain("capital");
+
+    // Now stage two solidarity policy candidates and enact them.
+    ep.turnPhase = "policy";
+    ep.policy.candidates = [getPolicy("mobilize"), getPolicy("mobilize")];
+    const r = enactPolicies(ep, setting, ["mobilize", "mobilize"]);
+    expect(r.ok).toBe(true);
+    // Two slotted solidarity stacks → strength 2 == threshold → node clears.
+    expect(policyStrengthFor(ep.policy, "solidarity")).toBe(2);
+    expect(ep.crisisTree.cleared).toContain("capital");
+    expect(isWon(setting.crisisTree, ep.crisisTree)).toBe(true);
+  });
+});
+
+// Helper: run the buildColumn tree hook in isolation (no column placement) by
+// driving applyBuild exactly as buildColumn does — passing the live tableau.
+function applyBuildViaCommand(
+  ep: ReturnType<typeof createEpoch>,
+  setting: ReturnType<typeof getSetting>,
+  unlock: ProjectUnlock,
+): CrisisTreeState {
+  ep.unlockedProjects.push(unlock);
+  const count = ep.unlockedProjects.filter((u) => u.projectId === unlock.projectId).length;
+  return applyBuild(setting.crisisTree, ep.crisisTree, unlock, count, ep.policy);
+}

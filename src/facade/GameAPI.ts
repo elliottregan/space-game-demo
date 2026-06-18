@@ -416,7 +416,7 @@ export class GameAPI {
    * distinct new slots would exceed the 5-slot cap.
    */
   enactPolicies(keepIds: string[]): CommandResult {
-    return enactPoliciesCore(this.epoch, keepIds);
+    return enactPoliciesCore(this.epoch, this.setting, keepIds);
   }
 
   /** Remove a slotted policy from the tableau, cycling it to its discard. */
