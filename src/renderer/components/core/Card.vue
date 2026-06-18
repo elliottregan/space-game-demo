@@ -34,6 +34,7 @@
         />
       </div>
       <div class="card-name">{{ card.name }}</div>
+      <div v-if="!compact && countsAsLabel" class="card-counts-as">{{ countsAsLabel }}</div>
       <ul v-if="!compact && effectLines.length > 0" class="card-effect-list">
         <li v-for="(line, i) in effectLines" :key="i">{{ line }}</li>
       </ul>
@@ -90,6 +91,30 @@ defineEmits<{
 
 const effectLines = computed(() => describeCard(props.card));
 
+const countsAsLabel = computed<string | null>(() => {
+  const ca = props.card.countsAs;
+  if (!ca) return null;
+  const isAny = (v: unknown): v is "any" => v === "any";
+  // Shipped case: the full joker (every dimension "any").
+  if (isAny(ca.rank) && isAny(ca.ideology) && isAny(ca.kind)) {
+    return "Wild: any rank, any color, either row";
+  }
+  // Generic partial formatting (future modifiers; no consumer ships these yet).
+  const parts: string[] = [];
+  if (ca.rank !== undefined) {
+    parts.push(isAny(ca.rank) ? "any rank" : `rank ${ca.rank.map(rankLabel).join(" or ")}`);
+  }
+  if (ca.ideology !== undefined) {
+    parts.push(
+      isAny(ca.ideology) ? "any color" : ca.ideology.map((i) => suitLabel(i)).join(" or "),
+    );
+  }
+  if (ca.kind !== undefined) {
+    parts.push(isAny(ca.kind) ? "either row" : ca.kind.join(" or "));
+  }
+  return parts.length ? `Counts as ${parts.join(", ")}` : null;
+});
+
 function describeCard(card: Card): string[] {
   if (card.kind === "dissent") {
     const txt = card.flavor ?? "Unplayable.";
@@ -98,3 +123,12 @@ function describeCard(card: Card): string[] {
   return flattenEffect(card.effect);
 }
 </script>
+
+<style scoped>
+.card-counts-as {
+  font-size: 9px;
+  line-height: 1.2;
+  font-style: italic;
+  color: var(--ink-subtle);
+}
+</style>
