@@ -61,7 +61,6 @@ export interface Crisis {
   id: string;
   name: string;
   flavor: string;
-  difficulty: number;
 }
 
 export interface CrisisContribution {

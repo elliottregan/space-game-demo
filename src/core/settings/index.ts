@@ -33,10 +33,10 @@ export interface Setting {
   startingColumns: ColumnConfig[];
   /** Exactly one project per pattern (see PATTERNS_IN_ORDER in data/projects.ts). */
   projects: KeystoneProject[];
-  /** Legacy scalar Crisis (id/name/flavor/difficulty). Win condition reads
-   *  difficulty until P4; the scalar is retired in P5. */
+  /** Crisis flavor/identity (id/name/flavor). The win condition itself is the
+   *  crisisTree below; this is just naming for the Crisis screen. */
   crisis: Crisis;
-  /** The branching win-condition DAG. Authored per Setting (§6). */
+  /** The branching win-condition DAG. Authored per Setting. */
   crisisTree: CrisisTree;
   transitions: {
     onWin: string | "campaign-end";

@@ -83,7 +83,6 @@ const CRISIS: Crisis = {
   id: "ruin-collapse",
   name: "The Long Collapse",
   flavor: "What was once a city must be coaxed back into shape.",
-  difficulty: 23,
 };
 
 // Crisis Tree (Ruined Homeworld, 16 turns / 5 columns, full deck). The

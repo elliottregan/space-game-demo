@@ -83,7 +83,6 @@ const CRISIS: Crisis = {
   id: "homeworld-arrival-storm",
   name: "Arrival Storm",
   flavor: "The first generation faces a dust-storm that will not pass.",
-  difficulty: 16,
 };
 
 // Crisis Tree (§6 Homeworld strawman, 12 turns / 7 columns). The root

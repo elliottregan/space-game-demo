@@ -108,7 +108,6 @@ const CRISIS: Crisis = {
   id: "ship-deep-cold",
   name: "Deep Cold",
   flavor: "The ship enters a silent corridor between stars.",
-  difficulty: 12,
 };
 
 // Crisis Tree (Generation Ship, 14 turns / 4 columns, 2-ideology deck).
