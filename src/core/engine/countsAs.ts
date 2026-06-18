@@ -54,13 +54,17 @@ function expandRows(card: Card): readonly RowKind[] {
 }
 
 function ideologyIsWild(card: Card): boolean {
-  // INDETERMINATE iff the ideology dimension is overridden to "any". A bare
-  // `ideology:"wild"` with NO countsAs (Dissent / data error) is NOT a joker and
-  // NOT ideologyWild — it is colorless (expandIdeology ⇒ []), which BLOCKS a
-  // flush rather than completing one. Per spec §3.2, isWild and ideologyWild
-  // diverge only for future PARTIAL wilds; for the shipped Dissent both are
-  // false. (countsAs.test.ts pins this.)
-  return card.countsAs?.ideology === "any";
+  // INDETERMINATE iff the ideology dimension can't be pinned to one real color:
+  // overridden to "any" (a full joker), OR a bare `ideology:"wild"` with no
+  // ideology override (Dissent / a transitional charter). Both must be SKIPPED
+  // by the identity vector (`deriveVector`/`unlockedIdeologyBreakdown`, plan
+  // Task 7), whose old guard was `c.ideology === "wild"` — so bare-"wild" must
+  // stay ideologyWild=true or the switch to this predicate would miscount it.
+  // This is SEPARATE from flush, which reads the `ideologies` set: a bare-"wild"
+  // card contributes [] there and BLOCKS a flush (does not complete one). A
+  // rank-only partial with a real literal color is NOT ideologyWild.
+  const ca = card.countsAs?.ideology;
+  return ca === "any" || (ca === undefined && card.ideology === "wild");
 }
 
 export function effectiveCard(card: Card): EffectiveCard {

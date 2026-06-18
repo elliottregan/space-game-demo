@@ -79,9 +79,12 @@ describe("effectiveCard — dissent (bare 'wild', no countsAs)", () => {
   test("ideologies is the EMPTY set (colorless, blocks flush)", () => {
     expect([...eff.ideologies]).toEqual([]);
   });
-  test("is NOT a joker (no countsAs) and NOT ideologyWild", () => {
+  test("is NOT a joker (no countsAs) but IS ideologyWild (color-indeterminate)", () => {
+    // isWild is structural (no countsAs ⇒ false), but its color is "wild" =
+    // indeterminate, so the identity vector must skip it (matches the old
+    // `c.ideology === "wild"` guard deriveVector replaces in Task 7).
     expect(eff.isWild).toBe(false);
-    expect(eff.ideologyWild).toBe(false);
+    expect(eff.ideologyWild).toBe(true);
     expect(isWildCard(card)).toBe(false);
   });
   test("ranks still collapse to its literal rank", () => {
